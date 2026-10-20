@@ -21,7 +21,7 @@ var p1_hero_id: String = ""
 var p2_hero_id: String = ""
 
 func _ready() -> void:
-	print("--- MAIN.GD: _ready() wurde ausgeführt. Starte Menü-Laden. ---")
+	print("--- MAIN.GD: _ready() wurde ausgeführt. Starte Setup-Phase. ---")
 	# Wire signals
 	Global.round_ended.connect(_on_round_ended)
 	Global.card_selected.connect(_on_card_selected)
@@ -30,9 +30,8 @@ func _ready() -> void:
 	sudden_death_timer.timeout.connect(_start_sudden_death)
 	
 	lava_overlay.visible = false
-	# Startet nicht mehr direkt, sondern wartet auf die Hero Selection
-	# _start_fresh_round() 
-	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+	# Starte direkt die Setup-Phase, um sicherzustellen, dass das Menü initialisiert wird.
+	_start_setup_phase()
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_bot") and not event.is_echo():
