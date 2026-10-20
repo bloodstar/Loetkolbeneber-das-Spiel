@@ -31,7 +31,11 @@ func _ready() -> void:
 	
 	lava_overlay.visible = false
 	# WICHTIG: Wir starten immer mit dem Menü, um die Konfiguration zu ermöglichen.
-	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+	var error = get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+	if error != OK:
+		print("!!! FEHLER: Konnte die Menüszene nicht laden! Überprüfe den Pfad: res://scenes/main_menu.tscn !!!")
+		# Fallback: Wenn das Laden fehlschlägt, wird die Szene nicht angezeigt.
+		# Wir lassen den Fehler im Output sichtbar.
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_bot") and not event.is_echo():
