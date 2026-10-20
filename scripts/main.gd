@@ -10,22 +10,27 @@ extends Node2D
 @onready var hero_select_dialog: HeroSelectDialog = $HeroSelectDialog
 @onready var sudden_death_timer: Timer = $SuddenDeathTimer
 @onready var lava_overlay: ColorRect = $LavaOverlay
+@onready var game_manager: Node = $GameManager # Neuer Game Manager Node
 
 var p1: Player = null
 var p2: Player = null
 var is_sudden_death: bool = false
 var lava_y_pos: float = 900.0
+var wins_to_start: int = 3 # Standardmäßig 3 Siege
+var p1_hero_id: String = ""
+var p2_hero_id: String = ""
 
 func _ready() -> void:
 	# Wire signals
 	Global.round_ended.connect(_on_round_ended)
 	Global.card_selected.connect(_on_card_selected)
 	card_draft_ui.draft_sequence_finished.connect(_on_draft_sequence_finished)
-	hero_select_dialog.heroes_chosen.connect(_start_fresh_round)
+	hero_select_dialog.heroes_chosen.connect(_start_setup_phase) # Startet jetzt mit der Setup-Phase
 	sudden_death_timer.timeout.connect(_start_sudden_death)
 	
 	lava_overlay.visible = false
-	_start_fresh_round()
+	# Startet nicht mehr direkt, sondern wartet auf die Hero Selection
+	# _start_fresh_round() 
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_bot") and not event.is_echo():
@@ -37,16 +42,30 @@ func _input(event: InputEvent) -> void:
 	
 	if event.is_action_pressed("restart_game") and not event.is_echo():
 		Global.reset_match()
-		_start_fresh_round()
+		# Startet den gesamten Setup-Prozess neu
+		_start_setup_phase()
 	
 	if event is InputEventKey and event.pressed and not event.is_echo() and event.keycode == KEY_H:
-		hero_select_dialog.open_dialog()
+		# Öffnet Dialog, falls nicht bereits in der Setup-Phase
+		if not hero_select_dialog.is_visible():
+			hero_select_dialog.open_dialog()
+
+# --- Setup Phase Management ---
+
+func _start_setup_phase() -> void:
+	# 1. Setze die gewünschte Anzahl an Siegen (Muss von der UI/Global gesetzt werden)
+	# Hier müsste die Logik zur Übernahme der Sieg-Anzahl von der UI kommen.
+	# Wir setzen einen Standardwert, der von der UI überschrieben werden sollte.
+	wins_to_start = 3 
+	
+	# 2. Starte die Hero Selection
+	hero_select_dialog.open_dialog()
 
 func _start_fresh_round() -> void:
-	# Regenerate dynamic Mario map
+	# 1. Level regenerieren
 	level_generator.generate_level()
 	
-	# Reset Sudden Death
+	# 2. Reset Sudden Death
 	is_sudden_death = false
 	lava_overlay.visible = false
 	lava_y_pos = (level_generator.MAP_HEIGHT * level_generator.TILE_SIZE)
