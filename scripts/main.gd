@@ -26,12 +26,12 @@ func _ready() -> void:
 	Global.round_ended.connect(_on_round_ended)
 	Global.card_selected.connect(_on_card_selected)
 	card_draft_ui.draft_sequence_finished.connect(_on_draft_sequence_finished)
-	hero_select_dialog.heroes_chosen.connect(_start_setup_phase) # Startet jetzt mit der Setup-Phase
+	hero_select_dialog.heroes_chosen.connect(_on_heroes_chosen) # Signal-Verbindung ist korrekt
 	sudden_death_timer.timeout.connect(_start_sudden_death)
 	
 	lava_overlay.visible = false
-	# Starte direkt die Setup-Phase, um sicherzustellen, dass das Menü initialisiert wird.
-	_start_setup_phase()
+	# WICHTIG: Wir starten immer mit dem Menü, um die Konfiguration zu ermöglichen.
+	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_bot") and not event.is_echo():
@@ -45,11 +45,10 @@ func _input(event: InputEvent) -> void:
 		Global.reset_match()
 		# Startet den gesamten Setup-Prozess neu
 		_start_setup_phase()
-	
-	if event is InputEventKey and event.pressed and not event.is_echo() and event.keycode == KEY_H:
-		# Öffnet Dialog, falls nicht bereits in der Setup-Phase
-		if not hero_select_dialog.is_visible():
-			hero_select_dialog.open_dialog()
+
+func _on_heroes_chosen() -> void:
+	# Setup-Phase nach Heldenauswahl
+	_start_setup_phase()
 
 # --- Setup Phase Management ---
 
