@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://cax1207aidl7f"]
+
+[ext_resource type="Script" uid="uid://b3l1gqh6weava" path="res://scripts/main.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/level/procedural_level.tscn" id="2_level"]
+[ext_resource type="PackedScene" path="res://scenes/camera/dynamic_camera.tscn" id="3_camera"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="4_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/card_draft_ui.tscn" id="5_card_draft"]
+[ext_resource type="PackedScene" path="res://scenes/ui/lobby.tscn" id="6_lobby"]
+[ext_resource type="PackedScene" path="res://scenes/ui/main_menu.tscn" id="7_main_menu"]
+
+[node name="Main" type="Node2D" unique_id=899625915]
+script = ExtResource("1_script")
+
+[node name="ProceduralLevel" parent="." unique_id=1930606400 instance=ExtResource("2_level")]
+
+[node name="LavaOverlay" type="ColorRect" parent="." unique_id=1557358880]
+visible = false
+z_index = 10
+color = Color(1, 0.25, 0.05, 0.65)
+
+[node name="DynamicCamera" parent="." unique_id=1924045563 instance=ExtResource("3_camera")]
+
+[node name="SuddenDeathTimer" type="Timer" parent="." unique_id=1544686600]
+wait_time = 38.0
+one_shot = true
+
+[node name="HUD" parent="." unique_id=475266848 instance=ExtResource("4_hud")]
+
+[node name="CardDraftUI" parent="." unique_id=1362705433 instance=ExtResource("5_card_draft")]
+visible = false
+
+[node name="Lobby" parent="." instance=ExtResource("6_lobby")]
+visible = false
+
+[node name="MainMenu" parent="." instance=ExtResource("7_main_menu")]
+visible = false

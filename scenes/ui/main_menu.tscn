@@ -1,0 +1,217 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/main_menu.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.05, 0.06, 0.09, 0.98)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_net"]
+bg_color = Color(0.07, 0.08, 0.12, 0.99)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.25, 0.55, 0.9, 0.7)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="MainMenu" type="CanvasLayer"]
+process_mode = 3
+layer = 20
+script = ExtResource("1_script")
+
+[node name="Panel" type="Panel" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 40.0
+offset_right = -40.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="Title" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.55, 0.2, 1)
+theme_override_font_sizes/font_size = 56
+text = "BATTLE BALLS"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 18
+text = "1v1 Plattform-Duell  •  Helden  •  Karten-Draft  •  Lokal, gegen Bot oder online"
+horizontal_alignment = 1
+
+[node name="StartBtn" type="Button" parent="Panel/VBox"]
+custom_minimum_size = Vector2(300, 56)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "SPIEL STARTEN"
+
+[node name="OnlineBtn" type="Button" parent="Panel/VBox"]
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 20
+text = "ONLINE SPIELEN"
+
+[node name="QuitBtn" type="Button" parent="Panel/VBox"]
+custom_minimum_size = Vector2(300, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 18
+text = "BEENDEN"
+
+[node name="Controls" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.55, 0.65, 1)
+theme_override_font_sizes/font_size = 14
+text = "P1: A/D bewegen • Leertaste springen • Maus zielen • Linksklick schießen • Shift dash • Rechtsklick/E Fähigkeit\nP2: Pfeiltasten • Punkt schießen • / dash • , Fähigkeit      Bot: Lobby (P2)      R: Neustart"
+horizontal_alignment = 1
+
+[node name="NetworkPanel" type="PanelContainer" parent="Panel"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 240.0
+offset_top = 50.0
+offset_right = -240.0
+offset_bottom = -50.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_net")
+
+[node name="Margin" type="MarginContainer" parent="Panel/NetworkPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 22
+
+[node name="VBox" type="VBoxContainer" parent="Panel/NetworkPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="NetTitle" type="Label" parent="Panel/NetworkPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.75, 1, 1)
+theme_override_font_sizes/font_size = 30
+text = "ONLINE SPIELEN"
+horizontal_alignment = 1
+
+[node name="NetInfo" type="Label" parent="Panel/NetworkPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 13
+text = "Ein Spieler hostet das Spiel, der andere tritt mit der angezeigten Adresse bei.\nBeide brauchen dieselbe Spielversion. Der Host startet das Match, sobald beide bereit sind."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HostHeader" type="Label" parent="Panel/NetworkPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.6, 0.25, 1)
+theme_override_font_sizes/font_size = 17
+text = "HOSTEN (SPIELER 1)"
+
+[node name="HostRow" type="HBoxContainer" parent="Panel/NetworkPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HostPortLabel" type="Label" parent="Panel/NetworkPanel/Margin/VBox/HostRow"]
+layout_mode = 2
+text = "Port:"
+vertical_alignment = 1
+
+[node name="HostPortSpin" type="SpinBox" parent="Panel/NetworkPanel/Margin/VBox/HostRow"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+min_value = 1024.0
+max_value = 65535.0
+value = 7777.0
+allow_greater = false
+
+[node name="HostBtn" type="Button" parent="Panel/NetworkPanel/Margin/VBox/HostRow"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "SPIEL HOSTEN"
+
+[node name="Sep1" type="HSeparator" parent="Panel/NetworkPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="JoinHeader" type="Label" parent="Panel/NetworkPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.75, 1, 1)
+theme_override_font_sizes/font_size = 17
+text = "BEITRETEN (SPIELER 2)"
+
+[node name="JoinIPEdit" type="LineEdit" parent="Panel/NetworkPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+placeholder_text = "IP-Adresse des Hosts, z. B. 192.168.1.20"
+clear_button_enabled = true
+
+[node name="JoinRow" type="HBoxContainer" parent="Panel/NetworkPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="JoinPortLabel" type="Label" parent="Panel/NetworkPanel/Margin/VBox/JoinRow"]
+layout_mode = 2
+text = "Port:"
+vertical_alignment = 1
+
+[node name="JoinPortSpin" type="SpinBox" parent="Panel/NetworkPanel/Margin/VBox/JoinRow"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+min_value = 1024.0
+max_value = 65535.0
+value = 7777.0
+allow_greater = false
+
+[node name="JoinBtn" type="Button" parent="Panel/NetworkPanel/Margin/VBox/JoinRow"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "BEITRETEN"
+
+[node name="NetStatus" type="Label" parent="Panel/NetworkPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.8, 0.35, 1)
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 2
+
+[node name="NetHelp" type="Label" parent="Panel/NetworkPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.55, 0.65, 1)
+theme_override_font_sizes/font_size = 12
+text = "Internet: Der Host gibt den UDP-Port im Router frei (viele Router können das automatisch per UPnP).\nWenn das nicht klappt: ZeroTier oder Tailscale installieren, beide im selben Netzwerk verbinden und die dortige IP des Hosts eingeben."
+autowrap_mode = 2
+
+[node name="NetBackBtn" type="Button" parent="Panel/NetworkPanel/Margin/VBox"]
+custom_minimum_size = Vector2(180, 38)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 16
+text = "ZURÜCK"

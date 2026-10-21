@@ -1,0 +1,273 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/lobby.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.05, 0.06, 0.09, 0.98)
+
+[node name="Lobby" type="CanvasLayer"]
+process_mode = 3
+layer = 12
+script = ExtResource("1_script")
+
+[node name="Panel" type="Panel" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 14.0
+offset_right = -24.0
+offset_bottom = -14.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="Panel/Margin/VBox/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.55, 0.2, 1)
+theme_override_font_sizes/font_size = 32
+text = "LOBBY"
+
+[node name="StatusLabel" type="Label" parent="Panel/Margin/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 14
+text = "Match: 3 Siege  •  Draft: 1 von 5"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
+theme_override_font_sizes/font_size = 13
+text = "Helden wählen, Regeln festlegen und Powerup-Karten sperren. Klassenkarten erscheinen nur für den passenden Helden."
+
+[node name="DraftSummary" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.8, 0.35, 1)
+theme_override_font_sizes/font_size = 15
+text = "Draft: 1 von 5 Karten  •  Match: 3 Siege  •  Kartenvorrat wird berechnet..."
+
+[node name="NetLabel" type="Label" parent="Panel/Margin/VBox"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.75, 1, 1)
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 2
+
+[node name="Tabs" type="TabContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Heroes" type="VBoxContainer" parent="Panel/Margin/VBox/Tabs"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="P1_Section" type="VBoxContainer" parent="Panel/Margin/VBox/Tabs/Heroes"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="P1_Row" type="HBoxContainer" parent="Panel/Margin/VBox/Tabs/Heroes/P1_Section"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="P1_Title" type="Label" parent="Panel/Margin/VBox/Tabs/Heroes/P1_Section/P1_Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.6, 0.2, 1)
+theme_override_font_sizes/font_size = 16
+text = "SPIELER 1 (HOST) – HELD WÄHLEN"
+
+[node name="P1_ReadyCheck" type="CheckBox" parent="Panel/Margin/VBox/Tabs/Heroes/P1_Section/P1_Row"]
+layout_mode = 2
+text = "Bereit"
+
+[node name="P1_Grid" type="HBoxContainer" parent="Panel/Margin/VBox/Tabs/Heroes/P1_Section"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="P2_Section" type="VBoxContainer" parent="Panel/Margin/VBox/Tabs/Heroes"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="P2_Row" type="HBoxContainer" parent="Panel/Margin/VBox/Tabs/Heroes/P2_Section"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="P2_Title" type="Label" parent="Panel/Margin/VBox/Tabs/Heroes/P2_Section/P2_Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.3, 0.7, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "SPIELER 2 / BOT – HELD WÄHLEN"
+
+[node name="P2_ReadyCheck" type="CheckBox" parent="Panel/Margin/VBox/Tabs/Heroes/P2_Section/P2_Row"]
+layout_mode = 2
+text = "Bereit"
+
+[node name="P2_BotCheck" type="CheckBox" parent="Panel/Margin/VBox/Tabs/Heroes/P2_Section/P2_Row"]
+layout_mode = 2
+button_pressed = true
+text = "Bot steuert Spieler 2"
+
+[node name="P2_Grid" type="HBoxContainer" parent="Panel/Margin/VBox/Tabs/Heroes/P2_Section"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Rules" type="VBoxContainer" parent="Panel/Margin/VBox/Tabs"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ScoreRow" type="HBoxContainer" parent="Panel/Margin/VBox/Tabs/Rules"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ScoreLabel" type="Label" parent="Panel/Margin/VBox/Tabs/Rules/ScoreRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Rundensiege bis zum Match-Sieg:"
+
+[node name="ScoreSpin" type="SpinBox" parent="Panel/Margin/VBox/Tabs/Rules/ScoreRow"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+min_value = 1.0
+max_value = 10.0
+value = 3.0
+
+[node name="ScoreHint" type="Label" parent="Panel/Margin/VBox/Tabs/Rules/ScoreRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.55, 0.65, 1)
+theme_override_font_sizes/font_size = 13
+text = "(Standard: 3)"
+
+[node name="BaseHpRow" type="HBoxContainer" parent="Panel/Margin/VBox/Tabs/Rules"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="BaseHpLabel" type="Label" parent="Panel/Margin/VBox/Tabs/Rules/BaseHpRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Basis-Hitpoints:"
+
+[node name="BaseHpSpin" type="SpinBox" parent="Panel/Margin/VBox/Tabs/Rules/BaseHpRow"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+max_value = 500.0
+step = 10.0
+value = 0.0
+
+[node name="BaseHpHint" type="Label" parent="Panel/Margin/VBox/Tabs/Rules/BaseHpRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.55, 0.65, 1)
+theme_override_font_sizes/font_size = 13
+text = "0 = Heldenwert  •  gilt für beide Spieler"
+
+[node name="DraftRow" type="HBoxContainer" parent="Panel/Margin/VBox/Tabs/Rules"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="DraftLabel" type="Label" parent="Panel/Margin/VBox/Tabs/Rules/DraftRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Karten-Draft:"
+
+[node name="PicksSpin" type="SpinBox" parent="Panel/Margin/VBox/Tabs/Rules/DraftRow"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+min_value = 1.0
+max_value = 7.0
+value = 1.0
+
+[node name="VonLabel" type="Label" parent="Panel/Margin/VBox/Tabs/Rules/DraftRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "von"
+
+[node name="OfferSpin" type="SpinBox" parent="Panel/Margin/VBox/Tabs/Rules/DraftRow"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+min_value = 1.0
+max_value = 10.0
+value = 5.0
+
+[node name="DraftHint" type="Label" parent="Panel/Margin/VBox/Tabs/Rules/DraftRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.55, 0.65, 1)
+theme_override_font_sizes/font_size = 13
+text = "Karten (Standard: 1 von 5)"
+
+[node name="BanHeader" type="HBoxContainer" parent="Panel/Margin/VBox/Tabs/Rules"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="BanLabel" type="Label" parent="Panel/Margin/VBox/Tabs/Rules/BanHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 16
+text = "Powerup-Karten sperren (erscheinen nicht im Draft):"
+
+[node name="BanCount" type="Label" parent="Panel/Margin/VBox/Tabs/Rules/BanHeader"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.65, 0.75, 1)
+theme_override_font_sizes/font_size = 13
+text = "0 gesperrt"
+vertical_alignment = 1
+
+[node name="UnbanBtn" type="Button" parent="Panel/Margin/VBox/Tabs/Rules/BanHeader"]
+layout_mode = 2
+text = "Alle entsperren"
+
+[node name="BanScroll" type="ScrollContainer" parent="Panel/Margin/VBox/Tabs/Rules"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="BanGrid" type="GridContainer" parent="Panel/Margin/VBox/Tabs/Rules/BanScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 2
+columns = 4
+
+[node name="Footer" type="HBoxContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="FooterHint" type="Label" parent="Panel/Margin/VBox/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.5, 0.55, 0.65, 1)
+theme_override_font_sizes/font_size = 12
+text = "Lokal: Spieler 1 stellt die Lobby für beide Seiten ein."
+vertical_alignment = 1
+
+[node name="BackBtn" type="Button" parent="Panel/Margin/VBox/Footer"]
+custom_minimum_size = Vector2(140, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "ZURÜCK"
+
+[node name="StartBtn" type="Button" parent="Panel/Margin/VBox/Footer"]
+custom_minimum_size = Vector2(260, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "KAMPF STARTEN"
