@@ -7,6 +7,9 @@ signal heroes_chosen
 @onready var p2_grid: HBoxContainer = $Panel/VBox/P2_Section/HeroGrid
 @onready var start_btn: Button = $Panel/VBox/StartBtn
 
+var p1_selected_button: Button = null
+var p2_selected_button: Button = null
+
 func _ready() -> void:
 	visible = false
 	start_btn.pressed.connect(_on_start_pressed)
@@ -14,6 +17,7 @@ func _ready() -> void:
 
 func open_dialog() -> void:
 	visible = true
+	_refresh_selection_highlight()
 	get_tree().paused = true
 
 func _build_hero_buttons() -> void:
@@ -34,11 +38,16 @@ func _build_hero_buttons() -> void:
 func _create_hero_card(hero: HeroData, p_idx: int) -> Button:
 	var btn = Button.new()
 	btn.custom_minimum_size = Vector2(210, 160)
+	# Held an den Button binden, damit die Auswahl eindeutig ist.
+	btn.set_meta("hero_id", hero.id)
 	
+	# Eine Lobby-Basis-HP-Einstellung überschreibt den Heldenwert bereits vor
+	# allen Kartenboni; die Heldenvorschau zeigt deshalb den effektiven Wert.
+	var shown_hp: int = Global.base_hp_override if Global.base_hp_override > 0 else hero.base_hp
 	var text_content = "%s\n[%s]\nHP: %d | Spd: %d\nPassive: %s\nActive: %s" % [
 		hero.name.to_upper(),
 		hero.role,
-		hero.base_hp,
+		shown_hp,
 		int(hero.base_speed),
 		hero.passive_desc,
 		hero.ability_name
@@ -46,32 +55,44 @@ func _create_hero_card(hero: HeroData, p_idx: int) -> Button:
 	btn.text = text_content
 	btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	
-	# NEU: Signal-Verbindung für die Hervorhebung
 	btn.pressed.connect(func():
-		SoundManager.play_sound("click")
-		_highlight_selection(btn, p_idx)
+		_select_hero(btn, p_idx)
 	)
 	return btn
 
-func _highlight_selection(button: Button, p_idx: int) -> void:
-	# 1. Alle Buttons im Dialog deaktivieren/entfärben
-	var all_buttons = get_node("Panel/VBox/P1_Section/HeroGrid").get_children() + get_node("Panel/VBox/P2_Section/HeroGrid").get_children()
-	for btn in all_buttons:
-		btn.modulate = Color(1.0, 1.0, 1.0, 0.8)
-		
-	# 2. Den geklickten Button hervorheben
-	button.modulate = Color(1.0, 1.0, 0.8, 1.0) # Leicht gelb/aktiv
+func _select_hero(button: Button, p_idx: int) -> void:
+	var hero_id: String = button.get_meta("hero_id", "")
+	if hero_id.is_empty():
+		return
 	
-	# 3. Globalen Zustand setzen
-	var hero: HeroData = Global.get_hero(Global.p1_hero_id if p_idx == 1 else Global.p2_hero_id)
+	SoundManager.play_sound("click")
+	
 	if p_idx == 1:
-		Global.p1_hero_id = hero.id
+		Global.p1_hero_id = hero_id
+		p1_selected_button = button
 	else:
-		Global.p2_hero_id = hero.id
+		Global.p2_hero_id = hero_id
+		p2_selected_button = button
 	
-	# Visuelle Bestätigung (optional: einen kleinen Pop-up-Text)
-	print("P%d ausgewählt: %s" % [p_idx, hero.name])
+	_refresh_selection_highlight()
+	print("P%d ausgewählt: %s" % [p_idx, Global.get_hero(hero_id).name])
 
+func _refresh_selection_highlight() -> void:
+	_highlight_grid(p1_grid, Global.p1_hero_id, 1)
+	_highlight_grid(p2_grid, Global.p2_hero_id, 2)
+
+func _highlight_grid(grid: HBoxContainer, hero_id: String, p_idx: int) -> void:
+	for child in grid.get_children():
+		var btn := child as Button
+		if btn == null:
+			continue
+		var is_selected: bool = btn.get_meta("hero_id", "") == hero_id
+		btn.modulate = Color(1.0, 1.0, 0.8, 1.0) if is_selected else Color(1.0, 1.0, 1.0, 0.8)
+		if is_selected:
+			if p_idx == 1:
+				p1_selected_button = btn
+			else:
+				p2_selected_button = btn
 
 func _on_start_pressed() -> void:
 	# Die Logik ist korrekt, aber wir stellen sicher, dass das Signal emittiert wird.

@@ -1,0 +1,74 @@
+[gd_scene format=3 uid="uid://bkaxjbh1vmpbs"]
+
+[ext_resource type="Script" uid="uid://geo3vfo21ioj" path="res://scripts/ui/hero_select_dialog.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.06, 0.07, 0.1, 0.96)
+
+[node name="HeroSelectDialog" type="CanvasLayer" unique_id=737524004]
+process_mode = 3
+layer = 12
+script = ExtResource("1_script")
+
+[node name="Panel" type="Panel" parent="." unique_id=742393427]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="VBox" type="VBoxContainer" parent="Panel" unique_id=1007057652]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 30.0
+offset_top = 20.0
+offset_right = -30.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="Title" type="Label" parent="Panel/VBox" unique_id=339190142]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "BAPBAP HELDENAUSWAHL"
+horizontal_alignment = 1
+
+[node name="P1_Section" type="VBoxContainer" parent="Panel/VBox" unique_id=1964977617]
+layout_mode = 2
+
+[node name="P1_Title" type="Label" parent="Panel/VBox/P1_Section" unique_id=1720519200]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.6, 0.2, 1)
+theme_override_font_sizes/font_size = 18
+text = "SPIELER 1: WÄHLE DEINEN HELDEN"
+
+[node name="HeroGrid" type="HBoxContainer" parent="Panel/VBox/P1_Section" unique_id=177235241]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="P2_Section" type="VBoxContainer" parent="Panel/VBox" unique_id=947289187]
+layout_mode = 2
+
+[node name="P2_Title" type="Label" parent="Panel/VBox/P2_Section" unique_id=1528953486]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.7, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "SPIELER 2 / BOT: WÄHLE DEINEN HELDEN"
+
+[node name="HeroGrid" type="HBoxContainer" parent="Panel/VBox/P2_Section" unique_id=249457296]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="StartBtn" type="Button" parent="Panel/VBox" unique_id=1780022913]
+custom_minimum_size = Vector2(220, 48)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 20
+text = "KAMPF STARTEN"
