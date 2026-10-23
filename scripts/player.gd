@@ -5,16 +5,19 @@ signal died(player_index: int)
 signal health_changed(current: float, max_h: float, shield: float, max_s: float)
 signal ammo_changed(current: int, max_a: int)
 signal ability_cooldown_updated(current: float, max_c: float)
+signal block_state_changed(is_blocking: bool, cooldown: float, max_cooldown: float)
 
 @export var player_index: int = 1
+@export var team_id: int = 0
 @export var is_bot: bool = false
 
-# Grundgröße der Spielfigur. Karten mit body_size_mult/giant_growth wirken
-# zusätzlich auf diesen Wert.
-const BASE_CHARACTER_SCALE: float = 1.5
+# GrundgrÃƒÂ¶ÃƒÅ¸e der Spielfigur. Karten mit body_size_mult/giant_growth wirken
+# zusÃƒÂ¤tzlich auf diesen Wert.
+const BASE_CHARACTER_SCALE: float = 1.7
+const GRAVITY: float = 980.0
 
 # Nodes
-@onready var sprite: Sprite2D = $Sprite2D
+@onready var sprite: PigCharacter = $Sprite2D
 @onready var weapon_pivot: Node2D = $WeaponPivot
 @onready var muzzle: Marker2D = $WeaponPivot/Muzzle
 @onready var gun_sprite: Sprite2D = $WeaponPivot/GunSprite
@@ -28,6 +31,7 @@ var max_shield: float = 0.0
 var current_shield: float = 0.0
 var move_speed: float = 300.0
 var jump_force: float = -470.0
+var gravity_mult: float = 1.0
 var max_jumps: int = 1
 var jumps_remaining: int = 1
 
@@ -35,11 +39,12 @@ var jumps_remaining: int = 1
 var bullet_damage: float = 22.0
 var bullet_speed: float = 650.0
 var bullet_size: float = 1.0
-var fire_rate_cooldown: float = 0.35
+var projectile_gravity_mult: float = 1.0
+var fire_rate_cooldown: float = 0.22
 var fire_timer: float = 0.0
-var max_ammo: int = 5
-var current_ammo: int = 5
-var reload_time: float = 1.0
+var max_ammo: int = 3
+var current_ammo: int = 3
+var reload_time: float = 1.8
 var reload_timer: float = 0.0
 var is_reloading: bool = false
 var bounces: int = 0
@@ -68,14 +73,39 @@ var is_invulnerable: bool = false
 var ability_name: String = ""
 var ability_max_cooldown: float = 6.0
 var ability_timer: float = 0.0
-var is_barrier_active: bool = false
-var barrier_duration_timer: float = 0.0
 var shield_dome_node: Sprite2D = null
+
+# --- Standard-Block (Taste Q), fÃƒÂ¼r alle Spieler gleich ---
+# Kurzer Schutz: verhindert Schaden vollstÃƒÂ¤ndig und reflektiert Projektile.
+const BLOCK_BASE_DURATION: float = 0.5
+const BLOCK_BASE_COOLDOWN: float = 4.0
+var is_blocking: bool = false
+var block_timer: float = 0.0
+var block_duration: float = BLOCK_BASE_DURATION
+var block_cooldown: float = BLOCK_BASE_COOLDOWN
+var block_cooldown_timer: float = 0.0
+var block_reflect_damage_add: float = 0.0
+var block_knockback_radius: float = 0.0
+var block_knockback_force: float = 0.0
+var block_bomb: bool = false
+var block_bomb_damage: float = 0.0
+var block_heal_zone: bool = false
+var block_reflect: bool = true
+var block_heal_pos: Vector2 = Vector2.ZERO
+var block_heal_timer: float = 0.0
+var block_heal_tick: float = 0.0
+var block_cd_display_tenths: int = -1
 
 # Rocket Leap (Ignis)
 var is_leaping: bool = false
 var leap_timer: float = 0.0
 var leap_dir: Vector2 = Vector2.ZERO
+
+# ZusÃƒÂ¤tzliche FÃƒÂ¤higkeits-ZustÃƒÂ¤nde fÃƒÂ¼r die neuen Klassen.
+var ability_invuln_timer: float = 0.0            # Klinge (Klingensturm) / Phantom (Schattensprung)
+var heal_field_timer: float = 0.0                # Bastion
+var heal_field_tick: float = 0.0                 # Bastion
+var gravity_wells: Array = []                    # Nova: aktive SingularitÃƒÂ¤ten
 
 # Status Effects
 var poison_ticks_left: int = 0
@@ -90,7 +120,17 @@ var shield_regen_timer: float = 0.0
 var shield_regen_mult: float = 1.0
 var hp_regen: float = 0.0
 var hp_regen_timer: float = 0.0
-var barrier_duration_add: float = 0.0
+
+# --- Temporäre Powerup-Effekte aus Kisten und Random-Spawns ---
+var powerup_invuln_timer: float = 0.0
+var powerup_damage_timer: float = 0.0
+var powerup_damage_mult: float = 1.0
+var powerup_rapid_fire_timer: float = 0.0
+
+# Letzte Schadensquelle für Kill-Credit. Der Timer verhindert, dass ein lange
+# zurückliegender Treffer einen späteren Umgebungstod gutschreibt.
+var last_damage_source: Player = null
+var last_damage_timer: float = 0.0
 
 # Countdown: Eingaben sind erst nach dem Start-Countdown erlaubt.
 var control_enabled: bool = true
@@ -123,9 +163,11 @@ var fire_trail_timer: float = 0.0
 
 var drone_count: int = 0
 var drone_guardian: bool = false
+var blocker_drone_count: int = 0
+var blocker_drone_heal: bool = false
 var drones: Array[Companion] = []
 
-# Eisflächen: Quellen werden gezählt, damit angrenzende Eis-Tiles kein Flackern
+# EisflÃƒÂ¤chen: Quellen werden gezÃƒÂ¤hlt, damit angrenzende Eis-Tiles kein Flackern
 # verursachen. Bewegungsbeschleunigung und Reibung werden auf Eis reduziert.
 var ice_sources: Dictionary = {}
 var on_ice: bool = false
@@ -147,22 +189,27 @@ var remote_input: Dictionary = {
 	"shoot": false,
 	"dash": false,
 	"ability": false,
+	"block": false,
 	"aim": Vector2.RIGHT,
 }
 
 var bullet_scene = preload("res://scenes/player/bullet.tscn")
+const EFFECT_CIRCLE_TEXTURE: Texture2D = preload("res://assets/projectiles/effect_circle.png")
 
 func _ready() -> void:
 	ghost_timer.timeout.connect(_spawn_ghost_trail)
 	
-	# Shield Dome for Titan
+	# Schildwabe fÃƒÂ¼r den universellen Block.
 	shield_dome_node = Sprite2D.new()
-	shield_dome_node.texture = load("res://assets/projectiles/tile_0000.png")
-	shield_dome_node.modulate = Color(0.2, 0.7, 1.0, 0.6)
+	shield_dome_node.texture = EFFECT_CIRCLE_TEXTURE
+	shield_dome_node.modulate = Color(0.3, 0.8, 1.0, 0.7)
 	shield_dome_node.scale = Vector2(4.5, 4.5)
 	shield_dome_node.visible = false
 	add_child(shield_dome_node)
 	
+	if not Global.pig_appearance_changed.is_connected(_on_pig_appearance_changed):
+		Global.pig_appearance_changed.connect(_on_pig_appearance_changed)
+
 	apply_stats()
 	
 	if is_replica:
@@ -179,39 +226,47 @@ func _process(delta: float) -> void:
 		global_position = global_position.lerp(net_target_pos, clampf(20.0 * delta, 0.0, 1.0))
 
 func apply_stats() -> void:
-	var hero_id = Global.p1_hero_id if player_index == 1 else Global.p2_hero_id
+	var hero_id: String = Global.get_player_hero_id(player_index)
 	var hero: HeroData = Global.get_hero(hero_id)
-	var card_list = Global.p1_cards if player_index == 1 else Global.p2_cards
+	var card_list: Array = Global.get_player_cards(player_index)
 	
-	# Load hero sprite
-	var tex_path = "res://assets/characters/" + hero.sprite_tile_name
-	if ResourceLoader.exists(tex_path):
-		sprite.texture = load(tex_path)
+	_apply_pig_appearance()
 	
 	ability_name = hero.ability_name
 	ability_max_cooldown = hero.ability_cooldown
 	
-	# Base Stats. Eine Lobby-Einstellung kann die heldenspezifischen Basis-HP
-	# überschreiben; 0 bedeutet, dass der Heldenwert verwendet wird.
-	var base_hp: int = Global.base_hp_override if Global.base_hp_override > 0 else hero.base_hp
+	# Basis-HP: Der Lobby-Prozent-Faktor skaliert den Heldenwert, damit die
+	# Klassenunterschiede (z. B. Bastion 125 vs. Volt 85) erhalten bleiben.
+	var base_hp: int = Global.get_effective_base_hp(hero)
 	var base_shield = hero.base_shield
 	var hp_mult = 1.0
 	var hp_flat = 0
 	var spd_mult = 1.0
 	var jmp_mult = 1.0
+	var grav_mult = 1.0
 	var extra_jumps_total = hero.extra_jumps
 	
 	var dmg_mult = 1.0
 	var b_spd_mult = 1.0
 	var b_size_mult = 1.0
+	var b_grav_mult = 1.0
 	var fr_mult = 1.0
 	var ammo_add = 0
 	var dash_cd_mult = 1.0
 	var ability_cd_mult = 1.0
 	var reload_mult = 1.0
 	var shield_regen_stack = 1.0
-	var barrier_add = 0.0
 	var hp_regen_total = 0.0
+
+	# Block-Modifikatoren aus Karten.
+	var block_dur_add = 0.0
+	var block_cd_mult = 1.0
+	var block_kb_radius = 0.0
+	var block_kb_force = 0.0
+	var block_bomb_enabled = false
+	var block_bomb_dmg = 0.0
+	var block_heal_enabled = false
+	var block_reflect_dmg_add = 0.0
 	var size_mult = BASE_CHARACTER_SCALE
 	var poison_dmg_mult = 1.0
 	
@@ -227,7 +282,7 @@ func apply_stats() -> void:
 	kamikaze = false
 	ricochet_bonus = 0.0
 
-	# Talentbaum-Flags zurücksetzen
+	# Talentbaum-Flags zurÃƒÂ¼cksetzen
 	tower_enabled = false
 	tower_auto_spawn = false
 	tower_follow = false
@@ -244,6 +299,8 @@ func apply_stats() -> void:
 	fire_trail = false
 	drone_count = 0
 	drone_guardian = false
+	blocker_drone_count = 0
+	blocker_drone_heal = false
 	
 	# Stack Cards
 	for c in card_list:
@@ -251,17 +308,30 @@ func apply_stats() -> void:
 		hp_flat += c.max_hp_flat
 		spd_mult *= c.move_speed_mult
 		jmp_mult *= c.jump_force_mult
+		grav_mult *= c.gravity_mult
 		dmg_mult *= c.damage_mult
 		b_spd_mult *= c.bullet_speed_mult
 		b_size_mult *= c.bullet_size_mult
+		b_grav_mult *= c.projectile_gravity_mult
 		fr_mult *= c.fire_rate_mult
 		ammo_add += c.max_ammo_add
 		reload_mult *= c.reload_speed_mult
 		dash_cd_mult *= c.dash_cooldown_mult
 		ability_cd_mult *= c.ability_cooldown_mult
 		shield_regen_stack *= c.shield_regen_mult
-		barrier_add += c.barrier_duration_add
 		extra_jumps_total += c.extra_jumps_add
+
+		# Standard-Block verbessern.
+		block_dur_add += c.block_duration_add
+		block_cd_mult *= c.block_cooldown_mult
+		block_kb_radius += c.block_knockback_radius_add
+		block_kb_force += c.block_knockback_force_add
+		block_reflect_dmg_add += c.block_reflect_damage_add
+		if c.block_bomb:
+			block_bomb_enabled = true
+		block_bomb_dmg = maxf(block_bomb_dmg, c.block_bomb_damage)
+		if c.block_heal_zone:
+			block_heal_enabled = true
 		base_shield += c.shield_max_add
 		hp_regen_total += c.hp_regen_add
 		bounces += c.bounces_add
@@ -313,6 +383,9 @@ func apply_stats() -> void:
 		drone_count += c.drone_count_add
 		if c.drone_guardian:
 			drone_guardian = true
+		blocker_drone_count += c.blocker_drone_count_add
+		if c.blocker_drone_heal:
+			blocker_drone_heal = true
 	
 	max_health = (base_hp + hp_flat) * hp_mult
 	current_health = max_health
@@ -320,22 +393,49 @@ func apply_stats() -> void:
 	current_shield = max_shield
 	move_speed = hero.base_speed * spd_mult
 	jump_force = hero.base_jump_force * jmp_mult
+	gravity_mult = grav_mult
 	max_jumps = 1 + extra_jumps_total
 	jumps_remaining = max_jumps
 	
-	bullet_damage = 22.0 * dmg_mult
+	bullet_damage = Global.base_damage * dmg_mult
 	bullet_speed = 650.0 * b_spd_mult
 	bullet_size = 1.0 * b_size_mult
-	fire_rate_cooldown = maxf(0.08, 0.35 * fr_mult)
-	max_ammo = 5 + ammo_add
+	projectile_gravity_mult = maxf(0.0, b_grav_mult)
+	fire_rate_cooldown = maxf(0.08, hero.base_fire_rate_cooldown * fr_mult)
+	max_ammo = maxi(1, hero.base_ammo + ammo_add)
 	current_ammo = max_ammo
 	dash_cooldown = maxf(0.5, 1.8 * dash_cd_mult)
 	ability_max_cooldown = maxf(1.0, hero.ability_cooldown * ability_cd_mult)
-	reload_time = 1.0 / maxf(0.1, reload_mult)
+	reload_time = hero.base_reload_time / maxf(0.1, reload_mult)
 	shield_regen_mult = shield_regen_stack
-	barrier_duration_add = barrier_add
+	# Bastion-Passive "Aurora": doppelte Schild-Regeneration.
+	if hero.id == "bastion":
+		shield_regen_mult *= 2.0
 	hp_regen = hp_regen_total
+
+	# Universeller Block: Basiswerte plus Kartenboni. Dauer und Cooldown sind
+	# gedeckelt, damit gestapelte Block-Karten nicht zu dauerhafter ImmunitÃƒÂ¤t fÃƒÂ¼hren.
+	block_duration = clampf(BLOCK_BASE_DURATION + block_dur_add, 0.2, 1.5)
+	block_cooldown = maxf(2.5, BLOCK_BASE_COOLDOWN * block_cd_mult)
+	block_reflect_damage_add = block_reflect_dmg_add
+	block_knockback_radius = block_kb_radius
+	block_knockback_force = block_kb_force
+	block_bomb = block_bomb_enabled
+	block_bomb_damage = block_bomb_dmg if block_bomb_dmg > 0.0 else 30.0
+	block_heal_zone = block_heal_enabled
+	# Der Standard-Block reflektiert immer Projektile.
+	block_reflect = true
+	is_blocking = false
+	block_timer = 0.0
+	block_cooldown_timer = 0.0
+	block_heal_timer = 0.0
+	if shield_dome_node:
+		shield_dome_node.visible = false
 	hp_regen_timer = 0.0
+	powerup_invuln_timer = 0.0
+	powerup_damage_timer = 0.0
+	powerup_damage_mult = 1.0
+	powerup_rapid_fire_timer = 0.0
 	poison_damage_per_tick = 4.0 * poison_dmg_mult
 
 	tower_spawn_timer = 5.0
@@ -351,6 +451,7 @@ func apply_stats() -> void:
 	emit_signal("health_changed", current_health, max_health, current_shield, max_shield)
 	emit_signal("ammo_changed", current_ammo, max_ammo)
 	emit_signal("ability_cooldown_updated", 0.0, ability_max_cooldown)
+	emit_signal("block_state_changed", false, 0.0, block_cooldown)
 
 func _physics_process(delta: float) -> void:
 	_handle_timers(delta)
@@ -363,7 +464,7 @@ func _physics_process(delta: float) -> void:
 		var coll = move_and_collide(velocity * delta)
 		if coll or leap_timer <= 0.0:
 			is_leaping = false
-			is_invulnerable = false
+			is_invulnerable = _has_temporary_invulnerability()
 			_trigger_rocket_impact()
 		return
 	
@@ -372,25 +473,28 @@ func _physics_process(delta: float) -> void:
 		move_and_slide()
 		return
 	
-	# Shield Dome behavior (Titan)
-	if is_barrier_active and shield_dome_node:
+	# Universeller Block: Schildwabe anzeigen und Projektile reflektieren.
+	if is_blocking and shield_dome_node:
 		shield_dome_node.visible = true
 		shield_dome_node.rotation += delta * 8.0
-		# Deflect any incoming enemy bullets!
-		var bullets = get_tree().get_nodes_in_group("bullet")
-		for b in bullets:
-			if is_instance_valid(b) and b.shooter != self and global_position.distance_to(b.global_position) < 55.0:
-				b.shooter = self
-				b.target_enemy = opponent
-				b.velocity = -b.velocity * 1.3
-				b.modulate = Color(0.2, 0.8, 1.0)
-				SoundManager.play_sound("bounce", 0.3, 3.0)
+		if block_reflect:
+			for b in get_tree().get_nodes_in_group("bullet"):
+				if is_instance_valid(b) and b.shooter != self and global_position.distance_to(b.global_position) < 60.0:
+					if is_instance_valid(b.shooter) and b.shooter is Player and b.shooter.team_id == team_id:
+						continue
+					b.shooter = self
+					b.target_enemy = _valid_opponent()
+					b.velocity = -b.velocity * 1.3
+					# Konterblitz-Karte: reflektierte Projektile werden stÃƒÂ¤rker.
+					b.damage *= 1.0 + block_reflect_damage_add
+					b.modulate = Color(0.75, 0.5, 1.0)
+					SoundManager.play_sound("bounce", 0.3, 3.0)
 	elif shield_dome_node:
 		shield_dome_node.visible = false
 	
 	# Gravity & Movement
 	if not is_on_floor():
-		var grav = 980.0
+		var grav := GRAVITY * gravity_mult
 		# Wall sliding
 		if is_on_wall() and velocity.y > 0 and (Input.is_action_pressed(_act("left")) or Input.is_action_pressed(_act("right"))):
 			velocity.y = minf(velocity.y + (grav * 0.4) * delta, 150.0)
@@ -399,7 +503,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		jumps_remaining = max_jumps
 	
-	# Input Handling. Während des Start-Countdowns oder eines Betäubungs-Effekts
+	# Input Handling. WÃƒÂ¤hrend des Start-Countdowns oder eines BetÃƒÂ¤ubungs-Effekts
 	# werden keine Bewegungs-/Angriffseingaben verarbeitet.
 	if control_enabled and stun_timer <= 0.0:
 		if is_remote and not is_bot:
@@ -412,6 +516,7 @@ func _physics_process(delta: float) -> void:
 		remote_input.jump_release = false
 		remote_input.dash = false
 		remote_input.ability = false
+		remote_input.block = false
 		remote_input.shoot = false
 	
 	move_and_slide()
@@ -434,7 +539,7 @@ func _apply_disabled_input() -> void:
 	velocity.x = move_toward(velocity.x, 0, current_spd * decel_factor)
 
 func _handle_player_input(_delta: float) -> void:
-	# Move X – auf Eis wird deutlich langsamer beschleunigt und gebremst.
+	# Move X Ã¢â‚¬â€œ auf Eis wird deutlich langsamer beschleunigt und gebremst.
 	var input_x = Input.get_axis(_act("left"), _act("right"))
 	var current_spd = move_speed * (0.6 if freeze_timer > 0.0 else 1.0)
 	var accel_factor := 0.06 if on_ice else 0.25
@@ -470,10 +575,14 @@ func _handle_player_input(_delta: float) -> void:
 	if Input.is_action_pressed(_act("shoot")):
 		shoot()
 	
-	# Ability
+	# Standard-Block (Q) Ã¢â‚¬â€œ fÃƒÂ¼r alle Spieler gleich.
+	if Input.is_action_just_pressed(_act("block")):
+		start_block()
+
+	# KlassenfÃƒÂ¤higkeit (Rechtsklick / E / F).
 	var ability_pressed = Input.is_action_just_pressed(_act("ability"))
 	if player_index == 1:
-		ability_pressed = ability_pressed or Input.is_action_just_pressed("p1_ability_alt") or Input.is_action_just_pressed("p1_ability_q") or Input.is_action_just_pressed("p1_ability_f")
+		ability_pressed = ability_pressed or Input.is_action_just_pressed("p1_ability_alt") or Input.is_action_just_pressed("p1_ability_f")
 	if ability_pressed:
 		use_ability()
 
@@ -493,9 +602,11 @@ func set_remote_input(data: Dictionary) -> void:
 		remote_input.dash = true
 	if bool(data.get("ability", false)):
 		remote_input.ability = true
+	if bool(data.get("block", false)):
+		remote_input.block = true
 
-# Eisflächen melden sich hier an/ab. Mehrere Quellen gleichzeitig (z. B. zwei
-# angrenzende Eis-Tiles) werden gezählt.
+# EisflÃƒÂ¤chen melden sich hier an/ab. Mehrere Quellen gleichzeitig (z. B. zwei
+# angrenzende Eis-Tiles) werden gezÃƒÂ¤hlt.
 func add_ice_source(source: Node) -> void:
 	if source == null or not is_instance_valid(source):
 		return
@@ -536,6 +647,10 @@ func _handle_remote_input(_delta: float) -> void:
 	if remote_input.shoot:
 		shoot()
 	
+	if remote_input.block:
+		remote_input.block = false
+		start_block()
+
 	if remote_input.ability:
 		remote_input.ability = false
 		use_ability()
@@ -552,6 +667,8 @@ func apply_network_state(data: Dictionary) -> void:
 		global_position = net_target_pos
 	
 	velocity = data.get("vel", Vector2.ZERO)
+	if data.get("fur") is Color and data.get("eyes") is Color and data.get("pants") is Color:
+		sprite.setup(data["fur"], data["eyes"], data["pants"])
 	max_health = float(data.get("max_hp", max_health))
 	current_health = float(data.get("hp", current_health))
 	max_shield = float(data.get("max_shield", max_shield))
@@ -561,7 +678,21 @@ func apply_network_state(data: Dictionary) -> void:
 	ability_timer = float(data.get("ability", ability_timer))
 	ability_max_cooldown = float(data.get("ability_max", ability_max_cooldown))
 	is_reloading = bool(data.get("reload", is_reloading))
-	is_barrier_active = bool(data.get("barrier", is_barrier_active))
+	reload_timer = float(data.get("reload_timer", reload_timer))
+	reload_time = float(data.get("reload_time", reload_time))
+	dash_cooldown_timer = float(data.get("dash_cd", dash_cooldown_timer))
+	dash_cooldown = float(data.get("dash_cd_max", dash_cooldown))
+	is_blocking = bool(data.get("blocking", is_blocking))
+	block_cooldown_timer = float(data.get("block_cd", block_cooldown_timer))
+	block_cooldown = float(data.get("block_cd_max", block_cooldown))
+	powerup_invuln_timer = float(data.get("powerup_invuln", powerup_invuln_timer))
+	powerup_damage_timer = float(data.get("powerup_damage", powerup_damage_timer))
+	powerup_damage_mult = float(data.get("powerup_damage_mult", powerup_damage_mult))
+	powerup_rapid_fire_timer = float(data.get("powerup_rapid", powerup_rapid_fire_timer))
+	if powerup_invuln_timer > 0.0:
+		is_invulnerable = true
+	elif not is_dashing and not is_leaping and ability_invuln_timer <= 0.0:
+		is_invulnerable = false
 	
 	var aim_value = data.get("aim", aim_direction)
 	if aim_value is Vector2 and aim_value.length_squared() > 0.001:
@@ -576,11 +707,14 @@ func apply_network_state(data: Dictionary) -> void:
 		sprite.flip_h = false
 	
 	if shield_dome_node:
-		shield_dome_node.visible = is_barrier_active
+		shield_dome_node.visible = is_blocking
+		if is_blocking:
+			shield_dome_node.modulate = _block_dome_color()
 	
 	emit_signal("health_changed", current_health, max_health, current_shield, max_shield)
 	emit_signal("ammo_changed", current_ammo, max_ammo)
 	emit_signal("ability_cooldown_updated", ability_timer, ability_max_cooldown)
+	emit_signal("block_state_changed", is_blocking, block_cooldown_timer, block_cooldown)
 
 func jump() -> void:
 	if not control_enabled or stun_timer > 0.0:
@@ -620,10 +754,9 @@ func dash() -> void:
 		dash_dir = aim_direction.normalized()
 	
 	ghost_timer.start(0.04)
-	SoundManager.play_sound("dash", 0.2, 0.0)
 	
 	# Ignis Passive: Afterburner fire sparks
-	var hero_id = Global.p1_hero_id if player_index == 1 else Global.p2_hero_id
+	var hero_id: String = Global.get_player_hero_id(player_index)
 	if hero_id == "ignis" and opponent and is_instance_valid(opponent):
 		_spawn_fire_sparks()
 
@@ -631,32 +764,58 @@ func _spawn_ghost_trail() -> void:
 	if not is_dashing:
 		ghost_timer.stop()
 		return
-	var ghost = Sprite2D.new()
-	ghost.texture = sprite.texture
-	ghost.global_position = sprite.global_position
+	var ghost := PigCharacter.new()
+	ghost.setup(sprite.fur_color, sprite.eye_color, sprite.pants_color)
+	ghost.animate = false
+	ghost.follow_parent_motion = false
 	ghost.scale = sprite.scale * scale
 	ghost.flip_h = sprite.flip_h
 	ghost.modulate = Color(1.0, 1.0, 1.0, 0.6)
 	get_parent().add_child(ghost)
+	ghost.global_position = sprite.global_position
 	var tw = ghost.create_tween()
 	tw.tween_property(ghost, "modulate:a", 0.0, 0.2)
 	tw.tween_callback(ghost.queue_free)
 
+func _apply_pig_appearance() -> void:
+	if sprite == null:
+		return
+	var look := Global.get_pig_appearance(player_index)
+	sprite.setup(look["fur"], look["eyes"], look["pants"])
+
+func _on_pig_appearance_changed(changed_index: int) -> void:
+	if changed_index == player_index:
+		_apply_pig_appearance()
+
+func get_pig_colors() -> Dictionary:
+	if sprite == null:
+		return {}
+	return {
+		"fur": sprite.fur_color,
+		"eyes": sprite.eye_color,
+		"pants": sprite.pants_color,
+	}
+
 func shoot() -> void:
 	if not control_enabled or stun_timer > 0.0:
 		return
-	if is_reloading or fire_timer > 0.0:
+	var rapid_fire := powerup_rapid_fire_timer > 0.0
+	if is_reloading and not rapid_fire:
 		return
-	if current_ammo <= 0:
+	if fire_timer > 0.0:
+		return
+	if current_ammo <= 0 and not rapid_fire:
 		start_reload()
 		return
 	
-	fire_timer = fire_rate_cooldown
-	current_ammo -= 1
-	emit_signal("ammo_changed", current_ammo, max_ammo)
+	fire_timer = minf(0.09, fire_rate_cooldown) if rapid_fire else fire_rate_cooldown
+	if not rapid_fire:
+		current_ammo -= 1
+		emit_signal("ammo_changed", current_ammo, max_ammo)
 	
 	# Recoil Kickback
-	velocity -= aim_direction * (80.0 + bullet_damage * 1.5)
+	var effective_damage := bullet_damage * powerup_damage_mult
+	velocity -= aim_direction * (80.0 + effective_damage * 1.5)
 	
 	# Fire Projectiles (Base + Multishot)
 	var total_bullets = 1 + multishot
@@ -671,16 +830,17 @@ func shoot() -> void:
 	
 	SoundManager.play_sound("shoot", 0.2, 0.0)
 	
-	if current_ammo <= 0:
+	if current_ammo <= 0 and not rapid_fire:
 		start_reload()
 
-func _spawn_bullet(dir: Vector2) -> void:
+func _spawn_bullet(dir: Vector2) -> Bullet:
 	var b: Bullet = bullet_scene.instantiate()
 	b.global_position = muzzle.global_position
 	b.velocity = dir * bullet_speed
 	b.shooter = self
-	b.target_enemy = opponent
-	b.damage = bullet_damage
+	b.target_enemy = _valid_opponent()
+	b.damage = bullet_damage * powerup_damage_mult
+	b.projectile_gravity_mult = projectile_gravity_mult
 	b.bounces_left = bounces
 	b.homing_strength = homing
 	b.explosion_radius = explosion_radius
@@ -701,20 +861,23 @@ func _spawn_bullet(dir: Vector2) -> void:
 	b.burn_stacks = 3 if fire_shot else 0
 	b.burn_damage = burn_damage_per_tick
 	b.scale = Vector2(bullet_size, bullet_size)
+	Global.add_match_stat(player_index, "shots_fired", 1.0)
 	
-	# Tint bullet by hero color
-	if player_index == 1:
-		b.modulate = Color(1.0, 0.6, 0.3)
-	else:
-		b.modulate = Color(0.4, 0.8, 1.0)
+	# Projektile in der Heldenfarbe einfÃƒÂ¤rben (wichtig im FFA mit bis zu 6 Spielern).
+	var hero: HeroData = Global.get_hero(Global.get_player_hero_id(player_index))
+	b.modulate = hero.color_tint
 	
 	get_parent().add_child(b)
+	return b
 
 func start_reload() -> void:
 	if is_reloading:
 		return
 	is_reloading = true
 	reload_timer = reload_time
+	# Der letzte Schuss wurde bereits signalisiert, bevor der Nachladezustand
+	# aktiv war. Ein zweites Signal aktualisiert die HUD-Anzeige auf "NACHLADEN".
+	emit_signal("ammo_changed", current_ammo, max_ammo)
 	SoundManager.play_sound("click", 0.1, -6.0)
 
 func use_ability() -> void:
@@ -725,7 +888,7 @@ func use_ability() -> void:
 	ability_timer = ability_max_cooldown
 	emit_signal("ability_cooldown_updated", ability_timer, ability_max_cooldown)
 	
-	var hero_id = Global.p1_hero_id if player_index == 1 else Global.p2_hero_id
+	var hero_id: String = Global.get_player_hero_id(player_index)
 	match hero_id:
 		"ignis":
 			# Rocket Leap: Explosiver Katapultflug mit AOE-Einschlag
@@ -736,30 +899,135 @@ func use_ability() -> void:
 			leap_dir = aim_direction.normalized()
 			if leap_dir.length_squared() < 0.1:
 				leap_dir = Vector2.UP
-		"titan":
-			# Fortress Shield Barrier: Unverwundbare Kugel, die gegnerische Schüsse reflektiert
-			SoundManager.play_sound("shield", 0.2, 0.0)
-			is_barrier_active = true
-			barrier_duration_timer = 2.8 + barrier_duration_add
-			if shield_dome_node:
-				shield_dome_node.visible = true
 		"volt":
-			# Flash Blink: Blitz-Teleport mit Schockwelle & Betäubung
-			SoundManager.play_sound("dash", 0.4, 3.0)
+			# Flash Blink: Blitz-Teleport mit Schockwelle & BetÃƒÂ¤ubung
 			_perform_flash_blink()
 		"spore":
-			# Toxic Gas Cloud: Große Giftwolke + 4 Sporen-Nadeln
+			# Toxic Gas Cloud: GroÃƒÅ¸e Giftwolke + 4 Sporen-Nadeln
 			SoundManager.play_sound("poison", 0.3, 0.0)
 			_spawn_spore_cloud()
+		"nova":
+			# SingularitÃƒÂ¤t: Gravitationskern, der Gegner heranzieht und schÃƒÂ¤digt
+			_spawn_singularity()
+		"klinge":
+			# Klingensturm: Rundumschlag mit RÃƒÂ¼ckstoÃƒÅ¸ und kurzer Unverwundbarkeit
+			_blade_storm()
+		"bastion":
+			# Heilfeld: Heilt ÃƒÂ¼ber Zeit und baut Schild auf
+			_deploy_heal_field()
+		"phantom":
+			# Schattensprung: Teleport mit Treffer und kurzer Unverwundbarkeit
+			_shadow_step()
 
-	# Turm-Talent: Die Spezialfähigkeit platziert zusätzlich einen Turm.
+	# Turm-Talent: Die SpezialfÃƒÂ¤higkeit platziert zusÃƒÂ¤tzlich einen Turm.
 	if tower_enabled:
 		_spawn_tower()
+
+# ============================================================
+# Standard-Block (Taste Q)
+# ============================================================
+
+func start_block() -> void:
+	if not control_enabled or stun_timer > 0.0:
+		return
+	if is_blocking or block_cooldown_timer > 0.0:
+		return
+
+	is_blocking = true
+	block_timer = block_duration
+	block_cooldown_timer = 0.0
+	block_cd_display_tenths = -1
+	if shield_dome_node:
+		shield_dome_node.modulate = _block_dome_color()
+		shield_dome_node.visible = true
+	SoundManager.play_sound("shield", 0.2, 0.0)
+	_trigger_block_effects()
+	emit_signal("block_state_changed", true, block_cooldown_timer, block_cooldown)
+
+func _end_block() -> void:
+	is_blocking = false
+	block_timer = 0.0
+	# Der Cooldown beginnt erst nach dem Block, nicht schon beim Aktivieren.
+	block_cooldown_timer = block_cooldown
+	block_cd_display_tenths = -1
+	if shield_dome_node:
+		shield_dome_node.visible = false
+	emit_signal("block_state_changed", false, block_cooldown_timer, block_cooldown)
+
+# Karten-Effekte, die beim Aktivieren des Blocks ausgelÃƒÂ¶st werden.
+func _trigger_block_effects() -> void:
+	if block_knockback_radius > 0.0 and block_knockback_force > 0.0:
+		for p in _opponents_within(global_position, block_knockback_radius):
+			var dir: Vector2 = (p.global_position - global_position).normalized()
+			p.apply_knockback(dir * block_knockback_force)
+	if block_bomb:
+		_spawn_block_bomb()
+	if block_heal_zone:
+		_spawn_block_heal_zone()
+
+func _spawn_block_bomb() -> void:
+	SoundManager.play_sound("explosion", 0.2, 1.0)
+	var boom := Sprite2D.new()
+	boom.texture = EFFECT_CIRCLE_TEXTURE
+	boom.modulate = Color(1.0, 0.55, 0.15, 0.9)
+	get_parent().add_child(boom)
+	boom.global_position = global_position
+	var tw := boom.create_tween()
+	tw.tween_property(boom, "scale", Vector2(7.0, 7.0), 0.25)
+	tw.parallel().tween_property(boom, "modulate:a", 0.0, 0.3)
+	tw.tween_callback(boom.queue_free)
+	for p in _opponents_within(global_position, 130.0):
+		var dir: Vector2 = (p.global_position - global_position).normalized()
+		p.take_damage(block_bomb_damage, dir * 480.0, self)
+
+func _spawn_block_heal_zone() -> void:
+	block_heal_pos = global_position
+	block_heal_timer = 2.5
+	block_heal_tick = 0.0
+	var ring := Sprite2D.new()
+	ring.texture = EFFECT_CIRCLE_TEXTURE
+	ring.modulate = Color(0.35, 1.0, 0.55, 0.65)
+	get_parent().add_child(ring)
+	ring.global_position = block_heal_pos
+	var tw := ring.create_tween()
+	tw.tween_property(ring, "scale", Vector2(5.0, 5.0), 0.3)
+	tw.parallel().tween_property(ring, "modulate:a", 0.0, 2.5)
+	tw.tween_callback(ring.queue_free)
+
+# Wird auch von RÃƒÂ¼ckstoÃƒÅ¸-Karten genutzt; ein aktiver Block dÃƒÂ¤mpft den StoÃƒÅ¸.
+func apply_knockback(force: Vector2) -> void:
+	if is_blocking:
+		force *= 0.2
+	velocity += force
+
+func _block_dome_color() -> Color:
+	if block_reflect_damage_add > 0.0:
+		return Color(0.75, 0.45, 1.0, 0.75)
+	if block_bomb:
+		return Color(1.0, 0.55, 0.2, 0.75)
+	if block_knockback_radius > 0.0:
+		return Color(0.4, 0.9, 1.0, 0.75)
+	return Color(0.3, 0.8, 1.0, 0.7)
+
+func _pulse_block_shield() -> void:
+	SoundManager.play_sound("bounce", 0.2, 2.0)
+	if shield_dome_node:
+		var base_color := _block_dome_color()
+		var tw := create_tween()
+		tw.tween_property(shield_dome_node, "modulate", Color(2.0, 2.0, 2.0, 0.95), 0.05)
+		tw.tween_property(shield_dome_node, "modulate", base_color, 0.1)
+
+# Liefert nur einen gÃƒÂ¼ltigen, lebenden Gegner. Verhindert Zuweisungen an
+# bereits freigegebene Player-Objekte (z. B. nach einem Tod).
+func _valid_opponent() -> Player:
+	if is_instance_valid(opponent) and opponent.current_health > 0.0 and opponent.team_id != team_id:
+		return opponent
+	return null
 
 func _trigger_rocket_impact() -> void:
 	SoundManager.play_sound("explosion", 0.2, -2.0)
 	var shock = Sprite2D.new()
-	shock.texture = load("res://assets/projectiles/tile_0000.png")
+	shock.texture = EFFECT_CIRCLE_TEXTURE
 	shock.modulate = Color(1.0, 0.4, 0.1, 0.9)
 	get_parent().add_child(shock)
 	shock.global_position = global_position
@@ -769,16 +1037,14 @@ func _trigger_rocket_impact() -> void:
 	tw.tween_callback(shock.queue_free)
 	
 	if opponent and is_instance_valid(opponent):
-		var dist = global_position.distance_to(opponent.global_position)
-		if dist < 140.0:
+		for p in _opponents_within(global_position, 140.0):
+			var dist = global_position.distance_to(p.global_position)
 			var falloff = 1.0 - (dist / 140.0)
-			opponent.take_damage(35.0 * falloff, (opponent.global_position - global_position).normalized() * 550.0)
+			p.take_damage(35.0 * falloff, (p.global_position - global_position).normalized() * 550.0, self)
 
 func _perform_flash_blink() -> void:
 	var start_pos = global_position
-	var target_pos = global_position + (aim_direction.normalized() * 260.0)
-	target_pos.x = clampf(target_pos.x, 60.0, 1320.0)
-	target_pos.y = clampf(target_pos.y, 60.0, 720.0)
+	var target_pos = _clamp_to_map(global_position + (aim_direction.normalized() * 260.0))
 	
 	var bolt = Line2D.new()
 	bolt.width = 4.0
@@ -795,7 +1061,7 @@ func _perform_flash_blink() -> void:
 	velocity = Vector2.ZERO
 	
 	var shock = Sprite2D.new()
-	shock.texture = load("res://assets/projectiles/tile_0000.png")
+	shock.texture = EFFECT_CIRCLE_TEXTURE
 	shock.modulate = Color(1.0, 1.0, 0.2, 0.9)
 	get_parent().add_child(shock)
 	shock.global_position = target_pos
@@ -804,15 +1070,13 @@ func _perform_flash_blink() -> void:
 	tw2.parallel().tween_property(shock, "modulate:a", 0.0, 0.25)
 	tw2.tween_callback(shock.queue_free)
 	
-	if opponent and is_instance_valid(opponent):
-		var dist = global_position.distance_to(opponent.global_position)
-		if dist < 120.0:
-			opponent.take_damage(20.0, (opponent.global_position - global_position).normalized() * 300.0)
-			opponent.apply_freeze(1.2)
+	for p in _opponents_within(target_pos, 120.0):
+		p.take_damage(20.0, (p.global_position - target_pos).normalized() * 300.0, self)
+		p.apply_freeze(1.2)
 
 func _spawn_fire_sparks() -> void:
 	var spark = Sprite2D.new()
-	spark.texture = load("res://assets/projectiles/tile_0000.png")
+	spark.texture = EFFECT_CIRCLE_TEXTURE
 	spark.modulate = Color(1.0, 0.4, 0.1, 0.8)
 	get_parent().add_child(spark)
 	spark.global_position = global_position
@@ -832,7 +1096,7 @@ func _spawn_spore_cloud() -> void:
 	cloud.add_child(col)
 	
 	var cloud_sprite = Sprite2D.new()
-	cloud_sprite.texture = load("res://assets/projectiles/tile_0000.png")
+	cloud_sprite.texture = EFFECT_CIRCLE_TEXTURE
 	cloud_sprite.modulate = Color(0.3, 0.9, 0.2, 0.5)
 	cloud_sprite.scale = Vector2(7.0, 7.0)
 	cloud.add_child(cloud_sprite)
@@ -842,29 +1106,139 @@ func _spawn_spore_cloud() -> void:
 	
 	var t = cloud.create_tween()
 	t.tween_method(func(_val: float):
-		if opponent and is_instance_valid(opponent):
-			if cloud.global_position.distance_to(opponent.global_position) <= 45.0:
-				opponent.take_damage(0.15, Vector2.ZERO)
+		for p in _opponents_within(cloud.global_position, 45.0):
+			p.take_damage(0.15, Vector2.ZERO, self)
 	, 0.0, 1.0, 3.5)
 	t.parallel().tween_property(cloud_sprite, "modulate:a", 0.0, 3.5)
 	t.tween_callback(cloud.queue_free)
+
+# Liefert alle lebenden Gegner im Umkreis. Wichtig fÃƒÂ¼r FFA-Runden mit bis zu 6
+# Spielern, damit FlÃƒÂ¤chenfÃƒÂ¤higkeiten nicht nur den ersten Gegner treffen.
+func _opponents_within(pos: Vector2, radius: float) -> Array:
+	var result: Array = []
+	for p in get_tree().get_nodes_in_group("player"):
+		if p == self or not is_instance_valid(p) or p.current_health <= 0.0:
+			continue
+		if p.team_id == team_id:
+			continue
+		if pos.distance_to(p.global_position) <= radius:
+			result.append(p)
+	return result
+
+# --- Nova: SingularitÃƒÂ¤t ---
+func _spawn_singularity() -> void:
+	SoundManager.play_sound("explosion", 0.2, 2.0)
+	var center := global_position + aim_direction.normalized() * 220.0
+	center = _clamp_to_map(center)
+	var core := Sprite2D.new()
+	core.texture = EFFECT_CIRCLE_TEXTURE
+	core.modulate = Color(0.6, 0.4, 1.0, 0.9)
+	get_parent().add_child(core)
+	core.global_position = center
+	var tw = core.create_tween()
+	tw.tween_property(core, "scale", Vector2(5.5, 5.5), 0.3)
+	tw.parallel().tween_property(core, "rotation", TAU, 1.4)
+	tw.tween_interval(1.0)
+	tw.tween_property(core, "modulate:a", 0.0, 0.4)
+	tw.tween_callback(core.queue_free)
+	gravity_wells.append({"pos": center, "time": 1.6, "tick": 0.0})
+
+# --- Klinge: Klingensturm ---
+func _blade_storm() -> void:
+	SoundManager.play_sound("hit", 0.3, 2.0)
+	is_invulnerable = true
+	ability_invuln_timer = maxf(ability_invuln_timer, 0.5)
+	var spin := Sprite2D.new()
+	spin.texture = EFFECT_CIRCLE_TEXTURE
+	spin.modulate = Color(1.0, 0.35, 0.55, 0.85)
+	get_parent().add_child(spin)
+	spin.global_position = global_position
+	var tw = spin.create_tween()
+	tw.tween_property(spin, "scale", Vector2(6.5, 6.5), 0.25)
+	tw.parallel().tween_property(spin, "rotation", TAU * 2.0, 0.25)
+	tw.parallel().tween_property(spin, "modulate:a", 0.0, 0.3)
+	tw.tween_callback(spin.queue_free)
+	for p in _opponents_within(global_position, 135.0):
+		p.take_damage(bullet_damage * 1.2, (p.global_position - global_position).normalized() * 520.0, self)
+
+# --- Bastion: Heilfeld ---
+func _deploy_heal_field() -> void:
+	SoundManager.play_sound("confirm", 0.3, 0.0)
+	heal_field_timer = 4.0
+	heal_field_tick = 0.0
+	var ring := Sprite2D.new()
+	ring.texture = EFFECT_CIRCLE_TEXTURE
+	ring.modulate = Color(0.3, 0.95, 0.7, 0.7)
+	get_parent().add_child(ring)
+	ring.global_position = global_position
+	var tw = ring.create_tween()
+	tw.tween_property(ring, "scale", Vector2(5.0, 5.0), 0.4)
+	tw.parallel().tween_property(ring, "modulate:a", 0.0, 4.0)
+	tw.tween_callback(ring.queue_free)
+
+# --- Phantom: Schattensprung ---
+func _shadow_step() -> void:
+	var start := global_position
+	var target := _clamp_to_map(global_position + aim_direction.normalized() * 260.0)
+	var trail_bolt := Line2D.new()
+	trail_bolt.width = 6.0
+	trail_bolt.default_color = Color(0.45, 0.45, 0.65, 0.7)
+	trail_bolt.add_point(start)
+	trail_bolt.add_point(target)
+	get_parent().add_child(trail_bolt)
+	var tw = trail_bolt.create_tween()
+	tw.tween_property(trail_bolt, "modulate:a", 0.0, 0.25)
+	tw.tween_callback(trail_bolt.queue_free)
+	global_position = target
+	velocity = Vector2.ZERO
+	is_invulnerable = true
+	ability_invuln_timer = maxf(ability_invuln_timer, 0.9)
+	for p in _opponents_within(target, 120.0):
+		p.take_damage(bullet_damage * 1.1, (p.global_position - target).normalized() * 320.0, self)
+
+# Begrenzt eine Weltposition auf den spielbaren Kartenbereich.
+func _clamp_to_map(pos: Vector2) -> Vector2:
+	var map_w := float(LevelGenerator.MAP_WIDTH) * LevelGenerator.TILE_SIZE
+	var map_h := float(LevelGenerator.MAP_HEIGHT) * LevelGenerator.TILE_SIZE
+	return Vector2(clampf(pos.x, 60.0, map_w - 60.0), clampf(pos.y, 60.0, map_h - 60.0))
 
 func _flash_effect() -> void:
 	var tw = create_tween()
 	tw.tween_property(sprite, "modulate", Color(3.0, 3.0, 1.0), 0.08)
 	tw.tween_property(sprite, "modulate", Color.WHITE, 0.12)
 
-func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO) -> void:
-	if is_invulnerable or is_barrier_active:
+func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null) -> void:
+	# In Team-Modi gibt es kein Freundschaftsfeuer. Das gilt auch für
+	# Flächenfähigkeiten und Explosionen, deren Quelle ein Spieler ist.
+	if is_instance_valid(source) and source is Player and source != self and source.team_id == team_id:
+		return
+	# Dash, Sprung und kurze FÃƒÂ¤higkeits-Unverwundbarkeit negieren Schaden komplett.
+	if is_invulnerable:
 		SoundManager.play_sound("bounce", 0.2, 2.0)
-		if shield_dome_node:
-			var tw = create_tween()
-			tw.tween_property(shield_dome_node, "modulate", Color(1.5, 2.0, 2.5, 0.9), 0.06)
-			tw.tween_property(shield_dome_node, "modulate", Color(0.2, 0.7, 1.0, 0.6), 0.12)
+		return
+
+	# Universeller Block verhindert Schaden vollstÃƒÂ¤ndig; Projektile werden in
+	# der Physik-Schleife reflektiert.
+	if is_blocking:
+		Global.add_match_stat(player_index, "damage_blocked", amount)
+		Global.add_match_stat(player_index, "blocked_hits", 1.0)
+		Global.shake_camera(0.16)
+		_pulse_block_shield()
 		return
 	
 	shield_regen_timer = 3.5
 	hp_regen_timer = 3.0
+	# Die Schadensquelle kann inzwischen freigegeben sein (z. B. ein bereits
+	# zerstörter Schütze oder eine alte Flächeneffekt-Zone). Deshalb erst
+	# validieren und dann als Kill-Credit übernehmen.
+	if is_instance_valid(source) and source != self and source is Player:
+		last_damage_source = source
+		last_damage_timer = 8.0
+
+	var effective_damage := minf(amount, current_shield + maxf(current_health, 0.0))
+	var damage_source_index := 0
+	if is_instance_valid(source) and source is Player and source != self:
+		damage_source_index = source.player_index
 	
 	# Shield absorption
 	if current_shield > 0.0:
@@ -877,6 +1251,12 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO) -> void:
 	
 	current_health -= amount
 	velocity += knockback
+
+	if effective_damage > 0.0:
+		Global.add_match_stat(player_index, "damage_taken", effective_damage)
+		if damage_source_index > 0:
+			Global.add_match_stat(damage_source_index, "damage_dealt", effective_damage)
+		Global.shake_camera(clampf(effective_damage * 0.008, 0.06, 0.45))
 	
 	_flash_hit()
 	emit_signal("health_changed", current_health, max_health, current_shield, max_shield)
@@ -890,14 +1270,48 @@ func _flash_hit() -> void:
 	tw.tween_property(sprite, "modulate", Color.WHITE, 0.12)
 
 func heal(amount: float) -> void:
+	var before := current_health
 	current_health = minf(current_health + amount, max_health)
+	var healed := current_health - before
+	if healed > 0.0:
+		Global.add_match_stat(player_index, "healing_done", healed)
 	emit_signal("health_changed", current_health, max_health, current_shield, max_shield)
 	var tw = create_tween()
 	tw.tween_property(sprite, "modulate", Color.GREEN, 0.08)
 	tw.tween_property(sprite, "modulate", Color.WHITE, 0.12)
 
+func apply_powerup(kind: String) -> void:
+	if current_health <= 0.0:
+		return
+	match kind:
+		"heal":
+			heal(35.0)
+			_flash_powerup(Color(0.45, 1.0, 0.55, 1.0))
+		"invulnerability":
+			powerup_invuln_timer = maxf(powerup_invuln_timer, 3.0)
+			is_invulnerable = true
+			_flash_powerup(Color(0.45, 0.78, 1.0, 1.0))
+		"damage":
+			powerup_damage_timer = maxf(powerup_damage_timer, 6.0)
+			powerup_damage_mult = maxf(powerup_damage_mult, 1.65)
+			_flash_powerup(Color(1.0, 0.45, 0.25, 1.0))
+		"rapid_fire":
+			powerup_rapid_fire_timer = maxf(powerup_rapid_fire_timer, 5.0)
+			is_reloading = false
+			reload_timer = 0.0
+			current_ammo = maxi(current_ammo, 1)
+			emit_signal("ammo_changed", current_ammo, max_ammo)
+			_flash_powerup(Color(1.0, 0.86, 0.3, 1.0))
+
+func _flash_powerup(flash_color: Color) -> void:
+	if not is_instance_valid(sprite):
+		return
+	var tw := create_tween()
+	tw.tween_property(sprite, "modulate", flash_color, 0.08)
+	tw.tween_property(sprite, "modulate", Color.WHITE, 0.2)
+
 func apply_poison(stacks: int, damage_per_tick: float = 4.0) -> void:
-	# Stärkeres Gift überschreibt schwächeres, schwächeres Gift verlängert nur.
+	# StÃƒÂ¤rkeres Gift ÃƒÂ¼berschreibt schwÃƒÂ¤cheres, schwÃƒÂ¤cheres Gift verlÃƒÂ¤ngert nur.
 	poison_damage_per_tick = maxf(poison_damage_per_tick, damage_per_tick)
 	poison_ticks_left = maxi(poison_ticks_left, stacks)
 
@@ -920,7 +1334,7 @@ func flash_intro() -> void:
 		tw.tween_property(sprite, "modulate", Color(2.2, 2.2, 0.8, 0.35), 0.10)
 		tw.tween_property(sprite, "modulate", Color.WHITE, 0.10)
 
-# --- Talentbaum: Türme und Drohnen ---
+# --- Talentbaum: TÃƒÂ¼rme und Drohnen ---
 
 func _clear_drones() -> void:
 	for drone in drones:
@@ -933,13 +1347,27 @@ func _spawn_drones() -> void:
 		var drone := Companion.new()
 		drone.mode = Companion.Mode.DRONE
 		drone.owner_player = self
-		drone.target_enemy = opponent
+		drone.target_enemy = _valid_opponent()
 		drone.support = drone_guardian
 		drone.is_replica = is_replica
 		drone.orbit_radius = 48.0 + float(i) * 16.0
 		drone.orbit_speed = 1.5 + float(i) * 0.25
 		add_child(drone)
 		drones.append(drone)
+
+	# Schutzdrohnen bilden einen eigenen, weiter außen liegenden Ring. Sie
+	# schießen nicht, sondern fangen Projektile ab.
+	for i in range(blocker_drone_count):
+		var blocker := Companion.new()
+		blocker.mode = Companion.Mode.DRONE
+		blocker.owner_player = self
+		blocker.is_replica = is_replica
+		blocker.blocks_projectiles = true
+		blocker.block_heals_owner = blocker_drone_heal
+		blocker.orbit_radius = 66.0 + float(i) * 16.0
+		blocker.orbit_speed = 1.7 + float(i) * 0.22
+		add_child(blocker)
+		drones.append(blocker)
 
 func _spawn_tower() -> void:
 	if is_replica:
@@ -955,14 +1383,14 @@ func _spawn_tower() -> void:
 	var tower := Companion.new()
 	tower.mode = Companion.Mode.TOWER
 	tower.owner_player = self
-	tower.target_enemy = opponent
+	tower.target_enemy = _valid_opponent()
 	tower.follow_owner = tower_follow
 	tower.is_replica = false
 	get_parent().add_child(tower)
 	tower.global_position = global_position
 	towers.append(tower)
 
-# --- Talentbaum: Flächeneffekte ---
+# --- Talentbaum: FlÃƒÂ¤cheneffekte ---
 
 func spawn_effect_zone(kind: int, pos: Vector2, radius: float, duration: float, params: Dictionary = {}) -> void:
 	if is_replica:
@@ -970,7 +1398,7 @@ func spawn_effect_zone(kind: int, pos: Vector2, radius: float, duration: float, 
 	var zone := EffectZone.new()
 	zone.kind = kind
 	zone.owner_player = self
-	zone.target = opponent
+	zone.target = _valid_opponent()
 	zone.radius = radius
 	zone.duration = duration
 	zone.tick_interval = float(params.get("tick_interval", 0.55))
@@ -1065,16 +1493,16 @@ func trigger_chain_lightning(primary: Player, from_position: Vector2) -> void:
 		return
 	var chain_target: Player = null
 	for p in get_tree().get_nodes_in_group("player"):
-		if p != self and p != primary and is_instance_valid(p) and p.current_health > 0.0:
+		if p != self and p != primary and p.team_id != team_id and is_instance_valid(p) and p.current_health > 0.0:
 			chain_target = p
 			break
 	if chain_target == null and is_instance_valid(primary) and primary.current_health > 0.0:
-		# Im 1-gegen-1 springt der Kettenblitz auf das Primärziel zurück.
+		# Im 1-gegen-1 springt der Kettenblitz auf das PrimÃƒÂ¤rziel zurÃƒÂ¼ck.
 		chain_target = primary
 	if chain_target == null:
 		return
 
-	chain_target.take_damage(bullet_damage * 0.45)
+	chain_target.take_damage(bullet_damage * 0.45, Vector2.ZERO, self)
 	chain_target.apply_stun(0.1)
 	_spawn_lightning_arc(from_position, chain_target.global_position)
 
@@ -1097,8 +1525,9 @@ func spawn_cluster_bomblets(pos: Vector2) -> void:
 		var dir := Vector2.from_angle((TAU / 4.0) * float(i) + randf_range(-0.25, 0.25))
 		var b: Bullet = bullet_scene.instantiate()
 		b.shooter = self
-		b.target_enemy = opponent
+		b.target_enemy = _valid_opponent()
 		b.damage = bullet_damage * 0.40
+		b.projectile_gravity_mult = projectile_gravity_mult
 		b.velocity = dir * bullet_speed * 0.65
 		b.bounces_left = 1
 		b.explosion_radius = 18.0
@@ -1112,18 +1541,26 @@ func _die() -> void:
 	if kamikaze:
 		_trigger_kamikaze()
 	SoundManager.play_sound("hit", 0.3, -4.0)
+	Global.shake_camera(0.5)
 	emit_signal("died", player_index)
 	queue_free()
 
 func _trigger_kamikaze() -> void:
 	SoundManager.play_sound("explosion", 0.2, 0.0)
-	if opponent and is_instance_valid(opponent):
-		var dist = global_position.distance_to(opponent.global_position)
-		if dist < 160.0:
-			var falloff = 1.0 - (dist / 160.0)
-			opponent.take_damage(65.0 * falloff, (opponent.global_position - global_position).normalized() * 500.0)
+	for p in _opponents_within(global_position, 160.0):
+		var dist = global_position.distance_to(p.global_position)
+		var falloff = 1.0 - (dist / 160.0)
+		p.take_damage(65.0 * falloff, (p.global_position - global_position).normalized() * 500.0, self)
+
+func _has_temporary_invulnerability() -> bool:
+	return is_dashing or is_leaping or ability_invuln_timer > 0.0 or powerup_invuln_timer > 0.0
 
 func _handle_timers(delta: float) -> void:
+	if last_damage_timer > 0.0:
+		last_damage_timer -= delta
+		if last_damage_timer <= 0.0:
+			last_damage_source = null
+
 	if fire_timer > 0.0:
 		fire_timer -= delta
 	
@@ -1141,7 +1578,7 @@ func _handle_timers(delta: float) -> void:
 		dash_timer -= delta
 		if dash_timer <= 0.0:
 			is_dashing = false
-			is_invulnerable = false
+			is_invulnerable = _has_temporary_invulnerability()
 	
 	if ability_timer > 0.0:
 		ability_timer -= delta
@@ -1151,11 +1588,75 @@ func _handle_timers(delta: float) -> void:
 		else:
 			emit_signal("ability_cooldown_updated", ability_timer, ability_max_cooldown)
 	
-	if is_barrier_active:
-		barrier_duration_timer -= delta
-		if barrier_duration_timer <= 0.0:
-			is_barrier_active = false
-			modulate = Color.WHITE
+	# Standard-Block: Dauer und Cooldown verwalten.
+	if is_blocking:
+		block_timer -= delta
+		if block_timer <= 0.0:
+			_end_block()
+	if block_cooldown_timer > 0.0:
+		block_cooldown_timer = maxf(0.0, block_cooldown_timer - delta)
+	# HUD nur ~10x pro Sekunde aktualisieren, nicht jeden Frame.
+	var block_tenths := int(ceil(block_cooldown_timer * 10.0))
+	if block_tenths != block_cd_display_tenths:
+		block_cd_display_tenths = block_tenths
+		emit_signal("block_state_changed", is_blocking, block_cooldown_timer, block_cooldown)
+
+	# Heilzone aus dem Block-Kartenpfad.
+	if block_heal_timer > 0.0:
+		block_heal_timer -= delta
+		block_heal_tick -= delta
+		if block_heal_tick <= 0.0:
+			block_heal_tick = 0.5
+			if global_position.distance_to(block_heal_pos) <= 110.0:
+				heal(6.0)
+
+	# Kurze Unverwundbarkeit durch Klingensturm / Schattensprung.
+	if ability_invuln_timer > 0.0:
+		ability_invuln_timer -= delta
+		if ability_invuln_timer <= 0.0 and not is_dashing and not is_leaping:
+			is_invulnerable = _has_temporary_invulnerability()
+
+	if powerup_invuln_timer > 0.0:
+		powerup_invuln_timer = maxf(0.0, powerup_invuln_timer - delta)
+		if powerup_invuln_timer <= 0.0:
+			is_invulnerable = _has_temporary_invulnerability()
+
+	if powerup_damage_timer > 0.0:
+		powerup_damage_timer = maxf(0.0, powerup_damage_timer - delta)
+		if powerup_damage_timer <= 0.0:
+			powerup_damage_mult = 1.0
+
+	if powerup_rapid_fire_timer > 0.0:
+		powerup_rapid_fire_timer = maxf(0.0, powerup_rapid_fire_timer - delta)
+
+	# Bastion-Heilfeld: heilt und lÃƒÂ¤dt Schild ÃƒÂ¼ber einige Sekunden auf.
+	if heal_field_timer > 0.0:
+		heal_field_timer -= delta
+		heal_field_tick -= delta
+		if heal_field_tick <= 0.0:
+			heal_field_tick = 0.5
+			heal(8.0)
+			if max_shield > 0.0 and current_shield < max_shield:
+				current_shield = minf(current_shield + 10.0, max_shield)
+				emit_signal("health_changed", current_health, max_health, current_shield, max_shield)
+
+	# Nova-SingularitÃƒÂ¤ten: ziehen Gegner heran und schÃƒÂ¤digen sie.
+	if not gravity_wells.is_empty():
+		for i in range(gravity_wells.size() - 1, -1, -1):
+			var well: Dictionary = gravity_wells[i]
+			well["time"] = float(well["time"]) - delta
+			well["tick"] = float(well["tick"]) - delta
+			var well_pos: Vector2 = well["pos"]
+			for p in _opponents_within(well_pos, 250.0):
+				var to_center: Vector2 = well_pos - p.global_position
+				if to_center.length() > 10.0:
+					p.velocity += to_center.normalized() * 900.0 * delta
+			if float(well["tick"]) <= 0.0:
+				well["tick"] = 0.35
+				for p in _opponents_within(well_pos, 130.0):
+					p.take_damage(6.0)
+			if float(well["time"]) <= 0.0:
+				gravity_wells.remove_at(i)
 	
 	if freeze_timer > 0.0:
 		freeze_timer -= delta
@@ -1180,7 +1681,7 @@ func _handle_timers(delta: float) -> void:
 			burn_ticks_left -= 1
 			take_damage(burn_damage_per_tick)
 
-	# Turm-Talent: automatisch neue Türme erzeugen.
+	# Turm-Talent: automatisch neue TÃƒÂ¼rme erzeugen.
 	if tower_enabled and tower_auto_spawn:
 		tower_spawn_timer -= delta
 		if tower_spawn_timer <= 0.0:

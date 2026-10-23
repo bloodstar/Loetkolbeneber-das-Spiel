@@ -1,12 +1,17 @@
 class_name Bullet
 extends CharacterBody2D
 
+# Normale Projektile fallen leicht. Karten können diesen Wert über
+# projectile_gravity_mult verstärken (Mörser) oder abschwächen (flache Schüsse).
+const BULLET_GRAVITY: float = 90.0
+
 var shooter: Node2D = null
 var target_enemy: Node2D = null
 
 var damage: float = 20.0
 var max_lifetime: float = 4.0
 var lifetime: float = 0.0
+var projectile_gravity_mult: float = 1.0
 
 var bounces_left: int = 0
 var homing_strength: float = 0.0
@@ -36,6 +41,10 @@ var net_id: int = 0
 var is_replica: bool = false
 var net_target_pos: Vector2 = Vector2.ZERO
 var net_target_rotation: float = 0.0
+var blocked_by_drone: bool = false
+
+var trail: Line2D = null
+var _trail_points: PackedVector2Array = PackedVector2Array()
 
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -44,6 +53,8 @@ func _ready() -> void:
 	if net_id == 0:
 		net_id = _next_net_id
 		_next_net_id += 1
+
+	_build_trail()
 	
 	if is_replica:
 		collision_layer = 0
@@ -54,8 +65,41 @@ func _ready() -> void:
 	
 	add_to_group("bullet")
 	# Ignore shooter collision initially
-	if shooter:
+	if is_instance_valid(shooter):
 		add_collision_exception_with(shooter)
+
+func _build_trail() -> void:
+	trail = Line2D.new()
+	trail.name = "Trail"
+	trail.top_level = true
+	trail.width = 5.0
+	trail.antialiased = true
+	trail.z_index = -2
+	trail.joint_mode = Line2D.LINE_JOINT_ROUND
+	trail.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	trail.end_cap_mode = Line2D.LINE_CAP_ROUND
+	add_child(trail)
+	_trail_points = PackedVector2Array([global_position])
+	trail.points = _trail_points
+	_update_trail_color()
+
+func _update_trail_color() -> void:
+	if trail == null:
+		return
+	var c := modulate
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(c.r, c.g, c.b, 0.0))
+	gradient.set_color(1, Color(c.r, c.g, c.b, 0.65))
+	trail.gradient = gradient
+
+func _advance_trail() -> void:
+	if trail == null:
+		return
+	if _trail_points.is_empty() or _trail_points[_trail_points.size() - 1].distance_to(global_position) > 1.0:
+		_trail_points.append(global_position)
+	while _trail_points.size() > 9:
+		_trail_points.remove_at(0)
+	trail.points = _trail_points
 
 func _process(delta: float) -> void:
 	if not is_replica:
@@ -65,6 +109,7 @@ func _process(delta: float) -> void:
 	else:
 		global_position = global_position.lerp(net_target_pos, clampf(25.0 * delta, 0.0, 1.0))
 	rotation = lerp_angle(rotation, net_target_rotation, clampf(20.0 * delta, 0.0, 1.0))
+	_advance_trail()
 
 # Wird auf dem Client pro Snapshot aufgerufen (keine Kollisionen/Physik).
 func apply_network_state(data: Dictionary) -> void:
@@ -76,13 +121,20 @@ func apply_network_state(data: Dictionary) -> void:
 	var col = data.get("color", Color.WHITE)
 	if col is Color:
 		modulate = col
+		_update_trail_color()
 
 func _physics_process(delta: float) -> void:
+	if blocked_by_drone:
+		return
 	lifetime += delta
 	if lifetime >= max_lifetime:
 		_explode_and_destroy()
 		return
 	
+	# Leichte Schwerkraft: Die Flugbahn wird zum Bogen. Mörser-Karten
+	# verstärken den Fall, Präzisionskarten flachen ihn ab.
+	velocity.y += BULLET_GRAVITY * maxf(0.0, projectile_gravity_mult) * delta
+
 	# Homing steering
 	if homing_strength > 0.0 and target_enemy and is_instance_valid(target_enemy):
 		var desired_dir = (target_enemy.global_position - global_position).normalized()
@@ -94,8 +146,22 @@ func _physics_process(delta: float) -> void:
 		rotation = velocity.angle()
 	
 	var collision = move_and_collide(velocity * delta)
+	_advance_trail()
 	if collision:
 		_handle_collision(collision)
+
+# Wird von einer Schutzdrohne aufgerufen. Das Projektil verschwindet ohne
+# Explosion, Flächeneffekt oder Trefferzählung; die Drohne übernimmt Heilung
+# und Statistik. Der Rückgabewert verhindert doppeltes Blocken im selben Frame.
+func block_by_drone() -> bool:
+	if blocked_by_drone or is_replica:
+		return false
+	blocked_by_drone = true
+	set_physics_process(false)
+	if is_instance_valid(collision_shape):
+		collision_shape.set_deferred("disabled", true)
+	queue_free()
+	return true
 
 func _handle_collision(collision: KinematicCollision2D) -> void:
 	var collider = collision.get_collider()
@@ -106,6 +172,18 @@ func _handle_collision(collision: KinematicCollision2D) -> void:
 		_explode_and_destroy()
 		return
 	
+	# Treffer auf bewegliche Map-Objekte (Fässer / TNT)
+	if collider.has_method("hit_barrel"):
+		collider.hit_barrel(self)
+		_explode_and_destroy()
+		return
+
+	# Holzkisten zerbrechen nach mehreren Treffern.
+	if collider.has_method("hit_crate"):
+		collider.hit_crate(self)
+		_explode_and_destroy()
+		return
+
 	# Hit mystery block
 	if collider.has_method("hit_block"):
 		collider.hit_block(self)
@@ -114,9 +192,17 @@ func _handle_collision(collision: KinematicCollision2D) -> void:
 	
 	# Hit a player
 	if collider is CharacterBody2D and collider != shooter:
+		var shooter_is_player := is_instance_valid(shooter) and shooter is Player
+		if collider is Player and shooter_is_player and collider.team_id == shooter.team_id:
+			# Teammitglieder blocken das Projektil körperlich, nehmen aber
+			# weder Schaden noch werden sie als Treffer gezählt.
+			_explode_and_destroy()
+			return
 		if collider.has_method("take_damage"):
+			if shooter_is_player:
+				Global.add_match_stat(shooter.player_index, "shots_hit", 1.0)
 			var knockback = velocity.normalized() * (150.0 + damage * 2.0)
-			collider.take_damage(damage, knockback)
+			collider.take_damage(damage, knockback, shooter)
 			
 			if poison_stacks > 0 and collider.has_method("apply_poison"):
 				collider.apply_poison(poison_stacks, poison_damage)
@@ -126,9 +212,9 @@ func _handle_collision(collision: KinematicCollision2D) -> void:
 				collider.apply_stun(stun_duration)
 			if burn_stacks > 0 and collider.has_method("apply_burn"):
 				collider.apply_burn(burn_stacks, burn_damage)
-			if chain_lightning and shooter and is_instance_valid(shooter) and shooter.has_method("trigger_chain_lightning"):
+			if chain_lightning and is_instance_valid(shooter) and shooter.has_method("trigger_chain_lightning"):
 				shooter.trigger_chain_lightning(collider, global_position)
-			if lifesteal_percent > 0.0 and shooter and is_instance_valid(shooter) and shooter.has_method("heal"):
+			if lifesteal_percent > 0.0 and is_instance_valid(shooter) and shooter.has_method("heal"):
 				shooter.heal(damage * lifesteal_percent)
 			
 			SoundManager.play_sound("hit", 0.2, 2.0)
@@ -158,7 +244,7 @@ func _explode_and_destroy() -> void:
 	queue_free()
 
 func _spawn_impact_effects() -> void:
-	if not shooter or not is_instance_valid(shooter):
+	if not is_instance_valid(shooter):
 		return
 	var impact_pos := global_position
 
@@ -175,6 +261,7 @@ func _spawn_impact_effects() -> void:
 
 func _trigger_aoe_explosion() -> void:
 	SoundManager.play_sound("explosion", 0.2, 0.0)
+	Global.shake_camera(clampf(explosion_radius / 180.0, 0.12, 0.45))
 	var space_state = get_world_2d().direct_space_state
 	var query = PhysicsShapeQueryParameters2D.new()
 	var circle = CircleShape2D.new()
@@ -190,11 +277,11 @@ func _trigger_aoe_explosion() -> void:
 			var dist = global_position.distance_to(body.global_position)
 			var falloff = clampf(1.0 - (dist / explosion_radius), 0.3, 1.0)
 			var knock = (body.global_position - global_position).normalized() * 300.0
-			body.take_damage(damage * 0.8 * falloff, knock)
+			body.take_damage(damage * 0.8 * falloff, knock, shooter)
 	
 	# Visual ring explosion
 	var ring = Sprite2D.new()
-	ring.texture = load("res://assets/projectiles/tile_0000.png")
+	ring.texture = load("res://assets/projectiles/effect_circle.png")
 	ring.modulate = Color(1.0, 0.6, 0.1, 0.8)
 	get_parent().add_child(ring)
 	ring.global_position = global_position

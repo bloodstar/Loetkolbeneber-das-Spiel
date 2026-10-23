@@ -3,6 +3,19 @@ extends Node
 var all_cards: Array[CardData] = []
 var cards_by_id: Dictionary = {}
 
+# Farben für den äußeren Kartenrahmen. Die Effektfarbe einer Karte bleibt in
+# CardData.color und bestimmt den inneren Rahmen.
+const RARITY_COLORS: Dictionary = {
+	"Common": Color(0.72, 0.76, 0.82),
+	"Uncommon": Color(0.35, 0.85, 0.45),
+	"Rare": Color(0.30, 0.60, 1.0),
+	"Epic": Color(0.72, 0.40, 1.0),
+	"Legendary": Color(1.0, 0.68, 0.12),
+}
+
+func get_rarity_color(rarity: String) -> Color:
+	return RARITY_COLORS.get(rarity, Color(0.72, 0.76, 0.82))
+
 func _ready() -> void:
 	_init_database()
 
@@ -281,20 +294,24 @@ func _init_database() -> void:
 	var n3 = CardData.new()
 	n3.id = "leichtfuessig"
 	n3.title = "Leichtfüßig"
-	n3.description = "Schneller auf den Beinen.\n+12% Bewegungstempo."
+	n3.description = "Leichter und flinker.\n+5% Bewegungstempo, -10% Schwerkraft."
 	n3.rarity = "Common"
 	n3.color = Color(0.35, 0.85, 0.90)
-	n3.move_speed_mult = 1.12
+	n3.move_speed_mult = 1.05
+	n3.gravity_mult = 0.90
 	_register(n3)
 
 	var n4 = CardData.new()
 	n4.id = "windschuhe"
 	n4.title = "Windschuhe"
-	n4.description = "Flott unterwegs.\n+18% Bewegungstempo, +10% Sprungkraft."
+	n4.description = "Leichte-Schuhe-Ausbau: Flott unterwegs.\n+18% Bewegungstempo, +10% Sprungkraft."
 	n4.rarity = "Common"
 	n4.color = Color(0.30, 0.80, 0.75)
 	n4.move_speed_mult = 1.18
 	n4.jump_force_mult = 1.10
+	n4.family_id = "leichte_schuhe"
+	n4.parent_card_id = "leichte_schuhe"
+	n4.evolution_branch = "A"
 	_register(n4)
 
 	var n5 = CardData.new()
@@ -454,6 +471,29 @@ func _init_database() -> void:
 	n20.bounces_add = 3
 	n20.bullet_speed_mult = 1.12
 	_register(n20)
+
+	# Projektil-Schwerkraft: flache Präzisionsschüsse oder fallende Wucht.
+	var ug1 = CardData.new()
+	ug1.id = "leichtes_geschoss"
+	ug1.title = "Leichtes Geschoss"
+	ug1.description = "Flache, schnelle Flugbahn.\n+10% Schaden, -35% Projektil-Schwerkraft, +10% Projektilgeschwindigkeit."
+	ug1.rarity = "Uncommon"
+	ug1.color = Color(0.35, 0.90, 1.00)
+	ug1.damage_mult = 1.10
+	ug1.projectile_gravity_mult = 0.65
+	ug1.bullet_speed_mult = 1.10
+	_register(ug1)
+
+	var ug2 = CardData.new()
+	ug2.id = "schweres_geschoss"
+	ug2.title = "Schweres Geschoss"
+	ug2.description = "Wuchtige, fallende Geschosse.\n+20% Schaden, +45% Projektil-Schwerkraft, +10% Projektilgröße."
+	ug2.rarity = "Uncommon"
+	ug2.color = Color(0.90, 0.55, 0.25)
+	ug2.damage_mult = 1.20
+	ug2.projectile_gravity_mult = 1.45
+	ug2.bullet_size_mult = 1.10
+	_register(ug2)
 
 	# --- Rare ---
 	var n21 = CardData.new()
@@ -819,8 +859,8 @@ func _init_database() -> void:
 
 	var db3 = CardData.new()
 	db3.id = "waechterdrohne_schild"
-	db3.title = "Schutzdrohne"
-	db3.description = "Wächterdrohnen-Ausbau: Deine Drohnen regenerieren zusätzlich deine Lebenspunkte."
+	db3.title = "Regenerationsdrohne"
+	db3.description = "Wächterdrohnen-Ausbau: Deine Drohnen regenerieren laufend deine Lebenspunkte."
 	db3.rarity = "Epic"
 	db3.color = Color(0.55, 0.85, 1.00)
 	db3.family_id = "waechterdrohne"
@@ -828,6 +868,91 @@ func _init_database() -> void:
 	db3.evolution_branch = "B"
 	db3.drone_guardian = true
 	_register(db3)
+
+	# --- Schutzdrohne ---
+	# Eigene Familie: Schutzdrohnen schießen nicht, sondern fangen gegnerische
+	# Projektile ab. Ausbau A heilt um den abgefangenen Schaden, Ausbau B
+	# verstärkt den Schwarm um zwei weitere Drohnen.
+	var sd1 = CardData.new()
+	sd1.id = "schutzdrohne"
+	sd1.title = "Schutzdrohne"
+	sd1.description = "Eine Schutzdrohne umkreist dich und fängt gegnerische Schüsse ab."
+	sd1.rarity = "Rare"
+	sd1.pool = "Defensive"
+	sd1.color = Color(0.45, 0.90, 1.00)
+	sd1.family_id = "schutzdrohne"
+	sd1.blocker_drone_count_add = 1
+	_register(sd1)
+
+	var sd2 = CardData.new()
+	sd2.id = "schutzdrohne_heilung"
+	sd2.title = "Heilende Schutzdrohne"
+	sd2.description = "Schutzdrohnen-Ausbau: Heilt dich um den Schaden abgefangener Schüsse."
+	sd2.rarity = "Epic"
+	sd2.color = Color(0.35, 1.00, 0.65)
+	sd2.family_id = "schutzdrohne"
+	sd2.parent_card_id = "schutzdrohne"
+	sd2.evolution_branch = "A"
+	sd2.blocker_drone_heal = true
+	_register(sd2)
+
+	var sd3 = CardData.new()
+	sd3.id = "schutzdrohne_schwarm"
+	sd3.title = "Schutzdrohnen-Schwarm"
+	sd3.description = "Schutzdrohnen-Ausbau: Zwei weitere Schutzdrohnen kreisen um dich."
+	sd3.rarity = "Epic"
+	sd3.color = Color(0.30, 0.75, 1.00)
+	sd3.family_id = "schutzdrohne"
+	sd3.parent_card_id = "schutzdrohne"
+	sd3.evolution_branch = "B"
+	sd3.blocker_drone_count_add = 2
+	_register(sd3)
+
+	# --- Mörser ---
+	# Der Mörser tauscht eine flache Flugbahn gegen schwere, bogenförmige
+	# Geschosse mit Flächenschaden. Ausbau A flacht den Bogen wieder ab,
+	# Ausbau B macht ihn steiler und explosionsstärker.
+	var mg1 = CardData.new()
+	mg1.id = "moerser"
+	mg1.title = "Mörser"
+	mg1.description = "Schwere, bogenförmige Geschosse.\n+80% Projektil-Schwerkraft, +25% Schaden, +18px Explosionsradius."
+	mg1.rarity = "Rare"
+	mg1.color = Color(0.95, 0.55, 0.15)
+	mg1.family_id = "moerser"
+	mg1.projectile_gravity_mult = 1.80
+	mg1.damage_mult = 1.25
+	mg1.explosion_radius_add = 18.0
+	mg1.bullet_size_mult = 1.15
+	_register(mg1)
+
+	var mg2 = CardData.new()
+	mg2.id = "moerser_praezision"
+	mg2.title = "Präzisionsmörser"
+	mg2.description = "Mörser-Ausbau: Flachere, schnellere Geschosse.\n+30% Schaden, -45% Projektil-Schwerkraft, +20% Projektilgeschwindigkeit."
+	mg2.rarity = "Epic"
+	mg2.color = Color(0.55, 0.85, 1.00)
+	mg2.family_id = "moerser"
+	mg2.parent_card_id = "moerser"
+	mg2.evolution_branch = "A"
+	mg2.projectile_gravity_mult = 0.55
+	mg2.damage_mult = 1.30
+	mg2.bullet_speed_mult = 1.20
+	mg2.explosion_radius_add = 8.0
+	_register(mg2)
+
+	var mg3 = CardData.new()
+	mg3.id = "moerser_belagerung"
+	mg3.title = "Belagerungsmörser"
+	mg3.description = "Mörser-Ausbau: Extrem steile Geschosse.\n+40% Schaden, +50% Projektil-Schwerkraft, +30px Explosionsradius."
+	mg3.rarity = "Epic"
+	mg3.color = Color(1.00, 0.35, 0.10)
+	mg3.family_id = "moerser"
+	mg3.parent_card_id = "moerser"
+	mg3.evolution_branch = "B"
+	mg3.projectile_gravity_mult = 1.50
+	mg3.damage_mult = 1.40
+	mg3.explosion_radius_add = 30.0
+	_register(mg3)
 
 	# ============================================================
 	# Klassenspezifische Upgrade-Karten
@@ -870,43 +995,6 @@ func _init_database() -> void:
 	i3.bullet_speed_mult = 1.25
 	i3.ability_cooldown_mult = 0.85
 	_register(i3)
-
-	# --- Titan: Armored Brawler ---
-	var t1 = CardData.new()
-	t1.id = "titan_bulwark"
-	t1.title = "Bollwerk"
-	t1.description = "Titan: +50 Schild, +25 Max HP, -10% Tempo."
-	t1.rarity = "Rare"
-	t1.color = Color(0.3, 0.65, 1.0)
-	t1.hero_id = "titan"
-	t1.shield_max_add = 50
-	t1.max_hp_flat = 25
-	t1.move_speed_mult = 0.90
-	_register(t1)
-
-	var t2 = CardData.new()
-	t2.id = "titan_reactive_armor"
-	t2.title = "Reaktive Panzerung"
-	t2.description = "Titan: +30 Schild, +60% Schild-Regeneration, +20% Max HP."
-	t2.rarity = "Epic"
-	t2.color = Color(0.2, 0.5, 0.9)
-	t2.hero_id = "titan"
-	t2.shield_max_add = 30
-	t2.shield_regen_mult = 1.60
-	t2.max_hp_mult = 1.20
-	_register(t2)
-
-	var t3 = CardData.new()
-	t3.id = "titan_fortress"
-	t3.title = "Festungsprotokoll"
-	t3.description = "Titan: +1.5s Barriere-Dauer, -20% Ability-Cooldown, +15% Schaden."
-	t3.rarity = "Epic"
-	t3.color = Color(0.4, 0.75, 1.0)
-	t3.hero_id = "titan"
-	t3.barrier_duration_add = 1.5
-	t3.ability_cooldown_mult = 0.80
-	t3.damage_mult = 1.15
-	_register(t3)
 
 	# --- Volt: Hyper Speedster ---
 	var v1 = CardData.new()
@@ -981,9 +1069,852 @@ func _init_database() -> void:
 	s3.lifesteal_percent_add = 0.15
 	_register(s3)
 
+	# ============================================================
+	# Zusätzliche Basis-Karten (Common / Uncommon)
+	# ============================================================
+
+	# --- Common ---
+	var bc1 = CardData.new()
+	bc1.id = "zaeher_kern"
+	bc1.title = "Zäher Kern"
+	bc1.description = "Robuster Körperbau.\n+12% Max HP."
+	bc1.rarity = "Common"
+	bc1.color = Color(0.30, 0.80, 0.42)
+	bc1.max_hp_mult = 1.12
+	_register(bc1)
+
+	var bc2 = CardData.new()
+	bc2.id = "ausdauer_lunge"
+	bc2.title = "Ausdauerlunge"
+	bc2.description = "Mehr Sprungkraft.\n+12% Sprungkraft."
+	bc2.rarity = "Common"
+	bc2.color = Color(0.60, 0.85, 0.55)
+	bc2.jump_force_mult = 1.12
+	_register(bc2)
+
+	var bc3 = CardData.new()
+	bc3.id = "leichte_schuhe"
+	bc3.title = "Leichte Schuhe"
+	bc3.description = "Flotter unterwegs.\n+10% Bewegungstempo."
+	bc3.rarity = "Common"
+	bc3.color = Color(0.35, 0.80, 0.90)
+	bc3.move_speed_mult = 1.10
+	_register(bc3)
+
+	var bc4 = CardData.new()
+	bc4.id = "scharfschuetze"
+	bc4.title = "Scharfschütze"
+	bc4.description = "Schnellere Geschosse.\n+12% Projektilgeschwindigkeit."
+	bc4.rarity = "Common"
+	bc4.color = Color(0.30, 0.85, 0.95)
+	bc4.bullet_speed_mult = 1.12
+	_register(bc4)
+
+	var bc5 = CardData.new()
+	bc5.id = "grosses_magazin"
+	bc5.title = "Großes Magazin"
+	bc5.description = "Mehr Munition.\n+1 Max Munition."
+	bc5.rarity = "Common"
+	bc5.color = Color(0.90, 0.75, 0.30)
+	bc5.max_ammo_add = 1
+	_register(bc5)
+
+	var bc6 = CardData.new()
+	bc6.id = "schnelle_haende"
+	bc6.title = "Schnelle Hände"
+	bc6.description = "Zügigerer Abzug.\n+12% Feuerrate."
+	bc6.rarity = "Common"
+	bc6.color = Color(0.95, 0.65, 0.25)
+	bc6.fire_rate_mult = 0.88
+	_register(bc6)
+
+	var bc7 = CardData.new()
+	bc7.id = "federkern"
+	bc7.title = "Federkern"
+	bc7.description = "Kürzere Erholung.\n-12% Dash-Cooldown."
+	bc7.rarity = "Common"
+	bc7.color = Color(0.85, 0.80, 0.40)
+	bc7.dash_cooldown_mult = 0.88
+	_register(bc7)
+
+	var bc8 = CardData.new()
+	bc8.id = "panzerplatte"
+	bc8.title = "Panzerplatte"
+	bc8.description = "Extra Schutz.\n+12 Schild."
+	bc8.rarity = "Common"
+	bc8.color = Color(0.45, 0.70, 0.95)
+	bc8.shield_max_add = 12
+	_register(bc8)
+
+	var bc9 = CardData.new()
+	bc9.id = "grobkaliber"
+	bc9.title = "Grobkaliber"
+	bc9.description = "Größere Projektile.\n+15% Projektilgröße."
+	bc9.rarity = "Common"
+	bc9.color = Color(0.85, 0.55, 0.30)
+	bc9.bullet_size_mult = 1.15
+	_register(bc9)
+
+	var bc10 = CardData.new()
+	bc10.id = "stabilisator"
+	bc10.title = "Stabilisator"
+	bc10.description = "Etwas mehr Abpraller.\n+1 Abpraller, +8% Projektilgröße."
+	bc10.rarity = "Common"
+	bc10.color = Color(0.70, 0.85, 0.35)
+	bc10.bounces_add = 1
+	bc10.bullet_size_mult = 1.08
+	_register(bc10)
+
+	var bc11 = CardData.new()
+	bc11.id = "frostartig"
+	bc11.title = "Frostartig"
+	bc11.description = "Leichte Verlangsamung.\n+0,4s Einfrierdauer."
+	bc11.rarity = "Common"
+	bc11.color = Color(0.50, 0.85, 0.95)
+	bc11.freeze_duration_add = 0.4
+	_register(bc11)
+
+	var bc12 = CardData.new()
+	bc12.id = "giftkapsel"
+	bc12.title = "Giftkapsel"
+	bc12.description = "Schwaches Gift.\n+1 Gift-Stapel, +10% Giftschaden."
+	bc12.rarity = "Common"
+	bc12.color = Color(0.45, 0.90, 0.30)
+	bc12.poison_stacks_add = 1
+	bc12.poison_damage_mult = 1.10
+	_register(bc12)
+
+	var bc13 = CardData.new()
+	bc13.id = "wendig"
+	bc13.title = "Wendig"
+	bc13.description = "Beweglich in alle Richtungen.\n+8% Tempo, +6% Sprungkraft."
+	bc13.rarity = "Common"
+	bc13.color = Color(0.40, 0.85, 0.75)
+	bc13.move_speed_mult = 1.08
+	bc13.jump_force_mult = 1.06
+	_register(bc13)
+
+	var bc14 = CardData.new()
+	bc14.id = "kompaktkern"
+	bc14.title = "Kompaktkern"
+	bc14.description = "Kleineres Ziel.\n10% kleinere Spielfigur."
+	bc14.rarity = "Common"
+	bc14.color = Color(0.55, 0.75, 0.95)
+	bc14.body_size_mult = 0.90
+	_register(bc14)
+
+	var bc15 = CardData.new()
+	bc15.id = "treffsicher"
+	bc15.title = "Treffsicher"
+	bc15.description = "Kräftigere Treffer.\n+10% Schaden."
+	bc15.rarity = "Common"
+	bc15.color = Color(0.95, 0.45, 0.30)
+	bc15.damage_mult = 1.10
+	_register(bc15)
+
+	var bc16 = CardData.new()
+	bc16.id = "ausweichrolle"
+	bc16.title = "Ausweichrolle"
+	bc16.description = "Schneller wieder bereit.\n-15% Dash-Cooldown, +6% Tempo."
+	bc16.rarity = "Common"
+	bc16.color = Color(0.75, 0.85, 0.45)
+	bc16.dash_cooldown_mult = 0.85
+	bc16.move_speed_mult = 1.06
+	bc16.required_mechanic = "dash"
+	_register(bc16)
+
+	var bc17 = CardData.new()
+	bc17.id = "hartschale"
+	bc17.title = "Hartschale"
+	bc17.description = "Mehr Schild.\n+20 Schild."
+	bc17.rarity = "Common"
+	bc17.color = Color(0.40, 0.65, 0.90)
+	bc17.shield_max_add = 20
+	_register(bc17)
+
+	var bc18 = CardData.new()
+	bc18.id = "schnellfeuer"
+	bc18.title = "Schnellfeuer"
+	bc18.description = "Dauerfeuer.\n+18% Feuerrate."
+	bc18.rarity = "Common"
+	bc18.color = Color(0.95, 0.70, 0.20)
+	bc18.fire_rate_mult = 0.82
+	_register(bc18)
+
+	var bc19 = CardData.new()
+	bc19.id = "federgewicht"
+	bc19.title = "Federgewicht"
+	bc19.description = "Leicht und schnell.\n+8% Tempo, 5% kleinere Spielfigur."
+	bc19.rarity = "Common"
+	bc19.color = Color(0.50, 0.80, 0.95)
+	bc19.move_speed_mult = 1.08
+	bc19.body_size_mult = 0.95
+	_register(bc19)
+
+	var bc20 = CardData.new()
+	bc20.id = "durchschlag"
+	bc20.title = "Durchschlag"
+	bc20.description = "Durchschlagskraft.\n+1 Durchschlag."
+	bc20.rarity = "Common"
+	bc20.color = Color(0.80, 0.50, 0.85)
+	bc20.piercing_add = 1
+	_register(bc20)
+
+	# --- Uncommon ---
+	var bu1 = CardData.new()
+	bu1.id = "lebensquell"
+	bu1.title = "Lebensquell"
+	bu1.description = "Deutlich mehr Leben.\n+20% Max HP."
+	bu1.rarity = "Uncommon"
+	bu1.color = Color(0.25, 0.90, 0.50)
+	bu1.max_hp_mult = 1.20
+	_register(bu1)
+
+	var bu2 = CardData.new()
+	bu2.id = "regenerations_modul"
+	bu2.title = "Regenerationsmodul"
+	bu2.description = "Heilt 1 HP/s nach 3s ohne Schaden."
+	bu2.rarity = "Uncommon"
+	bu2.color = Color(0.20, 0.95, 0.60)
+	bu2.hp_regen_add = 1.0
+	_register(bu2)
+
+	var bu3 = CardData.new()
+	bu3.id = "schildverstaerker"
+	bu3.title = "Schildverstärker"
+	bu3.description = "Massiver Schild.\n+30 Schild."
+	bu3.rarity = "Uncommon"
+	bu3.color = Color(0.30, 0.60, 1.00)
+	bu3.shield_max_add = 30
+	_register(bu3)
+
+	var bu4 = CardData.new()
+	bu4.id = "schildschnellbau"
+	bu4.title = "Schildschnellbau"
+	bu4.description = "Schild lädt viel schneller.\n+40% Schild-Regeneration."
+	bu4.rarity = "Uncommon"
+	bu4.color = Color(0.40, 0.75, 1.00)
+	bu4.shield_regen_mult = 1.40
+	bu4.required_mechanic = "shield"
+	_register(bu4)
+
+	var bu5 = CardData.new()
+	bu5.id = "wirbelsturm"
+	bu5.title = "Wirbelsturm"
+	bu5.description = "Schnelle Abpraller.\n+1 Abpraller, +15% Projektilgeschwindigkeit."
+	bu5.rarity = "Uncommon"
+	bu5.color = Color(0.60, 0.90, 0.40)
+	bu5.bounces_add = 1
+	bu5.bullet_speed_mult = 1.15
+	_register(bu5)
+
+	var bu6 = CardData.new()
+	bu6.id = "leichte_schrotflinte"
+	bu6.title = "Leichte Schrotflinte"
+	bu6.description = "Extra Projektil.\n+1 Projektil, -15% Schaden pro Kugel."
+	bu6.rarity = "Uncommon"
+	bu6.color = Color(0.90, 0.60, 0.45)
+	bu6.multishot_add = 1
+	bu6.spread_angle_deg = 10.0
+	bu6.damage_mult = 0.85
+	_register(bu6)
+
+	var bu7 = CardData.new()
+	bu7.id = "explosionswelle"
+	bu7.title = "Explosionswelle"
+	bu7.description = "Größere Explosionen.\n+25px Explosionsradius."
+	bu7.rarity = "Uncommon"
+	bu7.color = Color(1.00, 0.55, 0.20)
+	bu7.explosion_radius_add = 25.0
+	_register(bu7)
+
+	var bu8 = CardData.new()
+	bu8.id = "eishaut"
+	bu8.title = "Eishaut"
+	bu8.description = "Stärkere Verlangsamung.\n+0,6s Einfrierdauer, +5% Schaden."
+	bu8.rarity = "Uncommon"
+	bu8.color = Color(0.40, 0.85, 1.00)
+	bu8.freeze_duration_add = 0.6
+	bu8.damage_mult = 1.05
+	_register(bu8)
+
+	var bu9 = CardData.new()
+	bu9.id = "seuchenbringer"
+	bu9.title = "Seuchenbringer"
+	bu9.description = "Mehr Gift.\n+2 Gift-Stapel."
+	bu9.rarity = "Uncommon"
+	bu9.color = Color(0.45, 0.95, 0.25)
+	bu9.poison_stacks_add = 2
+	_register(bu9)
+
+	var bu10 = CardData.new()
+	bu10.id = "halsabschneider"
+	bu10.title = "Halsabschneider"
+	bu10.description = "Durchschlägt mehrere Gegner.\n+2 Durchschlag."
+	bu10.rarity = "Uncommon"
+	bu10.color = Color(0.85, 0.40, 0.90)
+	bu10.piercing_add = 2
+	_register(bu10)
+
+	var bu11 = CardData.new()
+	bu11.id = "raketenschuh"
+	bu11.title = "Raketenschuh"
+	bu11.description = "Noch ein Luftsprung.\n+1 Luft-Sprung, +12% Sprungkraft."
+	bu11.rarity = "Uncommon"
+	bu11.color = Color(0.80, 0.80, 1.00)
+	bu11.extra_jumps_add = 1
+	bu11.jump_force_mult = 1.12
+	_register(bu11)
+
+	var bu12 = CardData.new()
+	bu12.id = "schwarzes_herz"
+	bu12.title = "Schwarzes Herz"
+	bu12.description = "Viel Leben, etwas langsamer.\n+15% Max HP, -6% Tempo."
+	bu12.rarity = "Uncommon"
+	bu12.color = Color(0.70, 0.30, 0.55)
+	bu12.max_hp_mult = 1.15
+	bu12.move_speed_mult = 0.94
+	_register(bu12)
+
+	# ============================================================
+	# Klassenspezifische Karten der neuen Helden
+	# ============================================================
+
+	# --- Nova: Gravity Mage ---
+	var no1 = CardData.new()
+	no1.id = "nova_gravity"
+	no1.title = "Schwerkraftkern"
+	no1.description = "Nova: +40px Explosionsradius, +15% Schaden."
+	no1.rarity = "Rare"
+	no1.color = Color(0.60, 0.40, 1.0)
+	no1.hero_id = "nova"
+	no1.explosion_radius_add = 40.0
+	no1.damage_mult = 1.15
+	_register(no1)
+
+	var no2 = CardData.new()
+	no2.id = "nova_void"
+	no2.title = "Leerer Raum"
+	no2.description = "Nova: -20% Ability-Cooldown, +12% Projektilgeschwindigkeit."
+	no2.rarity = "Rare"
+	no2.color = Color(0.50, 0.35, 0.95)
+	no2.hero_id = "nova"
+	no2.ability_cooldown_mult = 0.80
+	no2.bullet_speed_mult = 1.12
+	_register(no2)
+
+	var no3 = CardData.new()
+	no3.id = "nova_supernova"
+	no3.title = "Supernova"
+	no3.description = "Nova: +70px Explosionsradius, +25% Schaden, -10% Tempo."
+	no3.rarity = "Epic"
+	no3.color = Color(0.75, 0.55, 1.0)
+	no3.hero_id = "nova"
+	no3.explosion_radius_add = 70.0
+	no3.damage_mult = 1.25
+	no3.move_speed_mult = 0.90
+	_register(no3)
+
+	# --- Klinge: Blade Dancer ---
+	var kl1 = CardData.new()
+	kl1.id = "klinge_wirbel"
+	kl1.title = "Wirbelklinge"
+	kl1.description = "Klinge: +25% Schaden, +15% Feuerrate."
+	kl1.rarity = "Rare"
+	kl1.color = Color(1.0, 0.35, 0.55)
+	kl1.hero_id = "klinge"
+	kl1.damage_mult = 1.25
+	kl1.fire_rate_mult = 0.85
+	_register(kl1)
+
+	var kl2 = CardData.new()
+	kl2.id = "klinge_reflexe"
+	kl2.title = "Klingenreflexe"
+	kl2.description = "Klinge: -30% Dash-Cooldown, +12% Tempo."
+	kl2.rarity = "Rare"
+	kl2.color = Color(1.0, 0.45, 0.65)
+	kl2.hero_id = "klinge"
+	kl2.dash_cooldown_mult = 0.70
+	kl2.move_speed_mult = 1.12
+	_register(kl2)
+
+	var kl3 = CardData.new()
+	kl3.id = "klinge_duell"
+	kl3.title = "Duellklinge"
+	kl3.description = "Klinge: +40 Max HP, +15% Lebensraub, +10% Schaden."
+	kl3.rarity = "Epic"
+	kl3.color = Color(1.0, 0.25, 0.45)
+	kl3.hero_id = "klinge"
+	kl3.max_hp_flat = 40
+	kl3.lifesteal_percent_add = 0.15
+	kl3.damage_mult = 1.10
+	_register(kl3)
+
+	# --- Bastion: Field Engineer ---
+	var ba1 = CardData.new()
+	ba1.id = "bastion_energieschild"
+	ba1.title = "Energieschild"
+	ba1.description = "Bastion: +40 Schild, +25% Schild-Regeneration."
+	ba1.rarity = "Rare"
+	ba1.color = Color(0.30, 0.90, 0.70)
+	ba1.hero_id = "bastion"
+	ba1.shield_max_add = 40
+	ba1.shield_regen_mult = 1.25
+	_register(ba1)
+
+	var ba2 = CardData.new()
+	ba2.id = "bastion_wartung"
+	ba2.title = "Feldwartung"
+	ba2.description = "Bastion: +40% Schild-Regeneration, +15% Nachladegeschwindigkeit."
+	ba2.rarity = "Rare"
+	ba2.color = Color(0.35, 0.85, 0.75)
+	ba2.hero_id = "bastion"
+	ba2.shield_regen_mult = 1.40
+	ba2.reload_speed_mult = 1.15
+	_register(ba2)
+
+	var ba3 = CardData.new()
+	ba3.id = "bastion_festung"
+	ba3.title = "Bastionsfestung"
+	ba3.description = "Bastion: +60 Schild, +25 Max HP, -10% Tempo."
+	ba3.rarity = "Epic"
+	ba3.color = Color(0.25, 0.95, 0.80)
+	ba3.hero_id = "bastion"
+	ba3.shield_max_add = 60
+	ba3.max_hp_flat = 25
+	ba3.move_speed_mult = 0.90
+	_register(ba3)
+
+	# --- Phantom: Shadow Assassin ---
+	var ph1 = CardData.new()
+	ph1.id = "phantom_schattenklinge"
+	ph1.title = "Schattenklinge"
+	ph1.description = "Phantom: +20% Schaden, +2 Durchschlag."
+	ph1.rarity = "Rare"
+	ph1.color = Color(0.50, 0.50, 0.70)
+	ph1.hero_id = "phantom"
+	ph1.damage_mult = 1.20
+	ph1.piercing_add = 2
+	_register(ph1)
+
+	var ph2 = CardData.new()
+	ph2.id = "phantom_sprungkraft"
+	ph2.title = "Schattensprung"
+	ph2.description = "Phantom: -25% Ability-Cooldown, +1 Luft-Sprung."
+	ph2.rarity = "Rare"
+	ph2.color = Color(0.45, 0.45, 0.65)
+	ph2.hero_id = "phantom"
+	ph2.ability_cooldown_mult = 0.75
+	ph2.extra_jumps_add = 1
+	_register(ph2)
+
+	var ph3 = CardData.new()
+	ph3.id = "phantom_todeskuss"
+	ph3.title = "Todeskuss"
+	ph3.description = "Phantom: +35% Schaden, +15% Lebensraub, -10% Max HP."
+	ph3.rarity = "Epic"
+	ph3.color = Color(0.35, 0.35, 0.55)
+	ph3.hero_id = "phantom"
+	ph3.damage_mult = 1.35
+	ph3.lifesteal_percent_add = 0.15
+	ph3.max_hp_mult = 0.90
+	_register(ph3)
+
+	# ============================================================
+	# Block-Karten (universell, verbessern die Q-Fähigkeit)
+	# ============================================================
+
+	# --- Common ---
+	var bl1 = CardData.new()
+	bl1.id = "block_uebung"
+	bl1.title = "Blockübung"
+	bl1.description = "Längere Deckung.\n+0,15s Blockdauer."
+	bl1.rarity = "Common"
+	bl1.color = Color(0.45, 0.80, 1.00)
+	bl1.block_duration_add = 0.15
+	_register(bl1)
+
+	var bl2 = CardData.new()
+	bl2.id = "schnelle_deckung"
+	bl2.title = "Schnelle Deckung"
+	bl2.description = "Schneller wieder bereit.\n-15% Block-Cooldown."
+	bl2.rarity = "Common"
+	bl2.color = Color(0.35, 0.75, 0.95)
+	bl2.block_cooldown_mult = 0.85
+	_register(bl2)
+
+	# --- Uncommon ---
+	var bl3 = CardData.new()
+	bl3.id = "verstaerkte_deckung"
+	bl3.title = "Verstärkte Deckung"
+	bl3.description = "Längere Schadensimmunität.\n+0,2s Blockdauer."
+	bl3.rarity = "Uncommon"
+	bl3.color = Color(0.40, 0.70, 1.00)
+	bl3.block_duration_add = 0.20
+	_register(bl3)
+
+	var bl4 = CardData.new()
+	bl4.id = "schildstoss"
+	bl4.title = "Schildstoß"
+	bl4.description = "Block stößt Gegner in der Nähe weg.\n+130px Radius, +350 Rückstoß."
+	bl4.rarity = "Uncommon"
+	bl4.color = Color(0.55, 0.90, 1.00)
+	bl4.block_knockback_radius_add = 130.0
+	bl4.block_knockback_force_add = 350.0
+	_register(bl4)
+
+	# --- Rare ---
+	var bl5 = CardData.new()
+	bl5.id = "blockbombe"
+	bl5.title = "Blockbombe"
+	bl5.description = "Beim Blocken explodiert eine Bombe.\n35 Schaden + Rückstoß im Umkreis."
+	bl5.rarity = "Rare"
+	bl5.color = Color(1.00, 0.55, 0.15)
+	bl5.block_bomb = true
+	bl5.block_bomb_damage = 35.0
+	_register(bl5)
+
+	var bl6 = CardData.new()
+	bl6.id = "heilzone"
+	bl6.title = "Heilzone"
+	bl6.description = "Block erzeugt ein Heilfeld.\nHeilt 6 HP pro 0,5s für 2,5s."
+	bl6.rarity = "Rare"
+	bl6.color = Color(0.35, 1.00, 0.55)
+	bl6.block_heal_zone = true
+	_register(bl6)
+
+	var bl7 = CardData.new()
+	bl7.id = "druckwelle"
+	bl7.title = "Druckwelle"
+	bl7.description = "Starker Rückstoß beim Blocken.\n+170px Radius, +600 Rückstoß."
+	bl7.rarity = "Rare"
+	bl7.color = Color(0.40, 0.90, 1.00)
+	bl7.block_knockback_radius_add = 170.0
+	bl7.block_knockback_force_add = 600.0
+	_register(bl7)
+
+	var bl8 = CardData.new()
+	bl8.id = "ausdauerblock"
+	bl8.title = "Ausdauerblock"
+	bl8.description = "Länger und öfter blocken.\n+0,3s Dauer, -10% Cooldown."
+	bl8.rarity = "Rare"
+	bl8.color = Color(0.50, 0.85, 0.95)
+	bl8.block_duration_add = 0.30
+	bl8.block_cooldown_mult = 0.90
+	_register(bl8)
+
+	# --- Epic ---
+	var bl9 = CardData.new()
+	bl9.id = "spiegelblock"
+	bl9.title = "Konterblitz"
+	bl9.description = "Reflektierte Projektile richten +50% Schaden an."
+	bl9.rarity = "Epic"
+	bl9.color = Color(0.75, 0.45, 1.00)
+	bl9.block_reflect_damage_add = 0.50
+	_register(bl9)
+
+	var bl10 = CardData.new()
+	bl10.id = "block_experte"
+	bl10.title = "Block-Experte"
+	bl10.description = "Meisterhafte Deckung.\n-30% Block-Cooldown, +0,2s Dauer."
+	bl10.rarity = "Epic"
+	bl10.color = Color(0.45, 0.75, 1.00)
+	bl10.block_cooldown_mult = 0.70
+	bl10.block_duration_add = 0.20
+	_register(bl10)
+
+	var bl11 = CardData.new()
+	bl11.id = "unzerbrechlich"
+	bl11.title = "Unzerbrechlich"
+	bl11.description = "Deutlich längere Deckung.\n+0,4s Blockdauer, -10% Cooldown."
+	bl11.rarity = "Epic"
+	bl11.color = Color(0.55, 0.65, 0.90)
+	bl11.block_duration_add = 0.40
+	bl11.block_cooldown_mult = 0.90
+	_register(bl11)
+
+	# --- Neue Pool-Karten ---
+	# Offensive
+	var of1 = CardData.new()
+	of1.id = "splittergeschoss"
+	of1.title = "Splittergeschoss"
+	of1.description = "Zusätzliches Projektil mit Streuung.\n+1 Schuss, +6° Streuung, -10% Schaden."
+	of1.rarity = "Uncommon"
+	of1.pool = "Offensive"
+	of1.color = Color(0.35, 0.85, 1.00)
+	of1.multishot_add = 1
+	of1.spread_angle_deg = 6.0
+	of1.damage_mult = 0.90
+	_register(of1)
+
+	var of2 = CardData.new()
+	of2.id = "panzerbrecher"
+	of2.title = "Panzerbrecher"
+	of2.description = "Durchschlägt Gegner und Deckung.\n+30% Schaden, +1 Durchschlag, -10% Geschwindigkeit."
+	of2.rarity = "Rare"
+	of2.pool = "Offensive"
+	of2.color = Color(1.00, 0.55, 0.20)
+	of2.damage_mult = 1.30
+	of2.piercing_add = 1
+	of2.bullet_speed_mult = 0.90
+	_register(of2)
+
+	var of3 = CardData.new()
+	of3.id = "brandkapsel"
+	of3.title = "Brandkapsel"
+	of3.description = "Treffer entzünden den Boden.\n+Feuerzone, +10% Schaden."
+	of3.rarity = "Epic"
+	of3.pool = "Offensive"
+	of3.color = Color(1.00, 0.40, 0.10)
+	of3.fire_shot = true
+	of3.fire_impact_zone = true
+	of3.damage_mult = 1.10
+	_register(of3)
+
+	var of4 = CardData.new()
+	of4.id = "kettenreaktion"
+	of4.title = "Kettenreaktion"
+	of4.description = "Blitze springen zwischen Gegnern.\n+Blitzschuss, +Kettenblitz."
+	of4.rarity = "Epic"
+	of4.pool = "Offensive"
+	of4.color = Color(0.95, 0.85, 0.20)
+	of4.lightning_shot = true
+	of4.chain_lightning = true
+	of4.damage_mult = 0.95
+	_register(of4)
+
+	# Defensive
+	var df1 = CardData.new()
+	df1.id = "sanitaeter"
+	df1.title = "Sanitäter"
+	df1.description = "Regeneration nach kurzer Pause.\n+1,2 HP/s, +15 Max HP."
+	df1.rarity = "Uncommon"
+	df1.pool = "Defensive"
+	df1.color = Color(0.35, 1.00, 0.55)
+	df1.hp_regen_add = 1.2
+	df1.max_hp_flat = 15
+	_register(df1)
+
+	var df2 = CardData.new()
+	df2.id = "bollwerk"
+	df2.title = "Bollwerk"
+	df2.description = "Mehr Schild und längere Deckung.\n+30 Schild, +0,15s Blockdauer."
+	df2.rarity = "Rare"
+	df2.pool = "Defensive"
+	df2.color = Color(0.40, 0.75, 1.00)
+	df2.shield_max_add = 30
+	df2.block_duration_add = 0.15
+	_register(df2)
+
+	var df3 = CardData.new()
+	df3.id = "zweites_herz"
+	df3.title = "Zweites Herz"
+	df3.description = "Deutlich mehr Lebensraum.\n+50 Max HP, +0,5 HP/s Regeneration."
+	df3.rarity = "Epic"
+	df3.pool = "Defensive"
+	df3.color = Color(1.00, 0.30, 0.45)
+	df3.max_hp_flat = 50
+	df3.hp_regen_add = 0.5
+	_register(df3)
+
+	# Bewegung
+	var mv1 = CardData.new()
+	mv1.id = "federstiefel"
+	mv1.title = "Federstiefel"
+	mv1.description = "Höher und ein zusätzliches Mal springen.\n+20% Sprungkraft, +1 Sprung."
+	mv1.rarity = "Uncommon"
+	mv1.pool = "Bewegung"
+	mv1.color = Color(0.45, 1.00, 0.70)
+	mv1.jump_force_mult = 1.20
+	mv1.extra_jumps_add = 1
+	_register(mv1)
+
+	var mv2 = CardData.new()
+	mv2.id = "windschatten"
+	mv2.title = "Windschatten"
+	mv2.description = "Schneller laufen und schneller dash-en.\n+20% Tempo, -20% Dash-Cooldown."
+	mv2.rarity = "Rare"
+	mv2.pool = "Bewegung"
+	mv2.color = Color(0.40, 0.90, 1.00)
+	mv2.move_speed_mult = 1.20
+	mv2.dash_cooldown_mult = 0.80
+	_register(mv2)
+
+	var mv3 = CardData.new()
+	mv3.id = "leichtgewicht"
+	mv3.title = "Leichtgewicht"
+	mv3.description = "Kleinere Trefferfläche gegen etwas weniger Leben.\n-15% Größe, +8% Tempo, -8% Max HP."
+	mv3.rarity = "Rare"
+	mv3.pool = "Bewegung"
+	mv3.color = Color(0.65, 0.95, 0.45)
+	mv3.body_size_mult = 0.85
+	mv3.move_speed_mult = 1.08
+	mv3.max_hp_mult = 0.92
+	_register(mv3)
+
+	# Kern
+	var core1 = CardData.new()
+	core1.id = "notvorrat"
+	core1.title = "Notvorrat"
+	core1.description = "Mehr Munition und schnelleres Nachladen.\n+2 Munition, +15% Nachladegeschwindigkeit."
+	core1.rarity = "Common"
+	core1.pool = "Kern"
+	core1.color = Color(0.85, 0.75, 0.45)
+	core1.max_ammo_add = 2
+	core1.reload_speed_mult = 1.15
+	_register(core1)
+
+	var core2 = CardData.new()
+	core2.id = "fokuskristall"
+	core2.title = "Fokuskristall"
+	core2.description = "Fähigkeit und Feuerrate im Einklang.\n-15% Fähigkeits-Cooldown, -6% Feuerrate."
+	core2.rarity = "Uncommon"
+	core2.pool = "Kern"
+	core2.color = Color(0.65, 0.65, 1.00)
+	core2.ability_cooldown_mult = 0.85
+	core2.fire_rate_mult = 0.94
+	core2.required_mechanic = "ability"
+	_register(core2)
+
+	# Chaos
+	var ch1 = CardData.new()
+	ch1.id = "instabiler_kern"
+	ch1.title = "Instabiler Kern"
+	ch1.description = "Explodiert beim Tod, aber schnell.\n+Kamikaze, +15% Tempo, +20 Max HP."
+	ch1.rarity = "Rare"
+	ch1.pool = "Chaos"
+	ch1.color = Color(1.00, 0.45, 0.20)
+	ch1.kamikaze = true
+	ch1.move_speed_mult = 1.15
+	ch1.max_hp_flat = 20
+	_register(ch1)
+
+	var ch2 = CardData.new()
+	ch2.id = "wandelnder_koloss"
+	ch2.title = "Wandelnder Koloss"
+	ch2.description = "Groß, schwer und schwer zu übersehen.\n+35% Größe, +40 Max HP, -10% Tempo."
+	ch2.rarity = "Epic"
+	ch2.pool = "Chaos"
+	ch2.color = Color(0.80, 0.55, 0.25)
+	ch2.giant_growth = 0.35
+	ch2.max_hp_flat = 40
+	ch2.move_speed_mult = 0.90
+	_register(ch2)
+
 func _register(card: CardData) -> void:
+	if card.pool.is_empty():
+		card.pool = _infer_pool(card)
+	if card.required_mechanic.is_empty():
+		card.required_mechanic = _infer_required_mechanic(card)
+	# Ausbaukarten bleiben im selben Pool wie ihre Grundkarte.
+	if not card.parent_card_id.is_empty():
+		var parent: CardData = cards_by_id.get(card.parent_card_id, null)
+		if parent != null:
+			card.pool = parent.pool
 	all_cards.append(card)
 	cards_by_id[card.id] = card
+
+# Karten, die nur eine vorhandene Mechanik verstärken, dürfen nicht auftauchen,
+# wenn der Spieler diese Mechanik gar nicht besitzt. Karten, die die Mechanik
+# selbst verleihen (z. B. Giftkapsel oder Frostschuss), bleiben ohne Bedingung.
+func _infer_required_mechanic(card: CardData) -> String:
+	if card.dash_cooldown_mult < 1.0:
+		return "dash"
+	if card.ability_cooldown_mult < 1.0:
+		return "ability"
+	if card.shield_regen_mult > 1.0 and card.shield_max_add <= 0:
+		return "shield"
+	if card.poison_damage_mult > 1.0 and card.poison_stacks_add <= 0 \
+			and not card.poison_impact_cloud and not card.poison_trail:
+		return "poison"
+	return ""
+
+func is_card_available_for_player(card: CardData, hero_id: String, owned_ids: Array = []) -> bool:
+	if card == null:
+		return false
+	if not is_card_pool_enabled(card):
+		return false
+	if not card.hero_id.is_empty() and card.hero_id != hero_id:
+		return false
+	if not card.parent_card_id.is_empty() and not owned_ids.has(card.parent_card_id):
+		return false
+	if not card.required_mechanic.is_empty() \
+			and not _player_has_mechanic(card.required_mechanic, hero_id, owned_ids):
+		return false
+	return true
+
+func _player_has_mechanic(mechanic: String, hero_id: String, owned_ids: Array) -> bool:
+	match mechanic:
+		"dash", "ability", "block", "jump":
+			return true
+		"shield":
+			var hero: HeroData = Global.heroes.get(hero_id, null)
+			if hero != null and hero.base_shield > 0:
+				return true
+		"poison":
+			if hero_id == "spore":
+				return true
+
+	for raw_id in owned_ids:
+		var owned := get_card(str(raw_id))
+		if owned == null:
+			continue
+		match mechanic:
+			"shield":
+				if owned.shield_max_add > 0:
+					return true
+			"poison":
+				if owned.poison_stacks_add > 0 or owned.poison_impact_cloud or owned.poison_trail:
+					return true
+			"frost":
+				if owned.freeze_duration_add > 0.0 or owned.frost_nova or owned.frost_trail:
+					return true
+			"fire":
+				if owned.fire_shot or owned.fire_impact_zone or owned.fire_trail:
+					return true
+			"lightning":
+				if owned.lightning_shot or owned.chain_lightning or owned.lightning_zone:
+					return true
+			"tower":
+				if owned.tower_enabled or owned.tower_auto_spawn or owned.tower_follow:
+					return true
+			"drone":
+				if owned.drone_count_add > 0 or owned.drone_guardian \
+						or owned.blocker_drone_count_add > 0 or owned.blocker_drone_heal:
+					return true
+	return false
+
+func is_card_pool_enabled(card: CardData) -> bool:
+	return card != null and Global.enabled_card_pools.has(card.pool)
+
+# Ordnet Karten automatisch einem klaren Draft-Pool zu. Explizit gesetzte
+# Pools (z. B. bei neuen Karten) haben Vorrang und werden hier nicht überschrieben.
+func _infer_pool(card: CardData) -> String:
+	if card.kamikaze or card.giant_growth > 0.0:
+		return "Chaos"
+	if card.max_hp_mult > 1.0 or card.max_hp_flat > 0 or card.hp_regen_add > 0.0 \
+		or card.shield_max_add > 0 or card.shield_regen_mult > 1.0 \
+		or card.block_duration_add > 0.0 or card.block_cooldown_mult < 1.0 \
+		or card.block_reflect_damage_add > 0.0 or card.block_knockback_radius_add > 0.0 \
+		or card.block_knockback_force_add > 0.0 or card.block_bomb or card.block_heal_zone \
+		or card.lifesteal_percent_add > 0.0 or card.blocker_drone_count_add > 0 \
+		or card.blocker_drone_heal:
+		return "Defensive"
+	if card.move_speed_mult > 1.0 or card.jump_force_mult > 1.0 or card.extra_jumps_add > 0 \
+		or card.dash_cooldown_mult < 1.0 or card.body_size_mult < 1.0 or card.gravity_mult < 1.0:
+		return "Bewegung"
+	if card.damage_mult > 1.0 or card.bullet_speed_mult != 1.0 or card.bullet_size_mult != 1.0 \
+		or card.projectile_gravity_mult != 1.0 \
+		or card.fire_rate_mult < 1.0 or card.max_ammo_add > 0 or card.reload_speed_mult > 1.0 \
+		or card.bounces_add > 0 or card.homing_strength_add > 0.0 or card.explosion_radius_add > 0.0 \
+		or card.poison_stacks_add > 0 or card.poison_damage_mult > 1.0 or card.freeze_duration_add > 0.0 \
+		or card.multishot_add > 0 or card.spread_angle_deg != 0.0 or card.piercing_add > 0 \
+		or card.poison_impact_cloud or card.poison_trail or card.lightning_shot or card.chain_lightning \
+		or card.lightning_zone or card.frost_nova or card.frost_trail or card.cluster_bomblets \
+		or card.fire_shot or card.fire_impact_zone or card.fire_trail or card.tower_enabled \
+		or card.tower_auto_spawn or card.tower_follow or card.drone_count_add > 0 or card.drone_guardian:
+		return "Offensive"
+	return "Kern"
 
 func get_card(id: String) -> CardData:
 	return cards_by_id.get(id, null)
@@ -999,6 +1930,7 @@ func get_random_cards(count: int = 5, exclude_ids: Array = [], hero_id: String =
 # - Ausbaukarten erscheinen nur, wenn die zugehörige Grundkarte bereits im Besitz ist.
 # - Wenn ein Talentbaum angeboten wird, werden möglichst alle offenen Zweige
 #   dieser Familie gemeinsam angezeigt (z. B. "Mehr Türme" und "Folgende Türme").
+# - Die Seltenheit wird über die in der Lobby eingestellten Prozente gewichtet.
 func get_draft_offer(count: int = 5, exclude_ids: Array = [], hero_id: String = "", owned_ids: Array = []) -> Array[CardData]:
 	var base_cards: Array[CardData] = []
 	var upgrade_groups: Dictionary = {}
@@ -1006,7 +1938,7 @@ func get_draft_offer(count: int = 5, exclude_ids: Array = [], hero_id: String = 
 	for c in all_cards:
 		if exclude_ids.has(c.id):
 			continue
-		if not c.hero_id.is_empty() and c.hero_id != hero_id:
+		if not is_card_available_for_player(c, hero_id, owned_ids):
 			continue
 
 		if c.parent_card_id.is_empty():
@@ -1026,38 +1958,110 @@ func get_draft_offer(count: int = 5, exclude_ids: Array = [], hero_id: String = 
 		all_available.shuffle()
 		return all_available
 
-	var selected: Array[CardData] = []
-	var group_keys: Array = upgrade_groups.keys()
-	group_keys.shuffle()
-
-	# Zuerst komplette Talentbaum-Gruppen anbieten.
-	for key in group_keys:
-		var group: Array = upgrade_groups[key]
-		if selected.size() + group.size() <= count:
-			selected.append_array(group)
-
-	# Falls das Angebot sonst leer bliebe (z. B. sehr kleines Angebot), einen
-	# Teil einer Gruppe übernehmen. Das ist nur ein Notfall für count < 2.
-	if selected.is_empty() and not group_keys.is_empty():
-		var first_group: Array = upgrade_groups[group_keys[0]]
-		for c in first_group:
-			if selected.size() >= count:
-				break
-			selected.append(c)
-
-	# Rest mit Grundkarten auffüllen.
-	base_cards.shuffle()
+	# Alle Angebote (Einzelkarten und komplette Talentbaum-Gruppen) werden zu
+	# Einheiten zusammengefasst. Innerhalb einer Seltenheit teilen sich die
+	# Einheiten den eingestellten Prozentanteil gleichmäßig. Dadurch entspricht
+	# der Anteil einer Seltenheit am fertigen Angebot den Lobby-Prozenten.
+	var units: Array = []
 	for c in base_cards:
-		if selected.size() >= count:
-			break
-		selected.append(c)
+		units.append({"cards": [c]})
+	for group in upgrade_groups.values():
+		units.append({"cards": group})
 
-	# Letzte Lücken mit noch nicht gewählten Ausbaukarten füllen.
-	for c in all_available:
-		if selected.size() >= count:
+	var selected: Array[CardData] = []
+
+	while selected.size() < count and not units.is_empty():
+		var fitting: Array[int] = []
+		for i in range(units.size()):
+			if selected.size() + units[i]["cards"].size() <= count:
+				fitting.append(i)
+		if fitting.is_empty():
 			break
-		if not selected.has(c):
-			selected.append(c)
+
+		var weights := _unit_rarity_weights(units, fitting)
+		var total := 0.0
+		for weight in weights:
+			total += weight
+		var roll := randf() * total
+		var chosen_pos := weights.size() - 1
+		for j in range(weights.size()):
+			roll -= weights[j]
+			if roll <= 0.0:
+				chosen_pos = j
+				break
+
+		var chosen_index: int = fitting[chosen_pos]
+		selected.append_array(units[chosen_index]["cards"])
+		units.remove_at(chosen_index)
+
+	# Verbleibende Plätze mit gewichtet gezogenen Einzelkarten auffüllen.
+	if selected.size() < count:
+		var pool: Array[CardData] = []
+		for c in all_available:
+			if not selected.has(c):
+				pool.append(c)
+		while selected.size() < count and not pool.is_empty():
+			var weights := _card_rarity_weights(pool)
+			var total := 0.0
+			for weight in weights:
+				total += weight
+			var roll := randf() * total
+			var chosen_index := weights.size() - 1
+			for j in range(weights.size()):
+				roll -= weights[j]
+				if roll <= 0.0:
+					chosen_index = j
+					break
+			selected.append(pool[chosen_index])
+			pool.remove_at(chosen_index)
 
 	selected.shuffle()
 	return selected
+
+func _unit_rarity_weights(units: Array, fitting: Array[int]) -> Array[float]:
+	var counts: Dictionary = {}
+	for i in fitting:
+		var rarity: String = _unit_rarity(units[i]["cards"])
+		counts[rarity] = int(counts.get(rarity, 0)) + 1
+
+	var total_percent := 0.0
+	for rarity in counts.keys():
+		total_percent += maxf(0.0, Global.get_rarity_percent(rarity))
+
+	var weights: Array[float] = []
+	if total_percent <= 0.0:
+		for i in fitting:
+			weights.append(1.0)
+		return weights
+
+	for i in fitting:
+		var rarity: String = _unit_rarity(units[i]["cards"])
+		var percent := maxf(0.0, Global.get_rarity_percent(rarity))
+		weights.append(percent / float(counts[rarity]))
+	return weights
+
+func _card_rarity_weights(pool: Array[CardData]) -> Array[float]:
+	var counts: Dictionary = {}
+	for card in pool:
+		counts[card.rarity] = int(counts.get(card.rarity, 0)) + 1
+
+	var total_percent := 0.0
+	for rarity in counts.keys():
+		total_percent += maxf(0.0, Global.get_rarity_percent(rarity))
+
+	var weights: Array[float] = []
+	if total_percent <= 0.0:
+		for card in pool:
+			weights.append(1.0)
+		return weights
+
+	for card in pool:
+		var percent := maxf(0.0, Global.get_rarity_percent(card.rarity))
+		weights.append(percent / float(counts[card.rarity]))
+	return weights
+
+func _unit_rarity(cards: Array) -> String:
+	if cards.is_empty():
+		return "Common"
+	var card := cards[0] as CardData
+	return card.rarity if card else "Common"

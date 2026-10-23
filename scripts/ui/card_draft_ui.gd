@@ -10,8 +10,9 @@ signal draft_sequence_finished
 # Draft view nodes
 @onready var turn_label: Label = $MainControl/DraftView/TurnLabel
 @onready var subtitle_label: Label = $MainControl/DraftView/SubtitleLabel
-@onready var cards_container: HBoxContainer = $MainControl/DraftView/CardsContainer
-@onready var bot_status_label: Label = $MainControl/DraftView/BotStatusLabel
+@onready var draft_tabs: TabContainer = $MainControl/DraftView/DraftTabs
+@onready var cards_container: HBoxContainer = $MainControl/DraftView/DraftTabs/Karten/CardsContainer
+@onready var bot_status_label: Label = $MainControl/DraftView/DraftTabs/Karten/BotStatusLabel
 
 # Reveal view nodes
 @onready var reveal_header: Label = $MainControl/RevealView/VBox/RevealHeader
@@ -50,10 +51,11 @@ func start_draft_sequence(losers: Array[int]) -> void:
 		_finish_entire_draft()
 		return
 	
-	network_mode = NetworkManager.is_host and NetworkManager.has_client()
+	network_mode = NetworkManager.is_host and NetworkManager.has_clients()
 	pending_network_pick = false
 	pending_remote_picks.clear()
 	visible = true
+	draft_tabs.current_tab = 0
 	get_tree().paused = true
 	_process_next_in_queue()
 
@@ -64,6 +66,7 @@ func start_network_draft(drafter: int, card_ids: Array, picks_total_count: int) 
 	SoundManager.play_sound("confirm", 0.2, 0.0)
 	draft_queue.clear()
 	visible = true
+	draft_tabs.current_tab = 0
 	get_tree().paused = true
 	network_mode = true
 	current_drafter = drafter
@@ -106,16 +109,17 @@ func _process_next_in_queue() -> void:
 	pending_network_pick = false
 	pending_remote_picks.clear()
 	picked_this_draft.clear()
-	is_bot_drafting = (current_drafter == 2 and Global.is_bot_enabled)
+	is_bot_drafting = Global.is_bot_slot(current_drafter)
 	local_owner = (not network_mode) or current_drafter == Global.local_player_index
-	
+
 	# Kartenangebot einmal pro Drafter ziehen. Besessene und gesperrte Karten
 	# ausschließen. Ausbaukarten erscheinen nur mit ihrer Grundkarte; offene
-	# Zweige einer Familie werden gemeinsam angeboten.
+	# Zweige einer Familie werden gemeinsam angeboten. Seltene Karten werden
+	# seltener gezogen (einstellbar über die Seltenheits-Gewichtung).
 	var owned_ids := Global.get_owned_card_ids(current_drafter)
 	var exclude: Array = owned_ids.duplicate()
 	exclude.append_array(Global.banned_card_ids)
-	var drafter_hero_id: String = Global.p1_hero_id if current_drafter == 1 else Global.p2_hero_id
+	var drafter_hero_id: String = Global.get_player_hero_id(current_drafter)
 	offered_cards = CardDatabase.get_draft_offer(Global.cards_per_draft, exclude, drafter_hero_id, owned_ids)
 	
 	if offered_cards.is_empty():
@@ -162,9 +166,14 @@ func _start_current_pick() -> void:
 	_populate_cards()
 
 func _drafter_name(index: int) -> String:
-	if index == 2 and Global.is_bot_enabled:
-		return "BOT"
-	return "SPIELER 1" if index == 1 else "SPIELER 2"
+	var prefix := ""
+	if Global.is_team_mode():
+		prefix = "[%s] " % Global.get_team_name(Global.get_team_for_slot(index))
+	if Global.is_bot_slot(index):
+		return prefix + "BOT (Slot %d)" % index
+	if Global.network_mode and index == Global.local_player_index:
+		return prefix + "DU (Slot %d)" % index
+	return prefix + "SPIELER %d" % index
 
 func _talent_badge_text(card: CardData) -> String:
 	if card.parent_card_id.is_empty():
@@ -196,30 +205,62 @@ func _populate_cards() -> void:
 		var card_panel = _create_card_button(remaining[i], i + 1)
 		cards_container.add_child(card_panel)
 
-func _create_card_button(card: CardData, slot_index: int) -> PanelContainer:
-	var panel = PanelContainer.new()
-	panel.custom_minimum_size = Vector2(200, 310)
-	
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.11, 0.13, 0.17, 0.96)
-	style.set_corner_radius_all(10)
-	style.border_width_left = 3
-	style.border_width_right = 3
-	style.border_width_top = 3
-	style.border_width_bottom = 3
-	style.border_color = card.color
-	panel.add_theme_stylebox_override("panel", style)
-	
-	var margin = MarginContainer.new()
+func _create_framed_card(card: CardData, min_size: Vector2, outer_bg: Color, inner_bg: Color) -> Dictionary:
+	# Äußerer Rahmen = Seltenheit, innerer Rahmen = Effektfarbe der Karte.
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = min_size
+
+	var outer_style := StyleBoxFlat.new()
+	outer_style.bg_color = outer_bg
+	outer_style.set_corner_radius_all(12)
+	outer_style.border_width_left = 5
+	outer_style.border_width_right = 5
+	outer_style.border_width_top = 5
+	outer_style.border_width_bottom = 5
+	outer_style.border_color = CardDatabase.get_rarity_color(card.rarity)
+	panel.add_theme_stylebox_override("panel", outer_style)
+
+	var outer_margin := MarginContainer.new()
+	outer_margin.add_theme_constant_override("margin_left", 5)
+	outer_margin.add_theme_constant_override("margin_right", 5)
+	outer_margin.add_theme_constant_override("margin_top", 5)
+	outer_margin.add_theme_constant_override("margin_bottom", 5)
+	panel.add_child(outer_margin)
+
+	var inner_panel := PanelContainer.new()
+	var inner_style := StyleBoxFlat.new()
+	inner_style.bg_color = inner_bg
+	inner_style.set_corner_radius_all(8)
+	inner_style.border_width_left = 2
+	inner_style.border_width_right = 2
+	inner_style.border_width_top = 2
+	inner_style.border_width_bottom = 2
+	inner_style.border_color = card.color
+	inner_panel.add_theme_stylebox_override("panel", inner_style)
+	outer_margin.add_child(inner_panel)
+
+	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 10)
 	margin.add_theme_constant_override("margin_right", 10)
 	margin.add_theme_constant_override("margin_top", 10)
 	margin.add_theme_constant_override("margin_bottom", 10)
-	panel.add_child(margin)
-	
-	var vbox = VBoxContainer.new()
+	inner_panel.add_child(margin)
+
+	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 8)
 	margin.add_child(vbox)
+
+	return {"panel": panel, "vbox": vbox}
+
+func _create_card_button(card: CardData, slot_index: int) -> PanelContainer:
+	var framed := _create_framed_card(
+		card,
+		Vector2(200, 310),
+		Color(0.08, 0.10, 0.14, 0.98),
+		Color(0.13, 0.15, 0.20, 0.98)
+	)
+	var panel: PanelContainer = framed["panel"]
+	var vbox: VBoxContainer = framed["vbox"]
 	
 	# Key indicator + Rarity
 	var top_row = HBoxContainer.new()
@@ -227,14 +268,22 @@ func _create_card_button(card: CardData, slot_index: int) -> PanelContainer:
 	key_badge.text = "[%d]" % slot_index
 	key_badge.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	top_row.add_child(key_badge)
+
+	var card_icon := CardIcon.new()
+	card_icon.setup(card, 38.0)
+	top_row.add_child(card_icon)
 	
 	var rarity_label = Label.new()
 	rarity_label.text = card.rarity.to_upper()
 	rarity_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rarity_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	rarity_label.add_theme_color_override("font_color", card.color)
+	rarity_label.add_theme_color_override("font_color", CardDatabase.get_rarity_color(card.rarity))
 	top_row.add_child(rarity_label)
 	vbox.add_child(top_row)
+
+	var evolution_banner := CardMechanics.make_evolution_banner(card, 11)
+	if evolution_banner != null:
+		vbox.add_child(evolution_banner)
 	
 	# Klassen-Badge für klassenspezifische Karten
 	if not card.hero_id.is_empty():
@@ -286,6 +335,7 @@ func _create_card_button(card: CardData, slot_index: int) -> PanelContainer:
 		btn.disabled = true
 	
 	vbox.add_child(btn)
+	CardMechanics.apply_tooltip(panel, card)
 	return panel
 
 func _input(event: InputEvent) -> void:
@@ -376,35 +426,33 @@ func _show_public_reveal(drafter_idx: int, card: CardData) -> void:
 	for child in reveal_card_holder.get_children():
 		child.queue_free()
 	
-	var reveal_panel = PanelContainer.new()
-	reveal_panel.custom_minimum_size = Vector2(260, 360)
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.14, 0.16, 0.22, 0.98)
-	style.set_corner_radius_all(12)
-	style.border_width_left = 4
-	style.border_width_right = 4
-	style.border_width_top = 4
-	style.border_width_bottom = 4
-	style.border_color = card.color
-	reveal_panel.add_theme_stylebox_override("panel", style)
-	
-	var margin = MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 14)
-	margin.add_theme_constant_override("margin_right", 14)
-	margin.add_theme_constant_override("margin_top", 14)
-	margin.add_theme_constant_override("margin_bottom", 14)
-	reveal_panel.add_child(margin)
-	
-	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 10)
-	margin.add_child(vbox)
-	
+	var framed := _create_framed_card(
+		card,
+		Vector2(260, 360),
+		Color(0.10, 0.12, 0.17, 0.99),
+		Color(0.14, 0.16, 0.22, 0.99)
+	)
+	var reveal_panel: PanelContainer = framed["panel"]
+	var vbox: VBoxContainer = framed["vbox"]
+
+	var rarity_row := HBoxContainer.new()
+	rarity_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	rarity_row.add_theme_constant_override("separation", 10)
+	var card_icon := CardIcon.new()
+	card_icon.setup(card, 44.0)
+	rarity_row.add_child(card_icon)
+
 	var rarity = Label.new()
 	rarity.text = "⭐ " + card.rarity.to_upper() + " ⭐"
 	rarity.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	rarity.add_theme_color_override("font_color", card.color)
+	rarity.add_theme_color_override("font_color", CardDatabase.get_rarity_color(card.rarity))
 	rarity.add_theme_font_size_override("font_size", 16)
-	vbox.add_child(rarity)
+	rarity_row.add_child(rarity)
+	vbox.add_child(rarity_row)
+
+	var evolution_banner := CardMechanics.make_evolution_banner(card, 12)
+	if evolution_banner != null:
+		vbox.add_child(evolution_banner)
 	
 	if not card.hero_id.is_empty():
 		var hero: HeroData = Global.get_hero(card.hero_id)
@@ -441,6 +489,7 @@ func _show_public_reveal(drafter_idx: int, card: CardData) -> void:
 	desc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	desc.add_theme_font_size_override("font_size", 15)
 	vbox.add_child(desc)
+	CardMechanics.apply_tooltip(reveal_panel, card)
 	
 	reveal_card_holder.add_child(reveal_panel)
 	

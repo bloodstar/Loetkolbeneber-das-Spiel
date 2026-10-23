@@ -11,6 +11,9 @@ signal regrown(tile_id: int)
 
 enum Kind { DESTRUCTIBLE, STRONG_VINE, WEAK_VINE }
 
+# Ranken-Effekte bewusst leiser als Waffen und Treffer.
+const VINE_EFFECT_VOLUME_DB: float = -6.0
+
 @export var tile_id: int = 0
 @export var kind: int = Kind.DESTRUCTIBLE
 @export var tile_texture: Texture2D
@@ -105,9 +108,9 @@ func break_tile(from_network: bool = false, start_regrow: bool = true) -> void:
 
 func _animate_break() -> void:
 	if kind == Kind.WEAK_VINE:
-		SoundManager.play_sound("poison", 0.15, 1.0)
+		SoundManager.play_sound("poison", 0.15, VINE_EFFECT_VOLUME_DB)
 	else:
-		SoundManager.play_sound("bounce", 0.15, 0.0)
+		SoundManager.play_sound("bounce", 0.15, VINE_EFFECT_VOLUME_DB)
 	sprite.scale = Vector2(2.0, 2.0)
 	var tw = create_tween()
 	tw.tween_property(sprite, "scale", Vector2(2.5, 0.3), 0.12)
@@ -123,7 +126,7 @@ func regrow_tile(from_network: bool = false) -> void:
 	# Nicht direkt unter einem Spieler nachwachsen. Dann kurz warten.
 	if kind == Kind.WEAK_VINE:
 		for player in get_tree().get_nodes_in_group("player"):
-			if player is Node2D and is_instance_valid(player):
+			if is_instance_valid(player) and player is Node2D:
 				if player.global_position.distance_to(global_position) < 42.0:
 					regrow_timer.start(0.8)
 					return

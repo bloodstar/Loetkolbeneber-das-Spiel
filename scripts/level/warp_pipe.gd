@@ -22,7 +22,6 @@ func _on_body_entered(body: Node2D) -> void:
 		target_pipe.can_warp = false
 		warp_cooldown = 1.2
 		target_pipe.warp_cooldown = 1.2
-		SoundManager.play_sound("dash", 0.3, -4.0)
 		body.global_position = target_pipe.global_position + Vector2(0, -28)
 		body.velocity = Vector2(0, -250)
 		

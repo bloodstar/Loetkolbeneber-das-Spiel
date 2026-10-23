@@ -21,7 +21,8 @@ func hit_block(instigator: Node2D = null) -> void:
 	tw.parallel().tween_property(sprite, "modulate", Color(0.6, 0.6, 0.6), 0.12)
 	
 	# Reward instigator or spawn buff
-	if instigator and instigator.has_method("heal"):
-		instigator.heal(30)
-	elif instigator and instigator.get("shooter") and instigator.shooter.has_method("heal"):
-		instigator.shooter.heal(30)
+	if is_instance_valid(instigator):
+		if instigator.has_method("heal"):
+			instigator.heal(30)
+		elif instigator.get("shooter") and is_instance_valid(instigator.shooter) and instigator.shooter.has_method("heal"):
+			instigator.shooter.heal(30)

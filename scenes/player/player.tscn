@@ -1,19 +1,20 @@
-[gd_scene load_steps=5 format=3 uid="uid://g1player_scene"]
+[gd_scene load_steps=6 format=3 uid="uid://g1player_scene"]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/characters/tile_0000.png" id="2_char_tex"]
+[ext_resource type="Script" path="res://scripts/pig_character.gd" id="2_pig_script"]
 [ext_resource type="Texture2D" path="res://assets/projectiles/tile_0004.png" id="3_gun_tex"]
+[ext_resource type="Script" path="res://scripts/player_status_indicators.gd" id="4_indicators_script"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
 size = Vector2(18, 22)
 
 [node name="Player" type="CharacterBody2D" groups=["player"]]
 collision_layer = 2
-collision_mask = 5
+collision_mask = 7
 script = ExtResource("1_script")
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
-texture = ExtResource("2_char_tex")
+[node name="Sprite2D" type="Node2D" parent="."]
+script = ExtResource("2_pig_script")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, 1)
@@ -28,6 +29,10 @@ texture = ExtResource("3_gun_tex")
 
 [node name="Muzzle" type="Marker2D" parent="WeaponPivot"]
 position = Vector2(18, 0)
+
+[node name="StatusIndicators" type="Node2D" parent="."]
+z_index = 10
+script = ExtResource("4_indicators_script")
 
 [node name="GhostTimer" type="Timer" parent="."]
 wait_time = 0.05

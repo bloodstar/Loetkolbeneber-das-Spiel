@@ -16,7 +16,114 @@ signal tile_regrown(tile_id: int)
 @export var special_tile_scene: PackedScene = preload("res://scenes/level/special_tile.tscn")
 @export var ice_patch_scene: PackedScene = preload("res://scenes/level/ice_patch.tscn")
 @export var rubber_wall_scene: PackedScene = preload("res://scenes/level/rubber_wall.tscn")
+@export var seesaw_scene: PackedScene = preload("res://scenes/level/seesaw.tscn")
+@export var chain_platform_scene: PackedScene = preload("res://scenes/level/chain_platform.tscn")
+@export var barrel_scene: PackedScene = preload("res://scenes/level/barrel.tscn")
+@export var crate_scene: PackedScene = preload("res://scenes/level/crate.tscn")
+@export var powerup_scene: PackedScene = preload("res://scenes/level/powerup.tscn")
 
+const CRATE_SIZES: Array = [0.82, 1.0, 1.16]
+const POWERUP_KINDS: Array[String] = ["heal", "invulnerability", "damage", "rapid_fire"]
+
+# Jede Map hat ein festes Tileset und ein festes Layout-Profil. Damit bleibt
+# die Optik einer Map konsistent, statt zufällig Tilesets zu mischen.
+const MAP_PROFILES: Dictionary = {
+	"grasarena": {
+		"archetype": "stepped",
+		"ground_top": [0, 2, 3, 20, 21, 22, 23],
+		"ground_bottom": [4, 5, 6, 24, 25, 26],
+		"platform": [1, 24, 25, 26, 30, 40, 42, 130, 131, 146, 147],
+		"destructible": [12, 13, 14, 15],
+		"strong_vine": [36, 37, 38, 39],
+		"weak_vine": [96, 97, 98, 99],
+		"decoration": [124, 125, 126, 127, 128],
+		"ice": [33],
+		"accent": Color(0.25, 0.95, 0.55, 1.0),
+		"ice_patches": 3,
+		"vines": true,
+		"destructibles": 3,
+		"random_platforms": 3,
+		"seesaws": 1,
+		"chains": 0,
+		"barrels": 2,
+		"tnt_barrels": 1,
+		"crate_stacks": 2,
+		"crate_powerup_chance": 0.55,
+		"powerups": 2,
+	},
+	"wuestenruine": {
+		"archetype": "islands",
+		"ground_top": [120, 121, 122, 123, 140, 141, 142, 143],
+		"ground_bottom": [120, 121, 122, 123, 140, 141, 142, 143],
+		"platform": [40, 41, 42, 43, 60, 61, 62, 63, 144, 145, 146, 147],
+		"destructible": [12, 13, 14, 15],
+		"strong_vine": [],
+		"weak_vine": [],
+		"decoration": [124, 125, 126, 127, 128],
+		"ice": [],
+		"accent": Color(1.0, 0.72, 0.25, 1.0),
+		"ice_patches": 0,
+		"vines": false,
+		"destructibles": 2,
+		"random_platforms": 2,
+		"seesaws": 0,
+		"chains": 2,
+		"barrels": 1,
+		"tnt_barrels": 2,
+		"crate_stacks": 1,
+		"crate_powerup_chance": 0.5,
+		"powerups": 1,
+	},
+	"eisgrotte": {
+		"archetype": "multitier",
+		"ground_top": [80, 81, 82, 83, 100, 101, 102, 103],
+		"ground_bottom": [53, 54, 55, 73, 74, 75],
+		"platform": [53, 54, 55, 73, 74, 75, 113, 114, 115],
+		"destructible": [12, 13, 14, 15],
+		"strong_vine": [],
+		"weak_vine": [],
+		"decoration": [153, 154, 155, 156],
+		"ice": [33],
+		"accent": Color(0.45, 0.85, 1.0, 1.0),
+		"ice_patches": 6,
+		"vines": false,
+		"destructibles": 2,
+		"random_platforms": 2,
+		"seesaws": 1,
+		"chains": 1,
+		"barrels": 2,
+		"tnt_barrels": 1,
+		"crate_stacks": 2,
+		"crate_powerup_chance": 0.6,
+		"powerups": 2,
+	},
+	"neonfabrik": {
+		"archetype": "stepped",
+		"ground_top": [113, 114, 115, 132, 133, 134],
+		"ground_bottom": [132, 133, 134, 113, 114, 115],
+		"platform": [111, 112, 113, 114, 115, 132, 133, 134],
+		"destructible": [12, 13, 14, 15],
+		"strong_vine": [],
+		"weak_vine": [],
+		"decoration": [150, 151, 152, 157, 158, 159],
+		"ice": [],
+		"accent": Color(0.2, 0.85, 1.0, 1.0),
+		"ice_patches": 0,
+		"vines": false,
+		"destructibles": 3,
+		"random_platforms": 3,
+		"seesaws": 0,
+		"chains": 2,
+		"barrels": 1,
+		"tnt_barrels": 2,
+		"crate_stacks": 2,
+		"crate_powerup_chance": 0.6,
+		"powerups": 2,
+	},
+}
+
+var current_map_id: String = "grasarena"
+var current_accent: Color = Color(1.0, 0.25, 0.65, 0.95)
 var ground_top_textures: Array[Texture2D] = []
 var ground_bottom_textures: Array[Texture2D] = []
 var platform_textures: Array[Texture2D] = []
@@ -35,70 +142,54 @@ var _special_cells: Dictionary = {}
 var _object_cells: Dictionary = {}
 var _ice_cells: Dictionary = {}
 var _special_tiles: Dictionary = {} # tile_id (int) -> SpecialTile
+var _tile_cache: Dictionary = {}
+var _moving_objects: Array[Node] = []
+var _moving_objects_by_id: Dictionary = {}
+var _next_moving_object_id: int = 1
+var _claimed_spawn_cells: Array[int] = []
+var _crate_powerup_chance: float = 0.0
+var _crate_drops_spawned: int = 0
 
 func _ready() -> void:
 	_load_textures()
 	generate_level()
 
 func _load_textures() -> void:
-	ground_top_textures = [
-		load("res://assets/tiles/tile_0000.png"),
-		load("res://assets/tiles/tile_0002.png"),
-		load("res://assets/tiles/tile_0003.png"),
-		load("res://assets/tiles/tile_0020.png"),
-		load("res://assets/tiles/tile_0021.png"),
-		load("res://assets/tiles/tile_0022.png"),
-		load("res://assets/tiles/tile_0023.png"),
-	]
-	ground_bottom_textures = [
-		load("res://assets/tiles/tile_0004.png"),
-		load("res://assets/tiles/tile_0005.png"),
-		load("res://assets/tiles/tile_0006.png"),
-		load("res://assets/tiles/tile_0024.png"),
-		load("res://assets/tiles/tile_0025.png"),
-		load("res://assets/tiles/tile_0026.png"),
-	]
-	platform_textures = [
-		load("res://assets/tiles/tile_0001.png"),
-		load("res://assets/tiles/tile_0024.png"),
-		load("res://assets/tiles/tile_0025.png"),
-		load("res://assets/tiles/tile_0026.png"),
-		load("res://assets/tiles/tile_0030.png"),
-		load("res://assets/tiles/tile_0040.png"),
-		load("res://assets/tiles/tile_0042.png"),
-		load("res://assets/tiles/tile_0130.png"),
-		load("res://assets/tiles/tile_0131.png"),
-		load("res://assets/tiles/tile_0146.png"),
-		load("res://assets/tiles/tile_0147.png"),
-	]
-	destructible_textures = [
-		load("res://assets/tiles/tile_0012.png"),
-		load("res://assets/tiles/tile_0013.png"),
-		load("res://assets/tiles/tile_0014.png"),
-		load("res://assets/tiles/tile_0015.png"),
-	]
-	strong_vine_textures = [
-		load("res://assets/tiles/tile_0036.png"),
-		load("res://assets/tiles/tile_0037.png"),
-		load("res://assets/tiles/tile_0038.png"),
-		load("res://assets/tiles/tile_0039.png"),
-	]
-	weak_vine_textures = [
-		load("res://assets/tiles/tile_0096.png"),
-		load("res://assets/tiles/tile_0097.png"),
-		load("res://assets/tiles/tile_0098.png"),
-		load("res://assets/tiles/tile_0099.png"),
-	]
-	decoration_textures = [
-		load("res://assets/tiles/tile_0124.png"),
-		load("res://assets/tiles/tile_0125.png"),
-		load("res://assets/tiles/tile_0126.png"),
-		load("res://assets/tiles/tile_0127.png"),
-		load("res://assets/tiles/tile_0128.png"),
-	]
-	ice_tex = load("res://assets/tiles/tile_0033.png")
+	_tile_cache.clear()
+	_apply_tileset("grasarena")
 
-func generate_level(level_seed: int = 0) -> void:
+func _tile_texture(index: int) -> Texture2D:
+	if not _tile_cache.has(index):
+		var path := "res://assets/tiles/tile_%04d.png" % index
+		if ResourceLoader.exists(path):
+			_tile_cache[index] = load(path)
+		else:
+			_tile_cache[index] = null
+	return _tile_cache[index] as Texture2D
+
+func _textures_for(indices: Array) -> Array[Texture2D]:
+	var result: Array[Texture2D] = []
+	for raw_index in indices:
+		var tex := _tile_texture(int(raw_index))
+		if tex != null:
+			result.append(tex)
+	return result
+
+func _apply_tileset(map_id: String) -> void:
+	current_map_id = map_id if MAP_PROFILES.has(map_id) else "grasarena"
+	var profile: Dictionary = MAP_PROFILES[current_map_id]
+	ground_top_textures = _textures_for(profile.get("ground_top", []))
+	ground_bottom_textures = _textures_for(profile.get("ground_bottom", []))
+	platform_textures = _textures_for(profile.get("platform", []))
+	destructible_textures = _textures_for(profile.get("destructible", []))
+	strong_vine_textures = _textures_for(profile.get("strong_vine", []))
+	weak_vine_textures = _textures_for(profile.get("weak_vine", []))
+	decoration_textures = _textures_for(profile.get("decoration", []))
+	var ice_indices: Array = profile.get("ice", [])
+	ice_tex = _tile_texture(int(ice_indices[0])) if not ice_indices.is_empty() else null
+	current_accent = profile.get("accent", Color(1.0, 0.25, 0.65, 0.95))
+
+func generate_level(level_seed: int = 0, map_id: String = "") -> void:
 	# Clear existing generated children
 	for child in get_children():
 		remove_child(child)
@@ -109,6 +200,12 @@ func generate_level(level_seed: int = 0) -> void:
 	_object_cells.clear()
 	_ice_cells.clear()
 	_special_tiles.clear()
+	_moving_objects.clear()
+	_moving_objects_by_id.clear()
+	_next_moving_object_id = 1
+	_claimed_spawn_cells.clear()
+	_crate_powerup_chance = 0.0
+	_crate_drops_spawned = 0
 	
 	# Eigener Zufallsgenerator: Bei Netzwerkpartien erzeugen Host und Client
 	# mit demselben Seed exakt dieselbe Karte.
@@ -117,117 +214,179 @@ func generate_level(level_seed: int = 0) -> void:
 		_rng.randomize()
 	else:
 		_rng.seed = level_seed
+
+	var resolved_map := map_id
+	if not MAP_PROFILES.has(resolved_map):
+		resolved_map = Global.resolve_map_id(level_seed)
+	_apply_tileset(resolved_map)
+	var profile: Dictionary = MAP_PROFILES[current_map_id]
 	
 	# 1. Boden: obere Grasschicht + Erde. Keine Seiten- oder Deckenwände –
 	#    außerhalb der Karte übernimmt die Gummiwand.
 	_build_rect_solid(0, MAP_WIDTH - 1, MAP_HEIGHT - 2, MAP_HEIGHT - 2, ground_top_textures)
 	_build_rect_solid(0, MAP_WIDTH - 1, MAP_HEIGHT - 1, MAP_HEIGHT - 1, ground_bottom_textures)
 	
-	# 2. Grundlayout (0: Stepped, 1: Multi-Tier, 2: Floating Islands)
-	var archetype := _rng.randi() % 3
-	match archetype:
-		0:
-			_generate_stepped_arena()
-		1:
-			_generate_multitier_arena()
-		2:
+	# 2. Festes Layout-Profil pro Map.
+	match str(profile.get("archetype", "stepped")):
+		"islands":
 			_generate_islands_arena()
+		"multitier":
+			_generate_multitier_arena()
+		_:
+			_generate_stepped_arena()
 	
 	# 3. Zusätzliche, gespiegelte Plattformen für mehr Varianz
-	_add_random_platforms()
+	_add_random_platforms(int(profile.get("random_platforms", 3)))
 	
 	# 4. Spezial-Tiles: Eis, Ranken, zerstörbare Blöcke
-	_place_ice_patches()
-	_place_vine_bridges()
-	_place_destructible_clusters()
+	_place_ice_patches(int(profile.get("ice_patches", 0)))
+	if bool(profile.get("vines", false)):
+		_place_vine_bridges()
+	_place_destructible_clusters(int(profile.get("destructibles", 3)))
+
+	# 5. Bewegliche Map-Objekte (host-seitig simuliert, für Clients repliziert)
+	_spawn_map_objects(profile)
 	
-	# 5. Kleine Deko auf Plattformen
+	# 6. Kleine Deko auf Plattformen
 	_place_decorations()
 	
-	# 6. Symmetrische Spawns
-	p1_spawn_pos = Vector2(4.0 * TILE_SIZE, (MAP_HEIGHT - 4) * TILE_SIZE)
-	p2_spawn_pos = Vector2((MAP_WIDTH - 5.0) * TILE_SIZE, (MAP_HEIGHT - 4) * TILE_SIZE)
+	# 7. Symmetrische Spawns. Die endgültigen Positionen werden erst später
+	#    gegen Map-Objekte geprüft, weil Kisten und Powerups ebenfalls Spawn-
+	#    Flächen belegen.
+	p1_spawn_pos = _spawn_position_at(4)
+	p2_spawn_pos = _spawn_position_at(MAP_WIDTH - 5)
 	
-	# 7. Gummiwand außerhalb der Karte
+	# 8. Gummiwand außerhalb der Karte
 	_build_rubber_boundary()
 
+# Liefert die Spawnposition für einen Spieler-Slot. Für 2 Spieler bleiben die
+# bewährten linken/rechten Spawns erhalten, ab 3 Spielern werden die Plätze
+# gleichmäßig am unteren Kartenrand verteilt. Jeder Platz sucht sich bei Bedarf
+# die nächste freie Fläche, damit niemand auf Federn, Röhren, Kisten oder
+# Stacheln startet.
+func get_spawn_position(index: int, total: int) -> Vector2:
+	var preferred_tile := 4
+	if total > 1:
+		var margin := 4.0
+		var usable := float(MAP_WIDTH) - margin * 2.0
+		var t := float(clampi(index - 1, 0, total - 1)) / float(maxi(total - 1, 1))
+		preferred_tile = int(round(margin + usable * t))
+	elif index > 1:
+		preferred_tile = MAP_WIDTH - 5
+	if total <= 2:
+		preferred_tile = 4 if index <= 1 else MAP_WIDTH - 5
+
+	var offsets: Array[int] = [0]
+	for distance in range(1, MAP_WIDTH):
+		offsets.append(distance)
+		offsets.append(-distance)
+	for offset in offsets:
+		var tile_x := preferred_tile + offset
+		if _is_spawn_tile_clear(tile_x, _claimed_spawn_cells):
+			_claimed_spawn_cells.append(tile_x)
+			return _spawn_position_at(tile_x)
+
+	# Notfall: irgendeinen freien Platz am Boden nehmen.
+	for tile_x in range(2, MAP_WIDTH - 2):
+		if _is_spawn_tile_clear(tile_x, []):
+			_claimed_spawn_cells.append(tile_x)
+			return _spawn_position_at(tile_x)
+	return _spawn_position_at(preferred_tile)
+
+func _spawn_position_at(tile_x: int) -> Vector2:
+	return Vector2((float(tile_x) + 0.5) * TILE_SIZE, float(MAP_HEIGHT - 4) * TILE_SIZE)
+
+func _is_spawn_tile_clear(tile_x: int, claimed: Array) -> bool:
+	if tile_x < 2 or tile_x >= MAP_WIDTH - 2:
+		return false
+	# Der Charakter ist mit seiner Kollisionsbreite (30,6 px) schmaler als eine
+	# Kachel (36 px). Deshalb muss nur die Spawn-Kachel selbst frei sein; die
+	# drei Reihen über dem Boden bleiben trotzdem gesperrt.
+	for row in range(MAP_HEIGHT - 5, MAP_HEIGHT - 2):
+		var cell := Vector2i(tile_x, row)
+		if _solid_cells.has(cell) or _object_cells.has(cell) or _special_cells.has(cell) or _ice_cells.has(cell):
+			return false
+	for claimed_tile in claimed:
+		if int(claimed_tile) == tile_x:
+			return false
+	return true
+
+# Öffentliche Prüfung für Tests und Debug-Anzeigen.
+func is_spawn_position_clear(world_position: Vector2) -> bool:
+	var tile_x := int(floor(world_position.x / TILE_SIZE))
+	return _is_spawn_tile_clear(tile_x, [])
+
 func _generate_stepped_arena() -> void:
-	# Stepped pyramids on both sides
-	var steps = 4
-	for s in range(steps):
-		var y = MAP_HEIGHT - 3 - s
-		# Left step
-		_build_rect_solid(4 + s, 8, y, y, platform_textures)
-		# Right step (mirrored)
-		_build_rect_solid(MAP_WIDTH - 9, MAP_WIDTH - 5 - s, y, y, platform_textures)
-	
-	# Center high platform
-	_build_rect_solid(MAP_WIDTH / 2 - 4, MAP_WIDTH / 2 + 3, 11, 11, platform_textures)
-	# Upper side ledges
-	_build_rect_solid(8, 14, 7, 7, platform_textures)
-	_build_rect_solid(MAP_WIDTH - 15, MAP_WIDTH - 9, 7, 7, platform_textures)
-	
-	# Mystery Blocks floating above center
-	_spawn_mystery_block(MAP_WIDTH / 2 - 2, 8)
-	_spawn_mystery_block(MAP_WIDTH / 2 + 1, 8)
-	
-	# Jump pads at bottom
-	_spawn_jump_pad(11, MAP_HEIGHT - 3)
-	_spawn_jump_pad(MAP_WIDTH - 12, MAP_HEIGHT - 3)
-	
-	# Warp Pipes (Left and Right)
-	_spawn_pipe_pair(3, MAP_HEIGHT - 3, MAP_WIDTH - 4, MAP_HEIGHT - 3)
-	
-	# Small spike hazard in center pit
+	# Schlanke, schwebende Balken statt Treppen. Zwischen den Ebenen bleiben
+	# zwei freie Kacheln (72 px) Luft, damit die Charaktere darunter
+	# durchlaufen und bequem auf die nächste Ebene springen können.
+	_build_rect_solid(7, 13, 17, 17, platform_textures)
+	_build_rect_solid(24, 30, 17, 17, platform_textures)
+	_build_rect_solid(10, 16, 14, 14, platform_textures)
+	_build_rect_solid(21, 27, 14, 14, platform_textures)
+	_build_rect_solid(7, 9, 11, 11, platform_textures)
+	_build_rect_solid(28, 30, 11, 11, platform_textures)
+	_build_rect_solid(15, 22, 11, 11, platform_textures)
+	_build_rect_solid(9, 12, 8, 8, platform_textures)
+	_build_rect_solid(25, 28, 8, 8, platform_textures)
+
+	# Herz-Blöcke schweben über der zentralen Wippe.
+	_spawn_mystery_block(MAP_WIDTH / 2 - 2, 4)
+	_spawn_mystery_block(MAP_WIDTH / 2 + 1, 4)
+
+	# Federn auf den unteren Balken; die mittlere Feder katapultiert auf die
+	# zentral aufgehängte Wippe.
+	_spawn_jump_pad(8, 16)
+	_spawn_jump_pad(29, 16)
+	_spawn_jump_pad(19, 10)
+
+	# Röhren und Stacheln bleiben am Boden, aber außerhalb der Spawn-Ecken.
+	_spawn_pipe_pair(2, MAP_HEIGHT - 3, MAP_WIDTH - 3, MAP_HEIGHT - 3)
 	_spawn_spike(MAP_WIDTH / 2 - 1, MAP_HEIGHT - 3)
 	_spawn_spike(MAP_WIDTH / 2, MAP_HEIGHT - 3)
 
 func _generate_multitier_arena() -> void:
-	# Lower side platforms
-	_build_rect_solid(3, 12, 16, 16, platform_textures)
-	_build_rect_solid(MAP_WIDTH - 13, MAP_WIDTH - 4, 16, 16, platform_textures)
-	
-	# Mid central battle bridge
-	_build_rect_solid(13, MAP_WIDTH - 14, 12, 12, ground_top_textures)
-	
-	# High sniper perches
-	_build_rect_solid(6, 11, 7, 7, platform_textures)
-	_build_rect_solid(MAP_WIDTH - 12, MAP_WIDTH - 7, 7, 7, platform_textures)
-	
-	# Mystery Blocks
-	_spawn_mystery_block(MAP_WIDTH / 2, 8)
-	_spawn_mystery_block(8, 13)
-	_spawn_mystery_block(MAP_WIDTH - 9, 13)
-	
-	# Jump pads
-	_spawn_jump_pad(6, 15)
-	_spawn_jump_pad(MAP_WIDTH - 7, 15)
-	
-	# Warp Pipes
-	_spawn_pipe_pair(3, 15, MAP_WIDTH - 4, 15)
+	# Mehrere luftige Etagen aus schmalen Balken. Die Ebenen liegen drei
+	# Kacheln auseinander, sodass zwischen ihnen genug Kopfraum bleibt.
+	_build_rect_solid(6, 12, 17, 17, platform_textures)
+	_build_rect_solid(25, 31, 17, 17, platform_textures)
+	_build_rect_solid(8, 14, 14, 14, platform_textures)
+	_build_rect_solid(23, 29, 14, 14, platform_textures)
+	_build_rect_solid(5, 10, 11, 11, platform_textures)
+	_build_rect_solid(27, 32, 11, 11, platform_textures)
+	_build_rect_solid(14, 23, 11, 11, ground_top_textures)
+	_build_rect_solid(16, 21, 8, 8, platform_textures)
+
+	_spawn_mystery_block(9, 8)
+	_spawn_mystery_block(28, 8)
+
+	_spawn_jump_pad(7, 16)
+	_spawn_jump_pad(30, 16)
+	_spawn_jump_pad(18, 7)
+	_spawn_pipe_pair(2, MAP_HEIGHT - 3, MAP_WIDTH - 3, MAP_HEIGHT - 3)
+	_spawn_spike(MAP_WIDTH / 2 - 1, MAP_HEIGHT - 3)
+	_spawn_spike(MAP_WIDTH / 2, MAP_HEIGHT - 3)
 
 func _generate_islands_arena() -> void:
-	# Floating Mario style islands
-	_build_rect_solid(5, 11, 15, 15, platform_textures)
-	_build_rect_solid(MAP_WIDTH - 12, MAP_WIDTH - 6, 15, 15, platform_textures)
-	
-	_build_rect_solid(MAP_WIDTH / 2 - 5, MAP_WIDTH / 2 + 4, 14, 14, ground_top_textures)
-	_build_rect_solid(MAP_WIDTH / 2 - 3, MAP_WIDTH / 2 + 2, 8, 8, platform_textures)
-	
-	# Floating blocks
+	# Kleine, offene Inseln mit klaren Sprungwegen. Keine massiven Treppen-
+	# blöcke, nur ein Kachel hohe Plattformen mit zwei Kacheln Luft dazwischen.
+	_build_rect_solid(7, 12, 17, 17, platform_textures)
+	_build_rect_solid(25, 30, 17, 17, platform_textures)
+	_build_rect_solid(9, 14, 14, 14, platform_textures)
+	_build_rect_solid(23, 28, 14, 14, platform_textures)
+	_build_rect_solid(5, 9, 11, 11, platform_textures)
+	_build_rect_solid(28, 32, 11, 11, platform_textures)
+	_build_rect_solid(14, 23, 11, 11, ground_top_textures)
+	_build_rect_solid(16, 21, 8, 8, platform_textures)
+
 	_spawn_mystery_block(MAP_WIDTH / 2 - 2, 5)
 	_spawn_mystery_block(MAP_WIDTH / 2 + 1, 5)
-	
-	# Jump pads on floor
-	_spawn_jump_pad(8, MAP_HEIGHT - 3)
-	_spawn_jump_pad(MAP_WIDTH - 9, MAP_HEIGHT - 3)
-	
-	# Warp Pipes
-	_spawn_pipe_pair(3, MAP_HEIGHT - 3, MAP_WIDTH - 4, MAP_HEIGHT - 3)
-	
-	# Spikes
-	_spawn_spike(14, MAP_HEIGHT - 3)
-	_spawn_spike(MAP_WIDTH - 15, MAP_HEIGHT - 3)
+
+	_spawn_jump_pad(11, MAP_HEIGHT - 3)
+	_spawn_jump_pad(MAP_WIDTH - 12, MAP_HEIGHT - 3)
+	_spawn_pipe_pair(2, MAP_HEIGHT - 3, MAP_WIDTH - 3, MAP_HEIGHT - 3)
+	_spawn_spike(MAP_WIDTH / 2 - 1, MAP_HEIGHT - 3)
+	_spawn_spike(MAP_WIDTH / 2, MAP_HEIGHT - 3)
 
 func _build_rect_solid(x_start: int, x_end: int, y_start: int, y_end: int, textures: Array) -> void:
 	if textures.is_empty():
@@ -267,13 +426,16 @@ func _pick_texture(textures: Array, x: int, y: int) -> Texture2D:
 		idx = _rng.randi() % textures.size()
 	return textures[idx] as Texture2D
 
-func _add_random_platforms() -> void:
+func _add_random_platforms(count: int = 3) -> void:
 	var placed := 0
 	var attempts := 0
-	while placed < 3 and attempts < 24:
+	# Die zusätzlichen Balken dürfen keine niedrigen Decken über den festen
+	# Ebenen erzeugen. Deshalb wird neben den belegten Kacheln auch der
+	# vertikale Freiraum geprüft.
+	while placed < count and attempts < 48:
 		attempts += 1
 		var w := 3 + _rng.randi() % 3
-		var y := 5 + _rng.randi() % 9
+		var y := 5 + _rng.randi() % 10
 		var max_x := int(MAP_WIDTH / 2) - w - 3
 		if max_x < 3:
 			continue
@@ -281,13 +443,18 @@ func _add_random_platforms() -> void:
 		var x_end := x + w - 1
 		if not _is_rect_free(x, x_end, y, y):
 			continue
+		if not _has_vertical_clearance(x, x_end, y, y):
+			continue
 		_build_rect_solid(x, x_end, y, y, platform_textures)
 		var mirror_x := MAP_WIDTH - 1 - x_end
-		if _is_rect_free(mirror_x, mirror_x + w - 1, y, y):
+		if (_is_rect_free(mirror_x, mirror_x + w - 1, y, y)
+				and _has_vertical_clearance(mirror_x, mirror_x + w - 1, y, y)):
 			_build_rect_solid(mirror_x, mirror_x + w - 1, y, y, platform_textures)
 		placed += 1
 
-func _place_ice_patches() -> void:
+func _place_ice_patches(desired_patches: int = 4) -> void:
+	if desired_patches <= 0:
+		return
 	var top_cells: Array[Vector2i] = []
 	for cell in _solid_cells.keys():
 		var x: int = cell.x
@@ -302,7 +469,7 @@ func _place_ice_patches() -> void:
 	
 	var patches := 0
 	var attempts := 0
-	while patches < 4 and attempts < 30:
+	while patches < desired_patches and attempts < 30:
 		attempts += 1
 		var start: Vector2i = top_cells[_rng.randi() % top_cells.size()]
 		var run_len := 2 + _rng.randi() % 3
@@ -372,10 +539,12 @@ func _try_place_vine_bridge(kind: int, min_w: int, max_w: int, min_y: int, max_y
 					_spawn_special_tile(tx, y, kind)
 		return
 
-func _place_destructible_clusters() -> void:
+func _place_destructible_clusters(desired_clusters: int = 3) -> void:
+	if desired_clusters <= 0:
+		return
 	var placed := 0
 	var attempts := 0
-	while placed < 3 and attempts < 30:
+	while placed < desired_clusters and attempts < 30:
 		attempts += 1
 		var w := 2
 		var h := 2
@@ -398,20 +567,32 @@ func _place_destructible_clusters() -> void:
 					_spawn_special_tile(tx, ty, SpecialTile.Kind.DESTRUCTIBLE)
 		placed += 1
 
+func _is_top_available(cell: Vector2i, check_spawn: bool = true) -> bool:
+	if cell.x < 0 or cell.x >= MAP_WIDTH or cell.y <= 0 or cell.y >= MAP_HEIGHT:
+		return false
+	if not _solid_cells.has(cell):
+		return false
+	var above := Vector2i(cell.x, cell.y - 1)
+	if _solid_cells.has(above):
+		return false
+	if _object_cells.has(cell) or _object_cells.has(above):
+		return false
+	if _special_cells.has(cell) or _special_cells.has(above):
+		return false
+	if _ice_cells.has(cell):
+		return false
+	if check_spawn and _is_near_spawn(cell.x, cell.y):
+		return false
+	return true
+
 func _place_decorations() -> void:
+	if decoration_textures.is_empty():
+		return
 	var top_cells: Array[Vector2i] = []
-	for cell in _solid_cells.keys():
-		var x: int = cell.x
-		var y: int = cell.y
-		if y <= 0:
-			continue
-		if _solid_cells.has(Vector2i(x, y - 1)):
-			continue
-		if _object_cells.has(cell) or _ice_cells.has(cell) or _special_cells.has(cell):
-			continue
-		if _is_near_spawn(x, y):
-			continue
-		top_cells.append(cell)
+	for raw_cell in _solid_cells.keys():
+		var cell: Vector2i = raw_cell
+		if _is_top_available(cell):
+			top_cells.append(cell)
 	if top_cells.is_empty():
 		return
 	
@@ -479,6 +660,20 @@ func _is_rect_free(x_start: int, x_end: int, y_start: int, y_end: int) -> bool:
 				return false
 	return true
 
+# Prüft, ob über und unter einem neuen Objekt genug Luft bleibt. Zwei freie
+# Kacheln entsprechen 72 px und damit dem Mindestabstand der Plattformebenen.
+func _has_vertical_clearance(x_start: int, x_end: int, y_start: int, y_end: int, free_rows: int = 2) -> bool:
+	if y_start - free_rows < 0 or y_end + free_rows >= MAP_HEIGHT:
+		return false
+	for check_y in range(y_start - free_rows, y_end + free_rows + 1):
+		if check_y >= y_start and check_y <= y_end:
+			continue
+		for x in range(x_start, x_end + 1):
+			var cell := Vector2i(x, check_y)
+			if _solid_cells.has(cell) or _special_cells.has(cell) or _object_cells.has(cell) or _ice_cells.has(cell):
+				return false
+	return true
+
 func _is_near_spawn(x: int, y: int) -> bool:
 	# Die Spawns liegen unten links/rechts. Dort keine Spezial-Tiles platzieren.
 	return y >= MAP_HEIGHT - 6 and (x <= 7 or x >= MAP_WIDTH - 8)
@@ -506,14 +701,18 @@ func _build_rubber_boundary() -> void:
 	var glow := Line2D.new()
 	glow.points = points
 	glow.width = 26.0
-	glow.default_color = Color(1.0, 0.15, 0.55, 0.18)
+	var glow_color := current_accent
+	glow_color.a = 0.18
+	glow.default_color = glow_color
 	glow.z_index = 1
 	add_child(glow)
 	
 	var line := Line2D.new()
 	line.points = points
 	line.width = 5.0
-	line.default_color = Color(1.0, 0.25, 0.65, 0.95)
+	var line_color := current_accent
+	line_color.a = 0.95
+	line.default_color = line_color
 	line.z_index = 2
 	add_child(line)
 	
@@ -569,3 +768,301 @@ func _spawn_spike(tx: int, ty: int) -> void:
 	sp.position = Vector2((tx + 0.5) * TILE_SIZE, (ty + 1.0) * TILE_SIZE)
 	add_child(sp)
 	_object_cells[Vector2i(tx, ty)] = true
+
+# --- Bewegliche Map-Objekte -------------------------------------------------
+
+func _register_moving_object(obj: Node) -> void:
+	obj.set("net_id", _next_moving_object_id)
+	obj.set("is_replica", Global.network_mode and not Global.is_local_host())
+	_next_moving_object_id += 1
+	_moving_objects.append(obj)
+	_moving_objects_by_id[int(obj.get("net_id"))] = obj
+
+func _spawn_map_objects(profile: Dictionary) -> void:
+	_crate_powerup_chance = float(profile.get("crate_powerup_chance", 0.0))
+	for _i in range(int(profile.get("seesaws", 0))):
+		_try_spawn_seesaw()
+	for i in range(int(profile.get("chains", 0))):
+		_try_spawn_chain_platform(i)
+	for _i in range(int(profile.get("barrels", 0))):
+		_spawn_barrel(false)
+	for _i in range(int(profile.get("tnt_barrels", 0))):
+		_spawn_barrel(true)
+	for _i in range(int(profile.get("crate_stacks", 0))):
+		_spawn_crate_stack()
+	for _i in range(int(profile.get("powerups", 0))):
+		_spawn_random_powerup()
+
+func _try_spawn_seesaw() -> void:
+	# Die Wippe ist ein zentrales Landmarken-Objekt und hängt sichtbar in der
+	# Luft. Sie wird nicht mehr auf den Boden oder auf eine zufällige Plattform
+	# gestellt. Die Höhe richtet sich nach der obersten festen Ebene, damit
+	# zwischen Wippe und Plattform genug Kopfraum bleibt.
+	var width := 6
+	var center_tile := int(MAP_WIDTH / 2)
+	var archetype := str(MAP_PROFILES.get(current_map_id, {}).get("archetype", "stepped"))
+	var center_row := 5 if archetype == "multitier" else 6
+	var center_y := float(center_row) * TILE_SIZE
+	var start := center_tile - int(width / 2)
+	var seesaw := seesaw_scene.instantiate()
+	seesaw.set("plank_width", float(width) * TILE_SIZE)
+	seesaw.set("suspended", true)
+	seesaw.set("chain_length", 3.0 * TILE_SIZE)
+	seesaw.position = Vector2(
+		(float(center_tile) + 0.5) * TILE_SIZE,
+		center_y
+	)
+	_register_moving_object(seesaw)
+	add_child(seesaw)
+	for x in range(start, start + width):
+		_object_cells[Vector2i(x, center_row - 1)] = true
+		_object_cells[Vector2i(x, center_row)] = true
+
+func _spawn_crate_stack() -> void:
+	var cell := _find_crate_stack_cell()
+	if cell.x < 0:
+		return
+	var stack_height := 2 + _rng.randi() % 3
+	var center_x := (float(cell.x) + 0.5) * TILE_SIZE
+	var cursor_y := float(cell.y) * TILE_SIZE - 2.0
+	var used_cells: Array[Vector2i] = []
+	for index in range(stack_height):
+		var size_factor: float = CRATE_SIZES[_rng.randi() % CRATE_SIZES.size()]
+		var size_px := 36.0 * size_factor
+		var crate := crate_scene.instantiate()
+		crate.set("crate_size", size_factor)
+		crate.set("health", 2)
+		crate.set("max_health", 2)
+		crate.connect("crate_broken", Callable(self, "_on_crate_broken"))
+		var jitter := _rng.randf_range(-1.5, 1.5)
+		crate.position = Vector2(center_x + jitter, cursor_y - size_px * 0.5)
+		crate.rotation = _rng.randf_range(-0.025, 0.025)
+		_register_moving_object(crate)
+		add_child(crate)
+		used_cells.append(Vector2i(cell.x, int(floor(crate.position.y / TILE_SIZE))))
+		cursor_y = crate.position.y - size_px * 0.5 - 1.0
+	for used_cell in used_cells:
+		for dx in range(-1, 2):
+			for dy in range(-1, 1):
+				_object_cells[Vector2i(used_cell.x + dx, used_cell.y + dy)] = true
+
+func _find_crate_stack_cell() -> Vector2i:
+	var candidates: Array[Vector2i] = []
+	for raw_cell in _solid_cells.keys():
+		var cell: Vector2i = raw_cell
+		if cell.y <= 5:
+			continue
+		if not _is_top_available(cell):
+			continue
+		if not _has_crate_headroom(cell, 5):
+			continue
+		candidates.append(cell)
+	if candidates.is_empty():
+		return Vector2i(-1, -1)
+	return candidates[_rng.randi() % candidates.size()]
+
+func _has_crate_headroom(cell: Vector2i, height: int) -> bool:
+	for dy in range(1, height + 1):
+		var above := Vector2i(cell.x, cell.y - dy)
+		if above.y < 0:
+			return false
+		if _solid_cells.has(above) or _special_cells.has(above) or _object_cells.has(above) or _ice_cells.has(above):
+			return false
+	return true
+
+func _on_crate_broken(world_position, attacker) -> void:
+	if _crate_drops_spawned >= 4:
+		return
+	if _rng.randf() > _crate_powerup_chance:
+		return
+	_crate_drops_spawned += 1
+	call_deferred("_spawn_powerup_at", world_position, _random_powerup_kind())
+
+func _spawn_random_powerup() -> void:
+	var spawn_pos := _find_powerup_position()
+	if spawn_pos == Vector2.INF:
+		return
+	_spawn_powerup_at(spawn_pos, _random_powerup_kind())
+
+func _find_powerup_position() -> Vector2:
+	var candidates: Array[Vector2i] = []
+	for raw_cell in _solid_cells.keys():
+		var cell: Vector2i = raw_cell
+		if cell.y <= 4:
+			continue
+		if not _is_top_available(cell):
+			continue
+		if not _has_crate_headroom(cell, 2):
+			continue
+		candidates.append(cell)
+	if candidates.is_empty():
+		return Vector2.INF
+	for _attempt in range(24):
+		var cell: Vector2i = candidates[_rng.randi() % candidates.size()]
+		var pos := Vector2((float(cell.x) + 0.5) * TILE_SIZE, float(cell.y) * TILE_SIZE - 32.0)
+		_object_cells[Vector2i(cell.x, cell.y - 1)] = true
+		return pos
+	return Vector2.INF
+
+func _spawn_powerup_at(world_position: Vector2, kind: String) -> void:
+	if not is_inside_tree():
+		return
+	var powerup := powerup_scene.instantiate()
+	powerup.set("kind", kind)
+	powerup.position = world_position
+	_register_moving_object(powerup)
+	add_child(powerup)
+
+func _random_powerup_kind() -> String:
+	return POWERUP_KINDS[_rng.randi() % POWERUP_KINDS.size()]
+
+func _try_spawn_chain_platform(index: int) -> void:
+	# Die Kettenplattformen hängen oberhalb der obersten festen Ebene. So
+	# bilden sie keinen niedrigen Deckel zwischen zwei Etagen.
+	var spots: Array[Dictionary] = [
+		{"cx": 14, "anchor_y": 1, "length": 4},
+		{"cx": 23, "anchor_y": 1, "length": 4},
+		{"cx": 18, "anchor_y": 0, "length": 5},
+		{"cx": 10, "anchor_y": 0, "length": 5},
+		{"cx": 27, "anchor_y": 0, "length": 5},
+	]
+	var width := 4
+	for offset in range(spots.size()):
+		var spot: Dictionary = spots[(index + offset) % spots.size()]
+		var cx := int(spot.get("cx", 18))
+		var anchor_y := int(spot.get("anchor_y", 6))
+		var length := int(spot.get("length", 5))
+		var platform_y := anchor_y + length
+		var x_start := cx - int(width / 2)
+		var x_end := x_start + width - 1
+		if not _is_rect_free(x_start, x_end, platform_y, platform_y):
+			continue
+		if not _has_vertical_clearance(x_start, x_end, platform_y, platform_y):
+			continue
+		var chain := chain_platform_scene.instantiate()
+		chain.set("platform_width", float(width) * TILE_SIZE)
+		chain.set("chain_length", float(length) * TILE_SIZE)
+		chain.position = Vector2(
+			(float(x_start) + float(width) * 0.5) * TILE_SIZE,
+			(float(anchor_y) + 0.5) * TILE_SIZE
+		)
+		_register_moving_object(chain)
+		add_child(chain)
+		for x in range(x_start, x_end + 1):
+			_object_cells[Vector2i(x, platform_y)] = true
+		return
+
+func _spawn_barrel(explosive: bool) -> void:
+	var cell := _find_barrel_cell(explosive)
+	if cell.x < 0:
+		return
+	var barrel := barrel_scene.instantiate()
+	barrel.set("explosive", explosive)
+	barrel.position = Vector2((float(cell.x) + 0.5) * TILE_SIZE, float(cell.y) * TILE_SIZE - 22.0)
+	_register_moving_object(barrel)
+	add_child(barrel)
+	_object_cells[cell] = true
+	_object_cells[Vector2i(cell.x, cell.y - 1)] = true
+
+func _find_barrel_cell(explosive: bool) -> Vector2i:
+	var candidates: Array[Vector2i] = []
+	for raw_cell in _solid_cells.keys():
+		var cell: Vector2i = raw_cell
+		if cell.y < 10:
+			continue
+		if not _is_top_available(cell):
+			continue
+		candidates.append(cell)
+	if candidates.is_empty():
+		return Vector2i(-1, -1)
+	if explosive:
+		var best := candidates[0]
+		var best_score := INF
+		for cell in candidates:
+			var score := absf(float(cell.x) + 0.5 - float(MAP_WIDTH) * 0.5) * 2.5
+			score += float((MAP_HEIGHT - 2) - cell.y) * 3.0
+			if score < best_score:
+				best_score = score
+				best = cell
+		return best
+	return candidates[_rng.randi() % candidates.size()]
+
+func _instantiate_moving_object_from_snapshot(data: Dictionary) -> Node:
+	var object_type := str(data.get("type", ""))
+	var obj: Node = null
+	match object_type:
+		"crate":
+			obj = crate_scene.instantiate()
+			obj.set("crate_size", float(data.get("size", 1.0)))
+		"powerup":
+			obj = powerup_scene.instantiate()
+			obj.set("kind", str(data.get("kind", "heal")))
+		"barrel", "tnt_barrel":
+			obj = barrel_scene.instantiate()
+			obj.set("explosive", object_type == "tnt_barrel")
+		_:
+			return null
+	obj.set("is_replica", true)
+	return obj
+
+func _adopt_moving_object(obj: Node, id: int) -> void:
+	obj.set("net_id", id)
+	obj.set("is_replica", true)
+	_moving_objects.append(obj)
+	_moving_objects_by_id[id] = obj
+	if id >= _next_moving_object_id:
+		_next_moving_object_id = id + 1
+
+func get_moving_object_snapshots() -> Array:
+	var result: Array = []
+	for obj in _moving_objects:
+		if not is_instance_valid(obj) or obj.is_queued_for_deletion():
+			continue
+		if obj.has_method("get_network_state"):
+			result.append(obj.get_network_state())
+	return result
+
+func get_moving_object_count() -> int:
+	var count := 0
+	for obj in _moving_objects:
+		if is_instance_valid(obj) and not obj.is_queued_for_deletion() and obj.has_method("get_network_state"):
+			count += 1
+	return count
+
+func apply_moving_object_snapshots(snapshots: Array) -> void:
+	if not Global.network_mode or Global.is_local_host():
+		return
+	var seen: Dictionary = {}
+	for raw_snapshot in snapshots:
+		if not raw_snapshot is Dictionary:
+			continue
+		var data: Dictionary = raw_snapshot
+		var id := int(data.get("id", -1))
+		if id < 0:
+			continue
+		seen[id] = true
+		var obj = _moving_objects_by_id.get(id)
+		if obj == null or not is_instance_valid(obj) or obj.is_queued_for_deletion():
+			obj = _instantiate_moving_object_from_snapshot(data)
+			if obj != null:
+				_adopt_moving_object(obj, id)
+				add_child(obj)
+		if obj != null and is_instance_valid(obj) and not obj.is_queued_for_deletion():
+			if obj.has_method("apply_network_state"):
+				obj.apply_network_state(data)
+	var missing: Array[int] = []
+	for id in _moving_objects_by_id.keys():
+		if not seen.has(id):
+			missing.append(int(id))
+	for id in missing:
+		var obj = _moving_objects_by_id.get(id)
+		_moving_objects_by_id.erase(id)
+		if obj == null:
+			continue
+		_moving_objects.erase(obj)
+		if not is_instance_valid(obj):
+			continue
+		if obj.has_method("spawn_remote_explosion"):
+			obj.spawn_remote_explosion()
+		else:
+			obj.queue_free()

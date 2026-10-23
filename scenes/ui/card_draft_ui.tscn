@@ -66,13 +66,22 @@ theme_override_font_sizes/font_size = 16
 text = "Öffentlicher Draft - Alle Spieler sehen die Kartenauswahl live!"
 horizontal_alignment = 1
 
-[node name="CardsContainer" type="HBoxContainer" parent="MainControl/DraftView"]
+[node name="DraftTabs" type="TabContainer" parent="MainControl/DraftView"]
+layout_mode = 2
+size_flags_vertical = 3
+current_tab = 0
+
+[node name="Karten" type="VBoxContainer" parent="MainControl/DraftView/DraftTabs"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="CardsContainer" type="HBoxContainer" parent="MainControl/DraftView/DraftTabs/Karten"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 15
 alignment = 1
 
-[node name="BotStatusLabel" type="Label" parent="MainControl/DraftView"]
+[node name="BotStatusLabel" type="Label" parent="MainControl/DraftView/DraftTabs/Karten"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.8, 0.3, 1)
 theme_override_font_sizes/font_size = 16

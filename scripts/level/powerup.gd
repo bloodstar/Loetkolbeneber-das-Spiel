@@ -1,0 +1,224 @@
+class_name Powerup
+extends Area2D
+
+const KIND_HEAL: String = "heal"
+const KIND_INVULNERABILITY: String = "invulnerability"
+const KIND_DAMAGE: String = "damage"
+const KIND_RAPID_FIRE: String = "rapid_fire"
+const KINDS: Array[String] = [
+	KIND_HEAL,
+	KIND_INVULNERABILITY,
+	KIND_DAMAGE,
+	KIND_RAPID_FIRE,
+]
+
+var net_id: int = 0
+var object_type: String = "powerup"
+var is_replica: bool = false
+var kind: String = KIND_HEAL
+
+var _visual_root: Node2D
+var _bob_time: float = 0.0
+var _collected: bool = false
+
+func _ready() -> void:
+	collision_layer = 4
+	collision_mask = 2
+	monitoring = true
+	monitorable = true
+	_build_collision()
+	_build_visual()
+	body_entered.connect(_on_body_entered)
+	if is_replica:
+		set_replica(true)
+
+func _process(delta: float) -> void:
+	_bob_time += delta
+	if _visual_root != null:
+		_visual_root.position.y = sin(_bob_time * 3.2) * 5.0
+		_visual_root.rotation = sin(_bob_time * 1.7) * 0.08
+
+func _build_collision() -> void:
+	var col := CollisionShape2D.new()
+	var shape := CircleShape2D.new()
+	shape.radius = 22.0
+	col.shape = shape
+	add_child(col)
+
+func _build_visual() -> void:
+	_visual_root = Node2D.new()
+	_visual_root.name = "Visual"
+	add_child(_visual_root)
+
+	var color := _kind_color()
+	var glow := Polygon2D.new()
+	glow.polygon = _circle_points(24.0, 24)
+	glow.color = Color(color.r, color.g, color.b, 0.18)
+	_visual_root.add_child(glow)
+
+	var ring := Line2D.new()
+	ring.points = _circle_points(18.0, 24)
+	ring.width = 3.0
+	ring.default_color = color
+	_visual_root.add_child(ring)
+
+	var core := Polygon2D.new()
+	core.polygon = _circle_points(12.0, 20)
+	core.color = color.darkened(0.18)
+	_visual_root.add_child(core)
+
+	var icon := Node2D.new()
+	icon.name = "Icon"
+	_visual_root.add_child(icon)
+	_build_icon(icon, color)
+
+	var label := Label.new()
+	label.text = _kind_label()
+	label.position = Vector2(-36.0, 24.0)
+	label.size = Vector2(72.0, 16.0)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 10)
+	label.add_theme_color_override("font_color", Color(1.0, 0.98, 0.88, 1.0))
+	label.add_theme_color_override("font_outline_color", Color(0.08, 0.08, 0.1, 0.95))
+	label.add_theme_constant_override("outline_size", 3)
+	_visual_root.add_child(label)
+
+func _build_icon(icon: Node2D, color: Color) -> void:
+	match kind:
+		KIND_HEAL:
+			var vertical := Polygon2D.new()
+			vertical.polygon = PackedVector2Array([
+				Vector2(-4, -11), Vector2(4, -11), Vector2(4, 11), Vector2(-4, 11),
+			])
+			vertical.color = Color(0.94, 1.0, 0.94, 1.0)
+			icon.add_child(vertical)
+			var horizontal := Polygon2D.new()
+			horizontal.polygon = PackedVector2Array([
+				Vector2(-11, -4), Vector2(11, -4), Vector2(11, 4), Vector2(-11, 4),
+			])
+			horizontal.color = Color(0.94, 1.0, 0.94, 1.0)
+			icon.add_child(horizontal)
+		KIND_INVULNERABILITY:
+			var shield := Polygon2D.new()
+			shield.polygon = PackedVector2Array([
+				Vector2(0, -12), Vector2(10, -7), Vector2(8, 6),
+				Vector2(0, 13), Vector2(-8, 6), Vector2(-10, -7),
+			])
+			shield.color = Color(0.9, 0.98, 1.0, 1.0)
+			icon.add_child(shield)
+			var inner := Polygon2D.new()
+			inner.polygon = PackedVector2Array([
+				Vector2(0, -7), Vector2(5, -4), Vector2(0, 7), Vector2(-5, -4),
+			])
+			inner.color = color.darkened(0.2)
+			icon.add_child(inner)
+		KIND_DAMAGE:
+			var bolt := Polygon2D.new()
+			bolt.polygon = PackedVector2Array([
+				Vector2(-3, -12), Vector2(9, -12), Vector2(1, -2),
+				Vector2(8, -2), Vector2(-7, 13), Vector2(-2, 1), Vector2(-9, 1),
+			])
+			bolt.color = Color(1.0, 0.94, 0.72, 1.0)
+			icon.add_child(bolt)
+		KIND_RAPID_FIRE:
+			for i in range(3):
+				var shot := Polygon2D.new()
+				shot.polygon = PackedVector2Array([
+					Vector2(-9.0 + float(i) * 5.0, -9.0),
+					Vector2(-3.0 + float(i) * 5.0, -9.0),
+					Vector2(-5.0 + float(i) * 5.0, 9.0),
+					Vector2(-11.0 + float(i) * 5.0, 9.0),
+				])
+				shot.color = Color(1.0, 0.95, 0.72, 1.0)
+				icon.add_child(shot)
+
+func _kind_color() -> Color:
+	match kind:
+		KIND_INVULNERABILITY:
+			return Color(0.32, 0.72, 1.0, 1.0)
+		KIND_DAMAGE:
+			return Color(1.0, 0.38, 0.22, 1.0)
+		KIND_RAPID_FIRE:
+			return Color(1.0, 0.78, 0.22, 1.0)
+		_:
+			return Color(0.35, 1.0, 0.48, 1.0)
+
+func _kind_label() -> String:
+	match kind:
+		KIND_INVULNERABILITY:
+			return "SCHUTZ"
+		KIND_DAMAGE:
+			return "SCHADEN"
+		KIND_RAPID_FIRE:
+			return "DAUERFEUER"
+		_:
+			return "HEILUNG"
+
+func _on_body_entered(body: Node2D) -> void:
+	if is_replica or _collected:
+		return
+	if not (body is Player):
+		return
+	var player := body as Player
+	if player.current_health <= 0.0:
+		return
+	_collected = true
+	player.apply_powerup(kind)
+	_spawn_pickup_flash()
+	queue_free()
+
+func _spawn_pickup_flash() -> void:
+	var parent := get_parent()
+	if parent == null:
+		return
+	var fx := Node2D.new()
+	fx.global_position = global_position
+	fx.z_index = 6
+	parent.add_child(fx)
+	var ring := Line2D.new()
+	ring.points = _circle_points(16.0, 18)
+	ring.width = 3.0
+	ring.default_color = _kind_color()
+	fx.add_child(ring)
+	var tw := fx.create_tween()
+	tw.tween_property(fx, "scale", Vector2(1.8, 1.8), 0.22)
+	tw.parallel().tween_property(fx, "modulate:a", 0.0, 0.24)
+	tw.tween_callback(fx.queue_free)
+
+func set_replica(replica: bool) -> void:
+	is_replica = replica
+	monitoring = not replica
+	monitorable = not replica
+	if replica:
+		collision_layer = 0
+		collision_mask = 0
+
+func get_network_state() -> Dictionary:
+	return {
+		"id": net_id,
+		"type": object_type,
+		"pos": global_position,
+		"rot": rotation,
+		"kind": kind,
+	}
+
+func apply_network_state(data: Dictionary) -> void:
+	if not is_replica:
+		return
+	global_position = data.get("pos", global_position)
+	var new_kind := str(data.get("kind", kind))
+	if new_kind != kind:
+		kind = new_kind
+		if _visual_root != null:
+			_visual_root.queue_free()
+			_build_visual()
+
+func _circle_points(radius: float, segments: int) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	for i in range(segments):
+		var angle := TAU * float(i) / float(segments)
+		points.append(Vector2(cos(angle), sin(angle)) * radius)
+	if not points.is_empty():
+		points.append(points[0])
+	return points

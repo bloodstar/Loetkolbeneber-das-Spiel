@@ -16,5 +16,11 @@ extends Resource
 @export var base_jump_force: float = -460.0
 @export var extra_jumps: int = 0
 
+# Waffenbasiswerte. Die Munition wird pro Klasse angepasst; Karten addieren
+# Munition bzw. multiplizieren das Feuerintervall und die Nachladezeit.
+@export var base_ammo: int = 3
+@export var base_fire_rate_cooldown: float = 0.22
+@export var base_reload_time: float = 1.8
+
 @export var color_tint: Color = Color.WHITE
 @export var sprite_tile_name: String = "tile_0000.png"
