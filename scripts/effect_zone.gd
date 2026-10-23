@@ -67,7 +67,7 @@ func _apply_tick() -> void:
 			target.apply_freeze(freeze_duration)
 		Kind.LIGHTNING:
 			if damage > 0.0:
-				target.take_damage(damage)
+				target.take_damage(damage, Vector2.ZERO, owner_player)
 			target.apply_stun(stun_duration)
 
 func _draw() -> void:

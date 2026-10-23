@@ -21,7 +21,8 @@ func open_dialog() -> void:
 	get_tree().paused = true
 
 func _build_hero_buttons() -> void:
-	var hero_keys = ["ignis", "titan", "volt", "spore"]
+	# Alle aktuell registrierten Helden (Titan wurde entfernt, Block ist universal).
+	var hero_keys: Array = Global.heroes.keys()
 	
 	# P1
 	for k in hero_keys:
@@ -37,18 +38,21 @@ func _build_hero_buttons() -> void:
 
 func _create_hero_card(hero: HeroData, p_idx: int) -> Button:
 	var btn = Button.new()
-	btn.custom_minimum_size = Vector2(210, 160)
+	btn.custom_minimum_size = Vector2(150, 190)
 	# Held an den Button binden, damit die Auswahl eindeutig ist.
 	btn.set_meta("hero_id", hero.id)
 	
 	# Eine Lobby-Basis-HP-Einstellung überschreibt den Heldenwert bereits vor
 	# allen Kartenboni; die Heldenvorschau zeigt deshalb den effektiven Wert.
-	var shown_hp: int = Global.base_hp_override if Global.base_hp_override > 0 else hero.base_hp
-	var text_content = "%s\n[%s]\nHP: %d | Spd: %d\nPassive: %s\nActive: %s" % [
+	var shown_hp: int = Global.get_effective_base_hp(hero)
+	var text_content = "%s\n[%s]\nHP: %d | Spd: %d\nMun: %d | Feuer: %.2fs | Reload: %.1fs\nPassive: %s\nActive: %s" % [
 		hero.name.to_upper(),
 		hero.role,
 		shown_hp,
 		int(hero.base_speed),
+		hero.base_ammo,
+		hero.base_fire_rate_cooldown,
+		hero.base_reload_time,
 		hero.passive_desc,
 		hero.ability_name
 	]

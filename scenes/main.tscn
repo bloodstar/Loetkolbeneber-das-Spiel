@@ -29,8 +29,8 @@ one_shot = true
 [node name="CardDraftUI" parent="." unique_id=1362705433 instance=ExtResource("5_card_draft")]
 visible = false
 
-[node name="Lobby" parent="." instance=ExtResource("6_lobby")]
+[node name="Lobby" parent="." unique_id=177500337 instance=ExtResource("6_lobby")]
 visible = false
 
-[node name="MainMenu" parent="." instance=ExtResource("7_main_menu")]
+[node name="MainMenu" parent="." unique_id=1626251674 instance=ExtResource("7_main_menu")]
 visible = false

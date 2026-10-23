@@ -17,7 +17,6 @@ func _ready() -> void:
 	_load_sound("shoot_alt", "res://assets/sfx/laserSmall_001.ogg")
 	_load_sound("shoot_heavy", "res://assets/sfx/laserLarge_000.ogg")
 	_load_sound("shoot_retro", "res://assets/sfx/laserRetro_000.ogg")
-	_load_sound("dash", "res://assets/sfx/thrusterFire_000.ogg")
 	_load_sound("shield", "res://assets/sfx/forceField_001.ogg")
 	_load_sound("explosion", "res://assets/sfx/explosionCrunch_000.ogg")
 	_load_sound("poison", "res://assets/sfx/slime_001.ogg")

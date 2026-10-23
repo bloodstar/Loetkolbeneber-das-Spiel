@@ -36,61 +36,26 @@ script = ExtResource("1_script")
 anchors_preset = 10
 anchor_right = 1.0
 offset_left = 20.0
-offset_top = 15.0
+offset_top = 12.0
 offset_right = -20.0
-offset_bottom = 110.0
+offset_bottom = 118.0
 grow_horizontal = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 16
 
-[node name="P1_Box" type="VBoxContainer" parent="Top"]
-custom_minimum_size = Vector2(280, 0)
-layout_mode = 2
-
-[node name="NameLabel" type="Label" parent="Top/P1_Box"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.6, 0.3, 1)
-theme_override_font_sizes/font_size = 18
-text = "P1: Ignis (Skirmisher)"
-
-[node name="HPBar" type="ProgressBar" parent="Top/P1_Box"]
-custom_minimum_size = Vector2(0, 16)
-layout_mode = 2
-theme_override_styles/fill = SubResource("StyleBoxFlat_hp")
-value = 100.0
-show_percentage = false
-
-[node name="ShieldBar" type="ProgressBar" parent="Top/P1_Box"]
-custom_minimum_size = Vector2(0, 8)
-layout_mode = 2
-theme_override_styles/fill = SubResource("StyleBoxFlat_shield")
-value = 50.0
-show_percentage = false
-
-[node name="AmmoLabel" type="Label" parent="Top/P1_Box"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 14
-text = "Munition: 5 / 5"
-
-[node name="AbilityLabel" type="Label" parent="Top/P1_Box"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 14
-text = "[RMB/E] Ability: BEREIT!"
-
-[node name="CardsLabel" type="Label" parent="Top/P1_Box"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
-theme_override_font_sizes/font_size = 12
-text = "Upgrades: 0"
-
-[node name="Center_Box" type="VBoxContainer" parent="Top"]
+[node name="PlayerBoxes" type="HBoxContainer" parent="Top"]
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="Center_Box" type="VBoxContainer" parent="Top"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
 alignment = 1
 
 [node name="ScoreLabel" type="Label" parent="Top/Center_Box"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 22
-text = "P1 [ 0 : 0 ] P2
+theme_override_font_sizes/font_size = 18
+text = "P1 0   P2 0
 (Ziel: 3 Siege)"
 horizontal_alignment = 1
 
@@ -98,56 +63,17 @@ horizontal_alignment = 1
 visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.2, 0.2, 1)
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 14
 text = "⚠ SUDDEN DEATH: LAVA STEIGT AUF! ⚠"
 horizontal_alignment = 1
 
-[node name="P2_Box" type="VBoxContainer" parent="Top"]
-custom_minimum_size = Vector2(280, 0)
+[node name="PingLabel" type="Label" parent="Top/Center_Box"]
+visible = false
 layout_mode = 2
-alignment = 2
-
-[node name="NameLabel" type="Label" parent="Top/P2_Box"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.4, 0.8, 1, 1)
-theme_override_font_sizes/font_size = 18
-text = "[BOT] Titan (Brawler)"
-horizontal_alignment = 2
-
-[node name="HPBar" type="ProgressBar" parent="Top/P2_Box"]
-custom_minimum_size = Vector2(0, 16)
-layout_mode = 2
-theme_override_styles/fill = SubResource("StyleBoxFlat_hp")
-fill_mode = 1
-value = 100.0
-show_percentage = false
-
-[node name="ShieldBar" type="ProgressBar" parent="Top/P2_Box"]
-custom_minimum_size = Vector2(0, 8)
-layout_mode = 2
-theme_override_styles/fill = SubResource("StyleBoxFlat_shield")
-fill_mode = 1
-value = 50.0
-show_percentage = false
-
-[node name="AmmoLabel" type="Label" parent="Top/P2_Box"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 14
-text = "Munition: 5 / 5"
-horizontal_alignment = 2
-
-[node name="AbilityLabel" type="Label" parent="Top/P2_Box"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 14
-text = "Ability: BEREIT!"
-horizontal_alignment = 2
-
-[node name="CardsLabel" type="Label" parent="Top/P2_Box"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
-theme_override_font_sizes/font_size = 12
-text = "Upgrades: 0"
-horizontal_alignment = 2
+theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
+theme_override_font_sizes/font_size = 11
+horizontal_alignment = 1
+autowrap_mode = 2
 
 [node name="GameOverPanel" type="PanelContainer" parent="."]
 visible = false
@@ -156,9 +82,9 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -220.0
+offset_left = -240.0
 offset_top = -120.0
-offset_right = 220.0
+offset_right = 240.0
 offset_bottom = 120.0
 grow_horizontal = 2
 grow_vertical = 2
@@ -174,13 +100,14 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 24
 text = "🏆 SPIELER 1 GEWINNT! 🏆"
 horizontal_alignment = 1
+autowrap_mode = 2
 
 [node name="RestartBtn" type="Button" parent="GameOverPanel/VBox"]
 custom_minimum_size = Vector2(180, 44)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 18
-text = "MATCH NEUSTARTEN (R)"
+text = "NOCHMAL"
 
 [node name="CountdownLabel" type="Label" parent="."]
 visible = false
