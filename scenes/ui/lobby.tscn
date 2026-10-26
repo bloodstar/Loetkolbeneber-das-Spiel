@@ -118,6 +118,10 @@ theme_override_constants/separation = 8
 layout_mode = 2
 theme_override_constants/separation = 8
 
+[node name="Modifier" type="VBoxContainer" parent="Panel/Margin/VBox/Tabs"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
 [node name="Footer" type="HBoxContainer" parent="Panel/Margin/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 16

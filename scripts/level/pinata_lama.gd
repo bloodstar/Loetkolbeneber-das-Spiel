@@ -13,9 +13,25 @@ var _direction: float = 1.0
 var _hop_timer: float = 0.0
 var _anim_time: float = 0.0
 var _arena_rect: Rect2 = Rect2(60, 60, 1200, 700)
+var _leader_position: Vector2 = Vector2.INF
+var _has_leader: bool = false
+var _flee_lock_timer: float = 0.0
 
 func setup_bounds(rect: Rect2) -> void:
 	_arena_rect = rect
+
+func set_leader_position(world_position: Vector2) -> void:
+	_leader_position = world_position
+	_has_leader = true
+
+func has_leader_target() -> bool:
+	return _has_leader
+
+func get_leader_position() -> Vector2:
+	return _leader_position
+
+func get_flee_direction() -> float:
+	return _direction
 
 func _ready() -> void:
 	collision_layer = 2 # Treat like player/hittable
@@ -31,16 +47,26 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_anim_time += delta * 12.0
 	_hop_timer -= delta
+	_flee_lock_timer = maxf(0.0, _flee_lock_timer - delta)
+	_update_flee_direction()
 
 	if not is_on_floor():
 		velocity.y += GRAVITY * delta
 	else:
-		velocity.x = _direction * RUN_SPEED
-		# Jump over walls or randomly
+		var panic_speed := 1.0
+		if _has_leader:
+			var distance := global_position.distance_to(_leader_position)
+			panic_speed = 1.0 + clampf(1.0 - distance / 420.0, 0.0, 1.0) * 0.45
+		velocity.x = _direction * RUN_SPEED * panic_speed
+		# Jump over walls or panic-hop when the leader gets close.
 		if is_on_wall() and _hop_timer <= 0.0:
 			velocity.y = JUMP_FORCE
-			_hop_timer = 0.6
+			_hop_timer = 0.55
+			_flee_lock_timer = 0.45
 			_direction = -_direction
+		elif _has_leader and _hop_timer <= 0.0 and randf() < 0.035:
+			velocity.y = JUMP_FORCE * 0.9
+			_hop_timer = 0.75
 		elif randf() < 0.015 and _hop_timer <= 0.0:
 			velocity.y = JUMP_FORCE * 0.8
 			_hop_timer = 0.8
@@ -53,6 +79,14 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 	queue_redraw()
+
+func _update_flee_direction() -> void:
+	if not _has_leader or _flee_lock_timer > 0.0:
+		return
+	var away := global_position.x - _leader_position.x
+	if absf(away) < 1.0:
+		away = 1.0 if randf() < 0.5 else -1.0
+	_direction = 1.0 if away > 0.0 else -1.0
 
 func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null, _is_reflected: bool = false) -> void:
 	velocity += knockback * 0.4

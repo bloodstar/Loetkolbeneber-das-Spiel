@@ -1444,6 +1444,9 @@ func _spawn_map_objects(profile: Dictionary) -> void:
 		_spawn_crate_stack()
 	for _i in range(int(profile.get("powerups", 0))):
 		_spawn_random_powerup()
+	if active_level_modifiers.has("powerup_rain"):
+		for _i in range(4):
+			_spawn_random_powerup()
 	if active_level_modifiers.has("ice_world"):
 		for raw_cell in _solid_cells.keys():
 			_spawn_ice_patch(raw_cell)

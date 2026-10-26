@@ -51,7 +51,7 @@ func _on_body_entered(body: Node2D) -> void:
 	# denselben Collision-Layer und hat ebenfalls take_damage(), darf aber
 	# keine Beute für Slot 1 auslösen.
 	if body is Player:
-		SoundManager.play_sound("glass", 0.3, 2.0)
+		SoundManager.play_sound("coin", 0.22, 0.0)
 		collected.emit(body)
 
 		# Sparkle particle effect

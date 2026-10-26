@@ -1,5 +1,7 @@
 extends Node2D
 
+const LevelModifierDefsClass = preload("res://scripts/level_modifier_defs.gd")
+
 func _assert_spawn_distances(spawns: Array[Vector2], context: String) -> void:
 	for i in range(spawns.size()):
 		for j in range(i + 1, spawns.size()):
@@ -17,6 +19,7 @@ func _ready() -> void:
 	CardStats.auto_evaluation_enabled = false
 	CardStats.reset_statistics(true)
 	assert(SoundManager.sounds.has("death"), "Death sound should be registered")
+	assert(SoundManager.sounds.has("coin"), "Coin pickup sound should be registered")
 	# Team-Modi: deterministische Zuordnung und Helfer vor dem Match prüfen.
 	Global.set_match_mode(Global.MATCH_MODE_2V2)
 	Global.set_player_count(4)
@@ -155,6 +158,27 @@ func _ready() -> void:
 	main.lobby._on_blind_pick_toggled(blind_pick_backup)
 	main.lobby._on_random_pick_toggled(random_pick_backup)
 
+	# Runden-Modifier-Reiter: Rate, Auswahl und Host-Sperre.
+	assert(main.lobby.modifier_rate_spin != null, "Lobby should build the modifier rate selector")
+	assert(main.lobby.modifier_checks.size() == 20, "Lobby should list all 20 round modifiers")
+	assert(main.lobby.modifier_all_btn != null and main.lobby.modifier_none_btn != null, "Lobby should offer select-all/none buttons")
+	var level_rate_backup: int = Global.level_modifier_rate_percent
+	var level_mods_backup: Array[String] = Global.get_enabled_level_modifiers()
+	main.lobby._on_modifier_rate_changed(0.0)
+	assert(Global.level_modifier_rate_percent == 0, "Lobby should update the modifier rate")
+	assert("Level-Mod 0 %" in main.lobby.draft_summary.text, "Lobby summary should show the modifier rate")
+	main.lobby._on_modifier_rate_changed(200.0)
+	assert(Global.level_modifier_rate_percent == 200, "Lobby should allow a 200 % modifier rate")
+	main.lobby._on_none_modifiers_pressed()
+	assert(Global.get_enabled_level_modifier_count() == 0, "None button should disable every modifier")
+	var wind_check := main.lobby.modifier_checks["wind"] as CheckButton
+	assert(wind_check != null and not wind_check.button_pressed, "Disabled modifiers should uncheck in the lobby")
+	main.lobby._on_all_modifiers_pressed()
+	assert(Global.get_enabled_level_modifier_count() == 20, "All button should enable every modifier")
+	Global.set_level_modifier_rate_percent(level_rate_backup)
+	Global.set_enabled_level_modifiers(level_mods_backup)
+	main.lobby._refresh_modifier_controls()
+
 	# Blind pick wirkt nur online gegen menschliche Spieler, nie gegen Bots.
 	var draft_ui: CardDraftUI = main.card_draft_ui
 	var draft_network_backup: bool = draft_ui.network_mode
@@ -199,8 +223,9 @@ func _ready() -> void:
 	assert(main.lobby.character_hero_icon != null and main.lobby.character_hero_icon.texture != null, "Character tab should show the selected class icon")
 	assert(main.lobby.ready_btn != null, "Lobby should build the footer ready button")
 	# Charakteranpassung lebt in der Lobby und ist pro Spieler-Slot verfügbar.
-	assert(main.lobby.tabs.get_tab_count() == 4, "Lobby should have four tabs")
+	assert(main.lobby.tabs.get_tab_count() == 5, "Lobby should have five tabs")
 	assert(main.lobby.tabs.get_tab_title(1) == "Charakter", "Lobby should provide a character tab")
+	assert(main.lobby.tabs.get_tab_title(4) == "Modifier", "Lobby should provide a modifier tab")
 	assert(main.lobby.character_tab != null and main.lobby.character_slot_option != null, "Lobby should build the character controls")
 	assert(main.lobby.character_slot_option.item_count >= 1, "Local lobby should offer player slots for customization")
 	assert(main.lobby.wand_shape_option != null, "Lobby should offer configurable wand tip shapes")
@@ -1434,6 +1459,22 @@ func _ready() -> void:
 	print("[TEST] Verifying Level Modifier System...")
 	var mod_mgr = main.modifier_manager
 	assert(mod_mgr != null, "Main game should have an active modifier manager")
+	assert(LevelModifierDefsClass.MODIFIERS.size() == 20, "Exactly 20 level modifiers should be defined")
+	assert(mod_mgr.MODIFIERS.size() == 20, "Modifier manager should use the shared 20 modifier definitions")
+
+	# Konfiguration: Rate 0 schaltet alles aus, Filterung und 200 % werden geprüft.
+	var config_rate_backup: int = Global.level_modifier_rate_percent
+	var config_enabled_backup: Array[String] = Global.get_enabled_level_modifiers()
+	assert(mod_mgr.roll_modifiers(123, 0).is_empty(), "0 % rate should disable all modifiers")
+	var only_wind: Array[String] = ["wind"]
+	var wind_only_roll: Array[String] = mod_mgr.roll_modifiers(123, 200, only_wind)
+	assert(wind_only_roll.size() == 1 and wind_only_roll[0] == "wind", "Allowed modifier ids should filter the roll")
+	Global.set_enabled_level_modifiers([])
+	assert(mod_mgr.roll_configured_modifiers(42).is_empty(), "An empty lobby selection should roll nothing")
+	Global.set_level_modifier_rate_percent(0)
+	Global.set_enabled_level_modifiers(config_enabled_backup)
+	assert(mod_mgr.roll_configured_modifiers(42).is_empty(), "A 0 % lobby rate should roll nothing")
+	Global.set_level_modifier_rate_percent(config_rate_backup)
 
 	# 1. Test 10,000 rolls distribution
 	var counts := {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
@@ -1445,7 +1486,9 @@ func _ready() -> void:
 		counts[c] = int(counts.get(c, 0)) + 1
 		if rolled.has("cave") and rolled.has("floor_is_lava"):
 			incompatible_rolls += 1
-	assert(incompatible_rolls == 0, "Cave and floor_is_lava must never be rolled together")
+		if rolled.has("low_gravity") and rolled.has("high_gravity"):
+			incompatible_rolls += 1
+	assert(incompatible_rolls == 0, "Cave/lava and low/high gravity must never be rolled together")
 
 	var pct_0: float = float(counts[0]) / float(total_rolls) * 100.0
 	var pct_1: float = float(counts[1]) / float(total_rolls) * 100.0
@@ -1497,6 +1540,27 @@ func _ready() -> void:
 		var bonus_drafters: Array[int] = mod_mgr.get_bonus_card_drafters()
 		assert(bonus_drafters.has(1), "P1 should get bonus card for most coins")
 		assert(bonus_drafters.has(2), "P2 should get bonus card for most Piñata damage")
+
+		# Das Lama flieht primär vor dem führenden Spieler.
+		var score_1_backup: int = Global.player_scores[0]
+		var score_2_backup: int = Global.player_scores[1]
+		Global.player_scores[0] = 100
+		Global.player_scores[1] = 10
+		var leader_players: Array[Player] = [active_p1, active_p2]
+		mod_mgr.update_physics_modifiers(0.0, leader_players)
+		var llama = mod_mgr.current_pinata
+		assert(llama.has_leader_target(), "Pinata should receive a leader target")
+		assert(
+			llama.get_leader_position().distance_to(active_p1.global_position) < 1.0,
+			"Pinata should target the leading player"
+		)
+		llama.global_position = Vector2(500, 300)
+		llama.set_leader_position(Vector2(800, 300))
+		llama._flee_lock_timer = 0.0
+		llama._update_flee_direction()
+		assert(llama.get_flee_direction() < 0.0, "Pinata should run away from a leader on its right")
+		Global.player_scores[0] = score_1_backup
+		Global.player_scores[1] = score_2_backup
 		print("[TEST] Modifier physics, coins, Piñata and bonus drafters verified with live players.")
 	else:
 		# Fallback: Wenn die neue Runde noch nicht gestartet ist, nur Slot-basierte Tests
@@ -1508,6 +1572,84 @@ func _ready() -> void:
 		assert(bonus_draft2.is_empty(), "No bonus drafters when no coins collected")
 		print("[TEST] Modifier coin tracking verified (fallback, no live players available).")
 
+	# Neue Modifier-Effekte prüfen: Schaden, Gravitation, Tempo, Luftjump,
+	# Startschild, Regeneration und Kistenregen. Falls die Draft-Sequenz die
+	# Runde bereits beendet hat, werden zwei temporäre Spieler erzeugt.
+	var effect_p1: Player = active_p1
+	var effect_p2: Player = active_p2
+	var temp_effect_players: Array[Player] = []
+	if not is_instance_valid(effect_p1):
+		var temp_p1 := main.player_scene.instantiate() as Player
+		temp_p1.name = "TestEffectP1"
+		temp_p1.player_index = 1
+		temp_p1.position = Vector2(400, 300)
+		temp_p1.control_enabled = false
+		main.add_child(temp_p1)
+		temp_p1.set_physics_process(false)
+		effect_p1 = temp_p1
+		temp_effect_players.append(temp_p1)
+	if not is_instance_valid(effect_p2):
+		var temp_p2 := main.player_scene.instantiate() as Player
+		temp_p2.name = "TestEffectP2"
+		temp_p2.player_index = 2
+		temp_p2.position = Vector2(650, 300)
+		temp_p2.control_enabled = false
+		main.add_child(temp_p2)
+		temp_p2.set_physics_process(false)
+		effect_p2 = temp_p2
+		temp_effect_players.append(temp_p2)
+
+	if is_instance_valid(effect_p1) and is_instance_valid(effect_p2):
+		effect_p1.is_dead = false
+		effect_p2.is_dead = false
+		effect_p1.apply_stats()
+		effect_p2.apply_stats()
+		var effect_mods: Array[String] = [
+			"double_damage", "high_gravity", "speed_demon", "air_jumps",
+			"starting_shield", "regeneration", "crate_rain", "powerup_rain",
+		]
+		mod_mgr.active_modifiers.clear()
+		mod_mgr.active_modifiers.append_array(effect_mods)
+		mod_mgr._main_ref = main
+		mod_mgr._level_ref = main.level_generator
+		mod_mgr._regen_timer = 0.5
+
+		var damage_before: float = effect_p1.bullet_damage
+		var gravity_before: float = effect_p1.gravity_mult
+		var speed_before: float = effect_p1.move_speed
+		var jumps_before: int = effect_p1.max_jumps
+		var shield_before: float = effect_p1.max_shield
+		mod_mgr.apply_player_modifiers(effect_p1)
+		assert(effect_p1.bullet_damage > damage_before, "Double damage should increase bullet damage")
+		assert(effect_p1.gravity_mult > gravity_before, "High gravity should increase gravity_mult")
+		assert(effect_p1.move_speed > speed_before, "Speed demon should increase move speed")
+		assert(effect_p1.max_jumps == jumps_before + 1, "Air jumps should grant one extra jump")
+		assert(effect_p1.max_shield > shield_before, "Starting shield should add bonus shield")
+		assert(is_equal_approx(effect_p1.current_shield, effect_p1.max_shield), "Starting shield should be filled")
+
+		effect_p1.current_health = maxf(1.0, effect_p1.max_health - 20.0)
+		var health_before: float = effect_p1.current_health
+		var effect_players: Array[Player] = [effect_p1, effect_p2]
+		mod_mgr.update_physics_modifiers(0.5, effect_players)
+		assert(effect_p1.current_health > health_before, "Regeneration should heal over time")
+
+		var crates_before: int = 0
+		for child in main.level_generator.get_children():
+			if child is PhysicsCrate:
+				crates_before += 1
+		mod_mgr._spawn_crate_rain()
+		var crates_after: int = 0
+		for child in main.level_generator.get_children():
+			if child is PhysicsCrate:
+				crates_after += 1
+		assert(crates_after >= crates_before + 3, "Crate rain should spawn three crates")
+		assert(LevelModifierDefsClass.MODIFIERS.has("powerup_rain"), "Powerup rain should be defined")
+		print("[TEST] New modifier effects verified: damage, gravity, speed, air jump, shield, regen, crates.")
+		for temp_player in temp_effect_players:
+			if is_instance_valid(temp_player):
+				main.remove_child(temp_player)
+				temp_player.free()
+
 	# Test HUD integration – typed Array[Dictionary] wird benötigt
 	var hud_test_mods: Array[Dictionary] = [
 		{"id": "cave", "title": "Höhle", "icon": "🪨", "color": Color.GRAY, "description": "Feste Felswände"},
@@ -1516,6 +1658,14 @@ func _ready() -> void:
 	main.hud.show_level_modifiers(hud_test_mods)
 	assert(main.hud._modifier_container.visible, "HUD modifier badges should be visible")
 	assert(main.hud._modifier_container.get_child_count() == 2, "HUD should show 2 badges")
+	assert(main.hud._modifier_container is VBoxContainer, "HUD modifier badges should stack vertically at the screen edge")
+	assert(is_equal_approx(main.hud._modifier_container.anchor_left, 1.0), "HUD modifier badges should be anchored to the right")
+	var first_badge := main.hud._modifier_container.get_child(0) as PanelContainer
+	assert(first_badge != null, "HUD modifier badge should be a panel")
+	var first_row := first_badge.get_child(0) as HBoxContainer
+	assert(first_row != null and first_row.get_child_count() >= 2, "HUD modifier badge should contain icon and title")
+	var badge_title := first_row.get_child(1) as Label
+	assert(badge_title.get_theme_font_size("font_size") >= 20, "HUD badge title should be enlarged")
 
 	main.hud.show_wind_notice(true, 1.0)
 	assert(main.hud._event_label.visible, "HUD event label should display wind notice")
@@ -1539,5 +1689,6 @@ func _ready() -> void:
 	assert(not main.hud._modifier_container.visible, "HUD badges should be hidden after reset")
 	print("[TEST] Level Modifier System fully verified!")
 
+	SoundManager.stop_all_sounds()
 	print("[SUCCESS] All integration tests passed smoothly! Game mechanics 100% verified.")
 	get_tree().quit(0)

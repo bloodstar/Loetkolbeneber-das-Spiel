@@ -12,92 +12,8 @@ signal wind_changed(active: bool, direction: float)
 signal coin_collected(player_slot: int, count: int)
 signal pinata_hit(player_slot: int, total_damage: float)
 
-const MODIFIERS: Dictionary = {
-	"cave": {
-		"id": "cave",
-		"title": "Höhle",
-		"icon": "🪨",
-		"description": "Feste Felswände umgeben die Arena statt der elastischen Gummiwand.",
-		"color": Color(0.7, 0.7, 0.75),
-	},
-	"tnt_depot": {
-		"id": "tnt_depot",
-		"title": "TNT-Depot",
-		"icon": "💣",
-		"description": "Mehr TNT im Level! Alle 10 Sekunden regnen 5 TNT-Kisten herab.",
-		"color": Color(1.0, 0.35, 0.15),
-	},
-	"wind": {
-		"id": "wind",
-		"title": "Sturmwind",
-		"icon": "🌪️",
-		"description": "Alle 10s weht ein starker Windstoß (3,5s), der Spieler pustet und Projektile bremst.",
-		"color": Color(0.4, 0.85, 1.0),
-	},
-	"laser": {
-		"id": "laser",
-		"title": "Orbital-Laser",
-		"icon": "🔴",
-		"description": "Alle 20s feuert ein warnender Riesenlaser quer über die Map (50 Schaden).",
-		"color": Color(1.0, 0.15, 0.2),
-	},
-	"bounty": {
-		"id": "bounty",
-		"title": "Münzbeute",
-		"icon": "🪙",
-		"description": "Münzen spawnen im Level. Wer am Ende die meisten sammelt, erhält eine Extrakarte!",
-		"color": Color(1.0, 0.85, 0.2),
-	},
-	"heal_zone": {
-		"id": "heal_zone",
-		"title": "Wandernde Heilzone",
-		"icon": "💖",
-		"description": "Ein schwebender Heilkreis gleitet sanft über die Map und heilt 16 HP/s.",
-		"color": Color(0.3, 1.0, 0.5),
-	},
-	"pinata": {
-		"id": "pinata",
-		"title": "Piñata-Lama",
-		"icon": "🦙",
-		"description": "Ein unsterbliches Lama rennt panisch umher. Der meiste Schaden bringt eine Extrakarte!",
-		"color": Color(1.0, 0.3, 0.8),
-	},
-	"low_gravity": {
-		"id": "low_gravity",
-		"title": "Mondgravitation",
-		"icon": "🌕",
-		"description": "50% Gravitation! Gigantische Sprünge, Schweben und enorme Rückstöße.",
-		"color": Color(0.7, 0.6, 1.0),
-	},
-	"floor_is_lava": {
-		"id": "floor_is_lava",
-		"title": "Der Boden ist Lava",
-		"icon": "🌋",
-		"description": "Der unterste Boden brennt! Bleib auf Kisten, Plattformen und Federn.",
-		"color": Color(1.0, 0.45, 0.0),
-	},
-	"meteor_shower": {
-		"id": "meteor_shower",
-		"title": "Meteoritenschauer",
-		"icon": "☄️",
-		"description": "Alle 12s stürzen 3 glühende Meteore mit Bodenzielkreuzen explosiv herab.",
-		"color": Color(1.0, 0.5, 0.1),
-	},
-	"ice_world": {
-		"id": "ice_world",
-		"title": "Glatteis-Welt",
-		"icon": "🧊",
-		"description": "Alle Plattformen sind spiegelglatt! Rasantes Schlittern und hohes Tempo.",
-		"color": Color(0.5, 0.95, 1.0),
-	},
-	"mini_pigs": {
-		"id": "mini_pigs",
-		"title": "Mini-Chaos",
-		"icon": "✨",
-		"description": "Schrumpffluch! Alle Schweine sind 35% kleiner, flinker und schwerer zu treffen.",
-		"color": Color(1.0, 0.8, 0.9),
-	},
-}
+const LevelModifierDefsClass = preload("res://scripts/level_modifier_defs.gd")
+const MODIFIERS: Dictionary = LevelModifierDefsClass.MODIFIERS
 
 # Aktive Modifier der laufenden Runde
 var active_modifiers: Array[String] = []
@@ -115,6 +31,8 @@ var _tnt_timer: float = 10.0
 var _laser_timer: float = 20.0
 var _meteor_timer: float = 12.0
 var _lava_timer: float = 0.0
+var _regen_timer: float = 0.5
+var _crate_timer: float = 9.0
 
 # Tracking per round
 var player_coins: Dictionary = {}         # slot -> coin count
@@ -124,19 +42,36 @@ var current_pinata: PinataLama = null
 
 var _wind_overlay: Node2D = null
 
-func roll_modifiers(seed_val: int) -> Array[String]:
+func roll_modifiers(seed_val: int, rate_percent: int = LevelModifierDefsClass.RATE_DEFAULT_PERCENT, allowed_ids: Array[String] = []) -> Array[String]:
+	var ids: Array[String] = []
+	if allowed_ids.is_empty():
+		ids = LevelModifierDefsClass.default_ids()
+	else:
+		for id in allowed_ids:
+			if MODIFIERS.has(id) and not ids.has(id):
+				ids.append(id)
+	return _roll_with_config(seed_val, rate_percent, ids)
+
+# Verwendet die aktuell in der Lobby konfigurierte Rate und Auswahl.
+func roll_configured_modifiers(seed_val: int) -> Array[String]:
+	var ids := Global.get_enabled_level_modifiers()
+	if ids.is_empty():
+		return []
+	return _roll_with_config(seed_val, Global.level_modifier_rate_percent, ids)
+
+func _roll_with_config(seed_val: int, rate_percent: int, allowed_ids: Array[String]) -> Array[String]:
+	var rate := clampf(float(rate_percent) / 100.0, 0.0, 2.0)
+	if rate <= 0.0 or allowed_ids.is_empty():
+		return []
+
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_val + 7777
 
 	var roll := rng.randf() * 100.0
 	var count := 0
 
-	# Exakte Vorgabe:
-	# 1% für 4 Modifier
-	# 3% für 3 Modifier
-	# 10% für 2 Modifier
-	# 33% für 1 Modifier
-	# 53% für 0 Modifier
+	# Standardverteilung bei 100 %:
+	# 1 % für 4 Modifier, 3 % für 3, 10 % für 2, 33 % für 1, 53 % für 0.
 	if roll < 1.0:
 		count = 4
 	elif roll < 4.0:
@@ -148,16 +83,25 @@ func roll_modifiers(seed_val: int) -> Array[String]:
 	else:
 		count = 0
 
+	# Unter 100 % fällt gelegentlich ein Modifier weg, über 100 % kommt
+	# gelegentlich einer hinzu. Bei 200 % ist es garantiert einer mehr.
+	if rate < 1.0:
+		if rng.randf() < (1.0 - rate):
+			count = maxi(0, count - 1)
+	elif rate > 1.0:
+		if count < 4 and rng.randf() < minf(1.0, rate - 1.0):
+			count += 1
+
 	if count == 0:
 		return []
 
-	var all_keys := MODIFIERS.keys()
+	var all_keys: Array[String] = allowed_ids.duplicate()
 	all_keys.sort() # Deterministic order before shuffle
 
 	# Fisher-Yates with seeded RNG
 	for i in range(all_keys.size() - 1, 0, -1):
 		var j := rng.randi() % (i + 1)
-		var temp = all_keys[i]
+		var temp := all_keys[i]
 		all_keys[i] = all_keys[j]
 		all_keys[j] = temp
 
@@ -165,13 +109,20 @@ func roll_modifiers(seed_val: int) -> Array[String]:
 	for k in all_keys:
 		if chosen.size() >= count:
 			break
-		# Inkompatibilitäten in beide Auswahlrichtungen ausschließen.
-		if (k == "cave" and chosen.has("floor_is_lava")) \
-				or (k == "floor_is_lava" and chosen.has("cave")):
+		if _are_incompatible(k, chosen):
 			continue
 		chosen.append(k)
 
 	return chosen
+
+func _are_incompatible(candidate: String, chosen: Array[String]) -> bool:
+	if (candidate == "cave" and chosen.has("floor_is_lava")) \
+			or (candidate == "floor_is_lava" and chosen.has("cave")):
+		return true
+	if (candidate == "low_gravity" and chosen.has("high_gravity")) \
+			or (candidate == "high_gravity" and chosen.has("low_gravity")):
+		return true
+	return false
 
 func start_round_modifiers(mod_ids: Array[String], main_node: Node2D, level_gen: LevelGenerator) -> void:
 	clear_round()
@@ -186,6 +137,8 @@ func start_round_modifiers(mod_ids: Array[String], main_node: Node2D, level_gen:
 	_laser_timer = 18.0
 	_meteor_timer = 12.0
 	_lava_timer = 0.0
+	_regen_timer = 0.5
+	_crate_timer = 9.0
 
 	var arena_rect := Rect2(60, 60, LevelGenerator.MAP_WIDTH * LevelGenerator.TILE_SIZE - 120, LevelGenerator.MAP_HEIGHT * LevelGenerator.TILE_SIZE - 120)
 
@@ -229,13 +182,55 @@ func apply_player_modifiers(player: Player) -> void:
 		return
 	if has_modifier("low_gravity"):
 		player.gravity_mult *= 0.45
+	if has_modifier("high_gravity"):
+		player.gravity_mult *= 1.6
 	if has_modifier("mini_pigs"):
 		player.scale *= 0.65
 		player.move_speed *= 1.25
+	if has_modifier("speed_demon"):
+		player.move_speed *= 1.3
+	if has_modifier("double_damage"):
+		player.bullet_damage *= 1.35
+	if has_modifier("air_jumps"):
+		player.max_jumps += 1
+		player.jumps_remaining = player.max_jumps
+	if has_modifier("starting_shield"):
+		var bonus_shield := player.max_health * 0.3
+		player.max_shield += bonus_shield
+		player.current_shield = player.max_shield
+		player.emit_signal(
+			"health_changed",
+			player.current_health,
+			player.max_health,
+			player.current_shield,
+			player.max_shield
+		)
 
 func update_physics_modifiers(delta: float, players: Array[Player]) -> void:
 	if active_modifiers.is_empty() or _main_ref == null:
 		return
+
+	# --- Piñata: primär vor dem führenden Spieler fliehen ---
+	if has_modifier("pinata") and is_instance_valid(current_pinata):
+		var leader := _get_leading_player(players)
+		if leader != null:
+			current_pinata.set_leader_position(leader.global_position)
+
+	# --- Regeneration ---
+	if has_modifier("regeneration"):
+		_regen_timer -= delta
+		if _regen_timer <= 0.0:
+			_regen_timer = 0.5
+			for p in players:
+				if is_instance_valid(p) and not p.is_dead and p.current_health > 0.0:
+					p.heal(2.0)
+
+	# --- Kistenregen ---
+	if has_modifier("crate_rain"):
+		_crate_timer -= delta
+		if _crate_timer <= 0.0:
+			_crate_timer = 9.0
+			_spawn_crate_rain()
 
 	# --- Windstoß ---
 	if has_modifier("wind"):
@@ -329,6 +324,38 @@ func _spawn_tnt_air_drop() -> void:
 		barrel.linear_velocity = Vector2(randf_range(-30, 30), randf_range(40, 100))
 		_level_ref._register_moving_object(barrel)
 		_level_ref.add_child(barrel)
+
+func _spawn_crate_rain() -> void:
+	if _level_ref == null or _main_ref == null:
+		return
+	SoundManager.play_sound("click", 0.2, -3.0)
+	for i in range(3):
+		var x := randf_range(120.0, LevelGenerator.MAP_WIDTH * LevelGenerator.TILE_SIZE - 120.0)
+		var y := randf_range(12.0, 48.0)
+		var crate = _level_ref.crate_scene.instantiate()
+		crate.set("crate_size", randf_range(0.75, 1.05))
+		crate.set("health", 2)
+		crate.set("max_health", 2)
+		crate.connect("crate_broken", Callable(_level_ref, "_on_crate_broken"))
+		crate.position = Vector2(x, y)
+		crate.linear_velocity = Vector2(randf_range(-30, 30), randf_range(40, 100))
+		_level_ref._register_moving_object(crate)
+		_level_ref.add_child(crate)
+
+func _get_leading_player(players: Array[Player]) -> Player:
+	var best: Player = null
+	var best_score := -INF
+	for p in players:
+		if not is_instance_valid(p) or p.is_dead or p.current_health <= 0.0:
+			continue
+		var score := 0.0
+		var score_index := p.player_index - 1
+		if score_index >= 0 and score_index < Global.player_scores.size():
+			score = float(Global.player_scores[score_index])
+		if best == null or score > best_score:
+			best = p
+			best_score = score
+	return best
 
 func _trigger_laser_hazard(players: Array[Player]) -> void:
 	if _main_ref == null:
