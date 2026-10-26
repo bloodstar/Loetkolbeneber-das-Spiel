@@ -4,9 +4,16 @@ extends Area2D
 # Eisfläche: rein sensorisch. Der Spieler bleibt auf der darunterliegenden
 # Plattform stehen, rutscht aber wegen der geänderten Beschleunigung/Reibung.
 
+@export var overlay_texture: Texture2D
+
 @onready var sprite: Sprite2D = $Sprite2D
 
 func _ready() -> void:
+	if overlay_texture:
+		sprite.texture = overlay_texture
+		var width := maxf(1.0, float(overlay_texture.get_width()))
+		sprite.scale = Vector2.ONE * (36.0 / width)
+		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
 	

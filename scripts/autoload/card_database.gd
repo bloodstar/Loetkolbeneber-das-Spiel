@@ -62,7 +62,7 @@ func _init_database() -> void:
 	c4.id = "tactical_vest"
 	c4.title = "Tactical Vest"
 	c4.description = "Reinforced plating.\n+30 Max HP, +15 Shield"
-	c4.rarity = "Common"
+	c4.rarity = "Rare"
 	c4.color = Color(0.4, 0.7, 0.4)
 	c4.max_hp_flat = 30
 	c4.shield_max_add = 15
@@ -365,10 +365,10 @@ func _init_database() -> void:
 	var n10 = CardData.new()
 	n10.id = "heilende_haende"
 	n10.title = "Heilende Hände"
-	n10.description = "Heilt 2,5 HP pro Sekunde nach 3s ohne Schaden.\n-8% Schaden."
+	n10.description = "Heilt 2,5 HP pro Sekunde, auch während du Schaden nimmst.\n-8% Schaden."
 	n10.rarity = "Uncommon"
 	n10.color = Color(0.45, 1.00, 0.65)
-	n10.hp_regen_add = 2.5
+	n10.hp_regen_always_add = 2.5
 	n10.damage_mult = 0.92
 	_register(n10)
 
@@ -494,6 +494,45 @@ func _init_database() -> void:
 	ug2.projectile_gravity_mult = 1.45
 	ug2.bullet_size_mult = 1.10
 	_register(ug2)
+
+	# --- Rückstoß ---
+	# Treffer drücken Gegner spürbar weg. Der Multiplikator wirkt auf alle vom
+	# Spieler verursachten Rückstöße, also Projektile, Explosionen und Fähigkeiten.
+	var kb1 = CardData.new()
+	kb1.id = "rueckstossfeder"
+	kb1.title = "Rückstoßfeder"
+	kb1.description = "Federnde Treffer drücken Gegner weg.\n+25% Rückstoß."
+	kb1.rarity = "Common"
+	kb1.color = Color(0.30, 0.90, 0.85)
+	kb1.family_id = "rueckstossfeder"
+	kb1.knockback_mult = 1.25
+	_register(kb1)
+
+	var kb2 = CardData.new()
+	kb2.id = "druckkammer"
+	kb2.title = "Druckkammer"
+	kb2.description = "Rückstoß-Ausbau: Mehr Druck pro Schuss.\n+35% Rückstoß, +10% Projektilgeschwindigkeit."
+	kb2.rarity = "Rare"
+	kb2.color = Color(0.95, 0.65, 0.20)
+	kb2.family_id = "rueckstossfeder"
+	kb2.parent_card_id = "rueckstossfeder"
+	kb2.evolution_branch = "A"
+	kb2.knockback_mult = 1.35
+	kb2.bullet_speed_mult = 1.10
+	_register(kb2)
+
+	var kb3 = CardData.new()
+	kb3.id = "schockgeschoss"
+	kb3.title = "Schockgeschoss"
+	kb3.description = "Rückstoß-Ausbau: Wuchtige Einschläge.\n+45% Rückstoß, +8% Schaden."
+	kb3.rarity = "Rare"
+	kb3.color = Color(0.85, 0.35, 0.95)
+	kb3.family_id = "rueckstossfeder"
+	kb3.parent_card_id = "rueckstossfeder"
+	kb3.evolution_branch = "B"
+	kb3.knockback_mult = 1.45
+	kb3.damage_mult = 1.08
+	_register(kb3)
 
 	# --- Rare ---
 	var n21 = CardData.new()
@@ -652,6 +691,29 @@ func _init_database() -> void:
 	tb3.evolution_branch = "B"
 	tb3.tower_follow = true
 	_register(tb3)
+
+	# Turm-Karten erscheinen nur, wenn die Turm-Fähigkeit bereits im Deck liegt.
+	var tp1 = CardData.new()
+	tp1.id = "turm_panzerung"
+	tp1.title = "Turm-Panzerung"
+	tp1.description = "Turm-Karte: Deine Türme erhalten +75 Leben."
+	tp1.rarity = "Rare"
+	tp1.pool = "Defensive"
+	tp1.color = Color(0.55, 0.72, 0.85)
+	tp1.required_mechanic = "tower"
+	tp1.tower_max_health_add = 75
+	_register(tp1)
+
+	var tp2 = CardData.new()
+	tp2.id = "turm_schnellfeuer"
+	tp2.title = "Schnellfeuer-Geschütz"
+	tp2.description = "Turm-Karte: Deine Türme feuern 25% schneller."
+	tp2.rarity = "Rare"
+	tp2.pool = "Offensive"
+	tp2.color = Color(0.45, 0.88, 1.00)
+	tp2.required_mechanic = "tower"
+	tp2.tower_fire_rate_mult = 0.8
+	_register(tp2)
 
 	# --- Giftschuss ---
 	var gb1 = CardData.new()
@@ -1717,6 +1779,134 @@ func _init_database() -> void:
 	df3.hp_regen_add = 0.5
 	_register(df3)
 
+	# --- Tank-Panzerung: Evolutionsbaum ---
+	# Die Grundkarte teilt sich in einen prozentualen Lebens-/Rüstungszweig (A)
+	# und einen Reflexionszweig (B). Jede Seltenheit ist im Baum vertreten.
+	var tk1 = CardData.new()
+	tk1.id = "tankplatte"
+	tk1.title = "Tankplatte"
+	tk1.description = "Mehr Leben und eine erste Panzerung.\n+30 Max HP, +5% Rüstung."
+	tk1.rarity = "Common"
+	tk1.pool = "Defensive"
+	tk1.color = Color(0.45, 0.72, 0.55)
+	tk1.family_id = "tank_panzerung"
+	tk1.max_hp_flat = 30
+	tk1.armor_percent_add = 0.05
+	_register(tk1)
+
+	var tk2 = CardData.new()
+	tk2.id = "tank_stahlhaut"
+	tk2.title = "Stahlhaut"
+	tk2.description = "Prozentual mehr Leben und stärkere Panzerung.\n+18% Max HP, +6% Rüstung."
+	tk2.rarity = "Uncommon"
+	tk2.color = Color(0.40, 0.80, 0.55)
+	tk2.family_id = "tank_panzerung"
+	tk2.parent_card_id = "tankplatte"
+	tk2.evolution_branch = "A"
+	tk2.max_hp_mult = 1.18
+	tk2.armor_percent_add = 0.06
+	_register(tk2)
+
+	var tk3 = CardData.new()
+	tk3.id = "tank_dornenhaut"
+	tk3.title = "Dornenhaut"
+	tk3.description = "Gepanzerte Stacheln werfen Schaden zurück.\n+25 Max HP, +8% Rüstung, 8% Schadensreflexion."
+	tk3.rarity = "Uncommon"
+	tk3.color = Color(0.55, 0.65, 0.35)
+	tk3.family_id = "tank_panzerung"
+	tk3.parent_card_id = "tankplatte"
+	tk3.evolution_branch = "B"
+	tk3.max_hp_flat = 25
+	tk3.armor_percent_add = 0.08
+	tk3.damage_reflect_percent_add = 0.08
+	_register(tk3)
+
+	var tk4 = CardData.new()
+	tk4.id = "tank_festungspanzer"
+	tk4.title = "Festungspanzer"
+	tk4.description = "Schwerer Prozent-Lebenspanzer.\n+25% Max HP, +10% Rüstung, -5% Tempo."
+	tk4.rarity = "Rare"
+	tk4.color = Color(0.35, 0.65, 0.45)
+	tk4.family_id = "tank_panzerung"
+	tk4.parent_card_id = "tank_stahlhaut"
+	tk4.evolution_branch = "A"
+	tk4.max_hp_mult = 1.25
+	tk4.armor_percent_add = 0.10
+	tk4.move_speed_mult = 0.95
+	_register(tk4)
+
+	var tk5 = CardData.new()
+	tk5.id = "tank_reflektorplatte"
+	tk5.title = "Reflektorplatte"
+	tk5.description = "Leitet einen Teil des Schadens zurück.\n+40 Max HP, +12% Rüstung, 12% Schadensreflexion."
+	tk5.rarity = "Rare"
+	tk5.color = Color(0.55, 0.55, 0.85)
+	tk5.family_id = "tank_panzerung"
+	tk5.parent_card_id = "tank_dornenhaut"
+	tk5.evolution_branch = "B"
+	tk5.max_hp_flat = 40
+	tk5.armor_percent_add = 0.12
+	tk5.damage_reflect_percent_add = 0.12
+	_register(tk5)
+
+	var tk6 = CardData.new()
+	tk6.id = "tank_titanenbollwerk"
+	tk6.title = "Titanenbollwerk"
+	tk6.description = "Massiver Lebens- und Panzerturm.\n+25% Max HP, +12% Rüstung, 10% Schadensreflexion, -8% Tempo."
+	tk6.rarity = "Epic"
+	tk6.color = Color(0.45, 0.55, 0.35)
+	tk6.family_id = "tank_panzerung"
+	tk6.parent_card_id = "tank_festungspanzer"
+	tk6.evolution_branch = "A"
+	tk6.max_hp_mult = 1.25
+	tk6.armor_percent_add = 0.12
+	tk6.damage_reflect_percent_add = 0.10
+	tk6.move_speed_mult = 0.92
+	_register(tk6)
+
+	var tk7 = CardData.new()
+	tk7.id = "tank_spiegelpanzer"
+	tk7.title = "Spiegelpanzer"
+	tk7.description = "Spiegelt Angriffe mit voller Wucht.\n+50 Max HP, +14% Rüstung, 18% Schadensreflexion."
+	tk7.rarity = "Epic"
+	tk7.color = Color(0.60, 0.45, 0.90)
+	tk7.family_id = "tank_panzerung"
+	tk7.parent_card_id = "tank_reflektorplatte"
+	tk7.evolution_branch = "B"
+	tk7.max_hp_flat = 50
+	tk7.armor_percent_add = 0.14
+	tk7.damage_reflect_percent_add = 0.18
+	_register(tk7)
+
+	var tk8 = CardData.new()
+	tk8.id = "tank_ewige_bastion"
+	tk8.title = "Ewige Bastion"
+	tk8.description = "Unerschütterlicher Koloss aus Leben und Stahl.\n+35% Max HP, +18% Rüstung, 15% Schadensreflexion, -10% Tempo."
+	tk8.rarity = "Legendary"
+	tk8.color = Color(0.95, 0.78, 0.30)
+	tk8.family_id = "tank_panzerung"
+	tk8.parent_card_id = "tank_titanenbollwerk"
+	tk8.evolution_branch = "A"
+	tk8.max_hp_mult = 1.35
+	tk8.armor_percent_add = 0.18
+	tk8.damage_reflect_percent_add = 0.15
+	tk8.move_speed_mult = 0.90
+	_register(tk8)
+
+	var tk9 = CardData.new()
+	tk9.id = "tank_spiegelkoloss"
+	tk9.title = "Spiegelkoloss"
+	tk9.description = "Ein wandelnder Spiegel, der Schaden zurückwirft.\n+60 Max HP, +16% Rüstung, 22% Schadensreflexion."
+	tk9.rarity = "Legendary"
+	tk9.color = Color(0.90, 0.65, 1.00)
+	tk9.family_id = "tank_panzerung"
+	tk9.parent_card_id = "tank_spiegelpanzer"
+	tk9.evolution_branch = "B"
+	tk9.max_hp_flat = 60
+	tk9.armor_percent_add = 0.16
+	tk9.damage_reflect_percent_add = 0.22
+	_register(tk9)
+
 	# Bewegung
 	var mv1 = CardData.new()
 	mv1.id = "federstiefel"
@@ -1827,6 +2017,8 @@ func _infer_required_mechanic(card: CardData) -> String:
 	if card.poison_damage_mult > 1.0 and card.poison_stacks_add <= 0 \
 			and not card.poison_impact_cloud and not card.poison_trail:
 		return "poison"
+	if card.tower_max_health_add > 0 or card.tower_fire_rate_mult < 1.0:
+		return "tower"
 	return ""
 
 func is_card_available_for_player(card: CardData, hero_id: String, owned_ids: Array = []) -> bool:
@@ -1838,10 +2030,39 @@ func is_card_available_for_player(card: CardData, hero_id: String, owned_ids: Ar
 		return false
 	if not card.parent_card_id.is_empty() and not owned_ids.has(card.parent_card_id):
 		return false
+	if not card.evolution_branch.is_empty():
+		var locked_branch := get_locked_evolution_branch(get_card_family_id(card), owned_ids)
+		if not locked_branch.is_empty() and locked_branch != card.evolution_branch:
+			return false
 	if not card.required_mechanic.is_empty() \
 			and not _player_has_mechanic(card.required_mechanic, hero_id, owned_ids):
 		return false
 	return true
+
+# Familienname eines Talentbaums. Ältere Karten ohne family_id werden über ihre
+# Grundkarte gruppiert.
+func get_card_family_id(card: CardData) -> String:
+	if card == null:
+		return ""
+	if not card.family_id.is_empty():
+		return card.family_id
+	return card.parent_card_id
+
+# Sobald ein Spieler eine Zweigoption gewählt hat, ist diese Familie auf diesen
+# Zweig festgelegt. Die Sperre wird aus dem Deck abgeleitet und gilt damit
+# gleichermaßen für lokale Drafts, Bots, Host und Client.
+func get_locked_evolution_branch(family_id: String, owned_ids: Array = []) -> String:
+	if family_id.is_empty():
+		return ""
+	for raw_id in owned_ids:
+		var owned := get_card(str(raw_id))
+		if owned == null:
+			continue
+		if get_card_family_id(owned) != family_id:
+			continue
+		if not owned.evolution_branch.is_empty():
+			return owned.evolution_branch
+	return ""
 
 func _player_has_mechanic(mechanic: String, hero_id: String, owned_ids: Array) -> bool:
 	match mechanic:
@@ -1893,18 +2114,20 @@ func _infer_pool(card: CardData) -> String:
 	if card.kamikaze or card.giant_growth > 0.0:
 		return "Chaos"
 	if card.max_hp_mult > 1.0 or card.max_hp_flat > 0 or card.hp_regen_add > 0.0 \
+		or card.hp_regen_always_add > 0.0 \
 		or card.shield_max_add > 0 or card.shield_regen_mult > 1.0 \
 		or card.block_duration_add > 0.0 or card.block_cooldown_mult < 1.0 \
 		or card.block_reflect_damage_add > 0.0 or card.block_knockback_radius_add > 0.0 \
 		or card.block_knockback_force_add > 0.0 or card.block_bomb or card.block_heal_zone \
 		or card.lifesteal_percent_add > 0.0 or card.blocker_drone_count_add > 0 \
-		or card.blocker_drone_heal:
+		or card.blocker_drone_heal or card.tower_max_health_add > 0 \
+		or card.armor_percent_add > 0.0 or card.damage_reflect_percent_add > 0.0:
 		return "Defensive"
 	if card.move_speed_mult > 1.0 or card.jump_force_mult > 1.0 or card.extra_jumps_add > 0 \
 		or card.dash_cooldown_mult < 1.0 or card.body_size_mult < 1.0 or card.gravity_mult < 1.0:
 		return "Bewegung"
 	if card.damage_mult > 1.0 or card.bullet_speed_mult != 1.0 or card.bullet_size_mult != 1.0 \
-		or card.projectile_gravity_mult != 1.0 \
+		or card.projectile_gravity_mult != 1.0 or card.knockback_mult > 1.0 \
 		or card.fire_rate_mult < 1.0 or card.max_ammo_add > 0 or card.reload_speed_mult > 1.0 \
 		or card.bounces_add > 0 or card.homing_strength_add > 0.0 or card.explosion_radius_add > 0.0 \
 		or card.poison_stacks_add > 0 or card.poison_damage_mult > 1.0 or card.freeze_duration_add > 0.0 \
@@ -1912,7 +2135,8 @@ func _infer_pool(card: CardData) -> String:
 		or card.poison_impact_cloud or card.poison_trail or card.lightning_shot or card.chain_lightning \
 		or card.lightning_zone or card.frost_nova or card.frost_trail or card.cluster_bomblets \
 		or card.fire_shot or card.fire_impact_zone or card.fire_trail or card.tower_enabled \
-		or card.tower_auto_spawn or card.tower_follow or card.drone_count_add > 0 or card.drone_guardian:
+		or card.tower_auto_spawn or card.tower_follow or card.tower_fire_rate_mult < 1.0 \
+		or card.drone_count_add > 0 or card.drone_guardian:
 		return "Offensive"
 	return "Kern"
 

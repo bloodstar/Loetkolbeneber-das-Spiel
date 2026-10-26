@@ -76,14 +76,19 @@ static func mechanic_notes(card: CardData) -> Array[String]:
 		notes.append("LEBENSRAUB: Ein Anteil des verursachten Schadens wird als Leben zurückgewonnen.")
 	if card.shield_max_add > 0 or card.shield_regen_mult > 1.0:
 		notes.append("SCHILD: Schild absorbiert Schaden, bevor Leben verloren geht. Schild-Regeneration baut ihn nach 3,5 s ohne Schaden wieder auf.")
+	if card.armor_percent_add > 0.0:
+		notes.append("RÜSTUNG: Reduziert eingehenden Schaden prozentual, bevor Schild und Leben getroffen werden. Mehrere Rüstungskarten addieren sich, maximal 75 %.")
+	if card.damage_reflect_percent_add > 0.0:
+		notes.append("REFLEXION: Ein Anteil des tatsächlich erlittenen Schadens wird an den angreifenden Spieler zurückgeworfen. Mehrere Reflexionskarten addieren sich, maximal 60 %.")
 	if _has_block_effect(card):
 		notes.append("BLOCK (Q): Blockt kurzzeitig Schaden, reflektiert Projektile und hat einen eigenen Cooldown.")
 	if card.dash_cooldown_mult < 1.0:
 		notes.append("DASH (Shift): Kurzer Ausweichsprung mit Unverwundbarkeit. Der Cooldown beginnt sofort.")
 	if card.ability_cooldown_mult < 1.0:
 		notes.append("HELDENFÄHIGKEIT (Rechtsklick/E): Aktive Fähigkeit deines Helden mit eigenem Cooldown.")
-	if card.tower_enabled or card.tower_auto_spawn or card.tower_follow:
-		notes.append("TURM: Ein Turm kämpft automatisch für dich. Türme können Ziele beschießen und ggf. bewegt werden.")
+	if card.tower_enabled or card.tower_auto_spawn or card.tower_follow \
+			or card.tower_max_health_add > 0 or card.tower_fire_rate_mult < 1.0:
+		notes.append("TURM: Ein Turm kämpft automatisch für dich. Türme haben 100 Grundleben, können zerstört werden und greifen Gegner in Reichweite an.")
 	if card.drone_count_add > 0 or card.drone_guardian:
 		notes.append("WÄCHTERDROHNE: Eine Drohne umkreist dich und beschießt automatisch Gegner. Regenerationsdrohnen heilen dich zusätzlich über Zeit.")
 	if card.blocker_drone_count_add > 0 or card.blocker_drone_heal:
@@ -99,10 +104,14 @@ static func mechanic_notes(card: CardData) -> Array[String]:
 		notes.append("BALLISTIK: Deine Projektile fallen stärker und beschreiben eine deutliche Kurve. Mörser treffen auch Ziele hinter Deckung.")
 	elif card.projectile_gravity_mult < 1.0:
 		notes.append("BALLISTIK: Deine Projektile fallen langsamer und fliegen flacher. Das erleichtert direkte Treffer auf Distanz.")
+	if card.knockback_mult > 1.0:
+		notes.append("RÜCKSTOSS: Treffer schleudern Gegner weiter zurück und nehmen ihnen kurz Bewegungskontrolle. Der Bonus wirkt auf Projektile, Explosionen und Fähigkeiten.")
 	if card.giant_growth > 0.0 or card.body_size_mult < 1.0:
 		notes.append("GRÖSSE: Ändert die Trefferfläche deiner Spielfigur.")
 	if card.kamikaze:
 		notes.append("KAMIKAZE: Beim K.O. explodiert die Figur und verursacht Flächenschaden.")
+	if card.hp_regen_always_add > 0.0:
+		notes.append("REGENERATION: Heilt kontinuierlich, auch während du Schaden nimmst.")
 	if card.hp_regen_add > 0.0:
 		notes.append("REGENERATION: Heilt nach 3 s ohne Schaden kontinuierlich.")
 	if card.fire_rate_mult < 1.0 or card.reload_speed_mult > 1.0 or card.max_ammo_add > 0:

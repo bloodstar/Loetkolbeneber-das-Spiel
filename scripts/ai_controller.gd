@@ -71,6 +71,11 @@ func _handle_aim(delta: float) -> void:
 	player.aim_direction = player.aim_direction.lerp(desired_aim, reaction_speed * delta).normalized()
 
 func _handle_navigation(_delta: float) -> void:
+	# Während des kurzen Rückstoßfensters nicht sofort gegensteuern, damit
+	# Treffer auch bei Bots sichtbar und spürbar bleiben.
+	if player.knockback_timer > 0.0:
+		return
+
 	var diff = target.global_position - player.global_position
 	var dist_x = diff.x
 	var dist_y = diff.y

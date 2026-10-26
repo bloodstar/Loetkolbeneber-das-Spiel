@@ -4,6 +4,11 @@ extends CharacterBody2D
 # Normale Projektile fallen leicht. Karten können diesen Wert über
 # projectile_gravity_mult verstärken (Mörser) oder abschwächen (flache Schüsse).
 const BULLET_GRAVITY: float = 90.0
+# Grundimpuls eines direkten Treffers. Der Rückstoß-Multiplikator des Schützen
+# wird beim Ziel in Player.take_damage() angewendet.
+const DIRECT_KNOCKBACK_BASE: float = 220.0
+const DIRECT_KNOCKBACK_PER_DAMAGE: float = 2.5
+const EXPLOSION_KNOCKBACK_FORCE: float = 340.0
 
 var shooter: Node2D = null
 var target_enemy: Node2D = null
@@ -82,6 +87,12 @@ func _build_trail() -> void:
 	_trail_points = PackedVector2Array([global_position])
 	trail.points = _trail_points
 	_update_trail_color()
+
+# Grundimpuls für einen direkten Treffer. Der Multiplikator des Schützen wird
+# erst am Ziel angewendet, damit auch Fähigkeiten und Explosionen davon profitieren.
+func calculate_knockback() -> Vector2:
+	var impulse := DIRECT_KNOCKBACK_BASE + maxf(0.0, damage) * DIRECT_KNOCKBACK_PER_DAMAGE
+	return velocity.normalized() * impulse
 
 func _update_trail_color() -> void:
 	if trail == null:
@@ -189,6 +200,18 @@ func _handle_collision(collision: KinematicCollision2D) -> void:
 		collider.hit_block(self)
 		_explode_and_destroy()
 		return
+
+	# Treffer auf einen Turm. Eigene Türme werden ignoriert, damit das
+	# Projektil weiterfliegen kann.
+	if collider.has_method("hit_tower"):
+		if collider.hit_tower(self):
+			if is_instance_valid(shooter) and shooter is Player:
+				var tower_shooter := shooter as Player
+				Global.add_match_stat(tower_shooter.player_index, "shots_hit", 1.0)
+			_explode_and_destroy()
+		else:
+			add_collision_exception_with(collider)
+		return
 	
 	# Hit a player
 	if collider is CharacterBody2D and collider != shooter:
@@ -201,8 +224,7 @@ func _handle_collision(collision: KinematicCollision2D) -> void:
 		if collider.has_method("take_damage"):
 			if shooter_is_player:
 				Global.add_match_stat(shooter.player_index, "shots_hit", 1.0)
-			var knockback = velocity.normalized() * (150.0 + damage * 2.0)
-			collider.take_damage(damage, knockback, shooter)
+			collider.take_damage(damage, calculate_knockback(), shooter)
 			
 			if poison_stacks > 0 and collider.has_method("apply_poison"):
 				collider.apply_poison(poison_stacks, poison_damage)
@@ -268,21 +290,24 @@ func _trigger_aoe_explosion() -> void:
 	circle.radius = explosion_radius
 	query.shape = circle
 	query.transform = Transform2D(0.0, global_position)
-	query.collision_mask = 2 # Players layer
+	query.collision_mask = 2 | 16 # Players + towers
 	
 	var results = space_state.intersect_shape(query, 8)
 	for res in results:
 		var body = res.collider
-		if body is CharacterBody2D and body.has_method("take_damage"):
-			var dist = global_position.distance_to(body.global_position)
-			var falloff = clampf(1.0 - (dist / explosion_radius), 0.3, 1.0)
-			var knock = (body.global_position - global_position).normalized() * 300.0
+		var dist = global_position.distance_to(body.global_position)
+		var falloff = clampf(1.0 - (dist / explosion_radius), 0.3, 1.0)
+		if body.has_method("take_tower_damage"):
+			body.take_tower_damage(damage * 0.8 * falloff, shooter)
+		elif body is CharacterBody2D and body.has_method("take_damage"):
+			var knock = (body.global_position - global_position).normalized() * EXPLOSION_KNOCKBACK_FORCE
 			body.take_damage(damage * 0.8 * falloff, knock, shooter)
 	
 	# Visual ring explosion
 	var ring = Sprite2D.new()
 	ring.texture = load("res://assets/projectiles/effect_circle.png")
 	ring.modulate = Color(1.0, 0.6, 0.1, 0.8)
+	ring.add_to_group("round_effect")
 	get_parent().add_child(ring)
 	ring.global_position = global_position
 	ring.scale = Vector2.ZERO

@@ -26,6 +26,12 @@ extends Resource
 @export var max_hp_mult: float = 1.0
 @export var max_hp_flat: int = 0
 @export var hp_regen_add: float = 0.0 # Zusätzliche HP pro Sekunde nach 3s ohne Schaden
+@export var hp_regen_always_add: float = 0.0 # Zusätzliche HP pro Sekunde, auch während Schaden
+# --- Tank / Rüstung ---
+# Additive prozentuale Schadensreduktion. 0.05 = 5 % weniger eingehender Schaden.
+@export var armor_percent_add: float = 0.0
+# Additive Schadensreflexion. 0.10 = 10 % des erlittenen Schadens gehen zurück.
+@export var damage_reflect_percent_add: float = 0.0
 @export var body_size_mult: float = 1.0 # <1.0 = kleinere Spielfigur
 @export var move_speed_mult: float = 1.0
 @export var jump_force_mult: float = 1.0
@@ -36,6 +42,7 @@ extends Resource
 @export var bullet_speed_mult: float = 1.0
 @export var bullet_size_mult: float = 1.0
 @export var projectile_gravity_mult: float = 1.0 # >1.0 = stärkerer Bogen, <1.0 = flachere Flugbahn
+@export var knockback_mult: float = 1.0 # >1.0 = stärkerer Rückstoß bei eigenen Treffern
 @export var fire_rate_mult: float = 1.0 # Multiplier on shoot cooldown (e.g. 0.8 is 20% faster)
 @export var max_ammo_add: int = 0
 @export var reload_speed_mult: float = 1.0
@@ -62,6 +69,8 @@ extends Resource
 @export var tower_enabled: bool = false
 @export var tower_auto_spawn: bool = false
 @export var tower_follow: bool = false
+@export var tower_max_health_add: int = 0
+@export var tower_fire_rate_mult: float = 1.0 # <1.0 = kürzeres Feuerintervall
 # Giftschuss
 @export var poison_impact_cloud: bool = false
 @export var poison_trail: bool = false
