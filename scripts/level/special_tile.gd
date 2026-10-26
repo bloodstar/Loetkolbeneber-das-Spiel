@@ -31,10 +31,16 @@ var is_broken: bool = false
 var regrow_timer: Timer
 var grace_timer: Timer
 var step_timer: Timer
+var _base_sprite_scale: Vector2 = Vector2(2.0, 2.0)
 
 func _ready() -> void:
 	if tile_texture:
 		sprite.texture = tile_texture
+		var width := maxf(1.0, float(tile_texture.get_width()))
+		_base_sprite_scale = Vector2.ONE * (36.0 / width)
+		sprite.scale = _base_sprite_scale
+		if width >= 36.0:
+			sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	
 	# Timer zuerst anlegen, damit das Step-Signal sie sicher verwenden kann.
 	regrow_timer = Timer.new()
@@ -111,9 +117,9 @@ func _animate_break() -> void:
 		SoundManager.play_sound("poison", 0.15, VINE_EFFECT_VOLUME_DB)
 	else:
 		SoundManager.play_sound("bounce", 0.15, VINE_EFFECT_VOLUME_DB)
-	sprite.scale = Vector2(2.0, 2.0)
+	sprite.scale = _base_sprite_scale
 	var tw = create_tween()
-	tw.tween_property(sprite, "scale", Vector2(2.5, 0.3), 0.12)
+	tw.tween_property(sprite, "scale", _base_sprite_scale * Vector2(1.25, 0.15), 0.12)
 	tw.parallel().tween_property(sprite, "modulate:a", 0.0, 0.12)
 	tw.tween_callback(func(): sprite.visible = false)
 
@@ -133,9 +139,9 @@ func regrow_tile(from_network: bool = false) -> void:
 	is_broken = false
 	sprite.visible = true
 	sprite.modulate = Color.WHITE
-	sprite.scale = Vector2(0.2, 2.0)
+	sprite.scale = _base_sprite_scale * Vector2(0.1, 1.0)
 	var tw = create_tween()
-	tw.tween_property(sprite, "scale", Vector2(2.0, 2.0), 0.18)
+	tw.tween_property(sprite, "scale", _base_sprite_scale, 0.18)
 	collision_shape.set_deferred("disabled", false)
 	step_shape.set_deferred("disabled", false)
 	if kind == Kind.WEAK_VINE:

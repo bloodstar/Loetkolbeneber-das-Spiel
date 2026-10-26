@@ -19,7 +19,7 @@ signal ping_updated()
 
 signal lobby_sync_received(data: Dictionary)
 signal match_start_received(config: Dictionary)
-signal round_start_received(seed: int, map_id: String)
+signal round_start_received(seed: int, map_id: String, points_to_win: int)
 signal snapshot_received(data: Dictionary)
 signal input_received(slot: int, data: Dictionary)
 signal draft_start_received(drafter: int, card_ids: Array, picks_total: int)
@@ -69,6 +69,7 @@ func _ready() -> void:
 	Global.lobby_state_changed.connect(_on_global_lobby_changed)
 	Global.banned_cards_changed.connect(_on_global_lobby_changed)
 	Global.draft_config_changed.connect(_on_global_draft_changed)
+	Global.draft_modifiers_changed.connect(_on_global_draft_modifiers_changed)
 	Global.scoring_config_changed.connect(_on_global_scoring_changed)
 	Global.bot_mode_toggled.connect(_on_global_bot_changed)
 	Global.base_hp_percent_changed.connect(_on_global_base_hp_percent_changed)
@@ -488,6 +489,8 @@ func receive_slot_assignment(slot: int) -> void:
 	is_spectator = false
 	Global.is_spectator = false
 	Global.set_local_player(slot)
+	# Gespeichertes Nutzerprofil auf den tatsächlich zugewiesenen Slot anwenden.
+	Global.apply_saved_character_customization(slot)
 	slot_assigned.emit(slot)
 	join_succeeded.emit()
 	sync_lobby()
@@ -524,6 +527,8 @@ func build_lobby_sync() -> Dictionary:
 		"kill_points": Global.kill_points,
 		"draft_picks": Global.draft_picks,
 		"cards_per_draft": Global.cards_per_draft,
+		"blind_pick_enabled": Global.blind_pick_enabled,
+		"random_pick_enabled": Global.random_pick_enabled,
 		"bans": Global.banned_card_ids.duplicate(),
 		"base_hp_percent": Global.base_hp_percent,
 		"base_damage": Global.base_damage,
@@ -544,6 +549,9 @@ func _on_global_lobby_changed() -> void:
 	sync_lobby()
 
 func _on_global_draft_changed(_picks: int, _offered: int) -> void:
+	sync_lobby()
+
+func _on_global_draft_modifiers_changed() -> void:
 	sync_lobby()
 
 func _on_global_scoring_changed() -> void:
@@ -607,6 +615,8 @@ func _apply_lobby_sync(data: Dictionary) -> void:
 		int(data.get("draft_picks", Global.draft_picks)),
 		int(data.get("cards_per_draft", Global.cards_per_draft))
 	)
+	Global.set_blind_pick_enabled(bool(data.get("blind_pick_enabled", Global.blind_pick_enabled)))
+	Global.set_random_pick_enabled(bool(data.get("random_pick_enabled", Global.random_pick_enabled)))
 	var rarity_data: Dictionary = data.get("rarity_percentages", {})
 	for rarity in Global.RARITY_ORDER:
 		if rarity_data.has(rarity):
@@ -665,15 +675,15 @@ func send_start_match(config: Dictionary) -> void:
 func receive_start_match(config: Dictionary) -> void:
 	match_start_received.emit(config)
 
-func send_round_start(level_seed: int, map_id: String) -> void:
+func send_round_start(level_seed: int, map_id: String, points_to_win: int = 0) -> void:
 	if not is_host:
 		return
 	for peer_id in _broadcast_targets():
-		receive_round_start.rpc_id(int(peer_id), level_seed, map_id)
+		receive_round_start.rpc_id(int(peer_id), level_seed, map_id, points_to_win)
 
 @rpc("authority", "call_remote", "reliable")
-func receive_round_start(level_seed: int, map_id: String) -> void:
-	round_start_received.emit(level_seed, map_id)
+func receive_round_start(level_seed: int, map_id: String, points_to_win: int = 0) -> void:
+	round_start_received.emit(level_seed, map_id, points_to_win)
 
 func send_snapshot(data: Dictionary) -> void:
 	if not is_host:
@@ -787,21 +797,39 @@ func send_draft_finished() -> void:
 func receive_draft_finished() -> void:
 	draft_finished_received.emit()
 
-# --- Charakter-Farben ---
-# Clients dürfen nur den eigenen Slot einfärben. Der Host übernimmt die Werte
-# und verteilt sie anschließend über die regulären Spieler-Snapshots.
-func request_pig_appearance(fur: Color, eyes: Color, pants: Color) -> void:
+# --- Charakteranpassung ---
+# Clients dürfen nur den eigenen Slot anpassen. Der Host übernimmt Farben,
+# Stabspitze und Schussfarbe und verteilt sie über die Spieler-Snapshots.
+func request_pig_appearance(
+		fur: Color,
+		eyes: Color,
+		pants: Color,
+		wand_tip_shape: String,
+		wand_tip_color: Color,
+		shot_color: Color
+	) -> void:
 	if is_client:
-		client_pig_appearance.rpc_id(1, fur, eyes, pants)
+		client_pig_appearance.rpc_id(
+			1, fur, eyes, pants, wand_tip_shape, wand_tip_color, shot_color
+		)
 
 @rpc("any_peer", "call_remote", "reliable")
-func client_pig_appearance(fur: Color, eyes: Color, pants: Color) -> void:
+func client_pig_appearance(
+		fur: Color,
+		eyes: Color,
+		pants: Color,
+		wand_tip_shape: String,
+		wand_tip_color: Color,
+		shot_color: Color
+	) -> void:
 	if not is_host:
 		return
 	var slot := get_slot_for_peer(multiplayer.get_remote_sender_id())
 	if slot <= 0:
 		return
-	Global.set_pig_appearance(slot, fur, eyes, pants)
+	Global.set_pig_appearance(
+		slot, fur, eyes, pants, wand_tip_shape, wand_tip_color, shot_color
+	)
 
 # --- Netzwerk-Info / UPnP ---
 

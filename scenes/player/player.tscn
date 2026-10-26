@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_script"]
 [ext_resource type="Script" path="res://scripts/pig_character.gd" id="2_pig_script"]
-[ext_resource type="Texture2D" path="res://assets/projectiles/tile_0004.png" id="3_gun_tex"]
+[ext_resource type="Script" path="res://scripts/magic_wand.gd" id="3_wand_script"]
 [ext_resource type="Script" path="res://scripts/player_status_indicators.gd" id="4_indicators_script"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
@@ -22,13 +22,11 @@ shape = SubResource("RectangleShape2D_body")
 
 [node name="WeaponPivot" type="Node2D" parent="."]
 
-[node name="GunSprite" type="Sprite2D" parent="WeaponPivot"]
-position = Vector2(10, 0)
-scale = Vector2(0.8, 0.8)
-texture = ExtResource("3_gun_tex")
+[node name="Wand" type="Node2D" parent="WeaponPivot"]
+script = ExtResource("3_wand_script")
 
 [node name="Muzzle" type="Marker2D" parent="WeaponPivot"]
-position = Vector2(18, 0)
+position = Vector2(24, 0)
 
 [node name="StatusIndicators" type="Node2D" parent="."]
 z_index = 10

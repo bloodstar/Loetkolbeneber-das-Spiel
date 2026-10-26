@@ -25,6 +25,7 @@ func _ready() -> void:
 	_load_sound("click", "res://assets/sfx/click_001.ogg")
 	_load_sound("confirm", "res://assets/sfx/confirmation_001.ogg")
 	_load_sound("spring", "res://assets/sfx/glass_001.ogg")
+	_load_sound("death", "res://assets/sfx/death_001.ogg")
 
 func _load_sound(key: String, path: String) -> void:
 	if ResourceLoader.exists(path):

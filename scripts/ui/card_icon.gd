@@ -46,7 +46,8 @@ func _resolve_kind(c: CardData) -> String:
 		return "spark"
 	if c.kamikaze:
 		return "bomb"
-	if c.tower_enabled or c.tower_auto_spawn or c.tower_follow:
+	if c.tower_enabled or c.tower_auto_spawn or c.tower_follow \
+			or c.tower_max_health_add > 0 or c.tower_fire_rate_mult < 1.0:
 		return "tower"
 	if c.drone_count_add > 0 or c.drone_guardian \
 			or c.blocker_drone_count_add > 0 or c.blocker_drone_heal:
@@ -65,6 +66,12 @@ func _resolve_kind(c: CardData) -> String:
 		return "health"
 	if _has_block_effect(c):
 		return "block"
+	if c.damage_reflect_percent_add > 0.0:
+		return "reflect"
+	if c.armor_percent_add > 0.0:
+		return "armor"
+	if c.knockback_mult > 1.0:
+		return "knockback"
 	if c.lifesteal_percent_add > 0.0:
 		return "leech"
 	if c.explosion_radius_add > 0.0 or c.cluster_bomblets:
@@ -79,7 +86,7 @@ func _resolve_kind(c: CardData) -> String:
 		return "multishot"
 	if c.shield_max_add > 0 or c.shield_regen_mult > 1.0:
 		return "shield"
-	if c.max_hp_mult > 1.0 or c.max_hp_flat > 0 or c.hp_regen_add > 0.0:
+	if c.max_hp_mult > 1.0 or c.max_hp_flat > 0 or c.hp_regen_add > 0.0 or c.hp_regen_always_add > 0.0:
 		return "health"
 	if c.giant_growth > 0.0:
 		return "giant"
@@ -141,6 +148,8 @@ func _draw() -> void:
 			draw_circle(c + Vector2(0.20, 0.23) * s, 0.055 * s, Color(0.95, 0.25, 0.35))
 		"damage":
 			_draw_damage(c, s, col)
+		"knockback":
+			_draw_knockback(c, s, col)
 		"rapid":
 			_draw_chevvies(c, s, col, true)
 		"projectile":
@@ -167,6 +176,10 @@ func _draw() -> void:
 			_draw_shield(c, s, col, false)
 		"block":
 			_draw_shield(c, s, col, true)
+		"armor":
+			_draw_armor(c, s, col)
+		"reflect":
+			_draw_reflect(c, s, col)
 		"mobility":
 			_draw_mobility(c, s, col)
 		"dash":
@@ -203,6 +216,19 @@ func _draw_damage(c: Vector2, s: float, col: Color) -> void:
 	draw_line(c + Vector2(0.02, 0.20) * s, c + Vector2(0.21, 0.01) * s, _alpha(col, 0.65), w * 0.8, true)
 	draw_line(c + Vector2(-0.20, 0.02) * s, c + Vector2(-0.02, -0.18) * s, _alpha(col, 0.65), w * 0.8, true)
 	draw_circle(c + Vector2(0.18, -0.20) * s, 0.05 * s, Color.WHITE)
+
+func _draw_knockback(c: Vector2, s: float, col: Color) -> void:
+	var w := maxf(1.6, s * 0.055)
+	var shift := float(frame % 2) * 0.02 * s
+	# Aufprallwellen links, Pfeil nach rechts.
+	draw_arc(c + Vector2(-0.16, 0.0) * s, 0.13 * s, -PI * 0.5, PI * 0.5, 18, _alpha(col, 0.85), w, true)
+	draw_arc(c + Vector2(-0.16, 0.0) * s, 0.22 * s, -PI * 0.5, PI * 0.5, 20, _alpha(col, 0.45), w, true)
+	var origin := c + Vector2(-0.02, 0.0) * s + Vector2(shift, 0.0)
+	var tip := c + Vector2(0.32, 0.0) * s + Vector2(shift, 0.0)
+	draw_line(origin, tip, col, w, true)
+	draw_line(tip, tip + Vector2(-0.10, -0.08) * s, col, w, true)
+	draw_line(tip, tip + Vector2(-0.10, 0.08) * s, col, w, true)
+	draw_circle(c + Vector2(-0.22, 0.0) * s, 0.045 * s, _alpha(col, 0.9))
 
 func _draw_chevvies(c: Vector2, s: float, col: Color, vertical: bool) -> void:
 	var w := maxf(1.6, s * 0.055)
@@ -348,6 +374,57 @@ func _draw_shield(c: Vector2, s: float, col: Color, square: bool) -> void:
 		]), _alpha(col, 0.20))
 		draw_polyline(points, col, w, true)
 		draw_line(c + Vector2(0.0, -0.13) * s, c + Vector2(0.0, 0.14) * s, _alpha(col, 0.75), w * 0.75, true)
+
+func _draw_armor(c: Vector2, s: float, col: Color) -> void:
+	var w := maxf(1.7, s * 0.055)
+	var bob := float(frame % 2) * 0.012 * s
+	var top := c + Vector2(0.0, -0.02) * s + Vector2(0.0, bob)
+	var points := PackedVector2Array([
+		top + Vector2(-0.20, -0.18) * s,
+		top + Vector2(0.20, -0.18) * s,
+		top + Vector2(0.24, -0.02) * s,
+		top + Vector2(0.0, 0.27) * s,
+		top + Vector2(-0.24, -0.02) * s,
+	])
+	draw_colored_polygon(points, _alpha(col, 0.24))
+	var outline := points.duplicate()
+	outline.append(points[0])
+	draw_polyline(outline, col, w, true)
+	# Drei Panzerplatten machen die Rüstung auch bei kleiner Symbolgröße lesbar.
+	for i in range(3):
+		var y := -0.08 + float(i) * 0.09
+		draw_line(
+			top + Vector2(-0.15, y) * s,
+			top + Vector2(0.15, y) * s,
+			_alpha(col, 0.82 - float(i) * 0.14),
+			w * 0.65,
+			true
+		)
+	draw_circle(top + Vector2(0.0, 0.15) * s, 0.025 * s, _alpha(Color.WHITE, 0.72))
+
+func _draw_reflect(c: Vector2, s: float, col: Color) -> void:
+	var w := maxf(1.6, s * 0.055)
+	var shift := float(frame % 2) * 0.015 * s
+	var top := c + Vector2(0.0, -0.01) * s
+	var points := PackedVector2Array([
+		top + Vector2(-0.18, -0.20) * s,
+		top + Vector2(0.18, -0.20) * s,
+		top + Vector2(0.22, -0.05) * s,
+		top + Vector2(0.0, 0.24) * s,
+		top + Vector2(-0.22, -0.05) * s,
+	])
+	draw_colored_polygon(points, _alpha(col, 0.20))
+	var outline := points.duplicate()
+	outline.append(points[0])
+	draw_polyline(outline, _alpha(col, 0.90), w, true)
+	draw_line(top + Vector2(0.0, 0.02) * s, top + Vector2(0.0, 0.15) * s, _alpha(col, 0.72), w * 0.7, true)
+	# Zwei Pfeile zeigen den zurückgeworfenen Schaden an.
+	for side in [-1.0, 1.0]:
+		var start := top + Vector2(0.03 * side, -0.04) * s
+		var tip := top + Vector2(0.32 * side, -0.17) * s + Vector2(shift * side, 0.0)
+		draw_line(start, tip, col, w, true)
+		draw_line(tip, tip + Vector2(-0.10 * side, -0.025) * s, col, w, true)
+		draw_line(tip, tip + Vector2(-0.025 * side, 0.10) * s, col, w, true)
 
 func _draw_mobility(c: Vector2, s: float, col: Color) -> void:
 	var w := maxf(1.6, s * 0.055)

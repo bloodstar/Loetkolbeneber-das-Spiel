@@ -137,6 +137,12 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 16
 text = "ZURÜCK"
 
+[node name="ReadyBtn" type="Button" parent="Panel/Margin/VBox/Footer"]
+custom_minimum_size = Vector2(170, 44)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "BEREIT"
+
 [node name="StartBtn" type="Button" parent="Panel/Margin/VBox/Footer"]
 custom_minimum_size = Vector2(250, 44)
 layout_mode = 2

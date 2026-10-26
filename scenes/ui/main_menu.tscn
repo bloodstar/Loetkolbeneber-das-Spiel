@@ -83,7 +83,7 @@ text = "BEENDEN"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.5, 0.55, 0.65, 1)
 theme_override_font_sizes/font_size = 14
-text = "P1: A/D bewegen • Leertaste springen • Maus zielen • Linksklick schießen • Shift dash • Rechtsklick/E Fähigkeit\nP2: Pfeiltasten • Punkt schießen • / dash • , Fähigkeit      Bot: Lobby (P2)      R: Neustart"
+text = "P1: A/D bewegen • Leertaste springen • Maus zielen • Linksklick schießen • Shift dash • Q Block • R nachladen • Rechtsklick/E Fähigkeit\nP2: Pfeiltasten • Punkt schießen • / dash • , Fähigkeit • M Block • L nachladen      Bot: Lobby (P2)      F9: Neustart"
 horizontal_alignment = 1
 
 [node name="NetworkPanel" type="PanelContainer" parent="Panel"]

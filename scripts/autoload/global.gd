@@ -7,8 +7,10 @@ signal match_over(winner_index: int)
 signal bot_mode_toggled(enabled: bool)
 signal cards_per_draft_changed(count: int)
 signal draft_config_changed(picks: int, offered: int)
+signal draft_modifiers_changed()
 signal banned_cards_changed()
 signal scoring_config_changed()
+signal match_target_changed(points: int)
 signal base_hp_percent_changed(percent: int)
 signal base_damage_changed(damage: float)
 signal rarity_percentages_changed()
@@ -88,6 +90,11 @@ var kill_points: int = 50
 
 var cards_per_draft: int = 5 # Y: Wie viele Karten zur Auswahl stehen
 var draft_picks: int = 1     # X: Wie viele Karten pro Draft gewählt werden
+# Draft-Modifier: Blind pick verdeckt Angebot/Auswahl online vor anderen
+# menschlichen Spielern (lokal gegen Bots ohne Wirkung), Random pick zieht
+# automatisch eine zufällige Karte aus dem Angebot.
+var blind_pick_enabled: bool = false
+var random_pick_enabled: bool = false
 var banned_card_ids: Array[String] = [] # Im Lobby gesperrte Powerup-Karten
 # Prozent-Faktor auf die heldenspezifischen Basis-HP vor Kartenboni.
 # 100 % = Heldenwert; die Klassenunterschiede bleiben dadurch erhalten.
@@ -112,11 +119,14 @@ var enabled_card_pools: Array[String] = ["Kern", "Offensive", "Defensive", "Bewe
 # Spielfeld-Auswahl. Jede Map hat ein festes Tileset und ein eigenes
 # Layout-Profil; "zufall" wählt deterministisch aus dem Seed.
 const MAP_RANDOM: String = "zufall"
-const MAP_PLAYABLE: Array[String] = ["grasarena", "wuestenruine", "eisgrotte", "neonfabrik"]
+const MAP_PLAYABLE: Array[String] = [
+	"grasarena", "wuestenruine", "eisgrotte", "neonfabrik",
+	"weite", "wolkeninsel", "kistenfestung",
+]
 const MAPS: Dictionary = {
 	"zufall": {
 		"name": "Zufällig",
-		"description": "Wählt pro Runde eine der vier Maps.",
+		"description": "Wählt pro Runde eine der sieben Maps.",
 	},
 	"grasarena": {
 		"name": "Grasarena",
@@ -134,6 +144,18 @@ const MAPS: Dictionary = {
 		"name": "Neonfabrik",
 		"description": "Vertikale Technikarena mit Ketten, Kisten und Powerups.",
 	},
+	"weite": {
+		"name": "Weite Wiese",
+		"description": "Offene Wiese mit nur wenigen Plattformen und viel Luft für Duelle.",
+	},
+	"wolkeninsel": {
+		"name": "Wolkeninsel",
+		"description": "Kleine Eisinseln, weite Sprünge und nur wenige Landeplätze.",
+	},
+	"kistenfestung": {
+		"name": "Kistenfestung",
+		"description": "Komplett aus Holzkisten gebaut – mit großer Wippe und Kistentürmen in der Mitte.",
+	},
 }
 var selected_map_id: String = MAP_RANDOM
 
@@ -141,6 +163,17 @@ var selected_map_id: String = MAP_RANDOM
 # Draft, Kartenpools, Bans, Map, HP/Schaden usw.). Sie werden lokal gespeichert.
 const LOBBY_LOADOUTS_PATH: String = "user://lobby_loadouts.json"
 var lobby_loadouts: Dictionary = {}
+
+# Automatisch gespeichertes Charakterprofil des lokalen Nutzers.
+const CHARACTER_CUSTOMIZATION_PATH: String = "user://character_customization.json"
+const WAND_TIP_SHAPES: Array[String] = ["orb", "star", "crystal", "flame"]
+const WAND_TIP_SHAPE_LABELS: Dictionary = {
+	"orb": "Kugel",
+	"star": "Stern",
+	"crystal": "Kristall",
+	"flame": "Flamme",
+}
+var user_character_customization: Dictionary = {}
 
 # Seltenheiten und ihre konfigurierbaren Anteile am Kartenangebot. Die Werte
 # müssen nicht genau 100 ergeben; sie werden beim Ziehen automatisch normalisiert.
@@ -198,6 +231,32 @@ var player_pig_eye_colors: Array[Color] = [
 var player_pig_pants_colors: Array[Color] = [
 	PIG_DEFAULT_PANTS_COLOR, PIG_DEFAULT_PANTS_COLOR, PIG_DEFAULT_PANTS_COLOR,
 	PIG_DEFAULT_PANTS_COLOR, PIG_DEFAULT_PANTS_COLOR, PIG_DEFAULT_PANTS_COLOR,
+]
+# Zauberstab-Spitze und Basis-Schuss sind pro Slot frei konfigurierbar.
+var default_wand_tip_colors: Array[Color] = [
+	Color(1.0, 0.4, 0.2, 1.0),
+	Color(1.0, 0.9, 0.2, 1.0),
+	Color(0.4, 0.9, 0.3, 1.0),
+	Color(0.6, 0.4, 1.0, 1.0),
+	Color(1.0, 0.3, 0.5, 1.0),
+	Color(0.3, 0.9, 0.7, 1.0),
+]
+var player_wand_tip_shapes: Array[String] = ["orb", "orb", "orb", "orb", "orb", "orb"]
+var player_wand_tip_colors: Array[Color] = [
+	Color(1.0, 0.4, 0.2, 1.0),
+	Color(1.0, 0.9, 0.2, 1.0),
+	Color(0.4, 0.9, 0.3, 1.0),
+	Color(0.6, 0.4, 1.0, 1.0),
+	Color(1.0, 0.3, 0.5, 1.0),
+	Color(0.3, 0.9, 0.7, 1.0),
+]
+var player_shot_colors: Array[Color] = [
+	Color(1.0, 0.4, 0.2, 1.0),
+	Color(1.0, 0.9, 0.2, 1.0),
+	Color(0.4, 0.9, 0.3, 1.0),
+	Color(0.6, 0.4, 1.0, 1.0),
+	Color(1.0, 0.3, 0.5, 1.0),
+	Color(0.3, 0.9, 0.7, 1.0),
 ]
 
 # --- Lobby / Session (multiplayer-ready) ---
@@ -258,6 +317,7 @@ func _ready() -> void:
 	_setup_default_inputs()
 	reset_lobby_state()
 	_load_lobby_loadouts()
+	_load_character_customization()
 
 func _setup_heroes() -> void:
 	# 1. Ignis
@@ -424,6 +484,8 @@ func _setup_default_inputs() -> void:
 	_ensure_key_action("p1_ability_f", KEY_F)
 	# Universeller Block für alle Spieler.
 	_ensure_key_action("p1_block", KEY_Q)
+	# Manuelles Nachladen.
+	_ensure_key_action("p1_reload", KEY_R)
 
 	# P2 bindings (Keyboard fallback for local 2-player)
 	_ensure_key_action("p2_left", KEY_LEFT)
@@ -435,9 +497,10 @@ func _setup_default_inputs() -> void:
 	_ensure_key_action("p2_shoot", KEY_PERIOD)
 	_ensure_key_action("p2_ability", KEY_COMMA)
 	_ensure_key_action("p2_block", KEY_M)
+	_ensure_key_action("p2_reload", KEY_L)
 
 	# Utility
-	_ensure_key_action("restart_game", KEY_R)
+	_ensure_key_action("restart_game", KEY_F9)
 
 func _ensure_key_action(action: String, keycode: Key) -> void:
 	if not InputMap.has_action(action):
@@ -463,19 +526,51 @@ func get_pig_appearance(index: int) -> Dictionary:
 		"fur": player_pig_fur_colors[slot - 1],
 		"eyes": player_pig_eye_colors[slot - 1],
 		"pants": player_pig_pants_colors[slot - 1],
+		"wand_tip_shape": player_wand_tip_shapes[slot - 1],
+		"wand_tip_color": player_wand_tip_colors[slot - 1],
+		"shot_color": player_shot_colors[slot - 1],
 	}
 
-func set_pig_appearance(index: int, fur: Color, eyes: Color, pants: Color) -> void:
+func normalize_wand_tip_shape(shape: String) -> String:
+	return shape if WAND_TIP_SHAPES.has(shape) else "orb"
+
+func get_wand_tip_shape_label(shape: String) -> String:
+	return str(WAND_TIP_SHAPE_LABELS.get(shape, shape.capitalize()))
+
+func set_pig_appearance(
+		index: int,
+		fur: Color,
+		eyes: Color,
+		pants: Color,
+		wand_tip_shape: String = "",
+		wand_tip_color: Color = Color(0, 0, 0, 0),
+		shot_color: Color = Color(0, 0, 0, 0)
+	) -> void:
 	if index < 1 or index > MAX_PLAYERS:
 		return
+	var next_shape: String = player_wand_tip_shapes[index - 1]
+	if not wand_tip_shape.is_empty():
+		next_shape = normalize_wand_tip_shape(wand_tip_shape)
+	var next_tip_color := wand_tip_color if wand_tip_color.a > 0.0 else player_wand_tip_colors[index - 1]
+	var next_shot_color := shot_color if shot_color.a > 0.0 else player_shot_colors[index - 1]
 	if player_pig_fur_colors[index - 1] == fur \
 			and player_pig_eye_colors[index - 1] == eyes \
-			and player_pig_pants_colors[index - 1] == pants:
+			and player_pig_pants_colors[index - 1] == pants \
+			and player_wand_tip_shapes[index - 1] == next_shape \
+			and player_wand_tip_colors[index - 1] == next_tip_color \
+			and player_shot_colors[index - 1] == next_shot_color:
 		return
 	player_pig_fur_colors[index - 1] = fur
 	player_pig_eye_colors[index - 1] = eyes
 	player_pig_pants_colors[index - 1] = pants
+	player_wand_tip_shapes[index - 1] = next_shape
+	player_wand_tip_colors[index - 1] = next_tip_color
+	player_shot_colors[index - 1] = next_shot_color
 	pig_appearance_changed.emit(index)
+	# Die Anpassung des lokalen Nutzers wird ohne separaten Speichern-Knopf
+	# direkt in sein Profil geschrieben.
+	if index == local_player_index:
+		save_character_customization(index)
 
 func reset_pig_appearance(index: int) -> void:
 	if index < 1 or index > MAX_PLAYERS:
@@ -484,8 +579,92 @@ func reset_pig_appearance(index: int) -> void:
 		index,
 		default_pig_fur_colors[index - 1],
 		PIG_DEFAULT_EYE_COLOR,
-		PIG_DEFAULT_PANTS_COLOR
+		PIG_DEFAULT_PANTS_COLOR,
+		"orb",
+		default_wand_tip_colors[index - 1],
+		default_wand_tip_colors[index - 1]
 	)
+
+func apply_saved_character_customization(index: int) -> void:
+	if user_character_customization.is_empty() or index < 1 or index > MAX_PLAYERS:
+		return
+	var look := user_character_customization
+	set_pig_appearance(
+		index,
+		look["fur"],
+		look["eyes"],
+		look["pants"],
+		look["wand_tip_shape"],
+		look["wand_tip_color"],
+		look["shot_color"]
+	)
+
+func save_character_customization(index: int = -1) -> bool:
+	var slot := local_player_index if index < 0 else index
+	if slot < 1 or slot > MAX_PLAYERS:
+		return false
+	var look := get_pig_appearance(slot)
+	user_character_customization = look.duplicate(true)
+	var payload := {
+		"version": 1,
+		"appearance": {
+			"fur": _color_to_json(look["fur"]),
+			"eyes": _color_to_json(look["eyes"]),
+			"pants": _color_to_json(look["pants"]),
+			"wand_tip_shape": look["wand_tip_shape"],
+			"wand_tip_color": _color_to_json(look["wand_tip_color"]),
+			"shot_color": _color_to_json(look["shot_color"]),
+		},
+	}
+	var file := FileAccess.open(CHARACTER_CUSTOMIZATION_PATH, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify(payload, "\t", false))
+	file.close()
+	return true
+
+func _load_character_customization() -> void:
+	user_character_customization.clear()
+	if not FileAccess.file_exists(CHARACTER_CUSTOMIZATION_PATH):
+		return
+	var file := FileAccess.open(CHARACTER_CUSTOMIZATION_PATH, FileAccess.READ)
+	if file == null:
+		return
+	var text := file.get_as_text()
+	file.close()
+	var parsed: Variant = JSON.parse_string(text)
+	if not (parsed is Dictionary):
+		return
+	var raw: Variant = parsed.get("appearance", {})
+	if not (raw is Dictionary):
+		return
+	var look := _normalize_saved_appearance(raw)
+	if look.is_empty():
+		return
+	user_character_customization = look
+	apply_saved_character_customization(local_player_index)
+
+func _normalize_saved_appearance(raw: Dictionary) -> Dictionary:
+	if not (raw.get("fur") is Array and raw.get("eyes") is Array and raw.get("pants") is Array):
+		return {}
+	var shape := normalize_wand_tip_shape(str(raw.get("wand_tip_shape", "orb")))
+	return {
+		"fur": _color_from_json(raw.get("fur"), default_pig_fur_colors[0]),
+		"eyes": _color_from_json(raw.get("eyes"), PIG_DEFAULT_EYE_COLOR),
+		"pants": _color_from_json(raw.get("pants"), PIG_DEFAULT_PANTS_COLOR),
+		"wand_tip_shape": shape,
+		"wand_tip_color": _color_from_json(raw.get("wand_tip_color"), default_wand_tip_colors[0]),
+		"shot_color": _color_from_json(raw.get("shot_color"), default_wand_tip_colors[0]),
+	}
+
+func _color_to_json(color: Color) -> Array:
+	return [color.r, color.g, color.b, color.a]
+
+func _color_from_json(value: Variant, fallback: Color) -> Color:
+	if value is Array and value.size() >= 3:
+		var alpha := float(value[3]) if value.size() > 3 else 1.0
+		return Color(float(value[0]), float(value[1]), float(value[2]), alpha)
+	return fallback
 
 func get_player_hero_id(index: int) -> String:
 	if index < 1 or index > MAX_PLAYERS:
@@ -956,12 +1135,51 @@ func set_scoring_config(points: int, survival: int, kills: int) -> void:
 	kill_points = k
 	scoring_config_changed.emit()
 
+# Setzt nur die Zielpunktzahl. Wird nach dem Match-Ende für die
+# "Weiterspielen"-Option verwendet, damit Punktestände und Decks erhalten
+# bleiben und das Ziel über die Lobby-Grenzen hinaus wachsen kann.
+func set_match_target(points: int) -> void:
+	var target := maxi(100, points)
+	if points_to_win == target:
+		return
+	points_to_win = target
+	match_target_changed.emit(points_to_win)
+
+# Erhöht das Match-Ziel um `percent` der bisherigen Zielpunktzahl. Liegt der
+# Führende bereits über dem alten Ziel (z. B. durch Kill-Punkte), wird von
+# seinem Punktestand aus weitergerechnet, damit das Spiel sicher weiterläuft.
+func advance_match_target(percent: float = 0.30) -> int:
+	var increment := maxi(1, int(round(float(points_to_win) * maxf(0.01, percent))))
+	var leading_score := 0
+	if is_team_mode():
+		for team in range(1, get_team_count() + 1):
+			leading_score = maxi(leading_score, get_team_score(team))
+	else:
+		for slot in get_active_player_indices():
+			leading_score = maxi(leading_score, player_scores[slot - 1])
+	set_match_target(maxi(points_to_win + increment, leading_score + increment))
+	return points_to_win
+
 # X von Y: picks = gewählte Karten pro Draft, offered = angebotene Karten
 func set_draft_config(picks: int, offered: int) -> void:
 	cards_per_draft = clampi(offered, 1, 10)
 	draft_picks = clampi(picks, 1, cards_per_draft)
 	draft_config_changed.emit(draft_picks, cards_per_draft)
 	cards_per_draft_changed.emit(cards_per_draft)
+
+func set_blind_pick_enabled(enabled: bool) -> void:
+	if blind_pick_enabled == enabled:
+		return
+	blind_pick_enabled = enabled
+	draft_modifiers_changed.emit()
+	lobby_state_changed.emit()
+
+func set_random_pick_enabled(enabled: bool) -> void:
+	if random_pick_enabled == enabled:
+		return
+	random_pick_enabled = enabled
+	draft_modifiers_changed.emit()
+	lobby_state_changed.emit()
 
 func cycle_cards_per_draft() -> void:
 	var next_offered := 3
@@ -1040,6 +1258,8 @@ func get_current_lobby_settings() -> Dictionary:
 		"kill_points": kill_points,
 		"draft_picks": draft_picks,
 		"cards_per_draft": cards_per_draft,
+		"blind_pick_enabled": blind_pick_enabled,
+		"random_pick_enabled": random_pick_enabled,
 		"base_hp_percent": base_hp_percent,
 		"base_damage": base_damage,
 		"map_id": selected_map_id,
@@ -1057,6 +1277,8 @@ func _default_lobby_settings() -> Dictionary:
 		"kill_points": 50,
 		"draft_picks": 1,
 		"cards_per_draft": 5,
+		"blind_pick_enabled": false,
+		"random_pick_enabled": false,
 		"base_hp_percent": 100,
 		"base_damage": 22.0,
 		"map_id": MAP_RANDOM,
@@ -1198,6 +1420,10 @@ func apply_lobby_settings(settings: Dictionary) -> void:
 		int(settings.get("draft_picks", draft_picks)),
 		int(settings.get("cards_per_draft", cards_per_draft))
 	)
+	# Alte Loadouts kennen die Modifier noch nicht; sie werden beim Laden
+	# bewusst deaktiviert, damit ein Preset eine vollständige Konfiguration ist.
+	set_blind_pick_enabled(bool(settings.get("blind_pick_enabled", false)))
+	set_random_pick_enabled(bool(settings.get("random_pick_enabled", false)))
 	set_base_hp_percent(int(settings.get("base_hp_percent", base_hp_percent)))
 	set_base_damage(float(settings.get("base_damage", base_damage)))
 	if settings.has("map_id"):
@@ -1225,7 +1451,15 @@ func get_lobby_loadout_summary(name: String) -> String:
 		return ""
 	var pools: Variant = data.get("enabled_card_pools", [])
 	var bans: Variant = data.get("banned_card_ids", [])
-	return "%s · %d Spieler · Ziel %d P · Draft %d/%d · HP %d %% · DMG %d · Map %s · %d Pools · %d Bans" % [
+	var modifiers: Array[String] = []
+	if bool(data.get("blind_pick_enabled", false)):
+		modifiers.append("Blind")
+	if bool(data.get("random_pick_enabled", false)):
+		modifiers.append("Random")
+	var modifier_text := ""
+	if not modifiers.is_empty():
+		modifier_text = " · Modifier: %s" % ", ".join(modifiers)
+	return "%s · %d Spieler · Ziel %d P · Draft %d/%d · HP %d %% · DMG %d · Map %s · %d Pools · %d Bans%s" % [
 		get_match_mode_name(str(data.get("match_mode", MATCH_MODE_FFA))),
 		int(data.get("player_count", 2)),
 		int(data.get("points_to_win", points_to_win)),
@@ -1236,6 +1470,7 @@ func get_lobby_loadout_summary(name: String) -> String:
 		get_map_name(str(data.get("map_id", MAP_RANDOM))),
 		pools.size() if pools is Array else 0,
 		bans.size() if bans is Array else 0,
+		modifier_text,
 	]
 
 # --- Lobby / Ready / Host ---

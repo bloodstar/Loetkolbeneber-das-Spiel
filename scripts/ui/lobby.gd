@@ -10,6 +10,7 @@ const HERO_IDS: Array[String] = [
 	"ignis", "volt", "spore", "nova",
 	"klinge", "bastion", "phantom",
 ]
+const HERO_ICON_DIR: String = "res://assets/ui/"
 
 @onready var tabs: TabContainer = $Panel/Margin/VBox/Tabs
 @onready var status_label: Label = $Panel/Margin/VBox/Header/StatusLabel
@@ -28,7 +29,15 @@ const HERO_IDS: Array[String] = [
 @onready var cards_tab: VBoxContainer = $Panel/Margin/VBox/Tabs/Cards
 
 @onready var back_btn: Button = $Panel/Margin/VBox/Footer/BackBtn
+@onready var ready_btn: Button = $Panel/Margin/VBox/Footer/ReadyBtn
 @onready var start_btn: Button = $Panel/Margin/VBox/Footer/StartBtn
+
+# Die Bereit-Anzeigen in den Heldenslots und der Footer-Button teilen sich
+# dieselben Farben: grün = bereit, neutral = noch nicht bereit.
+var _ready_display_on: StyleBoxFlat
+var _ready_display_off: StyleBoxFlat
+var _ready_button_on: StyleBoxFlat
+var _ready_button_off: StyleBoxFlat
 
 # Regel-Controls
 var score_spin: SpinBox
@@ -38,6 +47,8 @@ var base_hp_spin: SpinBox
 var base_damage_spin: SpinBox
 var picks_spin: SpinBox
 var offer_spin: SpinBox
+var blind_pick_check: CheckButton
+var random_pick_check: CheckButton
 var map_option: OptionButton
 var map_info_label: Label
 var mode_option: OptionButton
@@ -67,7 +78,13 @@ var ban_icons: Dictionary = {}
 var fur_picker: ColorPickerButton = null
 var eye_picker: ColorPickerButton = null
 var pants_picker: ColorPickerButton = null
+var wand_tip_picker: ColorPickerButton = null
+var shot_color_picker: ColorPickerButton = null
+var wand_shape_option: OptionButton = null
 var character_preview: PigCharacter = null
+var character_preview_wand: MagicWand = null
+var character_preview_wand_pivot: Node2D = null
+var character_hero_icon: TextureRect = null
 var character_hint: Label = null
 var character_slot_label: Label = null
 var character_slot_option: OptionButton = null
@@ -76,8 +93,9 @@ var _updating_character_ui: bool = false
 var _character_slot: int = 1
 var _character_slot_signature: String = ""
 
-# slot_index -> { section, title, kind, ready, grid }
+# slot_index -> { section, title, hero_icon, kind, ready, grid }
 var slot_nodes: Dictionary = {}
+var _hero_icon_cache: Dictionary = {}
 
 func _ready() -> void:
 	visible = false
@@ -87,6 +105,7 @@ func _ready() -> void:
 	tabs.set_tab_title(3, "Karten")
 
 	start_btn.pressed.connect(_on_start_pressed)
+	ready_btn.pressed.connect(_on_ready_pressed)
 	back_btn.pressed.connect(_on_back_pressed)
 	player_count_spin.value_changed.connect(_on_player_count_changed)
 	Global.banned_cards_changed.connect(_on_banned_cards_changed)
@@ -100,7 +119,9 @@ func _ready() -> void:
 	NetworkManager.slot_assigned.connect(_on_slot_assigned)
 	NetworkManager.ping_updated.connect(_refresh_network_status)
 	tabs.tab_changed.connect(_on_lobby_tab_changed)
+	CardStats.rarity_changed.connect(_on_card_rarity_changed)
 
+	_build_ready_styles()
 	_build_slot_list()
 	_build_character_tab()
 	_build_rules_tab()
@@ -124,6 +145,36 @@ func open_lobby() -> void:
 func close_lobby() -> void:
 	visible = false
 
+func _build_ready_styles() -> void:
+	_ready_display_on = _make_status_style(
+		Color(0.08, 0.30, 0.15, 0.95),
+		Color(0.30, 0.82, 0.42, 0.95)
+	)
+	_ready_display_off = _make_status_style(
+		Color(0.09, 0.11, 0.16, 0.55),
+		Color(0.28, 0.33, 0.43, 0.65)
+	)
+	_ready_button_on = _make_status_style(
+		Color(0.10, 0.40, 0.18, 1.0),
+		Color(0.38, 0.95, 0.52, 1.0)
+	)
+	_ready_button_off = _make_status_style(
+		Color(0.12, 0.15, 0.22, 0.98),
+		Color(0.30, 0.38, 0.50, 1.0)
+	)
+
+func _make_status_style(bg_color: Color, border_color: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg_color
+	style.border_color = border_color
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(5)
+	style.content_margin_left = 12.0
+	style.content_margin_right = 12.0
+	style.content_margin_top = 6.0
+	style.content_margin_bottom = 6.0
+	return style
+
 # --- Heldenslots ---
 
 func _build_slot_list() -> void:
@@ -141,6 +192,14 @@ func _build_slot_list() -> void:
 		row.add_theme_constant_override("separation", 12)
 		section.add_child(row)
 
+		var hero_icon := TextureRect.new()
+		hero_icon.custom_minimum_size = Vector2(28, 28)
+		hero_icon.texture = _get_hero_icon(Global.get_player_hero_id(i))
+		hero_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		hero_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		hero_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(hero_icon)
+
 		var title := Label.new()
 		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		title.add_theme_font_size_override("font_size", 15)
@@ -152,9 +211,13 @@ func _build_slot_list() -> void:
 		kind.item_selected.connect(_on_kind_selected.bind(i))
 		row.add_child(kind)
 
+		# Reine Statusanzeige: Die Bereitschaft wird unten neben "Kampf
+		# starten" gesetzt. Der CheckBox-Hintergrund wird bei Bereitschaft grün.
 		var ready := CheckBox.new()
 		ready.text = "Bereit"
-		ready.toggled.connect(_on_ready_toggled.bind(i))
+		ready.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ready.focus_mode = Control.FOCUS_NONE
+		ready.tooltip_text = "Anzeige: Bereitschaft dieses Slots"
 		row.add_child(ready)
 
 		var grid := HBoxContainer.new()
@@ -163,30 +226,84 @@ func _build_slot_list() -> void:
 		section.add_child(grid)
 		for hero_id in HERO_IDS:
 			var hero: HeroData = Global.get_hero(hero_id)
-			var btn := Button.new()
-			btn.custom_minimum_size = Vector2(130, 84)
-			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			btn.set_meta("hero_id", hero.id)
-			btn.add_theme_font_size_override("font_size", 11)
-			var effective_hp := Global.get_effective_base_hp(hero)
-			btn.text = "%s\nHP %d  ·  DMG %d\n%s" % [
-				hero.name, effective_hp, int(Global.base_damage), hero.ability_name,
-			]
-			btn.tooltip_text = "%s (%s)\nBasis-HP (effektiv): %d\nBasis-Schaden: %d\nBasis-Munition: %d\nFeuerintervall: %.2fs\nNachladezeit: %.1fs\nPassive: %s\nAktiv: %s (%ss Cooldown)\n%s" % [
-				hero.name, hero.role, effective_hp, int(Global.base_damage),
-				hero.base_ammo, hero.base_fire_rate_cooldown, hero.base_reload_time,
-				hero.passive_desc, hero.ability_name, hero.ability_cooldown, hero.description,
-			]
+			var btn := _create_hero_button(hero)
 			btn.pressed.connect(_select_hero.bind(i, hero.id))
 			grid.add_child(btn)
 
 		slot_nodes[i] = {
 			"section": section,
 			"title": title,
+			"hero_icon": hero_icon,
 			"kind": kind,
 			"ready": ready,
 			"grid": grid,
 		}
+
+func _get_hero_icon(hero_id: String) -> Texture2D:
+	if _hero_icon_cache.has(hero_id):
+		return _hero_icon_cache[hero_id]
+	var path := "%shero_%s.svg" % [HERO_ICON_DIR, hero_id]
+	var texture: Texture2D = null
+	if ResourceLoader.exists(path):
+		texture = load(path) as Texture2D
+	_hero_icon_cache[hero_id] = texture
+	return texture
+
+func _hero_button_text(hero: HeroData) -> String:
+	var effective_hp := Global.get_effective_base_hp(hero)
+	return "%s\nHP %d  ·  DMG %d\n%s" % [
+		hero.name, effective_hp, int(Global.base_damage), hero.ability_name,
+	]
+
+func _hero_tooltip(hero: HeroData) -> String:
+	var effective_hp := Global.get_effective_base_hp(hero)
+	return "%s (%s)\nBasis-HP (effektiv): %d\nBasis-Schaden: %d\nBasis-Munition: %d\nFeuerintervall: %.2fs\nNachladezeit: %.1fs\nPassive: %s\nAktiv: %s (%ss Cooldown)\n%s" % [
+		hero.name, hero.role, effective_hp, int(Global.base_damage),
+		hero.base_ammo, hero.base_fire_rate_cooldown, hero.base_reload_time,
+		hero.passive_desc, hero.ability_name, hero.ability_cooldown, hero.description,
+	]
+
+func _create_hero_button(hero: HeroData) -> Button:
+	var btn := Button.new()
+	btn.custom_minimum_size = Vector2(130, 104)
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn.set_meta("hero_id", hero.id)
+	btn.tooltip_text = _hero_tooltip(hero)
+
+	var margin := MarginContainer.new()
+	btn.add_child(margin)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	margin.add_theme_constant_override("margin_left", 4)
+	margin.add_theme_constant_override("margin_right", 4)
+	margin.add_theme_constant_override("margin_top", 3)
+	margin.add_theme_constant_override("margin_bottom", 3)
+
+	var content := VBoxContainer.new()
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_theme_constant_override("separation", 1)
+	margin.add_child(content)
+
+	var icon := TextureRect.new()
+	icon.texture = _get_hero_icon(hero.id)
+	icon.custom_minimum_size = Vector2(0, 38)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(icon)
+
+	var label := Label.new()
+	label.name = "StatsLabel"
+	label.text = _hero_button_text(hero)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	label.add_theme_font_size_override("font_size", 11)
+	label.add_theme_color_override("font_color", Color(0.92, 0.95, 1.0))
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(label)
+	btn.set_meta("stats_label", label)
+	return btn
 
 func _select_hero(slot: int, hero_id: String) -> void:
 	if not Global.can_control_slot(slot):
@@ -196,6 +313,7 @@ func _select_hero(slot: int, hero_id: String) -> void:
 	if not Global.is_bot_slot(slot):
 		Global.set_player_ready(slot, false)
 	_refresh_hero_highlights()
+	_update_titles()
 
 	# Online: Host teilt die Änderung mit, Client schickt seine eigene Wahl zum Host.
 	if Global.network_mode:
@@ -216,7 +334,11 @@ func _highlight_grid(grid: HBoxContainer, hero_id: String) -> void:
 		if btn == null:
 			continue
 		var is_selected: bool = btn.get_meta("hero_id", "") == hero_id
-		btn.modulate = Color(1.0, 1.0, 0.8, 1.0) if is_selected else Color(1.0, 1.0, 1.0, 0.75)
+		var alpha := 0.45 if btn.disabled else 0.75
+		if is_selected:
+			btn.modulate = Color(1.0, 1.0, 0.8, 0.55 if btn.disabled else 1.0)
+		else:
+			btn.modulate = Color(1.0, 1.0, 1.0, alpha)
 
 func _on_kind_selected(item: int, slot: int) -> void:
 	if not Global.is_local_host():
@@ -236,20 +358,101 @@ func _on_kind_selected(item: int, slot: int) -> void:
 	_refresh_kind_options()
 	_update_status()
 
-func _on_ready_toggled(ready: bool, slot: int) -> void:
-	if not Global.can_control_slot(slot):
-		_refresh_ready_checks()
+func _local_ready_slots() -> Array[int]:
+	var slots: Array[int] = []
+	if Global.is_spectator:
+		return slots
+	if not Global.network_mode:
+		# Lokal können Slot 1 und optional Slot 2 von Menschen gesteuert
+		# werden. Der Footer-Button meldet alle lokalen Menschen gemeinsam
+		# bereit, damit niemand seinen Slot separat suchen muss.
+		for slot_index in Global.get_active_player_indices():
+			if Global.is_human_slot(slot_index):
+				slots.append(slot_index)
+		return slots
+	var slot := Global.local_player_index
+	if slot >= 1 and slot <= Global.player_count and not Global.is_bot_slot(slot):
+		slots.append(slot)
+	return slots
+
+func _on_ready_pressed() -> void:
+	var slots := _local_ready_slots()
+	if slots.is_empty():
 		return
+	var all_ready := true
+	for slot in slots:
+		if not Global.can_control_slot(slot) or not Global.is_player_ready(slot):
+			all_ready = false
+			break
+	var next_state := not all_ready
 	SoundManager.play_sound("click")
-	Global.set_player_ready(slot, ready)
-	if Global.network_mode and not Global.is_local_host() and slot == Global.local_player_index:
-		NetworkManager.send_ready_state(ready)
+	for slot in slots:
+		Global.set_player_ready(slot, next_state)
+		if Global.network_mode and not Global.is_local_host() and slot == Global.local_player_index:
+			NetworkManager.send_ready_state(next_state)
+	_refresh_ready_checks()
+	_update_status()
+
+func _refresh_ready_button() -> void:
+	if ready_btn == null:
+		return
+	var slots := _local_ready_slots()
+	var can_ready := not slots.is_empty()
+	var all_ready := can_ready
+	for slot in slots:
+		if not Global.is_player_ready(slot):
+			all_ready = false
+			break
+	ready_btn.disabled = not can_ready
+	ready_btn.text = "BEREIT ✓" if all_ready else "BEREIT"
+	if not can_ready:
+		ready_btn.tooltip_text = "Zuschauer können sich nicht bereit melden."
+	elif slots.size() > 1:
+		ready_btn.tooltip_text = "Bereitschaft aller lokalen Spieler umschalten"
+	else:
+		ready_btn.tooltip_text = "Bereitschaft für Slot %d umschalten" % slots[0]
+	var style: StyleBoxFlat = _ready_button_on if all_ready else _ready_button_off
+	ready_btn.add_theme_stylebox_override("normal", style)
+	ready_btn.add_theme_stylebox_override("hover", style)
+	ready_btn.add_theme_stylebox_override("pressed", style)
+	ready_btn.add_theme_stylebox_override("disabled", _ready_button_off)
+	ready_btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	var font_color: Color = Color(0.86, 1.0, 0.89, 1.0) if all_ready else Color(0.92, 0.95, 1.0, 1.0)
+	ready_btn.add_theme_color_override("font_color", font_color)
+	ready_btn.add_theme_color_override("font_hover_color", font_color)
+	ready_btn.add_theme_color_override("font_pressed_color", font_color)
+	ready_btn.add_theme_color_override("font_disabled_color", Color(0.48, 0.53, 0.62, 1.0))
+
+func _apply_ready_display_style(check: CheckBox, is_ready: bool) -> void:
+	var style: StyleBoxFlat = _ready_display_on if is_ready else _ready_display_off
+	check.add_theme_stylebox_override("normal", style)
+	check.add_theme_stylebox_override("hover", style)
+	check.add_theme_stylebox_override("pressed", style)
+	check.add_theme_stylebox_override("disabled", style)
+	check.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	var font_color: Color = Color(0.82, 1.0, 0.85, 1.0) if is_ready else Color(0.70, 0.76, 0.86, 1.0)
+	check.add_theme_color_override("font_color", font_color)
+	check.add_theme_color_override("font_hover_color", font_color)
+	check.add_theme_color_override("font_pressed_color", font_color)
+	check.add_theme_color_override("font_disabled_color", font_color)
 
 func _on_lobby_state_changed() -> void:
 	_sync_from_global()
 
-func _on_slot_assigned(_slot: int) -> void:
+func _on_slot_assigned(slot: int) -> void:
 	_sync_from_global()
+	# Nach dem Beitritt das gespeicherte Profil einmalig an den Host senden,
+	# damit der eigene Charakter sofort für alle sichtbar ist.
+	if slot >= 1 and NetworkManager.is_client and slot == Global.local_player_index:
+		var look := Global.get_pig_appearance(slot)
+		NetworkManager.request_pig_appearance(
+			look["fur"],
+			look["eyes"],
+			look["pants"],
+			look["wand_tip_shape"],
+			look["wand_tip_color"],
+			look["shot_color"]
+		)
 
 func _refresh_slot_visibility() -> void:
 	for i in range(1, Global.MAX_PLAYERS + 1):
@@ -264,9 +467,17 @@ func _refresh_ready_checks() -> void:
 			continue
 		var check: CheckBox = slot_nodes[i]["ready"]
 		var bot := Global.is_bot_slot(i)
-		check.set_pressed_no_signal(Global.is_player_ready(i))
-		check.disabled = bot or not Global.can_control_slot(i)
-		check.text = "Bot ist bereit" if bot else "Bereit"
+		var is_ready := Global.is_player_ready(i)
+		check.set_pressed_no_signal(is_ready)
+		check.disabled = false
+		if bot:
+			check.text = "Bot ist bereit"
+		elif is_ready:
+			check.text = "Bereit"
+		else:
+			check.text = "Nicht bereit"
+		_apply_ready_display_style(check, is_ready)
+	_refresh_ready_button()
 
 func _refresh_kind_options() -> void:
 	for i in range(1, Global.MAX_PLAYERS + 1):
@@ -285,6 +496,8 @@ func _refresh_hero_controls() -> void:
 		var grid: HBoxContainer = slot_nodes[i]["grid"]
 		for child in grid.get_children():
 			child.disabled = not can
+	# Nach dem Setzen des Disabled-Status die Icons/Labels passend abdunkeln.
+	_refresh_hero_highlights()
 
 func _refresh_hero_stats_text() -> void:
 	for i in range(1, Global.MAX_PLAYERS + 1):
@@ -298,15 +511,12 @@ func _refresh_hero_stats_text() -> void:
 			var hero: HeroData = Global.get_hero(str(btn.get_meta("hero_id", "")))
 			if hero == null:
 				continue
-			var effective_hp := Global.get_effective_base_hp(hero)
-			btn.text = "%s\nHP %d  ·  DMG %d\n%s" % [
-				hero.name, effective_hp, int(Global.base_damage), hero.ability_name,
-			]
-			btn.tooltip_text = "%s (%s)\nBasis-HP (effektiv): %d\nBasis-Schaden: %d\nBasis-Munition: %d\nFeuerintervall: %.2fs\nNachladezeit: %.1fs\nPassive: %s\nAktiv: %s (%ss Cooldown)\n%s" % [
-				hero.name, hero.role, effective_hp, int(Global.base_damage),
-				hero.base_ammo, hero.base_fire_rate_cooldown, hero.base_reload_time,
-				hero.passive_desc, hero.ability_name, hero.ability_cooldown, hero.description,
-			]
+			var stats_label := btn.get_meta("stats_label", null) as Label
+			if stats_label != null:
+				stats_label.text = _hero_button_text(hero)
+			else:
+				btn.text = _hero_button_text(hero)
+			btn.tooltip_text = _hero_tooltip(hero)
 
 # --- Charakteranpassung ---
 
@@ -315,12 +525,18 @@ func _build_character_tab() -> void:
 	_character_slot_signature = ""
 	_clear_children(character_tab)
 
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	character_tab.add_child(scroll)
+
 	var center := CenterContainer.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	character_tab.add_child(center)
+	scroll.add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(760, 420)
+	panel.custom_minimum_size = Vector2(770, 610)
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = Color(0.06, 0.08, 0.12, 0.98)
 	panel_style.set_corner_radius_all(16)
@@ -381,6 +597,23 @@ func _build_character_tab() -> void:
 	character_preview.follow_parent_motion = false
 	preview_canvas.add_child(character_preview)
 
+	character_preview_wand_pivot = Node2D.new()
+	character_preview_wand_pivot.position = Vector2(140, 176)
+	character_preview_wand_pivot.scale = Vector2(4.4, 4.4)
+	character_preview_wand_pivot.rotation = -0.24
+	preview_canvas.add_child(character_preview_wand_pivot)
+
+	character_preview_wand = MagicWand.new()
+	character_preview_wand_pivot.add_child(character_preview_wand)
+
+	character_hero_icon = TextureRect.new()
+	character_hero_icon.position = Vector2(14, 14)
+	character_hero_icon.size = Vector2(54, 54)
+	character_hero_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	character_hero_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	character_hero_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	preview_canvas.add_child(character_hero_icon)
+
 	character_slot_label = Label.new()
 	character_slot_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	character_slot_label.add_theme_font_size_override("font_size", 13)
@@ -425,16 +658,22 @@ func _build_character_tab() -> void:
 	fur_picker = ColorPickerButton.new()
 	eye_picker = ColorPickerButton.new()
 	pants_picker = ColorPickerButton.new()
+	wand_tip_picker = ColorPickerButton.new()
+	shot_color_picker = ColorPickerButton.new()
 	_add_character_color_row(controls, "Fellfarbe", "Grundfarbe von Kopf, Körper und Ohren.", fur_picker)
 	_add_character_color_row(controls, "Augenfarbe", "Farbe der Iris. Die Augen bleiben weiß umrandet.", eye_picker)
 	_add_character_color_row(controls, "Hosenfarbe", "Farbe der kurzen Hose inklusive Gürtel und Hosenbeinen.", pants_picker)
+	_add_character_shape_row(controls)
+	_add_character_color_row(controls, "Zauberstab-Spitze", "Farbe des Leuchtkerns an der Spitze des Stabs.", wand_tip_picker)
+	_add_character_color_row(controls, "Basis-Schuss", "Farbe der normalen Projektile, bevor Karten sie verändern.", shot_color_picker)
 
 	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, 2)
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	controls.add_child(spacer)
 
 	var reset_button := Button.new()
-	reset_button.text = "STANDARDFARBEN ZURÜCKSETZEN"
+	reset_button.text = "STANDARD-CHARAKTER ZURÜCKSETZEN"
 	reset_button.custom_minimum_size = Vector2(0, 38)
 	reset_button.pressed.connect(_on_reset_character_colors)
 	controls.add_child(reset_button)
@@ -469,6 +708,38 @@ func _add_character_color_row(parent: VBoxContainer, title: String, description:
 	picker.edit_alpha = false
 	picker.color_changed.connect(_on_character_color_changed)
 	row.add_child(picker)
+
+func _add_character_shape_row(parent: VBoxContainer) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	parent.add_child(row)
+
+	var text_column := VBoxContainer.new()
+	text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_column.add_theme_constant_override("separation", 1)
+	row.add_child(text_column)
+
+	var title_label := Label.new()
+	title_label.text = "Spitzenform"
+	title_label.add_theme_font_size_override("font_size", 16)
+	title_label.add_theme_color_override("font_color", Color(0.92, 0.94, 0.98))
+	text_column.add_child(title_label)
+
+	var desc_label := Label.new()
+	desc_label.text = "Form des Leuchtkerns am Ende des einhändigen Zauberstabs."
+	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc_label.add_theme_font_size_override("font_size", 11)
+	desc_label.add_theme_color_override("font_color", Color(0.50, 0.56, 0.65))
+	text_column.add_child(desc_label)
+
+	wand_shape_option = OptionButton.new()
+	wand_shape_option.custom_minimum_size = Vector2(120, 42)
+	wand_shape_option.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for i in range(Global.WAND_TIP_SHAPES.size()):
+		var shape: String = Global.WAND_TIP_SHAPES[i]
+		wand_shape_option.add_item(Global.get_wand_tip_shape_label(shape), i)
+	wand_shape_option.item_selected.connect(_on_character_wand_shape_changed)
+	row.add_child(wand_shape_option)
 
 func _character_slots() -> Array[int]:
 	var slots: Array[int] = []
@@ -534,14 +805,28 @@ func _refresh_character_tab() -> void:
 	fur_picker.color = look["fur"]
 	eye_picker.color = look["eyes"]
 	pants_picker.color = look["pants"]
+	wand_tip_picker.color = look["wand_tip_color"]
+	shot_color_picker.color = look["shot_color"]
+	var shape_index := Global.WAND_TIP_SHAPES.find(str(look["wand_tip_shape"]))
+	wand_shape_option.select(maxi(0, shape_index))
 	_updating_character_ui = false
 
 	fur_picker.disabled = not can_customize
 	eye_picker.disabled = not can_customize
 	pants_picker.disabled = not can_customize
+	wand_tip_picker.disabled = not can_customize
+	shot_color_picker.disabled = not can_customize
+	wand_shape_option.disabled = not can_customize
 
 	if character_preview:
 		character_preview.setup(look["fur"], look["eyes"], look["pants"])
+	if character_preview_wand:
+		character_preview_wand.setup(look["wand_tip_shape"], look["wand_tip_color"])
+
+	if character_hero_icon:
+		character_hero_icon.visible = can_customize
+		if can_customize:
+			character_hero_icon.texture = _get_hero_icon(Global.get_player_hero_id(_character_slot))
 
 	if character_slot_label:
 		if can_customize:
@@ -556,11 +841,11 @@ func _refresh_character_tab() -> void:
 		if not can_customize:
 			character_hint.text = "Zuschauer können keine Spielfigur anpassen."
 		elif Global.network_mode:
-			character_hint.text = "Du kannst deinen eigenen Slot anpassen. Die Farben werden mit dem Host synchronisiert."
+			character_hint.text = "Du kannst deinen eigenen Slot anpassen. Charakter, Stabspitze und Schussfarbe werden mit dem Host synchronisiert und automatisch gespeichert."
 		elif slots.size() > 1:
-			character_hint.text = "Wähle oben den Spieler-Slot. Fell-, Augen- und Hosenfarbe gelten sofort fürs Match."
+			character_hint.text = "Wähle oben den Spieler-Slot. Alle Anpassungen gelten sofort fürs Match; der eigene Slot wird automatisch gespeichert."
 		else:
-			character_hint.text = "Fell-, Augen- und Hosenfarbe werden sofort im Spiel übernommen."
+			character_hint.text = "Charakter, Zauberstabspitze und Schussfarbe werden sofort übernommen und automatisch gespeichert."
 
 	tabs.set_tab_disabled(1, slots.is_empty())
 	if slots.is_empty() and tabs.current_tab == 1:
@@ -582,18 +867,45 @@ func _on_pig_appearance_changed(slot: int) -> void:
 		_refresh_character_tab()
 
 func _on_character_color_changed(_color: Color) -> void:
+	_commit_character_appearance()
+
+func _on_character_wand_shape_changed(_index: int) -> void:
+	_commit_character_appearance()
+
+func _selected_wand_tip_shape() -> String:
+	if wand_shape_option == null:
+		return "orb"
+	var index := clampi(wand_shape_option.selected, 0, Global.WAND_TIP_SHAPES.size() - 1)
+	return Global.WAND_TIP_SHAPES[index]
+
+func _commit_character_appearance() -> void:
 	if _updating_character_ui or not _character_ui_ready:
 		return
 	var slot := _character_slot
 	if not _can_customize_character_slot(slot):
 		return
 
-	var fur := fur_picker.color
-	var eyes := eye_picker.color
-	var pants := pants_picker.color
-	Global.set_pig_appearance(slot, fur, eyes, pants)
+	var shape := _selected_wand_tip_shape()
+	var tip_color := wand_tip_picker.color
+	var shot_color := shot_color_picker.color
+	Global.set_pig_appearance(
+		slot,
+		fur_picker.color,
+		eye_picker.color,
+		pants_picker.color,
+		shape,
+		tip_color,
+		shot_color
+	)
 	if NetworkManager.is_client and slot == Global.local_player_index:
-		NetworkManager.request_pig_appearance(fur, eyes, pants)
+		NetworkManager.request_pig_appearance(
+			fur_picker.color,
+			eye_picker.color,
+			pants_picker.color,
+			shape,
+			tip_color,
+			shot_color
+		)
 
 func _on_reset_character_colors() -> void:
 	if not _can_customize_character_slot(_character_slot):
@@ -603,7 +915,14 @@ func _on_reset_character_colors() -> void:
 	_refresh_character_tab()
 	if NetworkManager.is_client and slot == Global.local_player_index:
 		var look := Global.get_pig_appearance(slot)
-		NetworkManager.request_pig_appearance(look["fur"], look["eyes"], look["pants"])
+		NetworkManager.request_pig_appearance(
+			look["fur"],
+			look["eyes"],
+			look["pants"],
+			look["wand_tip_shape"],
+			look["wand_tip_color"],
+			look["shot_color"]
+		)
 
 func _refresh_host_controls() -> void:
 	# Match-Regeln und Karten darf nur der Host ändern.
@@ -628,6 +947,10 @@ func _refresh_host_controls() -> void:
 		var check := cb as CheckButton
 		if check != null:
 			check.disabled = not is_host
+	if blind_pick_check != null:
+		blind_pick_check.disabled = not is_host or not Global.network_mode
+	if random_pick_check != null:
+		random_pick_check.disabled = not is_host
 	_refresh_loadout_enabled()
 
 func _map_ids() -> Array[String]:
@@ -713,6 +1036,9 @@ func _update_titles() -> void:
 		if not slot_nodes.has(i):
 			continue
 		var title: Label = slot_nodes[i]["title"]
+		var hero_icon: TextureRect = slot_nodes[i]["hero_icon"]
+		if hero_icon != null:
+			hero_icon.texture = _get_hero_icon(Global.get_player_hero_id(i))
 		var team_prefix := ""
 		if Global.is_team_mode():
 			team_prefix = "[%s] " % Global.get_team_name(Global.get_team_for_slot(i))
@@ -875,6 +1201,52 @@ func _build_rules_tab() -> void:
 	draft_hint.add_theme_font_size_override("font_size", 12)
 	draft_row.add_child(draft_hint)
 
+	body.add_child(HSeparator.new())
+	_add_section_title(body, "DRAFT-MODIFIER", Color(0.82, 0.62, 1.0, 1.0))
+	var modifier_intro := Label.new()
+	modifier_intro.text = "Modifier gelten für alle Drafts. Blind pick verdeckt Angebot und Auswahl online vor anderen menschlichen Spielern; lokal gegen Bots bleibt er ohne Wirkung. Random pick zieht automatisch eine zufällige Karte."
+	modifier_intro.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
+	modifier_intro.add_theme_font_size_override("font_size", 12)
+	modifier_intro.autowrap_mode = 2
+	body.add_child(modifier_intro)
+
+	var modifier_grid := GridContainer.new()
+	modifier_grid.columns = 2
+	modifier_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	modifier_grid.add_theme_constant_override("h_separation", 18)
+	modifier_grid.add_theme_constant_override("v_separation", 8)
+	body.add_child(modifier_grid)
+
+	blind_pick_check = CheckButton.new()
+	blind_pick_check.text = "Blind pick (online)"
+	blind_pick_check.tooltip_text = "Nur online gegen menschliche Spieler: Andere sehen weder das Kartenangebot noch die gewählte Karte. Der aktive Spieler sieht seine Auswahl weiterhin. Lokal gegen Bots ohne Wirkung."
+	blind_pick_check.button_pressed = Global.blind_pick_enabled and Global.network_mode
+	blind_pick_check.toggled.connect(_on_blind_pick_toggled)
+	modifier_grid.add_child(blind_pick_check)
+
+	var blind_hint := Label.new()
+	blind_hint.text = "Nur online gegen menschliche Spieler wirksam; lokal mit Bots ohne Effekt."
+	blind_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	blind_hint.add_theme_color_override("font_color", Color(0.5, 0.55, 0.65, 1.0))
+	blind_hint.add_theme_font_size_override("font_size", 12)
+	blind_hint.autowrap_mode = 2
+	modifier_grid.add_child(blind_hint)
+
+	random_pick_check = CheckButton.new()
+	random_pick_check.text = "Random pick"
+	random_pick_check.tooltip_text = "Beim Draft wird automatisch eine zufällige Karte aus dem Angebot gezogen. Manuelle Auswahl ist deaktiviert; der Host entscheidet online autoritativ."
+	random_pick_check.button_pressed = Global.random_pick_enabled
+	random_pick_check.toggled.connect(_on_random_pick_toggled)
+	modifier_grid.add_child(random_pick_check)
+
+	var random_hint := Label.new()
+	random_hint.text = "Automatische Zufallswahl statt manuellem Picken."
+	random_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	random_hint.add_theme_color_override("font_color", Color(0.5, 0.55, 0.65, 1.0))
+	random_hint.add_theme_font_size_override("font_size", 12)
+	random_hint.autowrap_mode = 2
+	modifier_grid.add_child(random_hint)
+
 	var info := Label.new()
 	info.text = "Kills geben sofort Punkte. In FFA erhält der Überlebende den Bonus, in Team-Modi alle Mitglieder des Siegerteams. Bei einem Doppel-KO gibt es keinen Überlebensbonus."
 	info.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
@@ -888,7 +1260,7 @@ func _build_loadout_section(body: VBoxContainer) -> void:
 	_add_section_title(body, "LOBBY-LOADOUTS", Color(0.85, 0.65, 1.0, 1.0))
 
 	var intro := Label.new()
-	intro.text = "Gespeicherte Presets für Modus, Spielerzahl, Punkte, Draft, Kartenpools, Sperren, Map sowie HP und Schaden. Nur der Host kann Loadouts laden, speichern oder löschen."
+	intro.text = "Gespeicherte Presets für Modus, Spielerzahl, Punkte, Draft inkl. Modifier, Kartenpools, Sperren, Map sowie HP und Schaden. Nur der Host kann Loadouts laden, speichern oder löschen."
 	intro.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
 	intro.add_theme_font_size_override("font_size", 12)
 	intro.autowrap_mode = 2
@@ -1263,6 +1635,14 @@ func _build_cards_tab() -> void:
 
 	_build_ban_sections()
 
+func _on_card_rarity_changed() -> void:
+	# Automatische Aufwertungen können während eines Matches passieren. Die
+	# Kartenliste wird deshalb im Hintergrund neu gruppiert, damit die Lobby
+	# beim nächsten Öffnen sofort die aktuelle Seltenheit zeigt.
+	if ban_sections != null and is_instance_valid(ban_sections):
+		_build_ban_sections()
+		_refresh_host_controls()
+
 func _build_ban_sections() -> void:
 	_clear_children(ban_sections)
 	ban_checks.clear()
@@ -1504,6 +1884,22 @@ func _on_picks_changed(value: float) -> void:
 	Global.set_draft_config(int(value), int(offer_spin.value))
 	_update_status()
 
+func _on_blind_pick_toggled(pressed: bool) -> void:
+	if not Global.is_local_host():
+		_sync_from_global()
+		return
+	Global.set_blind_pick_enabled(pressed)
+	SoundManager.play_sound("click")
+	_update_status()
+
+func _on_random_pick_toggled(pressed: bool) -> void:
+	if not Global.is_local_host():
+		_sync_from_global()
+		return
+	Global.set_random_pick_enabled(pressed)
+	SoundManager.play_sound("click")
+	_update_status()
+
 # --- Karten sperren ---
 
 func _on_ban_toggled(pressed: bool, card_id: String, checkbox: CheckButton) -> void:
@@ -1551,6 +1947,10 @@ func _sync_from_global() -> void:
 	offer_spin.set_value_no_signal(Global.cards_per_draft)
 	picks_spin.max_value = Global.cards_per_draft
 	picks_spin.set_value_no_signal(Global.draft_picks)
+	if blind_pick_check != null:
+		blind_pick_check.set_pressed_no_signal(Global.blind_pick_enabled and Global.network_mode)
+	if random_pick_check != null:
+		random_pick_check.set_pressed_no_signal(Global.random_pick_enabled)
 	for rarity in rarity_spins.keys():
 		rarity_spins[rarity].set_value_no_signal(Global.get_rarity_percent(rarity))
 	_update_rarity_sum()
@@ -1614,11 +2014,19 @@ func _update_status() -> void:
 	ban_count.text = "%d von %d gesperrt · %d Grundkarten · min. %d je Held" % [
 		Global.banned_card_ids.size(), total_cards, available_total, available,
 	]
-	draft_summary.text = "Modus %s  ·  Spieler %d  ·  Draft %d/%d  ·  Ziel %d P (Überleben +%d, Kill +%d)  ·  HP %d %%  ·  DMG %d  ·  Map %s  ·  Pool min. %d/Held" % [
+	var active_modifiers: Array[String] = []
+	if Global.blind_pick_enabled and Global.network_mode:
+		active_modifiers.append("Blind")
+	if Global.random_pick_enabled:
+		active_modifiers.append("Random")
+	var modifier_summary := ""
+	if not active_modifiers.is_empty():
+		modifier_summary = "  ·  Modifier: %s" % ", ".join(active_modifiers)
+	draft_summary.text = "Modus %s  ·  Spieler %d  ·  Draft %d/%d  ·  Ziel %d P (Überleben +%d, Kill +%d)  ·  HP %d %%  ·  DMG %d  ·  Map %s  ·  Pool min. %d/Held%s" % [
 		Global.get_match_mode_name(), Global.player_count, Global.draft_picks, Global.cards_per_draft,
 		Global.points_to_win, Global.survival_points, Global.kill_points,
 		Global.base_hp_percent, int(Global.base_damage),
-		Global.get_map_name(Global.selected_map_id), available,
+		Global.get_map_name(Global.selected_map_id), available, modifier_summary,
 	]
 
 	var enough_cards := available >= Global.cards_per_draft

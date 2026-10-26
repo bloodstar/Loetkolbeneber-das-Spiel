@@ -54,9 +54,9 @@ alignment = 1
 
 [node name="ScoreLabel" type="Label" parent="Top/Center_Box"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
-text = "P1 0   P2 0
-(Ziel: 3 Siege)"
+theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
+theme_override_font_sizes/font_size = 11
+text = "Ziel: 500 Punkte"
 horizontal_alignment = 1
 
 [node name="SuddenDeathLabel" type="Label" parent="Top/Center_Box"]
@@ -101,6 +101,13 @@ theme_override_font_sizes/font_size = 24
 text = "🏆 SPIELER 1 GEWINNT! 🏆"
 horizontal_alignment = 1
 autowrap_mode = 2
+
+[node name="ContinueBtn" type="Button" parent="GameOverPanel/VBox"]
+custom_minimum_size = Vector2(320, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 18
+text = "WEITERSPIELEN (+30 % ZIEL)"
 
 [node name="RestartBtn" type="Button" parent="GameOverPanel/VBox"]
 custom_minimum_size = Vector2(180, 44)
