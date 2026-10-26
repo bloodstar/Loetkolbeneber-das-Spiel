@@ -11,6 +11,7 @@ const HERO_IDS: Array[String] = [
 	"klinge", "bastion", "phantom",
 ]
 const HERO_ICON_DIR: String = "res://assets/ui/"
+const LevelModifierDefsClass = preload("res://scripts/level_modifier_defs.gd")
 
 @onready var tabs: TabContainer = $Panel/Margin/VBox/Tabs
 @onready var status_label: Label = $Panel/Margin/VBox/Header/StatusLabel
@@ -22,11 +23,12 @@ const HERO_ICON_DIR: String = "res://assets/ui/"
 # Heldenslots (dynamisch für 1..6 aufgebaut)
 @onready var slot_list: VBoxContainer = $Panel/Margin/VBox/Tabs/Heroes/HeroesScroll/SlotList
 
-# Die Inhalte von "Charakter", "Regeln" und "Karten" werden im Skript
-# aufgebaut, damit die Lobby auch bei kleineren Fenstern flexibel bleibt.
+# Die Inhalte von "Charakter", "Regeln", "Karten" und "Modifier" werden im
+# Skript aufgebaut, damit die Lobby auch bei kleineren Fenstern flexibel bleibt.
 @onready var character_tab: VBoxContainer = $Panel/Margin/VBox/Tabs/Charakter
 @onready var rules_tab: VBoxContainer = $Panel/Margin/VBox/Tabs/Rules
 @onready var cards_tab: VBoxContainer = $Panel/Margin/VBox/Tabs/Cards
+@onready var modifier_tab: VBoxContainer = $Panel/Margin/VBox/Tabs/Modifier
 
 @onready var back_btn: Button = $Panel/Margin/VBox/Footer/BackBtn
 @onready var ready_btn: Button = $Panel/Margin/VBox/Footer/ReadyBtn
@@ -74,6 +76,13 @@ var ban_sections: VBoxContainer
 var ban_checks: Dictionary = {}
 var ban_icons: Dictionary = {}
 
+# Runden-Modifier-Controls
+var modifier_rate_spin: SpinBox
+var modifier_checks: Dictionary = {}
+var modifier_count_label: Label
+var modifier_all_btn: Button
+var modifier_none_btn: Button
+
 # Charakter-Controls
 var fur_picker: ColorPickerButton = null
 var eye_picker: ColorPickerButton = null
@@ -103,6 +112,7 @@ func _ready() -> void:
 	tabs.set_tab_title(1, "Charakter")
 	tabs.set_tab_title(2, "Regeln")
 	tabs.set_tab_title(3, "Karten")
+	tabs.set_tab_title(4, "Modifier")
 
 	start_btn.pressed.connect(_on_start_pressed)
 	ready_btn.pressed.connect(_on_ready_pressed)
@@ -113,6 +123,7 @@ func _ready() -> void:
 	Global.map_changed.connect(_on_map_changed)
 	Global.match_mode_changed.connect(_on_match_mode_changed)
 	Global.lobby_state_changed.connect(_on_lobby_state_changed)
+	Global.level_modifiers_changed.connect(_on_level_modifiers_changed)
 	Global.lobby_loadouts_changed.connect(_on_lobby_loadouts_changed)
 	Global.pig_appearance_changed.connect(_on_pig_appearance_changed)
 	Global.network_status_changed.connect(_refresh_network_status)
@@ -126,6 +137,7 @@ func _ready() -> void:
 	_build_character_tab()
 	_build_rules_tab()
 	_build_cards_tab()
+	_build_modifier_tab()
 	# Summary auch ohne open_lobby() korrekt anzeigen.
 	_sync_from_global()
 
@@ -438,6 +450,10 @@ func _apply_ready_display_style(check: CheckBox, is_ready: bool) -> void:
 
 func _on_lobby_state_changed() -> void:
 	_sync_from_global()
+
+func _on_level_modifiers_changed() -> void:
+	_refresh_modifier_controls()
+	_update_status()
 
 func _on_slot_assigned(slot: int) -> void:
 	_sync_from_global()
@@ -951,6 +967,7 @@ func _refresh_host_controls() -> void:
 		blind_pick_check.disabled = not is_host or not Global.network_mode
 	if random_pick_check != null:
 		random_pick_check.disabled = not is_host
+	_refresh_modifier_controls()
 	_refresh_loadout_enabled()
 
 func _map_ids() -> Array[String]:
@@ -1489,6 +1506,174 @@ func _add_spin_row(grid: GridContainer, label_text: String, min_value: float, ma
 	grid.add_child(hint)
 	return spin
 
+# --- Modifier-Tab ---
+
+func _build_modifier_tab() -> void:
+	_clear_children(modifier_tab)
+	modifier_checks.clear()
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	modifier_tab.add_child(scroll)
+
+	var body := VBoxContainer.new()
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 10)
+	scroll.add_child(body)
+
+	_add_section_title(body, "RUNDEN-MODIFIER", Color(1.0, 0.55, 0.9, 1.0))
+	var intro := Label.new()
+	intro.text = "Lege fest, wie oft und mit welchen Modifiern eine Runde startet. Die Rate wirkt auf die bisherige Verteilung: 0 % deaktiviert Modifier, 100 % entspricht dem Standard, 200 % garantiert einen zusätzlichen Modifier."
+	intro.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
+	intro.add_theme_font_size_override("font_size", 12)
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(intro)
+
+	var rate_row := HBoxContainer.new()
+	rate_row.add_theme_constant_override("separation", 12)
+	body.add_child(rate_row)
+
+	var rate_label := Label.new()
+	rate_label.text = "Modifier-Rate:"
+	rate_label.add_theme_font_size_override("font_size", 16)
+	rate_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	rate_row.add_child(rate_label)
+
+	modifier_rate_spin = SpinBox.new()
+	modifier_rate_spin.custom_minimum_size = Vector2(150, 0)
+	modifier_rate_spin.min_value = LevelModifierDefsClass.RATE_MIN_PERCENT
+	modifier_rate_spin.max_value = LevelModifierDefsClass.RATE_MAX_PERCENT
+	modifier_rate_spin.step = 10
+	modifier_rate_spin.suffix = " %"
+	modifier_rate_spin.value = Global.level_modifier_rate_percent
+	modifier_rate_spin.value_changed.connect(_on_modifier_rate_changed)
+	rate_row.add_child(modifier_rate_spin)
+
+	var rate_hint := Label.new()
+	rate_hint.text = "0 % = aus  |  100 % = Standard  |  200 % = garantiert +1"
+	rate_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rate_hint.add_theme_color_override("font_color", Color(0.55, 0.62, 0.72, 1.0))
+	rate_hint.add_theme_font_size_override("font_size", 12)
+	rate_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	rate_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rate_row.add_child(rate_hint)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 12)
+	body.add_child(header)
+
+	modifier_count_label = Label.new()
+	modifier_count_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	modifier_count_label.add_theme_color_override("font_color", Color(0.78, 0.84, 0.96, 1.0))
+	modifier_count_label.add_theme_font_size_override("font_size", 14)
+	modifier_count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	header.add_child(modifier_count_label)
+
+	modifier_all_btn = Button.new()
+	modifier_all_btn.text = "ALLE"
+	modifier_all_btn.tooltip_text = "Alle verfügbaren Runden-Modifier aktivieren."
+	modifier_all_btn.pressed.connect(_on_all_modifiers_pressed)
+	header.add_child(modifier_all_btn)
+
+	modifier_none_btn = Button.new()
+	modifier_none_btn.text = "KEINE"
+	modifier_none_btn.tooltip_text = "Alle Runden-Modifier deaktivieren. Die Rate bleibt unverändert."
+	modifier_none_btn.pressed.connect(_on_none_modifiers_pressed)
+	header.add_child(modifier_none_btn)
+
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 18)
+	grid.add_theme_constant_override("v_separation", 4)
+	body.add_child(grid)
+
+	for id in LevelModifierDefsClass.modifier_ids():
+		var definition: Dictionary = LevelModifierDefsClass.MODIFIERS[id]
+		var check := CheckButton.new()
+		check.text = "%s  %s" % [
+			str(definition.get("icon", "?")),
+			str(definition.get("title", id)),
+		]
+		check.tooltip_text = str(definition.get("description", ""))
+		check.button_pressed = Global.is_level_modifier_enabled(id)
+		check.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		check.add_theme_font_size_override("font_size", 14)
+		check.toggled.connect(_on_modifier_toggled.bind(id))
+		grid.add_child(check)
+		modifier_checks[id] = check
+
+	var note := Label.new()
+	note.text = "Nicht kombinierbar: Höhle + Der Boden ist Lava sowie Mondgravitation + Schwerewelt."
+	note.add_theme_color_override("font_color", Color(0.6, 0.55, 0.5, 1.0))
+	note.add_theme_font_size_override("font_size", 12)
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(note)
+
+	_refresh_modifier_controls()
+
+func _refresh_modifier_controls() -> void:
+	if modifier_rate_spin == null:
+		return
+	var is_host := Global.is_local_host()
+	modifier_rate_spin.set_value_no_signal(Global.level_modifier_rate_percent)
+	modifier_rate_spin.editable = is_host
+	for id in modifier_checks.keys():
+		var check := modifier_checks[id] as CheckButton
+		if check != null:
+			check.set_pressed_no_signal(Global.is_level_modifier_enabled(str(id)))
+			check.disabled = not is_host
+	if modifier_all_btn != null:
+		modifier_all_btn.disabled = not is_host
+	if modifier_none_btn != null:
+		modifier_none_btn.disabled = not is_host
+	if modifier_count_label != null:
+		var active_count := Global.get_enabled_level_modifier_count()
+		var total_count := LevelModifierDefsClass.MODIFIERS.size()
+		if Global.level_modifier_rate_percent <= 0:
+			modifier_count_label.text = "Modifier-Rate 0 % - Runden-Modifier sind deaktiviert."
+		else:
+			modifier_count_label.text = "%d von %d Modifiern aktiv  |  Rate %d %%" % [
+				active_count,
+				total_count,
+				Global.level_modifier_rate_percent,
+			]
+
+func _on_modifier_rate_changed(value: float) -> void:
+	if not Global.is_local_host():
+		_refresh_modifier_controls()
+		return
+	Global.set_level_modifier_rate_percent(int(round(value)))
+	SoundManager.play_sound("click")
+	_refresh_modifier_controls()
+	_update_status()
+
+func _on_modifier_toggled(pressed: bool, id: String) -> void:
+	if not Global.is_local_host():
+		_refresh_modifier_controls()
+		return
+	Global.set_level_modifier_enabled(id, pressed)
+	SoundManager.play_sound("click")
+	_refresh_modifier_controls()
+	_update_status()
+
+func _on_all_modifiers_pressed() -> void:
+	if not Global.is_local_host():
+		return
+	Global.set_enabled_level_modifiers(LevelModifierDefsClass.modifier_ids())
+	SoundManager.play_sound("click")
+	_refresh_modifier_controls()
+	_update_status()
+
+func _on_none_modifiers_pressed() -> void:
+	if not Global.is_local_host():
+		return
+	Global.set_enabled_level_modifiers([])
+	SoundManager.play_sound("click")
+	_refresh_modifier_controls()
+	_update_status()
+
 # --- Karten-Tab ---
 
 func _build_cards_tab() -> void:
@@ -2022,6 +2207,11 @@ func _update_status() -> void:
 	var modifier_summary := ""
 	if not active_modifiers.is_empty():
 		modifier_summary = "  ·  Modifier: %s" % ", ".join(active_modifiers)
+	modifier_summary += "  ·  Level-Mod %d %% (%d/%d)" % [
+		Global.level_modifier_rate_percent,
+		Global.get_enabled_level_modifier_count(),
+		LevelModifierDefsClass.MODIFIERS.size(),
+	]
 	draft_summary.text = "Modus %s  ·  Spieler %d  ·  Draft %d/%d  ·  Ziel %d P (Überleben +%d, Kill +%d)  ·  HP %d %%  ·  DMG %d  ·  Map %s  ·  Pool min. %d/Held%s" % [
 		Global.get_match_mode_name(), Global.player_count, Global.draft_picks, Global.cards_per_draft,
 		Global.points_to_win, Global.survival_points, Global.kill_points,

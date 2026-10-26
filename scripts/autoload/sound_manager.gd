@@ -25,6 +25,7 @@ func _ready() -> void:
 	_load_sound("click", "res://assets/sfx/click_001.ogg")
 	_load_sound("confirm", "res://assets/sfx/confirmation_001.ogg")
 	_load_sound("spring", "res://assets/sfx/glass_001.ogg")
+	_load_sound("coin", "res://assets/sfx/glass_001.ogg")
 	_load_sound("death", "res://assets/sfx/death_001.ogg")
 
 func _load_sound(key: String, path: String) -> void:
@@ -41,3 +42,10 @@ func play_sound(key: String, pitch_range: float = 0.1, volume_db: float = 0.0) -
 			player.volume_db = volume_db
 			player.play()
 			return
+
+# Stoppt alle laufenden Effekte und gibt die Stream-Referenzen frei.
+# Wird u. a. beim Verlassen einer Partie und in Tests genutzt.
+func stop_all_sounds() -> void:
+	for player in audio_players:
+		player.stop()
+		player.stream = null

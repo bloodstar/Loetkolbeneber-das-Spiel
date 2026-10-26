@@ -38,7 +38,7 @@ var _tab_content: VBoxContainer = null
 var _tab_refresh_timer: float = 0.0
 
 # Level Modifier UI
-var _modifier_container: HBoxContainer = null
+var _modifier_container: VBoxContainer = null
 var _event_label: Label = null
 var _event_timer: float = 0.0
 var _stamp_overlay: Control = null
@@ -765,26 +765,36 @@ func reset_for_round() -> void:
 func _build_modifier_ui() -> void:
 	if _modifier_container != null:
 		return
-	var center_box := score_label.get_parent()
-	if center_box == null:
-		return
 
-	_modifier_container = HBoxContainer.new()
+	_modifier_container = VBoxContainer.new()
 	_modifier_container.name = "ModifierBadges"
-	_modifier_container.alignment = BoxContainer.ALIGNMENT_CENTER
-	_modifier_container.add_theme_constant_override("separation", 6)
+	_modifier_container.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_modifier_container.anchor_left = 1.0
+	_modifier_container.anchor_right = 1.0
+	_modifier_container.offset_left = -370.0
+	_modifier_container.offset_right = -18.0
+	_modifier_container.offset_top = 132.0
+	_modifier_container.offset_bottom = 840.0
+	_modifier_container.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_modifier_container.grow_vertical = Control.GROW_DIRECTION_END
+	_modifier_container.alignment = BoxContainer.ALIGNMENT_BEGIN
+	_modifier_container.add_theme_constant_override("separation", 10)
 	_modifier_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_modifier_container.visible = false
-	center_box.add_child(_modifier_container)
+	add_child(_modifier_container)
 
-	_event_label = Label.new()
-	_event_label.name = "ModifierEventLabel"
-	_event_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_event_label.add_theme_font_size_override("font_size", 12)
-	_event_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
-	_event_label.visible = false
-	_event_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	center_box.add_child(_event_label)
+	var center_box := score_label.get_parent()
+	if center_box != null:
+		_event_label = Label.new()
+		_event_label.name = "ModifierEventLabel"
+		_event_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_event_label.add_theme_font_size_override("font_size", 20)
+		_event_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+		_event_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.9))
+		_event_label.add_theme_constant_override("outline_size", 4)
+		_event_label.visible = false
+		_event_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		center_box.add_child(_event_label)
 
 func show_level_modifiers(mod_details: Array[Dictionary]) -> void:
 	if _modifier_container == null:
@@ -800,24 +810,44 @@ func show_level_modifiers(mod_details: Array[Dictionary]) -> void:
 	_modifier_container.visible = true
 	for mod in mod_details:
 		var badge := PanelContainer.new()
+		badge.custom_minimum_size = Vector2(0.0, 72.0)
 		var sb := StyleBoxFlat.new()
 		var col: Color = mod.get("color", Color.WHITE)
-		sb.bg_color = Color(col.r * 0.15, col.g * 0.15, col.b * 0.15, 0.9)
+		sb.bg_color = Color(col.r * 0.16, col.g * 0.16, col.b * 0.16, 0.94)
 		sb.border_color = col
-		sb.set_border_width_all(1)
-		sb.set_corner_radius_all(6)
-		sb.content_margin_left = 6
-		sb.content_margin_right = 6
-		sb.content_margin_top = 2
-		sb.content_margin_bottom = 2
+		sb.set_border_width_all(2)
+		sb.set_corner_radius_all(10)
+		sb.content_margin_left = 12
+		sb.content_margin_right = 14
+		sb.content_margin_top = 8
+		sb.content_margin_bottom = 8
 		badge.add_theme_stylebox_override("panel", sb)
 
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		badge.add_child(row)
+
+		var icon_label := Label.new()
+		icon_label.text = str(mod.get("icon", "?"))
+		icon_label.custom_minimum_size = Vector2(42.0, 0.0)
+		icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		icon_label.add_theme_font_size_override("font_size", 40)
+		icon_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(icon_label)
+
 		var lbl := Label.new()
-		lbl.text = "%s %s" % [mod.get("icon", "⚡"), mod.get("title", "Modifier")]
-		lbl.add_theme_font_size_override("font_size", 11)
+		lbl.text = str(mod.get("title", "Modifier"))
+		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		lbl.add_theme_font_size_override("font_size", 26)
 		lbl.add_theme_color_override("font_color", col.lightened(0.25))
-		badge.add_child(lbl)
-		badge.tooltip_text = mod.get("description", "")
+		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(lbl)
+
+		badge.tooltip_text = str(mod.get("description", ""))
 		_modifier_container.add_child(badge)
 
 # Einstiegspunkt: Wird von modifier_manager.modifiers_rolled verbunden.
@@ -861,20 +891,20 @@ func show_modifier_stamp_reveal(mod_details: Array[Dictionary]) -> void:
 	var title := Label.new()
 	title.text = "── RUNDEN-MODIFIER ──"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 19)
+	title.add_theme_font_size_override("font_size", 34)
 	title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25, 0.0))
 	title.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.85))
 	title.add_theme_constant_override("outline_size", 5)
 	title.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	title.offset_top = cy - 140.0
-	title.offset_bottom = cy - 105.0
+	title.offset_top = cy - 190.0
+	title.offset_bottom = cy - 135.0
 	_stamp_overlay.add_child(title)
 	title.create_tween().tween_property(title, "theme_override_colors/font_color", Color(1.0, 0.85, 0.25, 1.0), 0.28)
 
 	# ── Badge-Layout ──────────────────────────────────────────────────────
-	const BADGE_W: float = 158.0
-	const BADGE_H: float = 138.0
-	const GAP: float    = 18.0
+	const BADGE_W: float = 280.0
+	const BADGE_H: float = 250.0
+	const GAP: float    = 24.0
 	var count   := mod_details.size()
 	var total_w := float(count) * BADGE_W + float(count - 1) * GAP
 	var start_x := cx - total_w * 0.5
@@ -891,7 +921,7 @@ func show_modifier_stamp_reveal(mod_details: Array[Dictionary]) -> void:
 		badge.custom_minimum_size = Vector2(BADGE_W, BADGE_H)
 		badge.size           = Vector2(BADGE_W, BADGE_H)
 		badge.pivot_offset   = Vector2(BADGE_W * 0.5, BADGE_H * 0.5)
-		badge.scale          = Vector2(2.8, 2.8)
+		badge.scale          = Vector2(2.2, 2.2)
 		# Abwechselnd leicht nach links / rechts geneigt für mehr Leben
 		badge.rotation       = deg_to_rad(-20.0 if i % 2 == 0 else 20.0)
 		badge.modulate.a     = 0.0
@@ -903,45 +933,45 @@ func show_modifier_stamp_reveal(mod_details: Array[Dictionary]) -> void:
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = Color(col.r * 0.09 + 0.03, col.g * 0.09 + 0.03, col.b * 0.09 + 0.03, 0.97)
 		sb.border_color = col
-		sb.set_border_width_all(3)
-		sb.set_corner_radius_all(10)
-		sb.content_margin_left   = 12
-		sb.content_margin_right  = 12
-		sb.content_margin_top    = 10
-		sb.content_margin_bottom = 10
+		sb.set_border_width_all(4)
+		sb.set_corner_radius_all(12)
+		sb.content_margin_left   = 18
+		sb.content_margin_right  = 18
+		sb.content_margin_top    = 14
+		sb.content_margin_bottom = 14
 		panel.add_theme_stylebox_override("panel", sb)
 		badge.add_child(panel)
 
 		var vbox := VBoxContainer.new()
 		vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-		vbox.add_theme_constant_override("separation", 3)
+		vbox.add_theme_constant_override("separation", 4)
 		panel.add_child(vbox)
 
 		var icon_l := Label.new()
 		icon_l.text = mod.get("icon", "⚡")
 		icon_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		icon_l.add_theme_font_size_override("font_size", 30)
+		icon_l.add_theme_font_size_override("font_size", 60)
 		vbox.add_child(icon_l)
 
 		var name_l := Label.new()
 		name_l.text = mod.get("title", "?").to_upper()
 		name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		name_l.add_theme_font_size_override("font_size", 12)
+		name_l.add_theme_font_size_override("font_size", 26)
 		name_l.add_theme_color_override("font_color", col.lightened(0.15))
 		vbox.add_child(name_l)
 
 		var sep := HSeparator.new()
 		sep.add_theme_color_override("color", col.darkened(0.3))
-		sep.add_theme_constant_override("separation", 4)
+		sep.add_theme_constant_override("separation", 5)
 		vbox.add_child(sep)
 
 		var desc_l := Label.new()
 		desc_l.text = mod.get("description", "")
 		desc_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		desc_l.add_theme_font_size_override("font_size", 9)
-		desc_l.add_theme_color_override("font_color", Color(0.78, 0.78, 0.78, 0.88))
+		desc_l.add_theme_font_size_override("font_size", 16)
+		desc_l.add_theme_color_override("font_color", Color(0.82, 0.82, 0.82, 0.92))
 		desc_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		desc_l.custom_minimum_size = Vector2(BADGE_W - 24.0, 0.0)
+		desc_l.custom_minimum_size = Vector2(BADGE_W - 40.0, 0.0)
 		vbox.add_child(desc_l)
 
 		# ── Stempel-Animation ─────────────────────────────────────────
@@ -1020,6 +1050,8 @@ func hide_countdown() -> void:
 
 func _on_match_over(winner_idx: int) -> void:
 	game_over_panel.visible = true
+	if _modifier_container != null:
+		_modifier_container.visible = false
 	if _tab_overlay != null:
 		_tab_overlay.visible = false
 	if _upgrade_bar != null:

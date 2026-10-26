@@ -1,5 +1,7 @@
 extends Node
 
+const LevelModifierDefsClass = preload("res://scripts/level_modifier_defs.gd")
+
 signal scores_changed(scores: Array)
 signal round_ended(winner_index: int)
 signal card_selected(player_index: int, card: CardData)
@@ -8,6 +10,7 @@ signal bot_mode_toggled(enabled: bool)
 signal cards_per_draft_changed(count: int)
 signal draft_config_changed(picks: int, offered: int)
 signal draft_modifiers_changed()
+signal level_modifiers_changed()
 signal banned_cards_changed()
 signal scoring_config_changed()
 signal match_target_changed(points: int)
@@ -95,6 +98,10 @@ var draft_picks: int = 1     # X: Wie viele Karten pro Draft gewählt werden
 # automatisch eine zufällige Karte aus dem Angebot.
 var blind_pick_enabled: bool = false
 var random_pick_enabled: bool = false
+# Runden-Modifier: Rate in Prozent (0 = aus, 100 = Standard, 200 = mehr)
+# und die Menge der freigeschalteten Modifier-IDs aus LevelModifierDefs.
+var level_modifier_rate_percent: int = LevelModifierDefsClass.RATE_DEFAULT_PERCENT
+var enabled_level_modifiers: Array[String] = []
 var banned_card_ids: Array[String] = [] # Im Lobby gesperrte Powerup-Karten
 # Prozent-Faktor auf die heldenspezifischen Basis-HP vor Kartenboni.
 # 100 % = Heldenwert; die Klassenunterschiede bleiben dadurch erhalten.
@@ -313,6 +320,7 @@ var is_bot_enabled: bool:
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	enabled_level_modifiers = LevelModifierDefsClass.default_ids()
 	_setup_heroes()
 	_setup_default_inputs()
 	reset_lobby_state()
@@ -1181,6 +1189,54 @@ func set_random_pick_enabled(enabled: bool) -> void:
 	draft_modifiers_changed.emit()
 	lobby_state_changed.emit()
 
+func set_level_modifier_rate_percent(percent: int) -> void:
+	var clamped := clampi(
+		percent,
+		LevelModifierDefsClass.RATE_MIN_PERCENT,
+		LevelModifierDefsClass.RATE_MAX_PERCENT
+	)
+	if level_modifier_rate_percent == clamped:
+		return
+	level_modifier_rate_percent = clamped
+	level_modifiers_changed.emit()
+
+func set_level_modifier_enabled(id: String, enabled: bool) -> void:
+	if not LevelModifierDefsClass.is_valid_id(id):
+		return
+	var desired: Array[String] = enabled_level_modifiers.duplicate()
+	if enabled and not desired.has(id):
+		desired.append(id)
+	elif not enabled and desired.has(id):
+		desired.erase(id)
+	var normalized := _normalize_level_modifier_ids(desired)
+	if normalized == enabled_level_modifiers:
+		return
+	enabled_level_modifiers = normalized
+	level_modifiers_changed.emit()
+
+func set_enabled_level_modifiers(ids: Array) -> void:
+	var normalized := _normalize_level_modifier_ids(ids)
+	if normalized == enabled_level_modifiers:
+		return
+	enabled_level_modifiers = normalized
+	level_modifiers_changed.emit()
+
+func get_enabled_level_modifiers() -> Array[String]:
+	return enabled_level_modifiers.duplicate()
+
+func is_level_modifier_enabled(id: String) -> bool:
+	return enabled_level_modifiers.has(id)
+
+func get_enabled_level_modifier_count() -> int:
+	return enabled_level_modifiers.size()
+
+func _normalize_level_modifier_ids(ids: Array) -> Array[String]:
+	var normalized: Array[String] = []
+	for id in LevelModifierDefsClass.modifier_ids():
+		if ids.has(id) and not normalized.has(id):
+			normalized.append(id)
+	return normalized
+
 func cycle_cards_per_draft() -> void:
 	var next_offered := 3
 	if cards_per_draft == 3:
@@ -1260,6 +1316,8 @@ func get_current_lobby_settings() -> Dictionary:
 		"cards_per_draft": cards_per_draft,
 		"blind_pick_enabled": blind_pick_enabled,
 		"random_pick_enabled": random_pick_enabled,
+		"level_modifier_rate_percent": level_modifier_rate_percent,
+		"enabled_level_modifiers": get_enabled_level_modifiers(),
 		"base_hp_percent": base_hp_percent,
 		"base_damage": base_damage,
 		"map_id": selected_map_id,
@@ -1279,6 +1337,8 @@ func _default_lobby_settings() -> Dictionary:
 		"cards_per_draft": 5,
 		"blind_pick_enabled": false,
 		"random_pick_enabled": false,
+		"level_modifier_rate_percent": LevelModifierDefsClass.RATE_DEFAULT_PERCENT,
+		"enabled_level_modifiers": LevelModifierDefsClass.default_ids(),
 		"base_hp_percent": 100,
 		"base_damage": 22.0,
 		"map_id": MAP_RANDOM,
@@ -1306,6 +1366,7 @@ func _create_default_lobby_loadouts() -> void:
 	fast["base_hp_percent"] = 80
 	fast["base_damage"] = 28.0
 	fast["map_id"] = "neonfabrik"
+	fast["level_modifier_rate_percent"] = 150
 	lobby_loadouts["Schnell & Wild"] = fast
 
 	var team := _default_lobby_settings()
@@ -1325,6 +1386,7 @@ func _create_default_lobby_loadouts() -> void:
 	chaos["base_hp_percent"] = 120
 	chaos["base_damage"] = 30.0
 	chaos["map_id"] = MAP_RANDOM
+	chaos["level_modifier_rate_percent"] = 200
 	chaos["rarity_percentages"] = {
 		"Common": 30.0,
 		"Uncommon": 30.0,
@@ -1424,6 +1486,17 @@ func apply_lobby_settings(settings: Dictionary) -> void:
 	# bewusst deaktiviert, damit ein Preset eine vollständige Konfiguration ist.
 	set_blind_pick_enabled(bool(settings.get("blind_pick_enabled", false)))
 	set_random_pick_enabled(bool(settings.get("random_pick_enabled", false)))
+	set_level_modifier_rate_percent(
+		int(settings.get(
+			"level_modifier_rate_percent",
+			LevelModifierDefsClass.RATE_DEFAULT_PERCENT
+		))
+	)
+	var level_mods: Variant = settings.get("enabled_level_modifiers", null)
+	if level_mods is Array:
+		set_enabled_level_modifiers(level_mods)
+	else:
+		set_enabled_level_modifiers(LevelModifierDefsClass.default_ids())
 	set_base_hp_percent(int(settings.get("base_hp_percent", base_hp_percent)))
 	set_base_damage(float(settings.get("base_damage", base_damage)))
 	if settings.has("map_id"):
@@ -1459,6 +1532,13 @@ func get_lobby_loadout_summary(name: String) -> String:
 	var modifier_text := ""
 	if not modifiers.is_empty():
 		modifier_text = " · Modifier: %s" % ", ".join(modifiers)
+	var level_mods: Variant = data.get("enabled_level_modifiers", LevelModifierDefsClass.default_ids())
+	var level_mod_count: int = level_mods.size() if level_mods is Array else 0
+	modifier_text += " · Level-Mod %d %% (%d/%d)" % [
+		int(data.get("level_modifier_rate_percent", LevelModifierDefsClass.RATE_DEFAULT_PERCENT)),
+		level_mod_count,
+		LevelModifierDefsClass.MODIFIERS.size(),
+	]
 	return "%s · %d Spieler · Ziel %d P · Draft %d/%d · HP %d %% · DMG %d · Map %s · %d Pools · %d Bans%s" % [
 		get_match_mode_name(str(data.get("match_mode", MATCH_MODE_FFA))),
 		int(data.get("player_count", 2)),

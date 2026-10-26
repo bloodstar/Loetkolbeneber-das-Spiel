@@ -172,13 +172,14 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	_clear_remote_bullets()
 	_clear_remote_towers()
 	_clear_round_effects()
+	hud.reset_for_round()
 	round_death_order.clear()
 	card_stats_match_recorded = false
 
 	# 1. Level-Modifier deterministisch bestimmen.
 	var active_mods: Array[String] = []
 	if modifier_manager != null:
-		active_mods = modifier_manager.roll_modifiers(level_seed)
+		active_mods = modifier_manager.roll_configured_modifiers(level_seed)
 
 	# 2. Level regenerieren. Erst danach die Modifier-Hazards spawnen, damit
 	#    Münzen, Meteore und Heilzonen die neue Karte als Grundlage nutzen.
@@ -195,7 +196,6 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	hud.set_sudden_death(false)
 
 	_spawn_players()
-	hud.reset_for_round()
 	_start_round_countdown()
 
 	if is_network_host and NetworkManager.has_clients():
@@ -547,6 +547,8 @@ func _build_network_config() -> Dictionary:
 		"cards_per_draft": Global.cards_per_draft,
 		"blind_pick_enabled": Global.blind_pick_enabled,
 		"random_pick_enabled": Global.random_pick_enabled,
+		"level_modifier_rate_percent": Global.level_modifier_rate_percent,
+		"enabled_level_modifiers": Global.get_enabled_level_modifiers(),
 		"bans": Global.banned_card_ids.duplicate(),
 		"player_count": Global.player_count,
 		"heroes": Global.player_hero_ids.duplicate(),
@@ -579,6 +581,12 @@ func _apply_network_config(config: Dictionary) -> void:
 	)
 	Global.set_blind_pick_enabled(bool(config.get("blind_pick_enabled", Global.blind_pick_enabled)))
 	Global.set_random_pick_enabled(bool(config.get("random_pick_enabled", Global.random_pick_enabled)))
+	Global.set_level_modifier_rate_percent(
+		int(config.get("level_modifier_rate_percent", Global.level_modifier_rate_percent))
+	)
+	var level_mods: Variant = config.get("enabled_level_modifiers", null)
+	if level_mods is Array:
+		Global.set_enabled_level_modifiers(level_mods)
 	var rarity_data: Dictionary = config.get("rarity_percentages", {})
 	for rarity in Global.RARITY_ORDER:
 		if rarity_data.has(rarity):

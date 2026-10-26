@@ -70,6 +70,7 @@ func _ready() -> void:
 	Global.banned_cards_changed.connect(_on_global_lobby_changed)
 	Global.draft_config_changed.connect(_on_global_draft_changed)
 	Global.draft_modifiers_changed.connect(_on_global_draft_modifiers_changed)
+	Global.level_modifiers_changed.connect(_on_global_lobby_changed)
 	Global.scoring_config_changed.connect(_on_global_scoring_changed)
 	Global.bot_mode_toggled.connect(_on_global_bot_changed)
 	Global.base_hp_percent_changed.connect(_on_global_base_hp_percent_changed)
@@ -529,6 +530,8 @@ func build_lobby_sync() -> Dictionary:
 		"cards_per_draft": Global.cards_per_draft,
 		"blind_pick_enabled": Global.blind_pick_enabled,
 		"random_pick_enabled": Global.random_pick_enabled,
+		"level_modifier_rate_percent": Global.level_modifier_rate_percent,
+		"enabled_level_modifiers": Global.get_enabled_level_modifiers(),
 		"bans": Global.banned_card_ids.duplicate(),
 		"base_hp_percent": Global.base_hp_percent,
 		"base_damage": Global.base_damage,
@@ -617,6 +620,12 @@ func _apply_lobby_sync(data: Dictionary) -> void:
 	)
 	Global.set_blind_pick_enabled(bool(data.get("blind_pick_enabled", Global.blind_pick_enabled)))
 	Global.set_random_pick_enabled(bool(data.get("random_pick_enabled", Global.random_pick_enabled)))
+	Global.set_level_modifier_rate_percent(
+		int(data.get("level_modifier_rate_percent", Global.level_modifier_rate_percent))
+	)
+	var level_mods: Variant = data.get("enabled_level_modifiers", null)
+	if level_mods is Array:
+		Global.set_enabled_level_modifiers(level_mods)
 	var rarity_data: Dictionary = data.get("rarity_percentages", {})
 	for rarity in Global.RARITY_ORDER:
 		if rarity_data.has(rarity):
