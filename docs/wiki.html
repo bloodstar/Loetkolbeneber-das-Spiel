@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="de" xml:lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Lötkolbeneber – Spiel-Wiki</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+  </style>
+  <style>
+  :root {
+    --bg: #0b1418; --panel: #10201f; --line: #1d3b3a; --text: #d9f2ee;
+    --muted: #8fb5b0; --cyan: #3ef2e0; --pink: #ff4fa3; --gold: #ffc857;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; padding: 0; max-width: none; hyphens: manual; background: var(--bg); color: var(--text);
+    font: 16px/1.6 "Segoe UI", system-ui, sans-serif;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 48px 48px; background-attachment: fixed;
+  }
+  #TOC {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 260px; overflow-y: auto;
+    padding: 24px 16px; background: rgba(8, 16, 18, 0.96);
+    border-right: 2px solid var(--cyan); box-shadow: 0 0 18px rgba(62, 242, 224, 0.25);
+  }
+  #TOC::before {
+    content: "LÖTKOLBENEBER WIKI"; display: block; margin-bottom: 14px;
+    color: var(--pink); font-weight: 800; letter-spacing: 2px; font-size: 14px;
+  }
+  #TOC > ul > li > a { display: none; }
+  #TOC > ul > li > ul { padding-left: 0; font-size: 15px; }
+  #TOC ul { list-style: none; margin: 0; padding-left: 0; }
+  #TOC ul ul { padding-left: 14px; font-size: 14px; }
+  #TOC a { display: block; padding: 3px 6px; color: var(--muted); text-decoration: none; border-radius: 4px; }
+  #TOC a:hover { color: var(--bg); background: var(--cyan); }
+  main { margin-left: 260px; padding: 32px 48px 80px; max-width: 1180px; }
+  h1 { color: var(--cyan); font-size: 40px; margin-top: 0; text-shadow: 0 0 14px rgba(62, 242, 224, 0.6); }
+  h2 {
+    color: var(--cyan); margin-top: 48px; padding-bottom: 6px;
+    border-bottom: 2px solid var(--pink); text-shadow: 0 0 8px rgba(62, 242, 224, 0.4);
+  }
+  h3 { color: var(--gold); margin-top: 28px; }
+  a { color: var(--cyan); }
+  strong { color: #ffffff; }
+  code { background: #08100f; border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; color: var(--gold); }
+  hr { border: 0; height: 1px; background: var(--line); margin: 32px 0; }
+  blockquote { margin: 16px 0; padding: 10px 16px; background: var(--panel); border-left: 4px solid var(--pink); color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 15px; display: block; overflow-x: auto; }
+  th, td { background: var(--panel); padding: 7px 10px; border: 1px solid var(--line); vertical-align: top; }
+  th { background: #14302e; color: var(--cyan); text-align: left; }
+  tr:nth-child(even) td { background: #132625; }
+  @media (max-width: 900px) {
+    #TOC { position: static; width: auto; border-right: 0; border-bottom: 2px solid var(--cyan); }
+    main { margin-left: 0; padding: 20px 16px 60px; }
+  }
+  </style>
+</head>
+<body>
+
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#-lötkolbeneber--spiel-wiki">🐗 Lötkolbeneber – Spiel-Wiki</a>
+<ul>
+<li><a href="#-schnellstart">🚀 Schnellstart</a></li>
+<li><a href="#-steuerung">🎮 Steuerung</a></li>
+<li><a href="#-helden">🐷 Helden</a></li>
+<li><a href="#-kampf-mechaniken">🥊 Kampf-Mechaniken</a></li>
+<li><a href="#-nahkampf">🔨 Nahkampf</a></li>
+<li><a href="#-lobby--match-regeln">🏆 Lobby &amp; Match-Regeln</a></li>
+<li><a href="#-spielmodi">👥 Spielmodi</a></li>
+<li><a href="#-karten-draft">🃏 Karten-Draft</a></li>
+<li><a href="#-karten-übersicht">📚 Karten-Übersicht</a></li>
+<li><a href="#-maps--spielfeld-objekte">🌍 Maps &amp; Spielfeld-Objekte</a></li>
+<li><a href="#-runden-modifier">🎲 Runden-Modifier</a></li>
+<li><a href="#-bots">🤖 Bots</a></li>
+<li><a href="#-online--lan">🌐 Online &amp; LAN</a></li>
+<li><a href="#-hauptmenü--optionen">🔧 Hauptmenü &amp; Optionen</a></li>
+<li><a href="#-statistiken-hud--feedback">📊 Statistiken, HUD &amp; Feedback</a></li>
+<li><a href="#-dateien--speicherorte">💾 Dateien &amp; Speicherorte</a></li>
+<li><a href="#-für-entwickler">🧰 Für Entwickler</a></li>
+</ul></li>
+</ul>
+</nav>
+<main>
+<h1 id="-lötkolbeneber--spiel-wiki">🐗 Lötkolbeneber – Spiel-Wiki</h1>
+<p>Lötkolbeneber ist ein schnelles 2D-Plattform-Duellspiel für <strong>2–6 Spieler</strong> (lokal, LAN oder übers Internet), gebaut mit <strong>Godot 4.6</strong>. Schweine mit glühenden Lötkolben kämpfen in Arenen, wer eine Runde verliert, darf sich eine neue Upgrade-Karte aussuchen.</p>
+<p>Vorbilder:</p>
+<ul>
+<li><strong><a target="_blank" href="https://landfall.se/rounds">Rounds</a></strong>: Arena-Kämpfe, Gunplay mit Physik und der Karten-Draft für die Rundenverlierer.</li>
+<li><strong><a target="_blank" href="https://bapbap.gg/">Bapbap</a></strong>: Helden-Klassen mit Passiv und aktiver Fähigkeit.</li>
+<li><strong>Super Mario</strong>: Sprungfedern, Portale, Herzblöcke, Stacheln und steigende Lava.</li>
+</ul>
+<blockquote>
+<p>Dieses Wiki öffnet sich auch direkt aus dem Spiel: Hauptmenü → <strong>WIKI</strong>. Früher hieß das Spiel <strong>Battle Balls</strong> bzw. DopDop.</p>
+</blockquote>
+<hr />
+<h2 id="-schnellstart">🚀 Schnellstart</h2>
+<ol>
+<li>Spiel starten → Hauptmenü → <strong>SPIEL STARTEN</strong>. Du landest in der <strong>Lobby</strong>.</li>
+<li>Spielerzahl wählen, freie Slots als <strong>Bot</strong> oder <strong>Mensch</strong> einstellen, Helden aussuchen.</li>
+<li>Im Tab <strong>Charakter</strong> Name, Farben, Hauer, Lötspitze und Nahkampfwaffe einstellen.</li>
+<li><strong>Bereit</strong> drücken und <strong>Kampf starten</strong>.</li>
+<li>Wer eine Runde verliert, wählt eine Karte. Wer zuerst die Zielpunktzahl erreicht (Standard <strong>500</strong>), gewinnt das Match.</li>
+</ol>
+<p>Online mit Freunden: Hauptmenü → <strong>ONLINE SPIELEN</strong> → <strong>Online hosten</strong> und den 6-stelligen Code weitergeben (siehe <a href="#-online--lan">Online &amp; LAN</a>).</p>
+<hr />
+<h2 id="-steuerung">🎮 Steuerung</h2>
+<p>Alle Tasten lassen sich unter <strong>Optionen → Steuerung</strong> neu belegen. Hier steht die Standardbelegung.</p>
+<h3 id="spieler-1-maus--tastatur-auch-online">Spieler 1 (Maus &amp; Tastatur, auch online)</h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Aktion</th>
+<th style="text-align: left;">Taste</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Bewegen</td>
+<td style="text-align: left;"><code>A</code> / <code>D</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Durchfallen (Einweg-Steg)</td>
+<td style="text-align: left;"><code>S</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Springen, Wandsprung</td>
+<td style="text-align: left;"><code>Leertaste</code> (gedrückt halten = höher)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Zielen</td>
+<td style="text-align: left;">Mauszeiger</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Schießen</td>
+<td style="text-align: left;"><code>Linksklick</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Dash / Ausweichen</td>
+<td style="text-align: left;"><code>Shift</code> (kurz unverwundbar)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Block</td>
+<td style="text-align: left;"><code>Q</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Nachladen</td>
+<td style="text-align: left;"><code>R</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Nahkampf</td>
+<td style="text-align: left;"><code>E</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Heldenfähigkeit</td>
+<td style="text-align: left;"><code>Rechtsklick</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="spieler-2-nur-lokaler-2-spieler-modus-am-selben-pc">Spieler 2 (nur lokaler 2-Spieler-Modus am selben PC)</h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Aktion</th>
+<th style="text-align: left;">Taste</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Bewegen</td>
+<td style="text-align: left;"><code>←</code> / <code>→</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Springen</td>
+<td style="text-align: left;"><code>↑</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Durchfallen (Einweg-Steg)</td>
+<td style="text-align: left;"><code>↓</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Zielen</td>
+<td style="text-align: left;">Pfeiltasten</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Schießen</td>
+<td style="text-align: left;"><code>.</code> (Punkt)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Dash</td>
+<td style="text-align: left;"><code>/</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Block</td>
+<td style="text-align: left;"><code>M</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Nachladen</td>
+<td style="text-align: left;"><code>L</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Nahkampf</td>
+<td style="text-align: left;"><code>K</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Heldenfähigkeit</td>
+<td style="text-align: left;"><code>,</code> (Komma)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="allgemeine-tasten">Allgemeine Tasten</h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Taste</th>
+<th style="text-align: left;">Wirkung</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>Tab</code> (halten)</td>
+<td style="text-align: left;">Charakterblatt mit allen Werten, Karten-Boni und Netzdiagrammen der eigenen Kartenverteilung, auch während der Kartenwahl</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>Esc</code></td>
+<td style="text-align: left;">Optionen öffnen. Lokal pausiert das Spiel, online läuft die Runde weiter</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>F9</code></td>
+<td style="text-align: left;">Match zurücksetzen und zurück in die Lobby (nur lokal)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="-helden">🐷 Helden</h2>
+<p>Es gibt <strong>7 Klassen</strong>. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am Kopf.</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Held</th>
+<th style="text-align: left;">Rolle</th>
+<th style="text-align: right;">HP</th>
+<th style="text-align: right;">Tempo</th>
+<th style="text-align: right;">Schild</th>
+<th style="text-align: left;">Passiv</th>
+<th style="text-align: left;">Fähigkeit</th>
+<th style="text-align: left;">Outfit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Ignis</strong></td>
+<td style="text-align: left;">Pyro Skirmisher</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">310</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;"><strong>Afterburner</strong>: Dash hinterlässt eine echte Feuerspur, Gegner darin brennen</td>
+<td style="text-align: left;"><strong>Rocket Leap</strong>: Explosiver Sprung, 35 Schaden im Einschlag (Radius 140)</td>
+<td style="text-align: left;">Schweißerbrille</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Volt</strong></td>
+<td style="text-align: left;">Hyper Speedster</td>
+<td style="text-align: right;">85</td>
+<td style="text-align: right;">350</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;"><strong>Overcharge</strong>: Doppelsprung von Anfang an</td>
+<td style="text-align: left;"><strong>Flash Blink</strong>: Teleport 260 px, 20 Schaden und 1,2 s Frost am Ziel</td>
+<td style="text-align: left;">Gelbe Kappe mit Blitz</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Spore</strong></td>
+<td style="text-align: left;">Toxic Alchemist</td>
+<td style="text-align: right;">105</td>
+<td style="text-align: right;">295</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: left;"><strong>Spore Coat</strong>: Treffer vergiften (2 Stapel)</td>
+<td style="text-align: left;"><strong>Spore Burst</strong>: Giftwolke, 9 Schaden/s für 3,5 s</td>
+<td style="text-align: left;">Pilzhut</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Nova</strong></td>
+<td style="text-align: left;">Gravity Mage</td>
+<td style="text-align: right;">95</td>
+<td style="text-align: right;">290</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: left;"><strong>Schwerelos</strong>: Höchste Sprungkraft</td>
+<td style="text-align: left;"><strong>Singularität</strong>: Kern zieht Gegner 2 s lang zur Mitte (kein Schaden)</td>
+<td style="text-align: left;">Zauberhut mit Mini-Planet</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Klinge</strong></td>
+<td style="text-align: left;">Blade Dancer</td>
+<td style="text-align: right;">110</td>
+<td style="text-align: right;">315</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: left;"><strong>Klingentanz</strong>: Start-Schild und hohes Tempo</td>
+<td style="text-align: left;"><strong>Klingensturm</strong>: Rundumschlag mit Rückstoß, 0,5 s unverwundbar</td>
+<td style="text-align: left;">Roter Schal</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Bastion</strong></td>
+<td style="text-align: left;">Field Engineer</td>
+<td style="text-align: right;">125</td>
+<td style="text-align: right;">270</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: left;"><strong>Aurora</strong>: Doppelte Schild-Regeneration</td>
+<td style="text-align: left;"><strong>Heilfeld</strong>: 4 s lang 8 HP und 10 Schild alle 0,5 s</td>
+<td style="text-align: left;">Bauhelm mit Lampe</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Phantom</strong></td>
+<td style="text-align: left;">Shadow Assassin</td>
+<td style="text-align: right;">90</td>
+<td style="text-align: right;">325</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: left;"><strong>Nachtwind</strong>: Sehr schnell, kürzestes Feuerintervall</td>
+<td style="text-align: left;"><strong>Schattensprung</strong>: Teleport 260 px mit Treffer, 0,9 s unverwundbar</td>
+<td style="text-align: left;">Ninja-Stirnband</td>
+</tr>
+</tbody>
+</table>
+<p>Die genauen Zahlen der Fähigkeiten stehen im Spiel unter <strong>HELDEN</strong> im Hauptmenü und im Tooltip der Heldenwahl. Sie kommen direkt aus den Konstanten in <code>player.gd</code>, stimmen also immer.</p>
+<h3 id="waffe--munition">Waffe &amp; Munition</h3>
+<p>Alle Eber schießen mit einem <strong>Lötkolben</strong>. Basis-Schaden pro Schuss ist <strong>22</strong> (in der Lobby einstellbar).</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Held</th>
+<th style="text-align: right;">Munition</th>
+<th style="text-align: right;">Feuerintervall</th>
+<th style="text-align: right;">Nachladezeit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Ignis</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0,22 s</td>
+<td style="text-align: right;">1,2 s</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Volt</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">0,17 s</td>
+<td style="text-align: right;">1,4 s</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Spore</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0,28 s</td>
+<td style="text-align: right;">1,05 s</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Nova</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0,30 s</td>
+<td style="text-align: right;">1,35 s</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Klinge</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">0,20 s</td>
+<td style="text-align: right;">1,25 s</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Bastion</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0,30 s</td>
+<td style="text-align: right;">1,45 s</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Phantom</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0,14 s</td>
+<td style="text-align: right;">1,05 s</td>
+</tr>
+</tbody>
+</table>
+<p>Die HP-Werte gelten bei <strong>Basis-HP-Faktor 100 %</strong>. In der Lobby lässt sich der Faktor von 50–300 % einstellen, die Unterschiede zwischen den Klassen bleiben dabei erhalten.</p>
+<hr />
+<h2 id="-kampf-mechaniken">🥊 Kampf-Mechaniken</h2>
+<h3 id="schüsse">Schüsse</h3>
+<ul>
+<li><strong>Ballistik</strong>: Schüsse fallen unter Schwerkraft und fliegen in einem Bogen. Karten wie <strong>Leichtes Geschoss</strong> machen die Bahn flacher, <strong>Schweres Geschoss</strong> und <strong>Mörser</strong> steiler und stärker. Drohnenschüsse fliegen flacher. Solange eine Kugel steigt, bremst die Schwerkraft doppelt so stark: Ein Schuss senkrecht nach oben kommt etwa 12 Kacheln hoch und fällt dir nach gut 3 s wieder auf den Kopf.</li>
+<li><strong>Leuchtspur</strong>: Jeder Schuss zieht eine Spur in deiner gewählten <strong>Schussfarbe</strong>. Blitz-Schüsse knistern.</li>
+<li><strong>Zielsuche</strong> (Homing): Weit weg lenken Geschosse kaum, nah am Gegner sehr stark. Weite Schüsse fliegen also erst im Bogen und korrigieren kurz vor dem Ziel.</li>
+<li><strong>Durchschlag</strong>: Jeder Punkt Durchschlag geht durch einen weiteren Gegner <strong>und</strong> durch eine halbe Kachel feste Wand oder eine ganze Kachel zerstörbaren Block. Diagonale Schüsse kosten gleich viel. Die Rand-Felswand, Fässer, Herzblöcke und Türme lassen sich nicht durchschießen.</li>
+<li><strong>Eigene Schüsse</strong>: Sobald eine Kugel deinen Körper verlassen hat, kann sie dich selbst treffen, etwa wenn ein Schuss nach oben auf deinen Kopf zurückfällt, vom Wind zurückgeweht wird oder abprallt. Selbstschaden ist halbiert.</li>
+<li><strong>Abpraller</strong>: Geschosse prallen von Oberflächen ab. Wer schon Abpraller hat, bekommt drei Ausbaukarten angeboten:
+<ul>
+<li><strong>Gummiwand</strong> (legendär): Kugeln prallen auch am Kartenrand ab, ohne einen Abpraller zu verbrauchen.</li>
+<li><strong>Gummipuffer</strong> (episch): 50 % weniger Selbstschaden durch eigene Kugeln, Explosionen und Flächen.</li>
+<li><strong>Zellteilung</strong> (episch): Bei jedem Abprall teilt sich die Kugel in zwei kleinere mit je 60 % Schaden. Höchstens 3 Teilungen pro Schuss (also maximal 8 Teile).</li>
+</ul></li>
+<li><strong>Projektil-Kollision</strong>: Schüsse von Gegnern stoßen in der Luft zusammen. Stärke = Schaden × Größe. Sind beide ähnlich stark (Verhältnis ab 0,7), löschen sie sich aus. Sonst fliegt der stärkere geschrumpft weiter.</li>
+<li><strong>Rückstoß</strong>: Treffer schubsen spürbar. Kurz danach ist die Steuerung des Ziels gedämpft, damit der Stoß wirkt.</li>
+</ul>
+<h3 id="block-q">Block (<code>Q</code>)</h3>
+<p>Jeder Held kann blocken: <strong>0,5 s kein Schaden</strong>, gegnerische Projektile werden <strong>zurückgeworfen</strong>, <strong>4 s Abklingzeit</strong>. Ein aktiver Block fängt auch Nahkampfschläge ab. Block-Karten verlängern ihn oder lösen Bomben, Heilzonen, Minen und Rückstoß aus.</p>
+<h3 id="dash-shift">Dash (<code>Shift</code>)</h3>
+<p>Kurzer Sprint mit kurzer Unverwundbarkeit. Ignis hinterlässt dabei Feuer.</p>
+<h3 id="leben-schild--regeneration">Leben, Schild &amp; Regeneration</h3>
+<ul>
+<li><strong>HP-Regeneration</strong> (durch Karten) läuft sofort, auch direkt nach einem Treffer.</li>
+<li><strong>Schild</strong> lädt sich erst <strong>3 s nach dem letzten Treffer</strong> wieder auf. Karten verkürzen die Pause (nie unter 0,5 s). Schild-Upgrade-Karten erscheinen erst, wenn man mindestens <strong>25 Schild</strong> hat.</li>
+<li>Über der HP-Leiste zeigt ein <strong>blauer Balken</strong> den aktuellen Schild.</li>
+<li><strong>Rüstung</strong> senkt jeden eingehenden Schaden prozentual, höchstens <strong>75 %</strong>.</li>
+<li><strong>Schadensreflexion</strong> wirft einen Teil des erlittenen Schadens auf den Angreifer zurück, höchstens <strong>60 %</strong>. Reflektierter Schaden wird nicht noch einmal reflektiert.</li>
+</ul>
+<h3 id="statuseffekte">Statuseffekte</h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Effekt</th>
+<th style="text-align: left;">Wirkung</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Gift</td>
+<td style="text-align: left;">Schaden in Ticks, das Schwein wird grünlich und blubbert</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Brand</td>
+<td style="text-align: left;">Feuerschaden in Ticks</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Frost</td>
+<td style="text-align: left;">Verlangsamt</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Betäubung</td>
+<td style="text-align: left;">Keine Bewegung für kurze Zeit</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Wand-Betäubung</td>
+<td style="text-align: left;">Nach einem Hammerschlag: wer gegen Wand oder Decke prallt, ist betäubt</td>
+</tr>
+</tbody>
+</table>
+<h3 id="flächeneffekte">Flächeneffekte</h3>
+<p>Feuerböden, Giftwolken, Eisflächen, Blitzzonen, Singularität und Heilfelder werden als Zonen gezeichnet. Feuer landet immer auf dem Boden darunter und fährt auf beweglichen Plattformen, Wippen und Kisten mit.</p>
+<hr />
+<h2 id="-nahkampf">🔨 Nahkampf</h2>
+<p>Jeder Eber hat eine Nahkampfwaffe auf <code>E</code> (P2: <code>K</code>). Gewählt wird sie im Lobby-Tab <strong>Charakter</strong>, sie wird im Profil gespeichert. Reichweite wird in Feldern (36 px) ab dem Körperrand gemessen. Wände blockieren den Schlag. Der Schlag trifft auch Blöcke, Kisten, Fässer und Türme.</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Waffe</th>
+<th style="text-align: left;">Form</th>
+<th style="text-align: right;">Schaden</th>
+<th style="text-align: right;">Reichweite</th>
+<th style="text-align: left;">Rückstoß</th>
+<th style="text-align: right;">Abklingzeit</th>
+<th style="text-align: left;">Besonderheit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Lötkolben</strong></td>
+<td style="text-align: left;">gerader Stich</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">3 Felder</td>
+<td style="text-align: left;">stark</td>
+<td style="text-align: right;">1,4 s</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Schwert</strong></td>
+<td style="text-align: left;">60°-Bogen</td>
+<td style="text-align: right;">30</td>
+<td style="text-align: right;">3 Felder</td>
+<td style="text-align: left;">wenig</td>
+<td style="text-align: right;">0,9 s</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Hammer</strong></td>
+<td style="text-align: left;">90°-Bogen</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">1 Feld</td>
+<td style="text-align: left;">sehr stark</td>
+<td style="text-align: right;">1,1 s</td>
+<td style="text-align: left;">Prallt das Ziel danach an Wand oder Decke: 0,8 s betäubt</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Flegel</strong></td>
+<td style="text-align: left;">360° rundum</td>
+<td style="text-align: right;">30</td>
+<td style="text-align: right;">2 Felder</td>
+<td style="text-align: left;">mittel</td>
+<td style="text-align: right;">1,2 s</td>
+<td style="text-align: left;"></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Parade</strong> (Legendary): Ist der Schlag bereit (nicht auf Abklingzeit), schlägt die Waffe von selbst in Richtung eines gegnerischen Projektils, sobald es in Reichweite ist und auf dich zufliegt, und wirft es zurück. Der Schlag trifft dabei normal und startet die Abklingzeit. Ein manueller Schlag pariert ebenfalls. Gilt auch für Bots und online.</p>
+<p>Das Powerup <strong>Auto-Angriff</strong> und der Runden-Modifier <strong>Brawl</strong> verstärken den Nahkampf. Ist Nahkampf in den Lobby-Regeln aus, erscheinen beide nicht.</p>
+<p>Nahkampf-Karten (Pool <strong>Nahkampf</strong>, 19 Karten) wirken nur auf den <code>E</code>-Schlag, siehe <a href="#nahkampf-karten">Karten-Übersicht</a>.</p>
+<hr />
+<h2 id="-lobby--match-regeln">🏆 Lobby &amp; Match-Regeln</h2>
+<p>Die Lobby hat mehrere Tabs. <strong>Spieler 1 ist Host</strong> und stellt Regeln, Map und Karten ein.</p>
+<h3 id="slots--helden">Slots &amp; Helden</h3>
+<ul>
+<li><strong>2–6 Spieler</strong>. Jeder Slot ab 2 ist <strong>Bot</strong> oder <strong>Mensch</strong>.</li>
+<li>Pro Slot gibt es eine Heldenreihe mit allen 7 Klassen und farbigen Icons. Menschen wählen selbst, der Host wählt für Bots.</li>
+<li><strong>Bereit</strong>: Lokal meldet der Knopf alle Menschen bereit, online jeder Client sich selbst. Bots sind automatisch bereit. Gestartet wird erst, wenn alle bereit sind.</li>
+</ul>
+<h3 id="tab-charakter">Tab Charakter</h3>
+<ul>
+<li><strong>Name</strong> (bis 16 Zeichen), erscheint in Lobby, HUD und Statistik.</li>
+<li><strong>Fell-, Augen- und Hosenfarbe</strong>.</li>
+<li><strong>Hauer</strong>: Klein, Lang, Säbel, Doppelt, Stummel.</li>
+<li><strong>Lötspitze</strong>: 8 Formen (Kegel, Meißel, Messer, Huf, Kugel, Diamant, Stern, Flamme) plus Glutfarbe.</li>
+<li><strong>Schussfarbe</strong>.</li>
+<li><strong>Nahkampfwaffe</strong>.</li>
+<li>Die Vorschau zeigt alles live. Das Profil wird automatisch gespeichert und online an alle verteilt.</li>
+</ul>
+<h3 id="tab-regeln">Tab Regeln</h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Einstellung</th>
+<th style="text-align: left;">Bereich</th>
+<th style="text-align: left;">Standard</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Spielmodus</td>
+<td style="text-align: left;">FFA, 2v2, 3v3, 2v2v2</td>
+<td style="text-align: left;">FFA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Punkte für Match-Sieg</td>
+<td style="text-align: left;">100–5000</td>
+<td style="text-align: left;">500</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Punkte für Überleben (pro Runde)</td>
+<td style="text-align: left;">0–500</td>
+<td style="text-align: left;">50</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Punkte pro Kill</td>
+<td style="text-align: left;">0–500</td>
+<td style="text-align: left;">50</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Basis-HP-Faktor</td>
+<td style="text-align: left;">50–300 %</td>
+<td style="text-align: left;">100 %</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Basis-Schaden pro Schuss</td>
+<td style="text-align: left;">1–200</td>
+<td style="text-align: left;">22</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Karten-Draft</td>
+<td style="text-align: left;">Wähle X von Y</td>
+<td style="text-align: left;">1 von 5</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Draft-Modifier</td>
+<td style="text-align: left;">Blind pick, Random pick, Gamble</td>
+<td style="text-align: left;">aus</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Pre-Draft</td>
+<td style="text-align: left;">0–10 Picks vor Matchbeginn, optional zufällig</td>
+<td style="text-align: left;">0 (aus)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Spielfeld</td>
+<td style="text-align: left;">eine der 23 Maps oder Zufällig</td>
+<td style="text-align: left;">Zufällig</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Runden-Modifier</td>
+<td style="text-align: left;">Auswahl + Rate 0–200 %</td>
+<td style="text-align: left;">alle, 100 %</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Loadouts</strong>: Der Host kann komplette Regel-Sets speichern, laden und löschen. Mitgeliefert sind <strong>Standard</strong>, <strong>Schnell &amp; Wild</strong>, <strong>Team 2v2</strong> und <strong>Chaos</strong>.</p>
+<h3 id="tab-karten">Tab Karten</h3>
+<ul>
+<li><strong>Kartenpools</strong> (Haupt-Tags) einzeln an- und ausschalten: Offensive, Defensive, Bewegung, Nahkampf. Mindestens einer bleibt aktiv. Die früheren Pools Kern und Chaos sind in Offensive bzw. Defensive aufgegangen.</li>
+<li><strong>Netzdiagramme</strong> unter den Pools zeigen, wie sich alle verfügbaren Karten verteilen: auf die Haupt-Tags, je Haupt-Tag auf seine Sub-Tags und auf die Seltenheiten. So sieht man, ob es für alle Werte ähnlich viele Karten gibt.</li>
+<li><strong>Seltenheits-Prozente</strong> für Common/Uncommon/Rare/Epic/Legendary (Standard 50 / 25 / 15 / 8 / 2). Die Summe wird automatisch normalisiert.</li>
+<li><strong>Karten sperren</strong>: Gesperrte Karten kommen in keinem Draft mehr, nach Seltenheit sortiert. Karten aus abgeschalteten Pools stehen dort abgedunkelt als gesperrt („Pool aus“). Der Host kann sie einzeln wieder freigeben („freigegeben“); Ausbaukarten einer freigegebenen Grundkarte sind dann ebenfalls frei. Wird der Pool wieder eingeschaltet, verfallen die Einzelfreigaben.</li>
+<li><strong>Filter ▾</strong> filtert die Kartenliste nach Haupt-Tags und Sub-Tags. Innerhalb einer Gruppe reicht ein Treffer (oder), Haupt- und Sub-Tags zusammen müssen beide passen (und).</li>
+<li>Die Lobby zeigt <code>Pool min. X/Held</code>, also wie viele Karten der kleinste Helden-Pool noch hat.</li>
+</ul>
+<h3 id="tab-levels">Tab Levels</h3>
+<ul>
+<li>Zeigt <strong>alle Maps mit Vorschaubild</strong>. Die Bilder rendert das Spiel beim ersten Öffnen des Reiters selbst aus dem Level-Generator, neue Maps tauchen also automatisch auf.</li>
+<li><strong>Klick aufs Bild</strong> öffnet die Großansicht mit Beschreibung. Mit <code>←</code>/<code>→</code> blättern, mit <code>Esc</code> oder Klick daneben schließen.</li>
+<li>Der Schalter neben dem Namen <strong>schaltet ein Level ab</strong>. Abgeschaltete Levels kommen bei <strong>Zufällig</strong> nicht mehr dran und sind unter Regeln → Spielfeld ausgegraut. <strong>ALLE AN</strong> / <strong>ALLE AUS</strong> schalten alles auf einmal. Ist kein Level aktiv, lässt sich das Match nicht starten.</li>
+<li>Die Auswahl gehört zu den Lobby-Regeln: Sie landet im Preset <strong>Last</strong> und in gespeicherten Loadouts, und der Host überträgt sie an alle Clients.</li>
+<li>Die Vorschau zeigt einen Beispiel-Aufbau. Zusätzliche Plattformen und Objekte werden jede Runde neu verteilt.</li>
+</ul>
+<h3 id="tab-powerups">Tab Powerups</h3>
+<ul>
+<li>Zeigt <strong>alle Powerups</strong> (Heilung, Schutz, Schaden, Dauerfeuer, Auto-Angriff, Multishot, Unsterblichkeit, Rache, Unsichtbar) so, wie sie in der Arena liegen, mit ihrer Wirkung.</li>
+<li>Der Schalter <strong>schaltet ein Powerup ab</strong>. Abgeschaltete Powerups erscheinen weder zufällig in der Arena noch aus Kisten noch beim Modifier <strong>Powerup-Regen</strong>. <strong>ALLE AN</strong> / <strong>ALLE AUS</strong> schalten alles auf einmal.</li>
+<li>Sind alle aus, laufen die Runden ohne Powerups: Der Modifier Powerup-Regen wird nicht gezogen und die Powerup-Karten (Powerup-Verstärker, Powerup-Magnet) kommen nicht in den Draft. Auto-Angriff erscheint zusätzlich nur, wenn Nahkampf an ist.</li>
+<li>Die Auswahl gehört zu den Lobby-Regeln: Sie landet im Preset <strong>Last</strong> und in gespeicherten Loadouts, und der Host überträgt sie an alle Clients. Alte Loadouts haben alle Powerups an.</li>
+</ul>
+<h3 id="ablauf-einer-runde">Ablauf einer Runde</h3>
+<ol start="0">
+<li><strong>Pre-Draft</strong> (nur wenn eingestellt): Vor der ersten Runde draftet jeder Spieler seine Startkarten.</li>
+<li><strong>3-Sekunden-Countdown</strong>. Die Kamera startet nah an deinem Eber, der aus einem Portal in Klassenfarbe kommt, und zoomt dann heraus.</li>
+<li>Kämpfen, bis nur noch ein Spieler (bzw. ein Team) lebt. Kills geben sofort Punkte, der Überlebende den Überlebensbonus.</li>
+<li>Beim entscheidenden Tod läuft eine kurze <strong>Kill-Cam</strong> in Zeitlupe.</li>
+<li>Die Verlierer wählen Karten, dann startet die nächste Runde.</li>
+<li><strong>Sudden Death</strong>: Dauert eine Runde nach dem Countdown länger als <strong>38 s</strong>, steigt Lava auf. Der Zähler startet bei jedem Tod neu. Die Lava hält knapp unter der höchsten Plattform an.</li>
+</ol>
+<p><strong>Weiterspielen</strong>: Nach dem Match-Sieg kann der Host <strong>WEITERSPIELEN</strong> wählen. Punkte und Decks bleiben, das Ziel steigt um 30 %.</p>
+<hr />
+<h2 id="-spielmodi">👥 Spielmodi</h2>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Modus</th>
+<th style="text-align: left;">Spieler</th>
+<th style="text-align: left;">Teams</th>
+<th style="text-align: left;">Aufteilung</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>FFA</strong></td>
+<td style="text-align: left;">2–6</td>
+<td style="text-align: left;">jeder für sich</td>
+<td style="text-align: left;">jeder Slot ist ein Team</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>2v2</strong></td>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">1+2 gegen 3+4</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>3v3</strong></td>
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">1+2+3 gegen 4+5+6</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>2v2v2</strong></td>
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">1+2 / 3+4 / 5+6</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Eine Team-Runde endet erst, wenn nur noch <strong>ein Team</strong> lebt.</li>
+<li><strong>Kein Freundschaftsfeuer</strong>, auch nicht durch Flächen, TNT oder reflektierte Schüsse. Teamkollegen blocken gegnerische Schüsse körperlich.</li>
+<li><strong>Eigene Explosionen</strong> machen nur 50 % Schaden an dir selbst.</li>
+<li>Team-Punkte sind die Summe der Spielerpunkte. Nach einer verlorenen Runde draften alle Mitglieder der Verliererteams.</li>
+<li>Teamfarben: ROT, BLAU, GRÜN.</li>
+</ul>
+<hr />
+<h2 id="-karten-draft">🃏 Karten-Draft</h2>
+<p>Nach jeder verlorenen Runde bekommt jeder Verlierer <strong>Y zufällige Karten</strong> und wählt <strong>X</strong> davon. Bei mehreren Picks wird nach jeder Wahl ein <strong>komplett neues Angebot</strong> gezogen, ohne die Karten der vorherigen Angebote (reicht der Pool nicht, dürfen sie wieder kommen). Online zieht der Host jedes Angebot. Karten stapeln sich über das ganze Match. Jede Karte gibt es pro Spieler nur einmal.</p>
+<ul>
+<li><strong>Seltenheit</strong>: Common (grau), Uncommon (grün), Rare (blau), Epic (lila), Legendary (gold). Der <strong>äußere Rahmen</strong> zeigt die Seltenheit, der <strong>innere</strong> die Effektfarbe.</li>
+<li><strong>Icons</strong>: Jede Karte hat ein kleines animiertes Icon passend zum Effekt.</li>
+<li><strong>Werte-Zeilen</strong>: Jeder Effekt einer Karte steht in einer eigenen Zeile.</li>
+<li><strong>Mechanik-Tooltips</strong>: Beim Hovern erklärt die Karte Begriffe wie Gift, Frost, Durchschlag, Rüstung, Reflexion, Turm oder Drohne.</li>
+<li><strong>Klassen-Badge</strong>: Klassenkarten sind markiert und erscheinen nur beim passenden Helden.</li>
+<li><strong>Evolution-Banner</strong>: Talentbaum-Karten sind als Evolution markiert.</li>
+<li><strong>Voraussetzungen</strong>: Karten, die eine Mechanik nur verstärken, erscheinen erst, wenn du sie schon hast (z. B. Turm-Panzerung nur mit Turm, Schild-Upgrades erst ab 25 Schild). Solche Karten tragen im Draft, in der Lobby und im Tab-Blatt die orange Zeile <strong>BENÖTIGT: …</strong>; der Tooltip listet unter <strong>FREISCHALTUNG</strong> alle Bedingungen (Klasse, Grundkarte und Zweig bei Evolutionen, Mechanik mit Beispielkarten).</li>
+<li><strong>Tab halten</strong> zeigt während der Wahl dein Charakterblatt mit den Werten der nächsten Runde.</li>
+</ul>
+<h3 id="pre-draft">Pre-Draft</h3>
+<p>Lobby-Regel unter <strong>Tab Regeln → Karten-Draft</strong>. Steht <strong>Pre-Draft</strong> auf mehr als 0, draften alle Spieler (auch Bots) direkt nach dem Start nacheinander so viele Karten, bevor die erste Runde beginnt. Jeder Pick bekommt wie sonst ein neues Angebot mit Y Karten, die Draft-Modifier gelten auch hier. Mit dem Schalter <strong>Pre-Draft-Karten zufällig wählen</strong> werden diese Picks automatisch zufällig gezogen (online zieht der Host), die Drafts nach den Runden bleiben normal. Die Regel landet in <strong>Last</strong>, in Loadouts und wird online an alle übertragen. <strong>Weiterspielen</strong> startet keinen neuen Pre-Draft.</p>
+<h3 id="draft-modifier">Draft-Modifier</h3>
+<ul>
+<li><strong>Draft-Steuerung</strong>: A/D (oder Pfeiltasten) markiert eine Karte, die Leertaste wählt sie. Maus und Zifferntasten gehen weiterhin.</li>
+<li><strong>Blind pick</strong>: Nur online gegen Menschen. Die anderen sehen nur Kartenrückseiten, die Wahl wird als „Karte verdeckt“ gezeigt. Lokal gegen Bots ohne Wirkung.</li>
+<li><strong>Random pick</strong>: Es wird automatisch eine Zufallskarte gezogen. Online zieht der Host.</li>
+<li><strong>Gamble</strong>: Die Karten liegen verdeckt, die Rückseite zeigt die Farbe der Seltenheit. Von links nach rechts wird einzeln aufgedeckt: Entweder nimmt man die offene Karte oder dreht die nächste um. Dann läuft ein Feuerbalken von unten nach oben über die offene Karte, danach ist sie verkohlt und weg. Die letzte Karte muss man nehmen. Steuerung: Mit A/D markiert man die offene Karte oder die nächste Rückseite, die Leertaste nimmt bzw. dreht um. Enter nimmt direkt die offene Karte, Klick und Zifferntasten gehen auch. Nach dem Pick werden kurz alle übrigen Karten aufgedeckt. Bots sehen die Rückseiten auch und drehen weiter, wenn rechts eine seltenere Karte liegt. Mit Random pick ohne Wirkung. Bei mehreren Picks gilt das für jedes neue Angebot.</li>
+</ul>
+<h3 id="kartenstatistik--automatische-aufwertung">Kartenstatistik &amp; automatische Aufwertung</h3>
+<p>Das Spiel führt im Hintergrund <code>card_statistics.json</code> mit <strong>Pickrate</strong>, <strong>Killrate</strong> und <strong>Winrate</strong> jeder Karte, inklusive Nahkampfschaden. Alle 3 abgeschlossenen Matches wird ausgewertet. Eine Karte steigt um eine Seltenheit auf, wenn sie:</p>
+<ul>
+<li>mindestens 8 Match-Samples hat,</li>
+<li>seit der letzten Aufwertung 8 Matches vergangen sind,</li>
+<li>eine geglättete Winrate von mindestens 55 % hat und</li>
+<li>mindestens 15 Prozentpunkte über dem Schnitt ihrer Seltenheit liegt.</li>
+</ul>
+<p>Pro Auswertung steigt höchstens eine Karte je Seltenheit auf, Legendary ist das Maximum. Abgewertet wird nie. Wer die Datei löscht, setzt alle Seltenheiten zurück.</p>
+<hr />
+<h2 id="-karten-übersicht">📚 Karten-Übersicht</h2>
+<p>Insgesamt gibt es über <strong>230 Karten</strong>: rund 210 in den Pools Offensive, Defensive und Bewegung, dazu 19 im Pool Nahkampf. Hier die wichtigsten Gruppen.</p>
+<h3 id="kartenpools">Kartenpools</h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Pool</th>
+<th style="text-align: left;">Inhalt</th>
+<th style="text-align: left;">Beispiele</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Offensive</strong></td>
+<td style="text-align: left;">Schaden, Munition, Projektile, Elemente</td>
+<td style="text-align: left;">Splittergeschoss, Panzerbrecher, Brandkapsel, Kettenreaktion, Leichtes/Schweres Geschoss, Mörser, Notvorrat, Fokuskristall, Weitstrahler, Kraftladung</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Defensive</strong></td>
+<td style="text-align: left;">Leben, Schild, Rüstung, Reflexion, Block, Größe</td>
+<td style="text-align: left;">Sanitäter, Bollwerk, Zweites Herz, Tank-Panzerung, Stachelweste, Dornenthron, Riese, Wandelnder Koloss</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Bewegung</strong></td>
+<td style="text-align: left;">Tempo, Sprünge, Dash, Größe</td>
+<td style="text-align: left;">Federstiefel, Windschatten</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Nahkampf</strong></td>
+<td style="text-align: left;">Nur für den <code>E</code>-Schlag</td>
+<td style="text-align: left;">Schleifstein, Frostklinge, Parade, Meister der Werkbank</td>
+</tr>
+</tbody>
+</table>
+<p>Weitere bekannte Karten: <strong>Lebensquell</strong> (Max-HP), <strong>Scharfe Munition</strong> (+20 % Schaden), <strong>Abpraller</strong>, <strong>Splittergeschoss</strong> (+1 Projektil), <strong>Flipper-Modus</strong>, <strong>Blutdurst</strong> (Lebensraub), <strong>Homing Micro-Seekers</strong> (Zielsuche), <strong>Cluster Warhead</strong>, <strong>Ricochet Frenzy</strong>, <strong>Martyrdom Shockwave</strong> (Explosion beim K.O.), <strong>Chronos Drive</strong>. Munition und Nachladen verbessern <strong>Quick Draw</strong>, <strong>Schnellfeuer</strong>, <strong>Gatling Surge</strong>, <strong>Großes Magazin</strong>, <strong>Schnelllader</strong>, <strong>Taktisches Magazin</strong> und <strong>Feldwartung</strong>.</p>
+<p><strong>Duplikat-Abgleich (28.10.2026):</strong> Pro Effekt soll es je Seltenheit möglichst nur eine Karte geben. Strikt schwächere Karten derselben Seltenheit wurden entfernt (u. a. Gummigeschoss, Wirbelsturm, Treffsicher, Schnelle Hände, Vitaler Kern, Panzerplatte, Raketenschuh, Leichtgewicht, Giftkern, Explosionswelle, Instabiler Kern). Notvorrat ist jetzt Uncommon, Quick Draw Rare, Martyrdom Shockwave Epic. Ähnliche Karten sind <strong>Evolutionen</strong> einer Grundkarte: Sie kommen nur, wenn man die Grundkarte besitzt, wer einen Zweig nimmt, bekommt den anderen nicht mehr, und die Werte kommen zur Grundkarte dazu.</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Grundkarte</th>
+<th style="text-align: left;">Zweig A</th>
+<th style="text-align: left;">Zweig B</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Abpraller (Common, +1)</td>
+<td style="text-align: left;">Bouncy Balls (Uncommon, +1, +15 % Projektilgeschw.)</td>
+<td style="text-align: left;">Stabilisator (Uncommon, +1, +15 % Projektilgröße)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Flipper-Modus (Rare, +3 Abpraller)</td>
+<td style="text-align: left;">Ricochet Frenzy (Epic, +3, +15 % Projektilgeschw., +20 % Schaden pro Abpraller)</td>
+<td style="text-align: left;">Flummi-Kern (Epic, +3, +15 % Projektilgröße)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Scharfe Munition (Common, +20 % Schaden)</td>
+<td style="text-align: left;">Wuchtgeschoss (Uncommon, +20 %)</td>
+<td style="text-align: left;">Heavy Bullets (Uncommon, +15 %, +40 % Projektilgröße)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Scharfschütze (Common, +30 % Projektilgeschw.)</td>
+<td style="text-align: left;">Railgun-Munition (Uncommon, +30 %, +8 % Schaden)</td>
+<td style="text-align: left;">Fast Forward (Uncommon, +30 %, +12 % Tempo)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Splittergeschoss (Uncommon, +1 Projektil)</td>
+<td style="text-align: left;">Splitterladung (Rare, +1, enge schnelle Salve)</td>
+<td style="text-align: left;">Leichte Schrotflinte (Rare, +2, breit)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Zäher Kern (Common, +24 % Max HP)</td>
+<td style="text-align: left;">Lebensquell (Uncommon, +20 %)</td>
+<td style="text-align: left;">Schwarzes Herz (Uncommon, +30 %, −6 % Tempo)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Regenerationsmodul (Common, +1 HP/s)</td>
+<td style="text-align: left;">Regenerationsserum (Uncommon, +1 HP/s)</td>
+<td style="text-align: left;">Sanitäter (Uncommon, +0,6 HP/s, +30 Max HP)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Blutdurst (Uncommon, +12 % Lebensraub)</td>
+<td style="text-align: left;">Vampiric Leech (Rare, +15 %)</td>
+<td style="text-align: left;">Vampirklinge (Rare, +20 %, −10 % Max HP)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Kompaktkern (Common, −10 % Größe)</td>
+<td style="text-align: left;">Kompakte Statur (Uncommon, −5 %, +8 % Tempo)</td>
+<td style="text-align: left;">Schlanker Körper (Uncommon, −10 %, +10 % Sprungkraft)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Feather Shoes (Uncommon, +1 Luft-Sprung)</td>
+<td style="text-align: left;">Federstiefel (Rare, +1 Luft-Sprung, +10 % Sprungkraft)</td>
+<td style="text-align: left;">–</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Verstärkte Deckung (Uncommon, +0,3 s Block)</td>
+<td style="text-align: left;">Ausdauerblock (Rare, +0,3 s, −10 % Abklingzeit)</td>
+<td style="text-align: left;">–</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Weitstrahler (Common, +25 % Fähigkeitsgröße)</td>
+<td style="text-align: left;">Flächenbrecher (Common, +50 % Fähigkeitsgröße)</td>
+<td style="text-align: left;">–</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Kraftladung (Common, +25 % Fähigkeitsschaden)</td>
+<td style="text-align: left;">Überladung (Common, +50 % Fähigkeitsschaden)</td>
+<td style="text-align: left;">–</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Powerup-Verstärker (Common, +25 % Powerup-Wirkung)</td>
+<td style="text-align: left;">Powerup-Magnet (Common, +25 % Powerup-Wirkung, +2 Felder Sammelreichweite)</td>
+<td style="text-align: left;">–</td>
+</tr>
+</tbody>
+</table>
+<p>Max-HP- und Schild-Boni auf Karten wurden verdoppelt, damit man nicht zu schnell stirbt.</p>
+<h3 id="sub-tags">Sub-Tags</h3>
+<p>Jede Karte hat neben ihrem Pool (Haupt-Tag) beliebig viele <strong>Sub-Tags</strong>. Sie werden automatisch aus den Kartenwerten abgeleitet und erscheinen in der Lobby-Kartenliste unter dem Titel.</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Haupt-Tag</th>
+<th style="text-align: left;">Sub-Tags</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Offensive</strong></td>
+<td style="text-align: left;">Schaden, Feuerrate (inkl. Munition/Nachladen), Projektil, Bounce, Durchschlag, Zielsuche, Mehrfachschuss, Explosion, Element, Begleiter</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Defensive</strong></td>
+<td style="text-align: left;">Leben, Heilung, Schild, Block, Rüstung, Reflexion</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Bewegung</strong></td>
+<td style="text-align: left;">Tempo, Sprung, Dash, Schwerkraft, Größe (kleiner oder größer)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Nahkampf</strong></td>
+<td style="text-align: left;">Klinge, Reichweite, Schlagtempo, Rückstoß, Kontrolle, Elementarhieb</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Allgemein</strong></td>
+<td style="text-align: left;">Fähigkeit (Heldenfähigkeit), Powerup (verstärkt eingesammelte Powerups), Unique (eigene Spezialmechanik)</td>
+</tr>
+</tbody>
+</table>
+<p>Sub-Tags gelten poolübergreifend: Eine Defensive-Karte kann z. B. auch „Tempo“ haben.</p>
+<p>Kartentexte nutzen für gleiche Effekte immer dieselben Begriffe: <strong>Tempo</strong> (Laufgeschwindigkeit), <strong>Max HP</strong>, <strong>Schild</strong>, <strong>Schaden</strong>, <strong>Feuerrate</strong>, <strong>Munition</strong>, <strong>Projektilgeschwindigkeit</strong>, <strong>Projektilgröße</strong>, <strong>Abpraller</strong>, <strong>Durchschlag</strong>, <strong>Explosionsradius</strong>, <strong>Sprungkraft</strong>, <strong>Luft-Sprung</strong>, <strong>Größe</strong>, <strong>Giftstapel</strong>, <strong>Giftschaden</strong>, <strong>HP/s Regeneration</strong> sowie <strong>Dash-</strong>, <strong>Block-</strong>, <strong>Fähigkeits-</strong> und <strong>Nahkampf-Abklingzeit</strong>.</p>
+<h3 id="klassenkarten-je-3-pro-held">Klassenkarten (je 3 pro Held)</h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Held</th>
+<th style="text-align: left;">Klassenkarten</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Ignis</strong></td>
+<td style="text-align: left;">Nachbrenner, Sprengkern, Überhitzung</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Volt</strong></td>
+<td style="text-align: left;">Overclock, Statisches Feld, Kinetische Ladung</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Spore</strong></td>
+<td style="text-align: left;">Virulenter Stamm, Mycelnetz, Toxische Blüte</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Nova</strong></td>
+<td style="text-align: left;">Schwerkraftkern, Leerer Raum, Supernova</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Klinge</strong></td>
+<td style="text-align: left;">Wirbelklinge, Klingenreflexe, Duellklinge</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Bastion</strong></td>
+<td style="text-align: left;">Energieschild, Feldwartung, Bastionsfestung</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Phantom</strong></td>
+<td style="text-align: left;">Schattenklinge, Schattensprung, Todeskuss</td>
+</tr>
+</tbody>
+</table>
+<h3 id="fähigkeitskarten-je-4-pro-held">Fähigkeitskarten (je 4 pro Held)</h3>
+<p>Eine Grundkarte (Rare) mit zwei exklusiven Evolutionen (Epic) und eine Einzelkarte (Uncommon). Evolutionen erscheinen erst mit der Grundkarte, und nur ein Zweig ist wählbar.</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Held</th>
+<th style="text-align: left;">Grundkarte</th>
+<th style="text-align: left;">Evolution A</th>
+<th style="text-align: left;">Evolution B</th>
+<th style="text-align: left;">Einzelkarte</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Ignis</strong></td>
+<td style="text-align: left;">Raketentriebwerk</td>
+<td style="text-align: left;">Napalm-Landung</td>
+<td style="text-align: left;">Splitterlandung</td>
+<td style="text-align: left;">Kurze Zündschnur</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Volt</strong></td>
+<td style="text-align: left;">Hochspannung</td>
+<td style="text-align: left;">Kettenblink</td>
+<td style="text-align: left;">Gewitterspur</td>
+<td style="text-align: left;">Restladung</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Spore</strong></td>
+<td style="text-align: left;">Dichter Nebel</td>
+<td style="text-align: left;">Ätzender Nebel</td>
+<td style="text-align: left;">Symbiose</td>
+<td style="text-align: left;">Sporenvorrat</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Nova</strong></td>
+<td style="text-align: left;">Ereignishorizont</td>
+<td style="text-align: left;">Implosion</td>
+<td style="text-align: left;">Doppelstern</td>
+<td style="text-align: left;">Massenanziehung</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Klinge</strong></td>
+<td style="text-align: left;">Geschliffene Klingen</td>
+<td style="text-align: left;">Echowirbel</td>
+<td style="text-align: left;">Blutrausch</td>
+<td style="text-align: left;">Tanzschritt</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Bastion</strong></td>
+<td style="text-align: left;">Verstärkte Emitter</td>
+<td style="text-align: left;">Schutzkuppel</td>
+<td style="text-align: left;">Pulsfeld</td>
+<td style="text-align: left;">Notfallprotokoll</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Phantom</strong></td>
+<td style="text-align: left;">Lautlose Klinge</td>
+<td style="text-align: left;">Schattenschnitt</td>
+<td style="text-align: left;">Lähmendes Mal</td>
+<td style="text-align: left;">Lange Schatten</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Für alle Helden:</strong> <strong>Weitstrahler</strong> (+25 % Fähigkeitsgröße) mit Evolution <strong>Flächenbrecher</strong> (+50 %) und <strong>Kraftladung</strong> (+25 % Fähigkeitsschaden) mit Evolution <strong>Überladung</strong> (+50 %), alle Common. Die Boni multiplizieren sich (Grundkarte + Evolution = ×1,875). <em>Fähigkeitsgröße</em> vergrößert Wirkungsradius und Effektfläche der Klassenfähigkeit samt Evolutionen (Einschlag, Schockwelle, Giftwolke, Sog, Klingenwirbel, Heilfeld-Optik, Schattenschnitt, Napalm, Blitzzonen, Splitter-Explosionen), aber <strong>nicht</strong> die Teleport-, Sprung- oder Wurfweite. <em>Fähigkeitsschaden</em> erhöht allen Schaden der Fähigkeit inklusive Kettenblitz, Splitter, Blitzzonen und Gift von „Ätzender Nebel“; bei Bastion steigen Heilung und Schild. Novas Singularität selbst macht keinen Schaden, deshalb bekommt Nova Kraftladung und Überladung erst angeboten, wenn „Implosion“ im Deck ist. Gesamtwerte sind gedeckelt (Größe ×2,5, Schaden ×4).</p>
+<h3 id="talentbäume">Talentbäume</h3>
+<p>Eine Ausbaukarte erscheint erst, wenn die Grundkarte im Deck liegt. Wer einen Zweig wählt, bekommt den anderen nicht mehr angeboten.</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Familie</th>
+<th style="text-align: left;">Grundkarte</th>
+<th style="text-align: left;">Ausbau A</th>
+<th style="text-align: left;">Ausbau B</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Turm</strong></td>
+<td style="text-align: left;">Turm: Fähigkeit stellt eine Kanone (100 Leben) auf</td>
+<td style="text-align: left;">Mehr Türme: alle 5 s ein weiterer</td>
+<td style="text-align: left;">Folgende Türme: folgen dir</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Giftschuss</strong></td>
+<td style="text-align: left;">+2 Gift-Stapel</td>
+<td style="text-align: left;">Giftwolke am Einschlag</td>
+<td style="text-align: left;">Giftspur hinter dir</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Blitzschuss</strong></td>
+<td style="text-align: left;">0,1 s Betäubung</td>
+<td style="text-align: left;">Kettenblitz</td>
+<td style="text-align: left;">Blitz-Orb am Einschlag</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Frostschuss</strong></td>
+<td style="text-align: left;">0,8 s Verlangsamung</td>
+<td style="text-align: left;">Eisnova am Einschlag</td>
+<td style="text-align: left;">Eisbahn hinter dir</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Explosivschuss</strong></td>
+<td style="text-align: left;">+30 px Explosion</td>
+<td style="text-align: left;">Großer Knall (+60 px)</td>
+<td style="text-align: left;">Splitterbomben</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Feuersturm</strong></td>
+<td style="text-align: left;">Geschosse entzünden</td>
+<td style="text-align: left;">Brandherd am Einschlag</td>
+<td style="text-align: left;">Feuerspur hinter dir</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Wächterdrohne</strong></td>
+<td style="text-align: left;">Drohne schießt mit</td>
+<td style="text-align: left;">Zwillingsdrohne</td>
+<td style="text-align: left;">Regenerationsdrohne</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Schutzdrohne</strong></td>
+<td style="text-align: left;">Drohne fängt Schüsse ab</td>
+<td style="text-align: left;">Heilende Schutzdrohne</td>
+<td style="text-align: left;">Schutzdrohnen-Schwarm</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Mörser</strong></td>
+<td style="text-align: left;">Steiler Bogen, mehr Schaden</td>
+<td style="text-align: left;">Präzisionsmörser</td>
+<td style="text-align: left;">Belagerungsmörser</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Rückstoßfeder</strong></td>
+<td style="text-align: left;">+25 % Rückstoß</td>
+<td style="text-align: left;">Druckkammer</td>
+<td style="text-align: left;">Schockgeschoss</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Leichte Schuhe</strong></td>
+<td style="text-align: left;">Tempo</td>
+<td style="text-align: left;">Windschuhe</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Minenleger</strong></td>
+<td style="text-align: left;">Blocken legt eine unsichtbare Mine</td>
+<td style="text-align: left;">Sofortzünder: explodiert ohne Verzögerung</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Tank-Panzerung</strong></td>
+<td style="text-align: left;">siehe unten</td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Türme</strong> haben 100 Leben und verlieren 5 % davon pro Sekunde, halten also höchstens 20 s. Gegner und Explosionen beschädigen sie. Turm-Panzerung und Schnellfeuer-Geschütz gibt es nur mit Turm.</p>
+<h3 id="tank-panzerung-evolutionsbaum">Tank-Panzerung (Evolutionsbaum)</h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Seltenheit</th>
+<th style="text-align: left;">Zweig A (Rüstung)</th>
+<th style="text-align: left;">Zweig B (Reflexion)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Common</td>
+<td style="text-align: left;">Tankplatte (+Max-HP, +5 % Rüstung)</td>
+<td style="text-align: left;">Tankplatte</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Uncommon</td>
+<td style="text-align: left;">Stahlhaut</td>
+<td style="text-align: left;">Dornenhaut (8 % Reflexion)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Rare</td>
+<td style="text-align: left;">Festungspanzer</td>
+<td style="text-align: left;">Reflektorplatte (12 %)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Epic</td>
+<td style="text-align: left;">Titanenbollwerk</td>
+<td style="text-align: left;">Spiegelpanzer (18 %)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Legendary</td>
+<td style="text-align: left;">Ewige Bastion</td>
+<td style="text-align: left;">Spiegelkoloss (22 %)</td>
+</tr>
+</tbody>
+</table>
+<p>Dazu kommen einzelne Reflexions-Karten im Pool Defensive: <strong>Stachelweste</strong>, <strong>Rachepanzer</strong>, <strong>Blutspiegel</strong>, <strong>Vergeltungsschild</strong> und <strong>Dornenthron</strong>. Manche reflektieren mehr unter 35 % Leben oder heilen dich mit.</p>
+<h3 id="block-karten">Block-Karten</h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Seltenheit</th>
+<th style="text-align: left;">Karten</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Common</td>
+<td style="text-align: left;">Blockübung (+0,15 s), Schnelle Deckung (−15 % Abklingzeit)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Uncommon</td>
+<td style="text-align: left;">Verstärkte Deckung (+0,3 s, Evolution: Ausdauerblock), Schildstoß (stößt weg)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Rare</td>
+<td style="text-align: left;">Blockbombe, Heilzone, Druckwelle</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Epic</td>
+<td style="text-align: left;">Konterblitz (+50 % auf reflektierte Schüsse), Block-Experte, Unzerbrechlich</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Minen:</strong> Mit <strong>Minenleger</strong> (Rare) lässt jeder Block eine Mine fallen, die auf dem Boden darunter liegen bleibt und auf Plattformen und Wippen mitfährt. Gegner sehen sie nicht (online gar nicht, am selben Bildschirm nur schwach). Nach 2 s ist sie scharf. Läuft ein Gegner darüber, blinkt sie und explodiert 1,5 s später: 50 Schaden, 2 Felder Explosionsradius, nur gegen Gegner. Höchstens 8 Minen pro Spieler, bei der neunten verschwindet die älteste. Nur mit Minenleger im Deck gibt es <strong>Minenschaden</strong> (Rare, +50 Schaden) und <strong>Minenreichweite</strong> (Uncommon, +1 Feld Explosionsradius). Evolution A <strong>Sofortzünder</strong> (Epic) lässt Minen ohne Verzögerung explodieren.</p>
+<h3 id="nahkampf-karten">Nahkampf-Karten</h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Seltenheit</th>
+<th style="text-align: left;">Karten</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Common</td>
+<td style="text-align: left;">Schleifstein (+25 % Schaden), Langer Griff (+0,5 Felder), Leichter Griff (−15 % Abklingzeit), Schwerer Kopf (+40 % Rückstoß)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Uncommon</td>
+<td style="text-align: left;">Frostklinge (1,2 s Frost), Giftzahn (+3 Gift), Glühende Spitze (3 Brand), Weiter Schwung (+30° Bogen), Gnadenstoß (+60 % unter 35 % Leben)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Rare</td>
+<td style="text-align: left;">Elektroschocker (0,35 s Betäubung), Wandklatscher (Wand-Betäubung für alle Waffen), Blutklinge (25 % Lebensraub), Meisterschliff</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Epic</td>
+<td style="text-align: left;">Hochspannung (Kettenblitz), Nachschlag (zweiter Schlag 60 %), Eiskern</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Legendary</td>
+<td style="text-align: left;">Meister der Werkbank, Gewitterschlag, Parade (bereiter Schlag löst von selbst aus und wirft anfliegende Projektile zurück)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="-maps--spielfeld-objekte">🌍 Maps &amp; Spielfeld-Objekte</h2>
+<p>Der Host wählt die Map unter <strong>Regeln → Spielfeld</strong>. <strong>Zufällig</strong> zieht pro Runde eine der aktiven Maps (abschaltbar im Reiter <strong>Levels</strong>), alle Spieler bekommen dieselbe.</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Map</th>
+<th style="text-align: left;">Art</th>
+<th style="text-align: left;">Besonderheiten</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Grasarena</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Luftige Balken, zentrale Wippe, Kisten, Ranken</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Wüstenruine</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Offene Sandinseln, Kettenplattformen, TNT</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Eisgrotte</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Glatte Eisflächen, schwebende Wippe, Kistenstapel</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Neonfabrik</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Technik-Balken, Ketten, Kisten, Powerups</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Weite Wiese</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Wenige Plattformen, viel Platz für Duelle</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Wolkeninsel</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Kleine Wolkeninseln, weite Sprünge, Wolkenfähre</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Uhrwerk</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Großes Zifferblatt in der Mitte: Der lange Minutenzeiger dreht sich in 16 s einmal herum, man fährt auf ihm mit. Aufzüge an den Seiten, aus zwei Trichtern fallen alle 10 s Kugeln, die der Zeiger herumschiebt</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Hauptplatine</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Leuchtende Leiterplatte, Datenbus-Shuttle, Chips als Deckung</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Kistenfestung</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Nur Holzkisten, große Wippe mit Kistentürmen</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Sonnentempel</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Riesige hohle Pyramide über drei Viertel der Breite (drüberlaufen oder unten hinein), Kistenkette über der Spitze</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Kettenwerk</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Neon-Halle voller Kistenketten, Einweg-Stege</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Wollhaus</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Haus mit vier Räumen, Luken und begehbarem Dach, Kisten an Ketten</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Eispyramiden</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Zwei große hohle Eispyramiden über fast die ganze Breite, Kistenkette zwischen den Spitzen</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Serverhaus</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Rechenzentrum mit vier Räumen, tief gespannte Kistenketten zum Rand</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Gitterzaun</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Gitter aus fünf senkrechten Ketten (Decke bis Boden) und vier waagrechten Ketten, große Kisten an jeder Kreuzung, Einweg-Stege an den Rändern</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Trümmerfeld</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Offen: zerstörbare Mauerreste, Torbogen in der Mitte, viele Fässer und Kisten</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Schrottplatz</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Offen: Blockhaufen, Kisten an Deckenketten, viel TNT</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Schneefeld</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Offen: Schneeburgen aus zerstörbaren Blöcken, Tiefschnee und Eis</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Wollmarkt</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Offen: Marktstände mit Einweg-Dächern auf zerstörbaren Pfosten, Trampoline</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Kugellawine</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Zwei Schrägen unter der Decke voller Kugeln hinter einer Kettensperre. Sie reißt nach 7 s (oder früher, wenn man sie zerschießt), dann rollt die Lawine über ein Satteldach durch die Arena. In der Höhle unter dem Dach dreht sich ein Rührbalken: Kleine Kugeln rollen darunter durch, große schiebt er an</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Kugelbahn</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Doppelte, gespiegelte Zickzack-Kugelbahn. Oben an jeder Bahn erscheint alle 5 s eine Kugel, oft mit bis zu zwei kleinen Kugeln davor, und rollt bis auf den Boden. Die Schrägen sind Einweg-Rampen: von unten durchspringen, mit <code>S</code> / <code>↓</code> durchfallen, Kugeln rollen oben darauf. Leiter aus Einweg-Stegen in der Mitte</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Kugelkette</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Lange Kette quer unter der Decke zwischen zwei Randleisten, oben drauf viele Kugeln aller Größen. Zerschießt man ein Glied, regnet alles in die Arena</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Kugelmühle</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Zwei gegenläufige Windmühlen-Kreuze. Aus Trichtern fallen alle 5 s Kugeln auf die Flügel, die sie anheben und zur Mitte schleudern. Leiter aus Einweg-Stegen in der Mitte, Steg-Treppen außen</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Pilzpfad</strong></td>
+<td style="text-align: left;">Scrollt seitlich</td>
+<td style="text-align: left;">Gruben, Treppen, Herz-Block, Fähre, Portale</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Gletscherpass</strong></td>
+<td style="text-align: left;">Scrollt seitlich</td>
+<td style="text-align: left;">Aufzüge im Abgrund, Eisfähre, hängende Wippe</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Lavaturm</strong></td>
+<td style="text-align: left;">Scrollt nach oben</td>
+<td style="text-align: left;">Lava steigt schon ab 4 s, Gipfel-Arena</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Himmelsleiter</strong></td>
+<td style="text-align: left;">Scrollt nach oben</td>
+<td style="text-align: left;">Feder, Aufzug, Wolkenfähre, Gipfelportal</td>
+</tr>
+</tbody>
+</table>
+<p>Auf Scroll-Maps folgt die Kamera dir. Gegner außerhalb des Bildes zeigen Pfeile am Rand.</p>
+<h3 id="spielfeld">Spielfeld</h3>
+<ul>
+<li><strong>Gummiwand</strong>: Um die Karte liegt ein Rahmen mit Stacheldraht (rote Dornen zeigen ins Feld). Wer ihn berührt, nimmt Schaden (roter Plasma-Schlag am Rand, online für alle sichtbar) und wird Richtung Bildschirmmitte zurückgeschleudert (Mitte aller Spieler, online für alle gleich; in Scroll-Levels gerade zurück ins Feld). Mit dem Modifier <strong>Höhle</strong> sind es feste Felswände.</li>
+<li><strong>Spawns</strong> sind jede Runde anders, verteilt über das Level und auf verschiedene Höhen.</li>
+<li>Jede neue Runde räumt Projektile, Türme und Effekte der Vorrunde weg.</li>
+</ul>
+<h3 id="objekte">Objekte</h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Objekt</th>
+<th style="text-align: left;">Verhalten</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Zerstörbare Blöcke</strong></td>
+<td style="text-align: left;">Halten 3 Treffer, dann weg</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Starke Ranken</strong></td>
+<td style="text-align: left;">Brechen nur durch Beschuss, wachsen nach 8 s nach</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Schwache Ranken</strong></td>
+<td style="text-align: left;">Brechen beim Drüberlaufen, wachsen nach 4,5 s nach</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Eisflächen</strong></td>
+<td style="text-align: left;">Rutschig, wenig Reibung</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Sprungfedern</strong></td>
+<td style="text-align: left;">Katapultieren hoch in die Luft</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Portale</strong></td>
+<td style="text-align: left;">Teleportieren, danach 10 s weg</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Herz-Blöcke</strong></td>
+<td style="text-align: left;">Von unten anspringen oder anschießen: +30 HP</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Stacheln</strong></td>
+<td style="text-align: left;">Schaden und Wegschleudern</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Wippe</strong></td>
+<td style="text-align: left;">Kippt unter Gewicht, Schüssen und Explosionen, federt zurück</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Kettenplattform</strong></td>
+<td style="text-align: left;">Hängt an Ketten und schwingt</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Einweg-Steg</strong></td>
+<td style="text-align: left;">Dünner Steg mit kleinen Pfeilen darunter: von unten durchspringen, oben landen. Mit <code>S</code> / <code>↓</code> fällst du hindurch. Schüsse von unten fliegen durch</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Kistenkette</strong></td>
+<td style="text-align: left;">Kisten verschiedener Größe an Ketten, gespannt zwischen Plattformen oder vom Kartenrand, oder frei hängend. Spieler, Kisten und Schüsse prallen ab, man kann darauf laufen. Glieder halten 2 Treffer (Schüsse oder Schläge), Kisten 2 Treffer; dann reißt die Kette dort und die Teile fallen. Explosionen und Kugeln schubsen Glieder nur, sie reißen sie nicht. Beim Spawn schwingt die Kette gedämpft in ihre Ruhelage</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Kettengitter</strong></td>
+<td style="text-align: left;">Netz aus Ketten mit Kisten an den Kreuzungen (Gitterzaun). Jedes Kettenstück reißt einzeln, eine zerstörte Kreuzungskiste löst die angrenzenden Stücke</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Pyramide</strong></td>
+<td style="text-align: left;">Großes hohles Dreieck: Die Schrägen sind begehbar, unten ist sie offen. Innen führen Einweg-Stege bis unter die Spitze</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Haus</strong></td>
+<td style="text-align: left;">Vier Räume: unten Türen, oben Fenster, Einweg-Luken in der Zwischendecke über kleinen Plattformen. Außen führen Leisten zum Fenster und aufs Satteldach</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Aufzug / Fähre</strong></td>
+<td style="text-align: left;">Fährt zwischen zwei Punkten und nimmt dich mit</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Drehbalken</strong></td>
+<td style="text-align: left;">Dreht sich gleichmäßig um seine Nabe (Uhrzeiger, Rührbalken, Windmühlen-Kreuz). Man fährt darauf mit, bis er zu steil wird. Kugeln, Kisten und Fässer schiebt und schleudert er weg. Schüsse prallen ab wie an einer Wand</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Fass</strong></td>
+<td style="text-align: left;">Rollt und fliegt bei Treffern weg, fallende Fässer machen Schaden</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>TNT-Fass</strong></td>
+<td style="text-align: left;">Blinkt 3 s nach einem Treffer, dann Explosion mit Kettenreaktion</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Holzkisten</strong></td>
+<td style="text-align: left;">Stapelbar, kippen um. Fallende oder geschleuderte Kisten machen Schaden (bis 38)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Rollende Kugeln</strong></td>
+<td style="text-align: left;">0,5, 1 oder 2 Kacheln groß, aus Gummi, Holz oder Eisen. Rollen Schrägen hinab und verletzen, wen sie treffen: je schneller und schwerer, desto mehr. Gummi: wie ein Strandball, sehr leicht und etwas schwebend, fliegt bei Schüssen, Schlägen, Explosionen und Anrempeln weit weg, hält sehr viel aus, wenig Schaden (bis 16). Holz: mittel, bis 30 Schaden, splittert bei harten Aufprallen. Eisen: sehr schwer, bis 55 Schaden, zertrümmert Kisten und Blöcke. Große Kugeln halten doppelt so viel aus und treffen härter, kleine halten halb so viel aus und treffen schwächer. Wer draufsteht, rollt sie weg, wer dagegenläuft, schiebt sie an. Wer obendrauf steht oder dagegen läuft, nimmt keinen Schaden</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Kettensperre</strong></td>
+<td style="text-align: left;">Hält Kugeln auf einer Schräge zurück, blinkt rot kurz bevor sie reißt. Reißt nach Treffern oder nach Ablauf der Zeit</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Powerups</strong></td>
+<td style="text-align: left;">Heilung (35 HP), Schutz (3 s Unverwundbarkeit), Schaden (6 s +65 %), Dauerfeuer (5 s), Auto-Angriff (8 s: halbe Nahkampf-Abklingzeit, die Nahkampfwaffe schlägt selbst nach Gegnern in Reichweite), Multishot (8 s: jeder Schuss feuert 3 Projektile im Fächer), Unsterblichkeit (stirbst du in den nächsten 10 s, liegst du 2 s unverwundbar am Boden und stehst mit halbem Leben und 1 s Schutz wieder auf; der Tod zählt nicht, kein Kill für den Gegner; Todes-Effekte wie die Kamikaze-Explosion lösen trotzdem aus), Rache (5 s 100 % Dornenschaden: Angreifer bekommen den Schaden, den sie dir machen, zurück), Unsichtbar (6 s: Gegner sehen deinen Charakter samt Lebensleiste nicht, Schüsse und Effekte bleiben sichtbar; online sieht dein Team dich schwach, am geteilten Bildschirm bleibt gegen menschliche Gegner nur ein Hauch übrig; Bots, Auto-Angriff und Zielsuche nehmen dich nicht ins Visier, treffen kannst du trotzdem). Aktive Powerups lassen den Körper in ihrer Farbe schimmern und zeigen eine Aura: Schutz eine Schildblase, Unsterblichkeit einen Heiligenschein, Rache einen drehenden Stachelkranz, alle anderen ein loderndes Energiefeld in ihrer Farbe; in der letzten Sekunde flackert die Aura. Powerups erscheinen 30 % seltener als in den Map-Werten angegeben (zufällig in der Arena, aus Kisten und beim Powerup-Regen). Einzeln abschaltbar im Lobby-Reiter <strong>Powerups</strong>. <strong>Powerup-Verstärker</strong> (+25 %) und seine Evolution <strong>Powerup-Magnet</strong> (weitere +25 %, +2 Felder Sammelreichweite: Powerups fliegen dir aus der Nähe zu) verlängern die Dauer bzw. erhöhen die Heilung</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="-runden-modifier">🎲 Runden-Modifier</h2>
+<p>Jede Runde können zufällig Modifier aktiv sein. Bei Rate 100 %: 53 % keine, 33 % einer, 10 % zwei, 3 % drei, 1 % vier. Unter 100 % fällt öfter einer weg, über 100 % kommt öfter einer dazu. Der Host schaltet im Regeln-Tab einzelne Modifier an oder aus (<strong>ALLE</strong> / <strong>KEINE</strong>).</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: center;"></th>
+<th style="text-align: left;">Modifier</th>
+<th style="text-align: left;">Wirkung</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">⛰</td>
+<td style="text-align: left;">Höhle</td>
+<td style="text-align: left;">Feste Felswände statt Gummiwand</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">💣</td>
+<td style="text-align: left;">TNT-Depot</td>
+<td style="text-align: left;">Mehr TNT, alle 10 s regnen 5 TNT-Kisten</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">🌪</td>
+<td style="text-align: left;">Sturmwind</td>
+<td style="text-align: left;">Alle 10 s ein Windstoß (3,5 s), schiebt Spieler und bremst Schüsse</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">🔴</td>
+<td style="text-align: left;">Orbital-Laser</td>
+<td style="text-align: left;">Alle 10 s ein angekündigter Riesenlaser quer über die Map (50 Schaden)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">🪙</td>
+<td style="text-align: left;">Münzbeute</td>
+<td style="text-align: left;">Münzen im Level, wer die meisten hat, bekommt eine Extrakarte</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">💚</td>
+<td style="text-align: left;">Wandernde Heilzone</td>
+<td style="text-align: left;">Schwebender Heilkreis wandert über die Map, 16 HP/s</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">🦙</td>
+<td style="text-align: left;">Piñata-Lama</td>
+<td style="text-align: left;">Unsterbliches Lama flieht vor dem Führenden. Meister Schaden bekommt eine Extrakarte</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">🌙</td>
+<td style="text-align: left;">Mondgravitation</td>
+<td style="text-align: left;">50 % Gravitation</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">🪨</td>
+<td style="text-align: left;">Schwerewelt</td>
+<td style="text-align: left;">60 % mehr Gravitation</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">🌋</td>
+<td style="text-align: left;">Der Boden ist Lava</td>
+<td style="text-align: left;">Der unterste Boden brennt</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">🌊</td>
+<td style="text-align: left;">Lava-Flut</td>
+<td style="text-align: left;">Alle 30 s steigt Lava auf ein Drittel bis die Hälfte der Höhe und sinkt wieder</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">☄</td>
+<td style="text-align: left;">Meteoritenschauer</td>
+<td style="text-align: left;">Alle 12 s 3 Meteore mit Zielkreuzen</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">❄</td>
+<td style="text-align: left;">Glatteis-Welt</td>
+<td style="text-align: left;">Alle Plattformen spiegelglatt</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">🐷</td>
+<td style="text-align: left;">Mini-Chaos</td>
+<td style="text-align: left;">Alle 35 % kleiner und flinker</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">💥</td>
+<td style="text-align: left;">Schadensrausch</td>
+<td style="text-align: left;">+35 % Schaden für alle</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">💨</td>
+<td style="text-align: left;">Turboschweine</td>
+<td style="text-align: left;">Alle 30 % schneller</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">🪂</td>
+<td style="text-align: left;">Luftakrobatik</td>
+<td style="text-align: left;">+1 Sprung in der Luft für alle</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">🌿</td>
+<td style="text-align: left;">Regeneration</td>
+<td style="text-align: left;">Alle heilen 4 HP/s</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">🛡</td>
+<td style="text-align: left;">Startschild</td>
+<td style="text-align: left;">Bonusschild in Höhe von 30 % der Max-HP</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">📦</td>
+<td style="text-align: left;">Kistenregen</td>
+<td style="text-align: left;">Alle 9 s drei Holzkisten</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">🎁</td>
+<td style="text-align: left;">Powerup-Regen</td>
+<td style="text-align: left;">Etwa drei zusätzliche Powerups beim Start (vier, abzüglich 30 %)</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">⚪</td>
+<td style="text-align: left;">Kugelregen</td>
+<td style="text-align: left;">Alle 4 s fallen fünf Kugeln (Gummi, Holz, Eisen) vom Himmel</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">🎳</td>
+<td style="text-align: left;">Kugelhagel</td>
+<td style="text-align: left;">Alle 16 s (erstmals nach 6 s) prasseln 24 Kugeln auf einmal über die ganze Breite herab</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">🌀</td>
+<td style="text-align: left;">Zone</td>
+<td style="text-align: left;">Sturmkreis wie in Fortnite: startet größer als die Map, schrumpft in drei Stufen (gestrichelte Vorschau), am Ende wandert ein kleiner Kreis über die Map. Außerhalb 6 bis 16 HP/s, im Sudden Death doppelt so schnell und immer über der Lava</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">🌑</td>
+<td style="text-align: left;">Nacht</td>
+<td style="text-align: left;">Jeder sieht nur einen kleinen Lichtkreis</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">😈</td>
+<td style="text-align: left;">Heiße Kartoffel</td>
+<td style="text-align: left;">Ein kleines fliegendes Teufelschwein (fliegt durch Wände) jagt zuerst den Führenden und schießt gerade Feuerbälle auf ihn (8 Schaden, alle 1,2 s, nur mit Sichtlinie). Ein Hörnchen-Pfeil zeigt das Ziel. Trifft das Ziel den Teufel (Schuss, Explosion oder Nahkampf), jagt er einen anderen Spieler. Trifft ihn jemand anderes, wird dieser sein Ziel und der Teufel ist 5 s wütend: schneller, schießt alle 0,5 s und lässt sich nicht weitergeben</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">🔨</td>
+<td style="text-align: left;">Brawl</td>
+<td style="text-align: left;">Nahkampfwaffen: 50 % mehr Reichweite, halbe Abklingzeit</td>
+</tr>
+</tbody>
+</table>
+<p>Extrakarten aus Münzbeute und Piñata-Lama erscheinen im Draft als <strong>Bonus Zug (Gold)</strong> bzw. <strong>Bonus Zug (Pinata)</strong>. Währenddessen regnen Goldmünzen bzw. Konfetti und Bonbons über den Bildschirm.</p>
+<hr />
+<h2 id="-bots">🤖 Bots</h2>
+<ul>
+<li>Jeder Slot ab 2 kann ein Bot sein. Für ein Solo-Match einfach bis zu fünf Bots einstellen.</li>
+<li>Bots suchen den nächsten Gegner, springen über Hindernisse, lassen sich durch Einweg-Stege fallen, gleichen den Geschossbogen aus, schießen nur mit Sichtlinie, nutzen Dash, Fähigkeit und Nahkampf, flüchten vor Lava und wählen selbst passende Karten. Bei der Heißen Kartoffel schießen sie als Ziel auf den Teufel und halten sonst das Feuer zurück, wenn er in der Schusslinie schwebt.</li>
+<li>Online simuliert der Host alle Bots.</li>
+</ul>
+<hr />
+<h2 id="-online--lan">🌐 Online &amp; LAN</h2>
+<p>Bis zu <strong>6 Spieler</strong> (Host + 5) plus bis zu <strong>4 Zuschauer</strong>. Der Host ist Slot 1 und rechnet die ganze Runde, die anderen senden nur Eingaben. Online spielt jeder mit der <strong>P1-Steuerung</strong>.</p>
+<h3 id="übers-internet-mit-code-epic-empfohlen">Übers Internet mit Code (Epic, empfohlen)</h3>
+<ol>
+<li><strong>Host</strong>: Hauptmenü → <strong>ONLINE SPIELEN</strong> → <strong>Online hosten</strong>.</li>
+<li>Oben in der Lobby steht ein <strong>6-stelliger Code</strong> mit Kopier-Knopf. Den an die Freunde schicken.</li>
+<li><strong>Mitspieler</strong>: <strong>ONLINE SPIELEN</strong> → Code eintragen → <strong>Mit Code beitreten</strong>.</li>
+</ol>
+<p>Kein Portfreigeben nötig. Läuft über Epic Online Services, ein Epic-Konto braucht niemand. Wichtig: Host und Mitspieler müssen an <strong>verschiedenen PCs</strong> sitzen.</p>
+<h3 id="im-lan-oder-per-ip">Im LAN oder per IP</h3>
+<ol>
+<li><strong>Host</strong>: <strong>ONLINE SPIELEN</strong> → Port <code>7777</code> lassen → <strong>SPIEL HOSTEN</strong>. Die Lobby zeigt die lokale IP (z. B. <code>192.168.1.42</code>).</li>
+<li><strong>Mitspieler</strong>: IP und Port eintragen → <strong>BEITRETEN</strong>. Für Zuschauer vorher <strong>„Als Zuschauer beitreten“</strong> anhaken.</li>
+</ol>
+<p>Übers Internet per IP: Das Spiel versucht <strong>UPnP</strong> automatisch. Klappt das nicht, im Router <strong>UDP 7777</strong> weiterleiten oder <strong>ZeroTier/Tailscale</strong> nutzen (gut bei CGNAT).</p>
+<h3 id="gut-zu-wissen">Gut zu wissen</h3>
+<ul>
+<li><strong>Ping</strong> steht in Lobby und HUD (grün, gelb, rot).</li>
+<li>Synchronisiert werden Lobby-Einstellungen, Charaktere, Namen, Map, alle Objekte, Lava, Modifier, Draft, Punkte, Kill-Cam und Statistik.</li>
+<li>Zuschauer können nur in der Lobby beitreten.</li>
+<li>Kein Reconnect: Verlässt ein Spieler das Match, geht es zurück ins Menü.</li>
+</ul>
+<h3 id="typische-probleme">Typische Probleme</h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Problem</th>
+<th style="text-align: left;">Lösung</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">„Verbindung fehlgeschlagen“</td>
+<td style="text-align: left;">Gleiche Spielversion? Host wirklich offen? IP, Port oder Code richtig?</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Code-Beitritt hängt</td>
+<td style="text-align: left;">Nicht am selben PC hosten und beitreten. Protokoll steht in <code>epic_online.log</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">LAN geht, Internet per IP nicht</td>
+<td style="text-align: left;">Firewall und Router-Portfreigabe prüfen, sonst Code-Beitritt oder ZeroTier/Tailscale</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">UPnP „nicht möglich“</td>
+<td style="text-align: left;">Router kann es nicht, Port manuell freigeben</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Client steuert falsch</td>
+<td style="text-align: left;">Online gilt WASD + Maus</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="-hauptmenü--optionen">🔧 Hauptmenü &amp; Optionen</h2>
+<p>Das Hauptmenü im <strong>Platinen-Look</strong>: leuchtende Leiterbahnen, zwei Eber mit Lötkolben, die Knöpfe in der Mitte.</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Knopf</th>
+<th style="text-align: left;">Wirkung</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>SPIEL STARTEN</strong></td>
+<td style="text-align: left;">Lokale Lobby</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>ONLINE SPIELEN</strong></td>
+<td style="text-align: left;">Hosten oder beitreten (Code oder IP)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>HELDEN</strong></td>
+<td style="text-align: left;">Übersicht aller Helden mit Werten und Fähigkeiten</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>WIKI</strong></td>
+<td style="text-align: left;">Öffnet dieses Wiki im Browser</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>OPTIONEN</strong></td>
+<td style="text-align: left;">Einstellungen</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>BEENDEN</strong></td>
+<td style="text-align: left;">Spiel schließen</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Optionen</strong> gibt es im Hauptmenü und in der Runde über <code>Esc</code>:</p>
+<ul>
+<li><strong>Grafik</strong>: Fenster, Vollbild oder Vollbild-Fenster (randlos).</li>
+<li><strong>Audio</strong>: Gesamt, Effekte und Musik, je 0–100 %.</li>
+<li><strong>Effekt-Set</strong> (Soundpaket): Arena (Standard), Retro, Handgemacht (Foley), Modernes Sci-Fi, Kräftig &amp; echt, Magie &amp; Zauber, Werkstatt &amp; Metall, Weich &amp; verspielt und optional <strong>Eigene Mischung</strong>. Mit <strong>PROBE</strong> anhören. Gilt nur auf deinem PC.</li>
+<li><strong>Steuerung</strong>: Feld anklicken, neue Taste drücken. Doppelte Belegungen werden angezeigt, <strong>STANDARD WIEDERHERSTELLEN</strong> setzt alles zurück.</li>
+</ul>
+<p>Jede Map-Stilrichtung hat eine eigene, ruhige <strong>Hintergrundmusik</strong>.</p>
+<hr />
+<h2 id="-statistiken-hud--feedback">📊 Statistiken, HUD &amp; Feedback</h2>
+<ul>
+<li><strong>HUD</strong>: Oben rechts das Match-Ziel, pro Spieler ein Punktebalken (im Team-Modus in Teamfarbe), Nahkampf-Status <code>[E]: BEREIT</code>.</li>
+<li><strong>Am Charakter</strong>: Munitionsstriche bzw. Nachlade-Ring, Lebensbalken mit Schild-Overlay, Symbole für Block (mit Abklingzeit-Anzeige), Schild, Dash und Fähigkeit.</li>
+<li><strong>Tab-Charakterblatt</strong>: Alle Werte, die Nahkampfwaffe und <strong>KARTEN-BONI (SUMMEN)</strong>. Geht auch während der Kartenwahl und wenn du tot bist. Ohne Blind Pick zeigt oben eine Leiste alle Spieler: bei gehaltenem Tab mit den Tasten 1–9 oder per Klick umschalten. Mit Blind Pick (online) bleibt es beim eigenen Blatt.</li>
+<li><strong>Kill-Cam</strong>: Beim rundenentscheidenden Tod läuft das Spiel 1,6 s lang in Zeitlupe (20 %), die Kamera zoomt auf den Treffer.</li>
+<li><strong>Screenshake</strong> bei Treffern, Kills und Explosionen.</li>
+<li><strong>Trefferanimation</strong>: Stauchen, Zittern, rotes Aufblitzen, Blutspritzer. Dazu ein Todes-Sound.</li>
+<li><strong>Match-Ende</strong>: Tabelle mit Punkten, Kills, Toden, Schaden, Block, Heilung, Trefferquote, Runden und Nahkampf. Dazu <strong>MVP</strong>, <strong>Meister Schaden</strong>, <strong>meiste Blocks</strong>, <strong>meiste Heilung</strong> und <strong>Meister Nahkampf</strong>.</li>
+<li><strong>ALLE SPIELER, KARTEN &amp; STATS</strong>: Nach dem Match für jeden Spieler das komplette Blatt mit Karten.</li>
+<li><strong>Rundenstatistik</strong>: Jede Runde wird als Zeile in <code>round_stats.jsonl</code> gespeichert (für Balancing).</li>
+<li><strong>Balance-Statistik im Spiel</strong>: Optionen → <strong>STATISTIK</strong>. Sortierbare Tabellen (Spaltenkopf anklicken) für <strong>Karten</strong>, <strong>Waffen</strong> und <strong>Helden</strong>, getrennt nach Version: Runden, geglättete Siegquote, Vergleich mit derselben Seltenheit, Kills/Tode pro Runde, Schadens- und Heilanteil, Nahkampfschaden, Pickquote und Aufstiegsvorschläge. Filter: nur menschliche Spieler, nur aktuelle Versionen, Mindestrunden für Vorschläge. Bei Helden zusätzlich <strong>Fähigk./R</strong> und <strong>Fähigk.-Anteil</strong>: Schaden aus direkten Treffern der Heldenfähigkeit samt Evolutionen (Brand/Gift danach zählt nicht), erfasst seit 28.10.2026. Die Seite <strong>Hinweise</strong> listet Vorschläge, Werte ohne neue Version und die automatischen Aufstiege. Hältst du die Maus 0,5 s über eine Kartenzeile oder einen Kartennamen unter Hinweise, erscheint die Karte unten links. Rechnet genauso wie <code>tools/analyze_round_stats.py</code>.</li>
+</ul>
+<hr />
+<h2 id="-dateien--speicherorte">💾 Dateien &amp; Speicherorte</h2>
+<p>Spieldaten liegen unter <code>%APPDATA%\Godot\app_userdata\Lötkolbeneber\</code>. Beim ersten Start übernimmt das Spiel automatisch die Daten aus dem alten Ordner <code>BattleBalls</code>.</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Datei</th>
+<th style="text-align: left;">Inhalt</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>settings.cfg</code></td>
+<td style="text-align: left;">Optionen: Grafik, Lautstärke, Effekt-Set, Tasten</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>character_customization.json</code></td>
+<td style="text-align: left;">Dein Charakter, Name, Nahkampfwaffe</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>lobby_loadouts.json</code></td>
+<td style="text-align: left;">Eigene Regel-Presets</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>card_statistics.json</code></td>
+<td style="text-align: left;">Kartenstatistik und Aufwertungen</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>round_stats.jsonl</code></td>
+<td style="text-align: left;">Eine Zeile pro gespielter Runde</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>epic_online.log</code></td>
+<td style="text-align: left;">Protokoll der Epic-Verbindung</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>wiki.html</code></td>
+<td style="text-align: left;">Kopie dieses Wikis, wird beim Klick auf <strong>WIKI</strong> angelegt</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>logs/</code></td>
+<td style="text-align: left;">Godot-Logs</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="-für-entwickler">🧰 Für Entwickler</h2>
+<h3 id="wichtige-skripte">Wichtige Skripte</h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Datei</th>
+<th style="text-align: left;">Zweck</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>scripts/autoload/global.gd</code></td>
+<td style="text-align: left;">Helden, Maps, Modi, Lobby-Zustand, Nahkampfwaffen</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>scripts/autoload/card_database.gd</code></td>
+<td style="text-align: left;">Alle Karten</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>scripts/autoload/network_manager.gd</code></td>
+<td style="text-align: left;">ENet- und Epic-Netzwerk</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>scripts/autoload/epic_online.gd</code></td>
+<td style="text-align: left;">Epic-Login und Lobby-Code</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>scripts/autoload/sound_manager.gd</code></td>
+<td style="text-align: left;">Sounds, Effekt-Sets, Musik</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>scripts/autoload/game_settings.gd</code></td>
+<td style="text-align: left;">Optionen und Tastenbelegung</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>scripts/autoload/card_stats.gd</code>, <code>round_stats.gd</code></td>
+<td style="text-align: left;">Statistik</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>scripts/balance_report.gd</code>, <code>scripts/ui/stats_screen.gd</code></td>
+<td style="text-align: left;">Balance-Statistik im Optionsmenü</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>scripts/main.gd</code></td>
+<td style="text-align: left;">Rundenablauf, Snapshots, Kill-Cam, Lava</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>scripts/player.gd</code></td>
+<td style="text-align: left;">Spieler, Fähigkeiten (Konstanten oben), Nahkampf</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>scripts/bullet.gd</code></td>
+<td style="text-align: left;">Ballistik, Durchschlag, Zielsuche, Kollision</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>scripts/level_generator.gd</code></td>
+<td style="text-align: left;">Maps und Tilesets, Einweg-Stege, Pyramide, Haus</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>scripts/level/crate_chain.gd</code>, <code>chain_link.gd</code></td>
+<td style="text-align: left;">Kistenketten (Bauplan, Gelenke, Netzwerk)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>scripts/level_modifier_defs.gd</code></td>
+<td style="text-align: left;">Liste der Runden-Modifier</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>scripts/main_menu.gd</code></td>
+<td style="text-align: left;">Hauptmenü inkl. Wiki-Knopf</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>scripts/ui/hud.gd</code></td>
+<td style="text-align: left;">HUD, Tab-Blatt, Match-Ende</td>
+</tr>
+</tbody>
+</table>
+<h3 id="werkzeuge">Werkzeuge</h3>
+<ul>
+<li><code>godot --headless res://tools/level_check.tscn</code> prüft alle Maps auf unerreichbare Flächen (<code>-- --seeds=24 --maps=pilzpfad --ascii</code> für eine Textkarte).</li>
+<li><code>tools/analyze_round_stats.py</code> wertet <code>round_stats.jsonl</code> aus, getrennt nach Version von Karten, Nahkampfwaffen, Helden und Heldenfähigkeiten. Dieselbe Rechnung steckt in <code>scripts/balance_report.gd</code> (Optionen → STATISTIK); Änderungen in beiden nachziehen.</li>
+</ul>
+<h3 id="balance-versionen">Balance-Versionen</h3>
+<p>Damit die Statistik alte und neue Werte nicht vermischt, tragen Karten, Nahkampfwaffen, Helden und Heldenfähigkeiten eine Versionsnummer. <strong>Regel: Zahl geändert, die beeinflusst, wie stark etwas ist → Version +1. Nur Name, Text oder Farbe geändert → nichts tun.</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Was geändert</th>
+<th style="text-align: left;">Wo erhöhen</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Karte</td>
+<td style="text-align: left;"><code>cX.version</code> in <code>card_database.gd</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Nahkampfwaffe</td>
+<td style="text-align: left;"><code>"version"</code> im Eintrag von <code>MELEE_WEAPON_DATA</code> in <code>global.gd</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Held: Basiswerte oder Passiv</td>
+<td style="text-align: left;"><code>x.version</code> in <code>Global._setup_heroes</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Heldenfähigkeit: Konstanten oben in <code>player.gd</code> oder <code>ability_cooldown</code></td>
+<td style="text-align: left;"><code>x.ability_version</code> in <code>Global._setup_heroes</code></td>
+</tr>
+</tbody>
+</table>
+<p>Vergessen ist nicht schlimm: Ein automatischer Fingerabdruck merkt geänderte Werte, das Spiel gibt dann eine Warnung aus und das Auswerteskript meldet „Werte ohne neue Version geändert“.</p>
+<ul>
+<li><code>tools/build_sound_packs.py</code> baut die Effekt-Sets, <code>tools/compose_music.py</code> die Musik.</li>
+<li><code>tools/build_wiki.py</code> baut aus dieser README die Browser-Fassung <code>docs/wiki.html</code> (braucht Python und pandoc).</li>
+</ul>
+<h3 id="export">Export</h3>
+<ul>
+<li>Windows-Export legt die EXE mit eingebettetem PCK an und packt den Ordner danach als ZIP.</li>
+<li><code>eos_config.cfg</code>, <code>assets/audio/packs/mix.json</code> und <code>docs/wiki.html</code> werden über den Export-Filter mitgenommen.</li>
+<li>Nach Änderungen an dieser README <code>docs/wiki.html</code> neu bauen, sonst zeigt der Knopf im Spiel den alten Stand.</li>
+</ul>
+</main>
+</body>
+</html>

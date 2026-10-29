@@ -17,6 +17,36 @@ var _leader_position: Vector2 = Vector2.INF
 var _has_leader: bool = false
 var _flee_lock_timer: float = 0.0
 
+# Auf Netzwerk-Clients bewegt sich das Lama nicht selbst, sondern folgt den
+# Snapshots des Hosts. Schaden zählt nur der Host.
+var is_replica: bool = false
+var _net_target: Vector2 = Vector2.INF
+# Sekunden seit dem letzten Host-Snapshot. Bleiben Snapshots aus (z. B. im
+# Match-Endbildschirm), wird nicht mehr mit der alten Geschwindigkeit
+# extrapoliert, sonst fliegt das Lama auf Clients durch die Karte.
+var _net_age: float = 0.0
+const NET_EXTRAPOLATE_MAX: float = 0.25
+
+func get_network_state() -> Dictionary:
+	return {
+		"pos": global_position,
+		"vel": velocity,
+		"dir": _direction,
+		"dmg": damage_by_player.duplicate(),
+	}
+
+func apply_network_state(data: Dictionary) -> void:
+	var pos: Vector2 = data.get("pos", global_position)
+	if _net_target == Vector2.INF or pos.distance_to(global_position) > 160.0:
+		global_position = pos
+	_net_target = pos
+	_net_age = 0.0
+	velocity = data.get("vel", velocity)
+	_direction = float(data.get("dir", _direction))
+	var dmg = data.get("dmg", {})
+	if dmg is Dictionary:
+		damage_by_player = dmg.duplicate()
+
 func setup_bounds(rect: Rect2) -> void:
 	_arena_rect = rect
 
@@ -33,7 +63,12 @@ func get_leader_position() -> Vector2:
 func get_flee_direction() -> float:
 	return _direction
 
+# Mitte der Kollisionsbox (sie sitzt über dem Ursprung), für Nahkampftreffer.
+func get_hit_center() -> Vector2:
+	return global_position + Vector2(0, -17.0)
+
 func _ready() -> void:
+	add_to_group("pinata")
 	collision_layer = 2 # Treat like player/hittable
 	collision_mask = 1  # Collide with solid world
 
@@ -46,6 +81,14 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_anim_time += delta * 12.0
+	if is_replica:
+		if _net_target != Vector2.INF:
+			_net_age += delta
+			if _net_age <= NET_EXTRAPOLATE_MAX:
+				_net_target += velocity * delta
+			global_position = global_position.lerp(_net_target, minf(1.0, delta * 15.0))
+		queue_redraw()
+		return
 	_hop_timer -= delta
 	_flee_lock_timer = maxf(0.0, _flee_lock_timer - delta)
 	_update_flee_direction()
@@ -89,6 +132,8 @@ func _update_flee_direction() -> void:
 	_direction = 1.0 if away > 0.0 else -1.0
 
 func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null, _is_reflected: bool = false) -> void:
+	if is_replica:
+		return
 	velocity += knockback * 0.4
 	SoundManager.play_sound("hit", 0.4, 2.5)
 

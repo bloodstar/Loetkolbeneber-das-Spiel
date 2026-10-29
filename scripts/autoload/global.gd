@@ -6,11 +6,16 @@ signal scores_changed(scores: Array)
 signal round_ended(winner_index: int)
 signal card_selected(player_index: int, card: CardData)
 signal match_over(winner_index: int)
+# Mehrere Spieler/Teams haben das Ziel gleichzeitig erreicht: Stechen.
+signal tiebreak_started(slots: Array)
+# Ein neues Match beginnt (Punkte, Karten und Match-Statistik wurden geleert).
+signal match_reset()
 signal bot_mode_toggled(enabled: bool)
 signal cards_per_draft_changed(count: int)
 signal draft_config_changed(picks: int, offered: int)
 signal draft_modifiers_changed()
 signal level_modifiers_changed()
+signal melee_enabled_changed(enabled: bool)
 signal banned_cards_changed()
 signal scoring_config_changed()
 signal match_target_changed(points: int)
@@ -19,10 +24,16 @@ signal base_damage_changed(damage: float)
 signal rarity_percentages_changed()
 signal card_pools_changed()
 signal map_changed()
+# Levels wurden im Lobby-Reiter "Levels" an- oder abgeschaltet.
+signal map_pool_changed()
+# Powerups wurden im Lobby-Reiter "Powerups" an- oder abgeschaltet.
+signal powerup_pool_changed()
 signal match_mode_changed(mode: String)
 signal player_count_changed(count: int)
 signal lobby_state_changed()
 signal lobby_loadouts_changed()
+# "Last" wurde neu geschrieben; die Lobby aktualisiert daraufhin nur die Vorschau.
+signal lobby_last_loadout_saved()
 signal network_status_changed()
 signal pig_appearance_changed(player_index: int)
 
@@ -88,6 +99,12 @@ var match_mode: String = MATCH_MODE_FFA
 # Match-Punkte: Kills und das Überleben einer Runde geben Punkte. Wer zuerst
 # die konfigurierte Punktzahl erreicht, gewinnt das Match.
 var points_to_win: int = 500
+# Stechen: Slots, die nach gleichzeitigem Erreichen des Ziels allein
+# gegeneinander antreten. Leer = normales Match.
+var tiebreak_slots: Array[int] = []
+# Wie das letzte Match endete: "" (Ziel erreicht), "tiebreak" (im Stechen
+# entschieden) oder "early" (vorzeitig beendet, Sieger nach Punkten).
+var match_end_reason: String = ""
 var survival_points: int = 50
 var kill_points: int = 50
 
@@ -97,7 +114,17 @@ var draft_picks: int = 1     # X: Wie viele Karten pro Draft gewählt werden
 # menschlichen Spielern (lokal gegen Bots ohne Wirkung), Random pick zieht
 # automatisch eine zufällige Karte aus dem Angebot.
 var blind_pick_enabled: bool = false
+# Lobby-Regel: Nahkampfwaffen (E) und der Kartenpool "Nahkampf" an/aus.
+var melee_enabled: bool = true
 var random_pick_enabled: bool = false
+# Draft-Modifier Gamble: Karten verdeckt (Rückseite = Seltenheit), von links
+# einzeln aufdecken; wer weiterdreht, verkohlt die offene Karte.
+var gamble_enabled: bool = false
+# Lobby-Regel Pre-Draft: Jeder Spieler draftet vor der ersten Runde so viele
+# Karten (0 = aus). pre_draft_random lässt diese Picks zufällig ziehen.
+const PRE_DRAFT_MAX_PICKS: int = 10
+var pre_draft_picks: int = 0
+var pre_draft_random: bool = false
 # Runden-Modifier: Rate in Prozent (0 = aus, 100 = Standard, 200 = mehr)
 # und die Menge der freigeschalteten Modifier-IDs aus LevelModifierDefs.
 var level_modifier_rate_percent: int = LevelModifierDefsClass.RATE_DEFAULT_PERCENT
@@ -113,15 +140,25 @@ var base_damage: float = 22.0
 
 # Kartenpools: Jede Karte gehört zu genau einem Pool. Die Lobby kann Pools
 # einzeln aktivieren, damit Drafts klarer thematisiert werden können.
-const CARD_POOLS: Array[String] = ["Kern", "Offensive", "Defensive", "Bewegung", "Chaos"]
+# Die früheren Pools "Kern" (jetzt Offensive) und "Chaos" (jetzt Defensive)
+# gibt es nicht mehr; gespeicherte Einstellungen damit werden beim Laden ignoriert.
+const CARD_POOLS: Array[String] = ["Offensive", "Defensive", "Bewegung", "Nahkampf"]
+# Pools, die es schon vor dem Nahkampf-Pool gab. Gespeicherte Einstellungen
+# ohne "known_card_pools" kennen nur diese; neuere Pools werden dann aktiviert.
+const LEGACY_CARD_POOLS: Array[String] = ["Kern", "Offensive", "Defensive", "Bewegung", "Chaos"]
+# Runden-Modifier, die nach dem ersten Speicherformat dazukamen. Gespeicherte
+# Einstellungen ohne "known_level_modifiers" schalten diese automatisch ein.
+const LATER_LEVEL_MODIFIERS: Array[String] = ["brawl"]
 const CARD_POOL_DESCRIPTIONS: Dictionary = {
-	"Kern": "Grundwerte, Munition und Utility.",
-	"Offensive": "Schaden, Projektile und Elementareffekte.",
+	"Offensive": "Schaden, Munition, Projektile und Elementareffekte.",
 	"Defensive": "Leben, Schild, Block und Regeneration.",
 	"Bewegung": "Tempo, Sprünge, Dash und Trefferfläche.",
-	"Chaos": "Riskante Karten mit starken Nebenwirkungen.",
+	"Nahkampf": "Schaden, Reichweite und Effekte der Nahkampfwaffe (E).",
 }
-var enabled_card_pools: Array[String] = ["Kern", "Offensive", "Defensive", "Bewegung", "Chaos"]
+var enabled_card_pools: Array[String] = ["Offensive", "Defensive", "Bewegung", "Nahkampf"]
+# Karten, die der Host trotz abgeschaltetem Pool einzeln freigegeben hat.
+# Ausbaukarten einer freigegebenen Grundkarte gelten ebenfalls als frei.
+var pool_unlocked_card_ids: Array[String] = []
 
 # Spielfeld-Auswahl. Jede Map hat ein festes Tileset und ein eigenes
 # Layout-Profil; "zufall" wählt deterministisch aus dem Seed.
@@ -129,11 +166,16 @@ const MAP_RANDOM: String = "zufall"
 const MAP_PLAYABLE: Array[String] = [
 	"grasarena", "wuestenruine", "eisgrotte", "neonfabrik",
 	"weite", "wolkeninsel", "kistenfestung",
+	"uhrwerk", "pilzpfad", "gletscherpass",
+	"lavaturm", "himmelsleiter", "hauptplatine",
+	"sonnentempel", "kettenwerk", "wollhaus", "eispyramiden", "serverhaus",
+	"gitterzaun", "truemmerfeld", "schrottplatz", "schneefeld", "wollmarkt",
+	"kugellawine", "kugelbahn", "kugelkette", "kugelmuehle",
 ]
 const MAPS: Dictionary = {
 	"zufall": {
 		"name": "Zufällig",
-		"description": "Wählt pro Runde eine der sieben Maps.",
+		"description": "Wählt pro Runde eine der siebenundzwanzig Maps.",
 	},
 	"grasarena": {
 		"name": "Grasarena",
@@ -157,28 +199,183 @@ const MAPS: Dictionary = {
 	},
 	"wolkeninsel": {
 		"name": "Wolkeninsel",
-		"description": "Kleine Eisinseln, weite Sprünge und nur wenige Landeplätze.",
+		"description": "Kleine Wolkeninseln, weite Sprünge und eine pendelnde Wolkenfähre.",
+	},
+	"uhrwerk": {
+		"name": "Uhrwerk",
+		"description": "Riesiges Zifferblatt: Auf dem drehenden Minutenzeiger fährt man mit, Aufzüge an den Seiten, von oben fallen Kugeln.",
+	},
+	"pilzpfad": {
+		"name": "Pilzpfad",
+		"description": "Seitlich scrollendes Jump-'n'-Run-Level mit Gruben, Treppen, Steinen und Fähre.",
+	},
+	"gletscherpass": {
+		"name": "Gletscherpass",
+		"description": "Scroll-Level über vereiste Abgründe mit Aufzügen, Wippe und Kettenplattform.",
+	},
+	"hauptplatine": {
+		"name": "Hauptplatine",
+		"description": "Arena auf einer leuchtenden Leiterplatte mit Datenbus-Shuttle und Chip-Deckung.",
+	},
+	"lavaturm": {
+		"name": "Lavaturm",
+		"description": "Vertikaler Turm: Klettern, bevor die Lava aus der Tiefe euch einholt.",
+	},
+	"himmelsleiter": {
+		"name": "Himmelsleiter",
+		"description": "Vertikaler Aufstieg durch die Wolken mit Feder, Aufzug, Fähre und Gipfelportal.",
+	},
+	"sonnentempel": {
+		"name": "Sonnentempel",
+		"description": "Große hohle Pyramide: außen drüberlaufen, unten hinein. Darüber eine Kistenkette.",
+	},
+	"kettenwerk": {
+		"name": "Kettenwerk",
+		"description": "Neon-Halle voller Kistenketten zwischen Einweg-Stegen und am Kartenrand.",
+	},
+	"wollhaus": {
+		"name": "Wollhaus",
+		"description": "Haus mit vier Räumen, Luken und begehbarem Dach, dazu Kisten an Ketten.",
+	},
+	"eispyramiden": {
+		"name": "Eispyramiden",
+		"description": "Zwei hohle Eispyramiden, zwischen den Spitzen hängt eine Kistenkette.",
+	},
+	"serverhaus": {
+		"name": "Serverhaus",
+		"description": "Rechenzentrum mit vier Räumen auf der Platine, Kistenketten bis zum Kartenrand.",
+	},
+	"gitterzaun": {
+		"name": "Gitterzaun",
+		"description": "Ein Gitter aus fünf senkrechten und vier waagrechten Ketten, große Kisten an jeder Kreuzung.",
+	},
+	"truemmerfeld": {
+		"name": "Trümmerfeld",
+		"description": "Offene Ruinen mit zerstörbaren Mauern, Torbogen, Fässern und vielen Kisten.",
+	},
+	"schrottplatz": {
+		"name": "Schrottplatz",
+		"description": "Offener Neon-Schrottplatz: Blockhaufen, Kisten an Ketten und viel TNT.",
+	},
+	"schneefeld": {
+		"name": "Schneefeld",
+		"description": "Weites Schneefeld mit zerstörbaren Schneeburgen, Tiefschnee und Eis.",
+	},
+	"wollmarkt": {
+		"name": "Wollmarkt",
+		"description": "Offener Markt mit Ständen auf zerstörbaren Pfosten, Trampolinen und Kisten.",
 	},
 	"kistenfestung": {
 		"name": "Kistenfestung",
 		"description": "Komplett aus Holzkisten gebaut – mit großer Wippe und Kistentürmen in der Mitte.",
 	},
+	"kugellawine": {
+		"name": "Kugellawine",
+		"description": "Oben warten Kugeln aus Gummi, Holz und Eisen hinter einer Kette. Reißt sie, rollt die Lawine los.",
+	},
+	"kugelkette": {
+		"name": "Kugelkette",
+		"description": "Lange Kette quer unter der Decke, oben drauf viele Kugeln. Ein Schuss ins Glied, und es regnet Kugeln.",
+	},
+	"kugelbahn": {
+		"name": "Kugelbahn",
+		"description": "Doppelte Zickzack-Kugelbahn: Alle 5 Sekunden rollen neue Kugeln herab bis auf den Boden.",
+	},
+	"kugelmuehle": {
+		"name": "Kugelmühle",
+		"description": "Zwei gegenläufige Windmühlen-Kreuze fangen herabfallende Kugeln und schleudern sie zur Mitte.",
+	},
 }
 var selected_map_id: String = MAP_RANDOM
+# Abgeschaltete Levels. Bewusst eine Sperrliste: Neue Maps in MAP_PLAYABLE sind
+# damit automatisch aktiv, auch in alten Presets. "Zufällig" wählt nur aus den
+# übrigen. Sind alle aus, lässt die Lobby das Match nicht starten.
+var disabled_map_ids: Array[String] = []
+
+# Pickup-Powerups (zufällige Spawns, Kisten-Drops, Powerup-Regen). Wie bei den
+# Levels eine Sperrliste: Neue Powerup-Arten sind automatisch aktiv. Alle aus
+# ist erlaubt, dann erscheinen keine Powerups.
+const POWERUP_KINDS: Array[String] = ["heal", "invulnerability", "damage", "rapid_fire", "auto_attack", "multishot", "undying", "revenge", "invisible"]
+const POWERUP_INFO: Dictionary = {
+	"heal": {"name": "Heilung", "description": "Heilt sofort 35 HP."},
+	"invulnerability": {"name": "Schutz", "description": "3 s unverwundbar."},
+	"damage": {"name": "Schaden", "description": "6 s lang +65 % Schaden (Schüsse und Nahkampf)."},
+	"rapid_fire": {"name": "Dauerfeuer", "description": "5 s Dauerfeuer ohne Munitionsverbrauch und ohne Nachladen."},
+	"auto_attack": {"name": "Auto-Angriff", "description": "8 s halbe Nahkampf-Abklingzeit, schlägt selbst nach Gegnern in Reichweite. Erscheint nur mit Nahkampf."},
+	"multishot": {"name": "Multishot", "description": "8 s lang feuert jeder Schuss 3 Projektile im Fächer."},
+	"undying": {"name": "Unsterblichkeit", "description": "Stirbst du in den nächsten 10 s, stehst du nach 2 s mit halbem Leben wieder auf."},
+	"revenge": {"name": "Rache", "description": "5 s lang 100 % Dornenschaden: Angreifer erleiden den Schaden, den sie dir zufügen."},
+	"invisible": {"name": "Unsichtbar", "description": "6 s lang für Gegner unsichtbar. Deine Schüsse und Effekte bleiben sichtbar."},
+}
+var disabled_powerup_kinds: Array[String] = []
 
 # Lobby-Loadouts: benannte Presets für alle Host-Einstellungen (Modus, Punkte,
 # Draft, Kartenpools, Bans, Map, HP/Schaden usw.). Sie werden lokal gespeichert.
 const LOBBY_LOADOUTS_PATH: String = "user://lobby_loadouts.json"
+# Wird bei jeder Regeländerung automatisch mitgeschrieben und beim Start geladen.
+const LOBBY_LAST_LOADOUT: String = "Last"
+const LOBBY_AUTOSAVE_DELAY: float = 0.6
 var lobby_loadouts: Dictionary = {}
+# In Tests abschaltbar, damit sie die echte "Last"-Datei nicht überschreiben.
+var lobby_autosave_enabled: bool = true
+var _lobby_autosave_timer: Timer
 
 # Automatisch gespeichertes Charakterprofil des lokalen Nutzers.
 const CHARACTER_CUSTOMIZATION_PATH: String = "user://character_customization.json"
-const WAND_TIP_SHAPES: Array[String] = ["orb", "star", "crystal", "flame"]
+const WAND_TIP_SHAPES: Array[String] = ["orb", "star", "crystal", "flame", "ball", "diamond", "spark", "blaze"]
 const WAND_TIP_SHAPE_LABELS: Dictionary = {
-	"orb": "Kugel",
-	"star": "Stern",
-	"crystal": "Kristall",
-	"flame": "Flamme",
+	"orb": "Kegel",
+	"star": "Meißel",
+	"crystal": "Messer",
+	"flame": "Huf",
+	"ball": "Kugel",
+	"diamond": "Diamant",
+	"spark": "Stern",
+	"blaze": "Flamme",
+}
+# Hauerformen des Ebers (Charakter-Tab).
+const TUSK_SHAPES: Array[String] = ["small", "long", "saber", "double", "stub"]
+const TUSK_SHAPE_LABELS: Dictionary = {
+	"small": "Klein",
+	"long": "Lang",
+	"saber": "Säbel",
+	"double": "Doppelt",
+	"stub": "Stummel",
+}
+const PLAYER_NAME_MAX_LENGTH: int = 16
+# Nahkampfwaffen (Taste E). Reichweite in Feldern (1 Feld = 36 px) ab dem
+# Rand des Ziels; arc_deg ist der volle Trefferwinkel um die Zielrichtung,
+# 0 = gerader Stich. wall_stun: Betäubung, wenn das Ziel gegen eine Wand fliegt.
+# version: Bei jeder Balance-Änderung einer Waffe (Schaden, Reichweite, Bogen,
+# Rückstoß, Abklingzeit, Betäubung) um 1 erhöhen. Nur label/desc geändert:
+# nicht erhöhen. Die Statistik trennt alte und neue Messwerte danach.
+const MELEE_WEAPONS: Array[String] = ["iron", "sword", "hammer", "flail"]
+const MELEE_TILE_SIZE: float = 36.0
+const MELEE_WEAPON_DATA: Dictionary = {
+	"iron": {
+		"version": 2, # Balance von Jochen am 2026-10-27
+		"label": "Lötkolben", "arc_deg": 0.0, "range_tiles": 3.0,
+		"damage": 50.0, "knockback": 650.0, "cooldown": 1.4, "wall_stun": 0.0,
+		"desc": "Sticht gerade Richtung Zeiger. Hoher Schaden, hohe Reichweite, starker Rückstoß.",
+	},
+	"sword": {
+		"version": 2, # Balance von Jochen am 2026-10-27
+		"label": "Schwert", "arc_deg": 60.0, "range_tiles": 3.0,
+		"damage": 30.0, "knockback": 220.0, "cooldown": 0.9, "wall_stun": 0.0,
+		"desc": "Hieb im 60°-Bogen Richtung Zeiger. Mittlerer Schaden, hohe Reichweite, wenig Rückstoß.",
+	},
+	"hammer": {
+		"version": 3, # Balance von Jochen am 2026-10-27
+		"label": "Hammer", "arc_deg": 120.0, "range_tiles": 1.0,
+		"damage": 20.0, "knockback": 950.0, "cooldown": 1.1, "wall_stun": 0.8,
+		"desc": "Schwingt im 120°-Bogen und schleudert Gegner weg. Wer gegen eine Wand fliegt, ist kurz betäubt.",
+	},
+	"flail": {
+		"version": 2, # Balance von Jochen am 2026-10-27
+		"label": "Flegel", "arc_deg": 360.0, "range_tiles": 2.0,
+		"damage": 30.0, "knockback": 420.0, "cooldown": 1.2, "wall_stun": 0.0,
+		"desc": "Kreist einmal komplett um den Eber. Mittlere Reichweite und mittlerer Rückstoß.",
+	},
 }
 var user_character_customization: Dictionary = {}
 
@@ -186,11 +383,11 @@ var user_character_customization: Dictionary = {}
 # müssen nicht genau 100 ergeben; sie werden beim Ziehen automatisch normalisiert.
 const RARITY_ORDER: Array[String] = ["Common", "Uncommon", "Rare", "Epic", "Legendary"]
 var rarity_percentages: Dictionary = {
-	"Common": 50.0,
+	"Common": 54.0,
 	"Uncommon": 25.0,
 	"Rare": 15.0,
-	"Epic": 8.0,
-	"Legendary": 2.0,
+	"Epic": 5.0,
+	"Legendary": 1.0,
 }
 
 # --- Spieler-Slots (Index 0..5 = Spieler 1..6) ---
@@ -205,6 +402,7 @@ var player_scores: Array[int] = [0, 0, 0, 0, 0, 0]
 const MATCH_STAT_KEYS: Array[String] = [
 	"kills", "deaths", "damage_dealt", "damage_taken", "damage_blocked",
 	"blocked_hits", "healing_done", "shots_fired", "shots_hit", "rounds_won",
+	"melee_damage", "melee_hits", "ability_damage",
 ]
 var match_stats: Array = []
 # Pro Slot eine Liste der gedrafteten Karten.
@@ -249,6 +447,11 @@ var default_wand_tip_colors: Array[Color] = [
 	Color(0.3, 0.9, 0.7, 1.0),
 ]
 var player_wand_tip_shapes: Array[String] = ["orb", "orb", "orb", "orb", "orb", "orb"]
+var player_tusk_shapes: Array[String] = ["small", "small", "small", "small", "small", "small"]
+# Selbst gewählte Benutzernamen; leer = Ersatzname wie "Spieler 2".
+var player_names: Array[String] = ["", "", "", "", "", ""]
+# Gewählte Nahkampfwaffe pro Slot (Schlüssel aus MELEE_WEAPONS).
+var player_melee_weapons: Array[String] = ["iron", "iron", "iron", "iron", "iron", "iron"]
 var player_wand_tip_colors: Array[Color] = [
 	Color(1.0, 0.4, 0.2, 1.0),
 	Color(1.0, 0.9, 0.2, 1.0),
@@ -325,8 +528,14 @@ func _ready() -> void:
 	_setup_default_inputs()
 	reset_lobby_state()
 	_load_lobby_loadouts()
+	_restore_last_lobby_settings()
+	_setup_lobby_settings_autosave()
 	_load_character_customization()
 
+# Versionierung wie bei Karten: Ändert sich ein Basiswert (HP, Schild, Tempo,
+# Sprung, Munition, Feuerintervall, Nachladen) oder das Passiv eines Helden,
+# `x.version` um 1 erhöhen. Ändert sich die aktive Fähigkeit (Konstanten in
+# player.gd oder ability_cooldown), `x.ability_version` um 1 erhöhen.
 func _setup_heroes() -> void:
 	# 1. Ignis
 	var ignis = HeroData.new()
@@ -334,7 +543,10 @@ func _setup_heroes() -> void:
 	ignis.name = "Ignis"
 	ignis.role = "Pyro Skirmisher"
 	ignis.description = "Explosiv und wendig."
-	ignis.passive_desc = "Afterburner: Hinterlässt Feuerspur beim Dash"
+	ignis.passive_desc = "Afterburner: Dash hinterlässt eine Feuerspur (%.0f s). Gegner darin brennen: %d × %d Schaden alle %.1f s." % [
+		Player.AFTERBURNER_ZONE_DURATION, Player.AFTERBURNER_BURN_STACKS,
+		int(Player.AFTERBURNER_BURN_DAMAGE), Player.BURN_TICK_INTERVAL,
+	]
 	ignis.ability_name = "Rocket Leap"
 	ignis.ability_desc = "Explosiver Sprung nach vorn mit AOE-Rückstoß!"
 	ignis.ability_cooldown = 5.0
@@ -344,9 +556,11 @@ func _setup_heroes() -> void:
 	ignis.base_jump_force = -510.0
 	ignis.base_ammo = 3
 	ignis.base_fire_rate_cooldown = 0.22
-	ignis.base_reload_time = 1.8
+	ignis.base_reload_time = 1.2
 	ignis.color_tint = Color(1.0, 0.4, 0.2)
 	ignis.sprite_tile_name = "tile_0000.png"
+	ignis.version = 2
+	ignis.ability_version = 1
 	heroes["ignis"] = ignis
 
 	# 2. Volt
@@ -366,9 +580,11 @@ func _setup_heroes() -> void:
 	volt.extra_jumps = 1
 	volt.base_ammo = 4
 	volt.base_fire_rate_cooldown = 0.17
-	volt.base_reload_time = 2.1
+	volt.base_reload_time = 1.4
 	volt.color_tint = Color(1.0, 0.9, 0.2)
 	volt.sprite_tile_name = "tile_0006.png"
+	volt.version = 2
+	volt.ability_version = 1
 	heroes["volt"] = volt
 
 	# 3. Spore
@@ -377,7 +593,7 @@ func _setup_heroes() -> void:
 	spore.name = "Spore"
 	spore.role = "Toxic Alchemist"
 	spore.description = "Zermürbt Feinde mit ätzenden Giften."
-	spore.passive_desc = "Spore Coat: Angriffe vergiften Gegner"
+	spore.passive_desc = "Spore Coat: Treffer vergiften Gegner (2 Stapel à 4 Schaden, alle 0,8 s = 8 Schaden)"
 	spore.ability_name = "Spore Burst"
 	spore.ability_desc = "Hinterlässt eine giftige Gaswolke!"
 	spore.ability_cooldown = 6.0
@@ -387,9 +603,11 @@ func _setup_heroes() -> void:
 	spore.base_jump_force = -500.0
 	spore.base_ammo = 3
 	spore.base_fire_rate_cooldown = 0.28
-	spore.base_reload_time = 1.6
+	spore.base_reload_time = 1.05
 	spore.color_tint = Color(0.4, 0.9, 0.3)
 	spore.sprite_tile_name = "tile_0002.png"
+	spore.version = 2
+	spore.ability_version = 1
 	heroes["spore"] = spore
 
 	# 4. Nova – Gravitationsmagier
@@ -398,9 +616,9 @@ func _setup_heroes() -> void:
 	nova.name = "Nova"
 	nova.role = "Gravity Mage"
 	nova.description = "Kontrolliert den Raum und zieht Gegner in ihr Verderben."
-	nova.passive_desc = "Schwerelos: Höherer Sprung"
+	nova.passive_desc = "Schwerelos: Höchste Sprungkraft (540)"
 	nova.ability_name = "Singularität"
-	nova.ability_desc = "Erzeugt einen Gravitationskern, der Gegner heranzieht und schädigt!"
+	nova.ability_desc = "Erzeugt einen Gravitationskern, der Gegner in die Mitte zieht!"
 	nova.ability_cooldown = 6.5
 	nova.base_hp = 95
 	nova.base_shield = 10
@@ -408,9 +626,11 @@ func _setup_heroes() -> void:
 	nova.base_jump_force = -540.0
 	nova.base_ammo = 3
 	nova.base_fire_rate_cooldown = 0.30
-	nova.base_reload_time = 2.0
+	nova.base_reload_time = 1.35
 	nova.color_tint = Color(0.6, 0.4, 1.0)
 	nova.sprite_tile_name = "tile_0003.png"
+	nova.version = 2
+	nova.ability_version = 1
 	heroes["nova"] = nova
 
 	# 5. Klinge – Klingentänzer
@@ -429,9 +649,11 @@ func _setup_heroes() -> void:
 	klinge.base_jump_force = -505.0
 	klinge.base_ammo = 4
 	klinge.base_fire_rate_cooldown = 0.20
-	klinge.base_reload_time = 1.9
+	klinge.base_reload_time = 1.25
 	klinge.color_tint = Color(1.0, 0.3, 0.5)
 	klinge.sprite_tile_name = "tile_0005.png"
+	klinge.version = 2
+	klinge.ability_version = 1
 	heroes["klinge"] = klinge
 
 	# 6. Bastion – Feldtechniker
@@ -440,7 +662,7 @@ func _setup_heroes() -> void:
 	bastion.name = "Bastion"
 	bastion.role = "Field Engineer"
 	bastion.description = "Robuster Unterstützer mit Schildtechnik."
-	bastion.passive_desc = "Aurora: Doppelte Schild-Regeneration"
+	bastion.passive_desc = "Aurora: Doppelte Schild-Regeneration (30 statt 15 Schild/s, startet 3 s nach dem letzten Treffer)"
 	bastion.ability_name = "Heilfeld"
 	bastion.ability_desc = "Errichtet ein Feld, das dich über Zeit heilt und Schild aufbaut!"
 	bastion.ability_cooldown = 8.0
@@ -450,9 +672,11 @@ func _setup_heroes() -> void:
 	bastion.base_jump_force = -490.0
 	bastion.base_ammo = 3
 	bastion.base_fire_rate_cooldown = 0.30
-	bastion.base_reload_time = 2.2
+	bastion.base_reload_time = 1.45
 	bastion.color_tint = Color(0.3, 0.9, 0.7)
 	bastion.sprite_tile_name = "tile_0001.png"
+	bastion.version = 2
+	bastion.ability_version = 1
 	heroes["bastion"] = bastion
 
 	# 7. Phantom – Schattenassassine
@@ -461,7 +685,7 @@ func _setup_heroes() -> void:
 	phantom.name = "Phantom"
 	phantom.role = "Shadow Assassin"
 	phantom.description = "Blitzschnelle Überraschungsangriffe aus dem Nichts."
-	phantom.passive_desc = "Nachtwind: Höchste Grundgeschwindigkeit"
+	phantom.passive_desc = "Nachtwind: Sehr hohes Grundtempo (325) und schnellstes Feuerintervall (0,14 s)"
 	phantom.ability_name = "Schattensprung"
 	phantom.ability_desc = "Teleportiert in Zielrichtung, wird kurz unverwundbar und schlägt zu!"
 	phantom.ability_cooldown = 5.0
@@ -471,13 +695,68 @@ func _setup_heroes() -> void:
 	phantom.base_jump_force = -515.0
 	phantom.base_ammo = 2
 	phantom.base_fire_rate_cooldown = 0.14
-	phantom.base_reload_time = 1.6
+	phantom.base_reload_time = 1.05
 	phantom.color_tint = Color(0.45, 0.45, 0.6)
 	phantom.sprite_tile_name = "tile_0007.png"
+	phantom.version = 2
+	phantom.ability_version = 1
 	heroes["phantom"] = phantom
 
 func get_hero(id: String) -> HeroData:
 	return heroes.get(id, heroes["ignis"])
+
+# Ausführliche Werte der Heldenfähigkeit (Schaden, Radius, Dauer usw.).
+# Die Zahlen stammen aus den Konstanten in player.gd; Schaden, der vom
+# Schussschaden abhängt, wird mit dem aktuellen Basis-Schaden berechnet.
+# Kartenboni sind darin nicht enthalten.
+func get_hero_ability_details(hero: HeroData) -> String:
+	match hero.id:
+		"ignis":
+			return "Fliegt %.2f s lang mit Tempo %d in Zielrichtung (ca. %d px) und ist dabei unverwundbar. Beim Aufprall: Explosion mit Radius %d px, bis zu %d Schaden (nimmt zum Rand hin ab) und starker Rückstoß." % [
+				Player.ROCKET_LEAP_DURATION, int(Player.ROCKET_LEAP_SPEED),
+				int(Player.ROCKET_LEAP_SPEED * Player.ROCKET_LEAP_DURATION),
+				int(Player.ROCKET_IMPACT_RADIUS), int(Player.ROCKET_IMPACT_DAMAGE),
+			]
+		"volt":
+			return "Teleport %d px in Zielrichtung. Schockwelle am Ziel: Radius %d px, %d Schaden und verlangsamt Gegner %.1f s lang um %d%%." % [
+				int(Player.FLASH_BLINK_DISTANCE), int(Player.FLASH_BLINK_RADIUS),
+				int(Player.FLASH_BLINK_DAMAGE), Player.FLASH_BLINK_FREEZE,
+				int(round((1.0 - Player.FREEZE_SPEED_MULT) * 100.0)),
+			]
+		"spore":
+			return "Giftwolke an deiner Position: Radius %d px, %.1f s lang %d Schaden pro Sekunde (bis zu %d Schaden gesamt)." % [
+				int(Player.SPORE_CLOUD_RADIUS), Player.SPORE_CLOUD_DURATION,
+				int(Player.SPORE_CLOUD_DPS),
+				int(Player.SPORE_CLOUD_DPS * Player.SPORE_CLOUD_DURATION),
+			]
+		"nova":
+			return "Gravitationskern %d px vor dir, %.1f s aktiv. Zieht alle Gegner im Radius %d px stark in die Mitte, hält sie im Kern fest und schwächt ihre Laufkontrolle. Macht selbst keinen Schaden." % [
+				int(Player.SINGULARITY_DISTANCE), Player.SINGULARITY_DURATION,
+				int(Player.SINGULARITY_PULL_RADIUS),
+			]
+		"klinge":
+			return "Rundumschlag im Radius %d px: %d Schaden (%d%% des Schussschadens) mit starkem Rückstoß. %.1f s unverwundbar." % [
+				int(Player.BLADE_STORM_RADIUS),
+				int(round(base_damage * Player.BLADE_STORM_DAMAGE_MULT)),
+				int(round(Player.BLADE_STORM_DAMAGE_MULT * 100.0)),
+				Player.BLADE_STORM_INVULN,
+			]
+		"bastion":
+			var ticks := int(ceil(Player.HEAL_FIELD_DURATION / Player.HEAL_FIELD_TICK_INTERVAL))
+			return "%.0f s lang: +%d HP pro Sekunde (%d HP gesamt) und +%d Schild pro Sekunde (bis zum Maximum)." % [
+				Player.HEAL_FIELD_DURATION,
+				int(round(Player.HEAL_FIELD_TICK_HEAL / Player.HEAL_FIELD_TICK_INTERVAL)),
+				int(Player.HEAL_FIELD_TICK_HEAL * ticks),
+				int(round(Player.HEAL_FIELD_TICK_SHIELD / Player.HEAL_FIELD_TICK_INTERVAL)),
+			]
+		"phantom":
+			return "Teleport %d px in Zielrichtung, danach %.1f s unverwundbar. Am Ziel: Radius %d px, %d Schaden (%d%% des Schussschadens) mit Rückstoß." % [
+				int(Player.SHADOW_STEP_DISTANCE), Player.SHADOW_STEP_INVULN,
+				int(Player.SHADOW_STEP_RADIUS),
+				int(round(base_damage * Player.SHADOW_STEP_DAMAGE_MULT)),
+				int(round(Player.SHADOW_STEP_DAMAGE_MULT * 100.0)),
+			]
+	return hero.ability_desc
 
 func _setup_default_inputs() -> void:
 	_ensure_key_action("p1_left", KEY_A)
@@ -488,12 +767,12 @@ func _setup_default_inputs() -> void:
 	_ensure_key_action("p1_dash", KEY_SHIFT)
 	_ensure_mouse_action("p1_shoot", MOUSE_BUTTON_LEFT)
 	_ensure_mouse_action("p1_ability", MOUSE_BUTTON_RIGHT)
-	_ensure_key_action("p1_ability_alt", KEY_E)
-	_ensure_key_action("p1_ability_f", KEY_F)
 	# Universeller Block für alle Spieler.
 	_ensure_key_action("p1_block", KEY_Q)
 	# Manuelles Nachladen.
 	_ensure_key_action("p1_reload", KEY_R)
+	# Nahkampfwaffe aus dem Charakter-Tab.
+	_ensure_key_action("p1_melee", KEY_E)
 
 	# P2 bindings (Keyboard fallback for local 2-player)
 	_ensure_key_action("p2_left", KEY_LEFT)
@@ -506,6 +785,7 @@ func _setup_default_inputs() -> void:
 	_ensure_key_action("p2_ability", KEY_COMMA)
 	_ensure_key_action("p2_block", KEY_M)
 	_ensure_key_action("p2_reload", KEY_L)
+	_ensure_key_action("p2_melee", KEY_K)
 
 	# Utility
 	_ensure_key_action("restart_game", KEY_F9)
@@ -535,6 +815,7 @@ func get_pig_appearance(index: int) -> Dictionary:
 		"eyes": player_pig_eye_colors[slot - 1],
 		"pants": player_pig_pants_colors[slot - 1],
 		"wand_tip_shape": player_wand_tip_shapes[slot - 1],
+		"tusk_shape": player_tusk_shapes[slot - 1],
 		"wand_tip_color": player_wand_tip_colors[slot - 1],
 		"shot_color": player_shot_colors[slot - 1],
 	}
@@ -545,6 +826,107 @@ func normalize_wand_tip_shape(shape: String) -> String:
 func get_wand_tip_shape_label(shape: String) -> String:
 	return str(WAND_TIP_SHAPE_LABELS.get(shape, shape.capitalize()))
 
+func normalize_tusk_shape(shape: String) -> String:
+	return shape if TUSK_SHAPES.has(shape) else "small"
+
+func get_tusk_shape_label(shape: String) -> String:
+	return str(TUSK_SHAPE_LABELS.get(shape, shape.capitalize()))
+
+func normalize_melee_weapon(weapon_id: String) -> String:
+	return weapon_id if MELEE_WEAPONS.has(weapon_id) else "iron"
+
+func get_melee_weapon(index: int) -> String:
+	if index < 1 or index > MAX_PLAYERS:
+		return "iron"
+	return player_melee_weapons[index - 1]
+
+func get_melee_weapon_data(weapon_id: String) -> Dictionary:
+	return MELEE_WEAPON_DATA[normalize_melee_weapon(weapon_id)]
+
+func get_melee_weapon_label(weapon_id: String) -> String:
+	return str(get_melee_weapon_data(weapon_id)["label"])
+
+func get_melee_weapon_version(weapon_id: String) -> int:
+	return int(get_melee_weapon_data(weapon_id).get("version", 1))
+
+# Fingerabdruck der Balance-Werte (ohne label/desc/version). Ändert er sich
+# ohne neue version, warnt die Statistik.
+func get_melee_weapon_fingerprint(weapon_id: String) -> String:
+	var data := get_melee_weapon_data(weapon_id)
+	var parts: PackedStringArray = []
+	for key in data.keys():
+		if key in ["label", "desc", "version"]:
+			continue
+		parts.append("%s=%s" % [key, var_to_str(data[key])])
+	parts.sort()
+	return ";".join(parts).md5_text().substr(0, 8)
+
+# Kurzer Werteblock für den Charakter-Tab.
+func get_melee_weapon_stats_text(weapon_id: String) -> String:
+	var data := get_melee_weapon_data(weapon_id)
+	var arc := float(data["arc_deg"])
+	var arc_text := "Stich" if arc <= 0.0 else ("360°" if arc >= 360.0 else "%d°-Bogen" % int(arc))
+	var text := "%d Schaden · %s · %d %s Reichweite · %.1f s Abklingzeit" % [
+		int(data["damage"]), arc_text, int(data["range_tiles"]),
+		"Feld" if int(data["range_tiles"]) == 1 else "Felder", float(data["cooldown"]),
+	]
+	if float(data["wall_stun"]) > 0.0:
+		text += " · %.1f s Wand-Betäubung" % float(data["wall_stun"])
+	return text
+
+func set_melee_weapon(index: int, weapon_id: String) -> void:
+	if index < 1 or index > MAX_PLAYERS:
+		return
+	var clean := normalize_melee_weapon(weapon_id)
+	if player_melee_weapons[index - 1] == clean:
+		return
+	player_melee_weapons[index - 1] = clean
+	if index == local_player_index:
+		save_character_customization(index)
+	lobby_state_changed.emit()
+
+func _random_melee_weapon() -> String:
+	return MELEE_WEAPONS[randi() % MELEE_WEAPONS.size()]
+
+# Bots bekommen zu jedem Match eine zufällige Nahkampfwaffe (nur Host/Offline,
+# Clients erhalten sie über den Lobby-Sync).
+func randomize_bot_melee_weapons() -> void:
+	var changed := false
+	for i in range(1, MAX_PLAYERS + 1):
+		if get_player_kind(i) == PlayerKind.BOT:
+			player_melee_weapons[i - 1] = _random_melee_weapon()
+			changed = true
+	if changed:
+		lobby_state_changed.emit()
+
+func sanitize_player_name(raw: String) -> String:
+	var clean := raw.replace("\n", " ").replace("\r", " ").replace("\t", " ").strip_edges()
+	return clean.substr(0, PLAYER_NAME_MAX_LENGTH)
+
+# Nur der selbst eingegebene Name (kann leer sein).
+func get_custom_player_name(index: int) -> String:
+	if index < 1 or index > MAX_PLAYERS or is_bot_slot(index):
+		return ""
+	return player_names[index - 1]
+
+# Anzeigename: eingegebener Benutzername oder Ersatz wie "Spieler 2" / "Bot 3".
+func get_player_name(index: int) -> String:
+	var custom := get_custom_player_name(index)
+	if not custom.is_empty():
+		return custom
+	return ("Bot %d" if is_bot_slot(index) else "Spieler %d") % index
+
+func set_player_name(index: int, value: String) -> void:
+	if index < 1 or index > MAX_PLAYERS:
+		return
+	var clean := sanitize_player_name(value)
+	if player_names[index - 1] == clean:
+		return
+	player_names[index - 1] = clean
+	if index == local_player_index:
+		save_character_customization(index)
+	lobby_state_changed.emit()
+
 func set_pig_appearance(
 		index: int,
 		fur: Color,
@@ -552,7 +934,8 @@ func set_pig_appearance(
 		pants: Color,
 		wand_tip_shape: String = "",
 		wand_tip_color: Color = Color(0, 0, 0, 0),
-		shot_color: Color = Color(0, 0, 0, 0)
+		shot_color: Color = Color(0, 0, 0, 0),
+		tusk_shape: String = ""
 	) -> void:
 	if index < 1 or index > MAX_PLAYERS:
 		return
@@ -561,12 +944,16 @@ func set_pig_appearance(
 		next_shape = normalize_wand_tip_shape(wand_tip_shape)
 	var next_tip_color := wand_tip_color if wand_tip_color.a > 0.0 else player_wand_tip_colors[index - 1]
 	var next_shot_color := shot_color if shot_color.a > 0.0 else player_shot_colors[index - 1]
+	var next_tusk: String = player_tusk_shapes[index - 1]
+	if not tusk_shape.is_empty():
+		next_tusk = normalize_tusk_shape(tusk_shape)
 	if player_pig_fur_colors[index - 1] == fur \
 			and player_pig_eye_colors[index - 1] == eyes \
 			and player_pig_pants_colors[index - 1] == pants \
 			and player_wand_tip_shapes[index - 1] == next_shape \
 			and player_wand_tip_colors[index - 1] == next_tip_color \
-			and player_shot_colors[index - 1] == next_shot_color:
+			and player_shot_colors[index - 1] == next_shot_color \
+			and player_tusk_shapes[index - 1] == next_tusk:
 		return
 	player_pig_fur_colors[index - 1] = fur
 	player_pig_eye_colors[index - 1] = eyes
@@ -574,6 +961,7 @@ func set_pig_appearance(
 	player_wand_tip_shapes[index - 1] = next_shape
 	player_wand_tip_colors[index - 1] = next_tip_color
 	player_shot_colors[index - 1] = next_shot_color
+	player_tusk_shapes[index - 1] = next_tusk
 	pig_appearance_changed.emit(index)
 	# Die Anpassung des lokalen Nutzers wird ohne separaten Speichern-Knopf
 	# direkt in sein Profil geschrieben.
@@ -590,7 +978,8 @@ func reset_pig_appearance(index: int) -> void:
 		PIG_DEFAULT_PANTS_COLOR,
 		"orb",
 		default_wand_tip_colors[index - 1],
-		default_wand_tip_colors[index - 1]
+		default_wand_tip_colors[index - 1],
+		"small"
 	)
 
 func apply_saved_character_customization(index: int) -> void:
@@ -604,8 +993,13 @@ func apply_saved_character_customization(index: int) -> void:
 		look["pants"],
 		look["wand_tip_shape"],
 		look["wand_tip_color"],
-		look["shot_color"]
+		look["shot_color"],
+		str(look.get("tusk_shape", "small"))
 	)
+	if look.has("name"):
+		set_player_name(index, str(look["name"]))
+	if look.has("melee_weapon"):
+		set_melee_weapon(index, str(look["melee_weapon"]))
 
 func save_character_customization(index: int = -1) -> bool:
 	var slot := local_player_index if index < 0 else index
@@ -613,13 +1007,18 @@ func save_character_customization(index: int = -1) -> bool:
 		return false
 	var look := get_pig_appearance(slot)
 	user_character_customization = look.duplicate(true)
+	user_character_customization["name"] = player_names[slot - 1]
+	user_character_customization["melee_weapon"] = player_melee_weapons[slot - 1]
 	var payload := {
 		"version": 1,
+		"player_name": player_names[slot - 1],
+		"melee_weapon": player_melee_weapons[slot - 1],
 		"appearance": {
 			"fur": _color_to_json(look["fur"]),
 			"eyes": _color_to_json(look["eyes"]),
 			"pants": _color_to_json(look["pants"]),
 			"wand_tip_shape": look["wand_tip_shape"],
+			"tusk_shape": look["tusk_shape"],
 			"wand_tip_color": _color_to_json(look["wand_tip_color"]),
 			"shot_color": _color_to_json(look["shot_color"]),
 		},
@@ -649,6 +1048,8 @@ func _load_character_customization() -> void:
 	var look := _normalize_saved_appearance(raw)
 	if look.is_empty():
 		return
+	look["name"] = sanitize_player_name(str(parsed.get("player_name", "")))
+	look["melee_weapon"] = normalize_melee_weapon(str(parsed.get("melee_weapon", "iron")))
 	user_character_customization = look
 	apply_saved_character_customization(local_player_index)
 
@@ -661,6 +1062,7 @@ func _normalize_saved_appearance(raw: Dictionary) -> Dictionary:
 		"eyes": _color_from_json(raw.get("eyes"), PIG_DEFAULT_EYE_COLOR),
 		"pants": _color_from_json(raw.get("pants"), PIG_DEFAULT_PANTS_COLOR),
 		"wand_tip_shape": shape,
+		"tusk_shape": normalize_tusk_shape(str(raw.get("tusk_shape", "small"))),
 		"wand_tip_color": _color_from_json(raw.get("wand_tip_color"), default_wand_tip_colors[0]),
 		"shot_color": _color_from_json(raw.get("shot_color"), default_wand_tip_colors[0]),
 	}
@@ -704,6 +1106,7 @@ func set_player_kind(index: int, kind: int) -> void:
 	player_kind[index - 1] = kind
 	if kind == PlayerKind.BOT:
 		player_ready[index] = true
+		player_melee_weapons[index - 1] = _random_melee_weapon()
 	elif kind == PlayerKind.HUMAN:
 		player_ready[index] = false
 	lobby_state_changed.emit()
@@ -844,8 +1247,11 @@ func reset_match() -> void:
 		if player_cards[i] is Array:
 			player_cards[i].clear()
 	reset_match_stats()
+	tiebreak_slots.clear()
+	match_end_reason = ""
 	current_state = GameState.PLAYING
 	scores_changed.emit(get_scores())
+	match_reset.emit()
 
 func _empty_match_stats() -> Dictionary:
 	var stats := {}
@@ -948,21 +1354,122 @@ func award_round(winner_index: int, award_survival: bool = true) -> void:
 	var scoring_members: Array[int] = [winner_index]
 	if is_team_mode():
 		scoring_members = get_team_members(get_team_for_slot(winner_index))
+	# Im Team-Modus werden die Siegpunkte auf das Team aufgeteilt, statt dass
+	# jedes Mitglied die vollen Punkte bekommt. Der Rest beim Teilen geht an
+	# den Rundensieger, damit das Team genau survival_points erhält.
+	if scoring_members.is_empty():
+		scoring_members = [winner_index]
+	var share := floori(float(survival_points) / float(scoring_members.size()))
+	var remainder := survival_points - share * scoring_members.size()
 	for member in scoring_members:
 		add_match_stat(member, "rounds_won", 1.0)
 		if award_survival:
-			player_scores[member - 1] += survival_points
+			player_scores[member - 1] += share + (remainder if member == winner_index else 0)
 	scores_changed.emit(get_scores())
 
+	# Stechen läuft: Wer die Runde mit Überlebenden gewinnt, gewinnt das Match.
+	# Ein Doppel-KO entscheidet nichts, dann wird erneut gestochen.
+	if not tiebreak_slots.is_empty():
+		if award_survival and tiebreak_slots.has(winner_index):
+			_finish_match(winner_index, "tiebreak")
+		else:
+			_start_tiebreak(tiebreak_slots.duplicate())
+		return
+
 	# Nicht nur der Rundensieger kann durch Kills die Zielpunktzahl erreicht
-	# haben. Im Team-Modus zählt die Summe des Teams, in FFA der beste Spieler.
-	var match_winner := _points_leader(winner_index)
-	if match_winner > 0 and get_team_score_for_slot(match_winner) >= points_to_win:
-		current_state = GameState.GAME_OVER
-		match_over.emit(match_winner)
+	# haben. Im Team-Modus zählt die Summe des Teams, in FFA der Spieler.
+	# Erreichen mehrere Spieler/Teams das Ziel in derselben Runde, entscheidet
+	# ein Stechen nur unter ihnen.
+	var finalists := _slots_at_target()
+	if _score_group_count(finalists) > 1:
+		_start_tiebreak(finalists)
+	elif not finalists.is_empty():
+		_finish_match(_points_leader(winner_index), "")
 	else:
 		current_state = GameState.CARD_DRAFT
 		round_ended.emit(winner_index)
+
+func _finish_match(winner_index: int, reason: String) -> void:
+	tiebreak_slots.clear()
+	match_end_reason = reason
+	current_state = GameState.GAME_OVER
+	match_over.emit(winner_index)
+
+func _start_tiebreak(slots: Array) -> void:
+	set_tiebreak_slots(slots)
+	current_state = GameState.CARD_DRAFT
+	tiebreak_started.emit(tiebreak_slots.duplicate())
+
+# Vorzeitiges Match-Ende (ESC → Hauptmenü, Verbindungsabbruch). winner 0 = Unentschieden.
+func end_match_early(winner_index: int) -> void:
+	_finish_match(winner_index, "early")
+
+func is_tiebreak() -> bool:
+	return not tiebreak_slots.is_empty()
+
+func set_tiebreak_slots(slots: Array) -> void:
+	tiebreak_slots.clear()
+	for slot in slots:
+		var i := int(slot)
+		if i >= 1 and i <= MAX_PLAYERS and not tiebreak_slots.has(i):
+			tiebreak_slots.append(i)
+
+func clear_tiebreak() -> void:
+	tiebreak_slots.clear()
+
+# Slots, die in dieser Runde spielen: im Stechen nur die Finalisten.
+func get_round_player_indices() -> Array[int]:
+	var active := get_active_player_indices()
+	if tiebreak_slots.is_empty():
+		return active
+	var result: Array[int] = []
+	for slot in tiebreak_slots:
+		if active.has(slot):
+			result.append(slot)
+	return result if not result.is_empty() else active
+
+# Alle Slots, deren Punkte (Team-Modus: Teamsumme) das Ziel erreicht haben.
+func _slots_at_target() -> Array[int]:
+	var result: Array[int] = []
+	for slot in get_active_player_indices():
+		if get_team_score_for_slot(slot) >= points_to_win:
+			result.append(slot)
+	return result
+
+# Anzahl Parteien unter den Slots: Spieler in FFA, Teams im Team-Modus.
+func _score_group_count(slots: Array) -> int:
+	if not is_team_mode():
+		return slots.size()
+	var teams: Array[int] = []
+	for slot in slots:
+		var team := get_team_for_slot(int(slot))
+		if not teams.has(team):
+			teams.append(team)
+	return teams.size()
+
+# Sieger bei vorzeitigem Ende: meiste Punkte (Team-Modus: Teamsumme).
+# Gleichstand an der Spitze ergibt 0 = Unentschieden.
+func get_early_end_winner() -> int:
+	var best_score := -1
+	var best_slots: Array[int] = []
+	for slot in get_active_player_indices():
+		var score := get_team_score_for_slot(slot)
+		if score > best_score:
+			best_score = score
+			best_slots.clear()
+			best_slots.append(slot)
+		elif score == best_score:
+			best_slots.append(slot)
+	if best_slots.is_empty() or _score_group_count(best_slots) > 1:
+		return 0
+	return _points_leader(best_slots[0])
+
+# Wurde in diesem Match schon etwas entschieden? Sonst lohnt kein Win-Screen.
+func has_match_progress() -> bool:
+	for slot in get_active_player_indices():
+		if player_scores[slot - 1] > 0 or get_match_stat(slot, "rounds_won") > 0.0:
+			return true
+	return false
 
 func _points_leader(preferred_index: int) -> int:
 	if is_team_mode():
@@ -1070,9 +1577,49 @@ func set_card_pool_enabled(pool: String, enabled: bool) -> void:
 		return
 	if enabled:
 		enabled_card_pools.append(pool)
+		_clear_pool_unlocks(pool)
 	else:
 		enabled_card_pools.erase(pool)
 	card_pools_changed.emit()
+
+# Wird ein Pool wieder eingeschaltet, sind seine Einzelfreigaben überflüssig.
+# Schaltet man ihn später erneut ab, sind dann wieder alle Karten gesperrt.
+func _clear_pool_unlocks(pool: String) -> void:
+	var changed := false
+	for card_id in pool_unlocked_card_ids.duplicate():
+		var card: CardData = CardDatabase.get_card(card_id)
+		if card == null or card.pool == pool:
+			pool_unlocked_card_ids.erase(card_id)
+			changed = true
+	if changed:
+		banned_cards_changed.emit()
+
+func is_card_pool_unlocked(card: CardData) -> bool:
+	if card == null:
+		return false
+	if pool_unlocked_card_ids.has(card.id):
+		return true
+	return not card.parent_card_id.is_empty() and pool_unlocked_card_ids.has(card.parent_card_id)
+
+func set_card_pool_unlocked(card_id: String, unlocked: bool) -> void:
+	if unlocked == pool_unlocked_card_ids.has(card_id):
+		return
+	if unlocked:
+		pool_unlocked_card_ids.append(card_id)
+	else:
+		pool_unlocked_card_ids.erase(card_id)
+	banned_cards_changed.emit()
+
+func set_pool_unlocked_cards(card_ids: Array) -> void:
+	pool_unlocked_card_ids.clear()
+	for card_id in card_ids:
+		var id := str(card_id)
+		if not id.is_empty() and not pool_unlocked_card_ids.has(id):
+			pool_unlocked_card_ids.append(id)
+
+# Gesperrt = vom Host gebannt oder Pool aus (ohne Einzelfreigabe).
+func is_card_locked(card: CardData) -> bool:
+	return card == null or banned_card_ids.has(card.id) or not CardDatabase.is_card_pool_enabled(card)
 
 func set_all_card_pools(enabled: bool) -> void:
 	if not enabled:
@@ -1081,6 +1628,9 @@ func set_all_card_pools(enabled: bool) -> void:
 	if target == enabled_card_pools:
 		return
 	enabled_card_pools = target
+	if not pool_unlocked_card_ids.is_empty():
+		pool_unlocked_card_ids.clear()
+		banned_cards_changed.emit()
 	card_pools_changed.emit()
 
 # Setzt eine beliebige Pool-Auswahl (z. B. aus dem Netzwerk-Sync). Die Reihenfolge
@@ -1102,25 +1652,132 @@ func get_map_name(map_id: String) -> String:
 	return str(info.get("name", "Unbekannt"))
 
 func get_map_description(map_id: String) -> String:
+	if map_id == MAP_RANDOM:
+		var enabled_count := get_enabled_map_ids().size()
+		if enabled_count == MAP_PLAYABLE.size():
+			return "Wählt pro Runde eine der %d Maps." % enabled_count
+		if enabled_count == 0:
+			return "Alle Levels sind abgeschaltet – im Reiter „Levels“ mindestens eins aktivieren."
+		return "Wählt pro Runde eine der %d aktiven Maps (von %d)." % [enabled_count, MAP_PLAYABLE.size()]
 	var info: Dictionary = MAPS.get(map_id, {})
 	return str(info.get("description", ""))
 
 func set_selected_map(map_id: String) -> void:
 	if map_id != MAP_RANDOM and not MAP_PLAYABLE.has(map_id):
 		return
+	# Wer eine feste Map wählt, will sie spielen: ein abgeschaltetes Level
+	# wird dabei wieder aktiv.
+	if map_id != MAP_RANDOM and disabled_map_ids.has(map_id):
+		disabled_map_ids.erase(map_id)
+		map_pool_changed.emit()
 	if selected_map_id == map_id:
 		return
 	selected_map_id = map_id
 	map_changed.emit()
+
+func is_map_enabled(map_id: String) -> bool:
+	return MAP_PLAYABLE.has(map_id) and not disabled_map_ids.has(map_id)
+
+# Aktive Levels in der Reihenfolge von MAP_PLAYABLE.
+func has_enabled_maps() -> bool:
+	return not get_enabled_map_ids().is_empty()
+
+func get_enabled_map_ids() -> Array[String]:
+	var result: Array[String] = []
+	for map_id in MAP_PLAYABLE:
+		if not disabled_map_ids.has(map_id):
+			result.append(map_id)
+	return result
+
+func set_map_enabled(map_id: String, enabled: bool) -> void:
+	if not MAP_PLAYABLE.has(map_id):
+		return
+	if enabled == is_map_enabled(map_id):
+		return
+	# Alle Levels aus ist erlaubt; die Lobby sperrt dann den Start.
+	if enabled:
+		disabled_map_ids.erase(map_id)
+	else:
+		disabled_map_ids.append(map_id)
+	map_pool_changed.emit()
+	# Eine fest gewählte Map, die abgeschaltet wird, fällt auf "Zufällig" zurück.
+	if not enabled and selected_map_id == map_id:
+		selected_map_id = MAP_RANDOM
+		map_changed.emit()
+
+# Setzt die komplette Sperrliste (Presets, Netzwerk-Sync). Unbekannte IDs
+# werden verworfen.
+func set_disabled_maps(map_ids: Array) -> void:
+	var target: Array[String] = []
+	for map_id in MAP_PLAYABLE:
+		if map_ids.has(map_id):
+			target.append(map_id)
+	if target == disabled_map_ids:
+		return
+	disabled_map_ids = target
+	map_pool_changed.emit()
+	if selected_map_id != MAP_RANDOM and disabled_map_ids.has(selected_map_id):
+		selected_map_id = MAP_RANDOM
+		map_changed.emit()
+
+# --- Powerups ---
+
+func get_powerup_name(kind: String) -> String:
+	return str(POWERUP_INFO.get(kind, {}).get("name", kind))
+
+func get_powerup_description(kind: String) -> String:
+	return str(POWERUP_INFO.get(kind, {}).get("description", ""))
+
+func is_powerup_enabled(kind: String) -> bool:
+	return POWERUP_KINDS.has(kind) and not disabled_powerup_kinds.has(kind)
+
+# Powerups, die im Match wirklich erscheinen können. Auto-Angriff braucht
+# zusätzlich die Nahkampfwaffe (Lobby-Regel).
+func get_active_powerup_kinds() -> Array[String]:
+	var result: Array[String] = []
+	for kind in POWERUP_KINDS:
+		if disabled_powerup_kinds.has(kind):
+			continue
+		if kind == "auto_attack" and not melee_enabled:
+			continue
+		result.append(kind)
+	return result
+
+func has_active_powerups() -> bool:
+	return not get_active_powerup_kinds().is_empty()
+
+func set_powerup_enabled(kind: String, enabled: bool) -> void:
+	if not POWERUP_KINDS.has(kind) or enabled == is_powerup_enabled(kind):
+		return
+	if enabled:
+		disabled_powerup_kinds.erase(kind)
+	else:
+		disabled_powerup_kinds.append(kind)
+	powerup_pool_changed.emit()
+
+# Setzt die komplette Sperrliste (Presets, Netzwerk-Sync). Unbekannte Arten
+# werden verworfen.
+func set_disabled_powerups(kinds: Array) -> void:
+	var target: Array[String] = []
+	for kind in POWERUP_KINDS:
+		if kinds.has(kind):
+			target.append(kind)
+	if target == disabled_powerup_kinds:
+		return
+	disabled_powerup_kinds = target
+	powerup_pool_changed.emit()
 
 # Löst "zufall" deterministisch anhand des Runden-Seeds auf. Host und Client
 # erhalten so dieselbe Map, auch wenn der Host "Zufällig" ausgewählt hat.
 func resolve_map_id(level_seed: int) -> String:
 	if selected_map_id != MAP_RANDOM and MAP_PLAYABLE.has(selected_map_id):
 		return selected_map_id
+	var pool := get_enabled_map_ids()
+	if pool.is_empty():
+		pool = MAP_PLAYABLE.duplicate()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = maxi(1, level_seed)
-	return MAP_PLAYABLE[rng.randi() % MAP_PLAYABLE.size()]
+	return pool[rng.randi() % pool.size()]
 
 func toggle_bot() -> void:
 	set_bot_enabled(not is_bot_enabled)
@@ -1175,6 +1832,13 @@ func set_draft_config(picks: int, offered: int) -> void:
 	draft_config_changed.emit(draft_picks, cards_per_draft)
 	cards_per_draft_changed.emit(cards_per_draft)
 
+func set_melee_enabled(enabled: bool) -> void:
+	if melee_enabled == enabled:
+		return
+	melee_enabled = enabled
+	melee_enabled_changed.emit(melee_enabled)
+	lobby_state_changed.emit()
+
 func set_blind_pick_enabled(enabled: bool) -> void:
 	if blind_pick_enabled == enabled:
 		return
@@ -1186,6 +1850,28 @@ func set_random_pick_enabled(enabled: bool) -> void:
 	if random_pick_enabled == enabled:
 		return
 	random_pick_enabled = enabled
+	draft_modifiers_changed.emit()
+	lobby_state_changed.emit()
+
+func set_gamble_enabled(enabled: bool) -> void:
+	if gamble_enabled == enabled:
+		return
+	gamble_enabled = enabled
+	draft_modifiers_changed.emit()
+	lobby_state_changed.emit()
+
+func set_pre_draft_picks(picks: int) -> void:
+	var clamped := clampi(picks, 0, PRE_DRAFT_MAX_PICKS)
+	if pre_draft_picks == clamped:
+		return
+	pre_draft_picks = clamped
+	draft_modifiers_changed.emit()
+	lobby_state_changed.emit()
+
+func set_pre_draft_random(enabled: bool) -> void:
+	if pre_draft_random == enabled:
+		return
+	pre_draft_random = enabled
 	draft_modifiers_changed.emit()
 	lobby_state_changed.emit()
 
@@ -1316,13 +2002,22 @@ func get_current_lobby_settings() -> Dictionary:
 		"cards_per_draft": cards_per_draft,
 		"blind_pick_enabled": blind_pick_enabled,
 		"random_pick_enabled": random_pick_enabled,
+		"gamble_enabled": gamble_enabled,
+		"pre_draft_picks": pre_draft_picks,
+		"pre_draft_random": pre_draft_random,
+		"melee_enabled": melee_enabled,
 		"level_modifier_rate_percent": level_modifier_rate_percent,
 		"enabled_level_modifiers": get_enabled_level_modifiers(),
+		"known_level_modifiers": LevelModifierDefsClass.modifier_ids(),
 		"base_hp_percent": base_hp_percent,
 		"base_damage": base_damage,
 		"map_id": selected_map_id,
+		"disabled_map_ids": disabled_map_ids.duplicate(),
+		"disabled_powerup_kinds": disabled_powerup_kinds.duplicate(),
 		"enabled_card_pools": enabled_card_pools.duplicate(),
+		"known_card_pools": CARD_POOLS.duplicate(),
 		"banned_card_ids": banned_card_ids.duplicate(),
+		"pool_unlocked_card_ids": pool_unlocked_card_ids.duplicate(),
 		"rarity_percentages": rarity_percentages.duplicate(),
 	}
 
@@ -1337,13 +2032,20 @@ func _default_lobby_settings() -> Dictionary:
 		"cards_per_draft": 5,
 		"blind_pick_enabled": false,
 		"random_pick_enabled": false,
+		"gamble_enabled": false,
+		"pre_draft_picks": 0,
+		"pre_draft_random": false,
+		"melee_enabled": true,
 		"level_modifier_rate_percent": LevelModifierDefsClass.RATE_DEFAULT_PERCENT,
 		"enabled_level_modifiers": LevelModifierDefsClass.default_ids(),
 		"base_hp_percent": 100,
 		"base_damage": 22.0,
 		"map_id": MAP_RANDOM,
+		"disabled_map_ids": [],
+		"disabled_powerup_kinds": [],
 		"enabled_card_pools": CARD_POOLS.duplicate(),
 		"banned_card_ids": [],
+		"pool_unlocked_card_ids": [],
 		"rarity_percentages": {
 			"Common": 50.0,
 			"Uncommon": 25.0,
@@ -1352,6 +2054,15 @@ func _default_lobby_settings() -> Dictionary:
 			"Legendary": 2.0,
 		},
 	}
+
+# Öffentlicher Zugriff für den "Standard"-Button der Lobby.
+func get_default_lobby_settings() -> Dictionary:
+	return _default_lobby_settings()
+
+# Setzt alle Regeln auf Standard und überschreibt dabei "Last".
+func apply_default_lobby_settings() -> void:
+	apply_lobby_settings(_default_lobby_settings())
+	save_last_lobby_settings()
 
 func _create_default_lobby_loadouts() -> void:
 	lobby_loadouts.clear()
@@ -1432,6 +2143,101 @@ func _save_lobby_loadouts_file() -> bool:
 	file.close()
 	return true
 
+# --- Automatisches "Last"-Loadout ---
+
+func _restore_last_lobby_settings() -> void:
+	if lobby_loadouts.has(LOBBY_LAST_LOADOUT):
+		apply_lobby_settings(get_lobby_loadout(LOBBY_LAST_LOADOUT))
+		return
+	# Erster Start mit dieser Version: Standardwerte übernehmen und als "Last" ablegen.
+	apply_default_lobby_settings()
+
+# Lädt "Last" beim Öffnen der Lobby erneut. Dadurch verschwinden Werte, die
+# nicht vom Host eingestellt wurden: gespiegelte Regeln eines fremden Hosts
+# (nach einer Runde als Client) und das per "Weiterspielen" erhöhte Match-Ziel.
+func restore_last_lobby_settings() -> void:
+	if not lobby_autosave_enabled:
+		return
+	if network_mode and not is_local_host():
+		return
+	# Noch nicht geschriebene Änderung zuerst sichern, sie ist der neueste Stand.
+	if _lobby_autosave_timer != null and not _lobby_autosave_timer.is_stopped():
+		_lobby_autosave_timer.stop()
+		save_last_lobby_settings()
+		return
+	if lobby_loadouts.has(LOBBY_LAST_LOADOUT):
+		apply_lobby_settings(get_lobby_loadout(LOBBY_LAST_LOADOUT))
+
+# Beim Schließen des Fensters eine noch wartende Änderung sofort schreiben,
+# sonst geht alles verloren, was in den letzten LOBBY_AUTOSAVE_DELAY Sekunden
+# eingestellt wurde.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		if _lobby_autosave_timer != null and not _lobby_autosave_timer.is_stopped():
+			_lobby_autosave_timer.stop()
+			_flush_lobby_autosave()
+
+func _setup_lobby_settings_autosave() -> void:
+	_lobby_autosave_timer = Timer.new()
+	_lobby_autosave_timer.name = "LobbySettingsAutosave"
+	_lobby_autosave_timer.one_shot = true
+	_lobby_autosave_timer.wait_time = LOBBY_AUTOSAVE_DELAY
+	_lobby_autosave_timer.process_mode = Node.PROCESS_MODE_ALWAYS
+	_lobby_autosave_timer.timeout.connect(_flush_lobby_autosave)
+	add_child(_lobby_autosave_timer)
+	match_mode_changed.connect(_queue_lobby_autosave)
+	player_count_changed.connect(_queue_lobby_autosave)
+	scoring_config_changed.connect(_queue_lobby_autosave)
+	draft_config_changed.connect(_queue_lobby_autosave)
+	draft_modifiers_changed.connect(_queue_lobby_autosave)
+	level_modifiers_changed.connect(_queue_lobby_autosave)
+	melee_enabled_changed.connect(_queue_lobby_autosave)
+	banned_cards_changed.connect(_queue_lobby_autosave)
+	card_pools_changed.connect(_queue_lobby_autosave)
+	map_changed.connect(_queue_lobby_autosave)
+	map_pool_changed.connect(_queue_lobby_autosave)
+	powerup_pool_changed.connect(_queue_lobby_autosave)
+	base_hp_percent_changed.connect(_queue_lobby_autosave)
+	base_damage_changed.connect(_queue_lobby_autosave)
+	rarity_percentages_changed.connect(_queue_lobby_autosave)
+
+func _queue_lobby_autosave(_arg1: Variant = null, _arg2: Variant = null) -> void:
+	if not lobby_autosave_enabled or _lobby_autosave_timer == null:
+		return
+	# Clients spiegeln die Host-Regeln und sollen ihr eigenes "Last" nicht überschreiben.
+	if network_mode and not is_local_host():
+		return
+	_lobby_autosave_timer.start()
+
+func _flush_lobby_autosave() -> void:
+	if not lobby_autosave_enabled:
+		return
+	if network_mode and not is_local_host():
+		return
+	save_last_lobby_settings()
+
+# Schreibt die aktuellen Regeln sofort als "Last". Liefert false, wenn die Datei
+# nicht geschrieben werden konnte; der vorherige Stand bleibt dann erhalten.
+func save_last_lobby_settings() -> bool:
+	var settings := get_current_lobby_settings()
+	var previous: Variant = lobby_loadouts.get(LOBBY_LAST_LOADOUT, null)
+	if previous is Dictionary and JSON.stringify(previous) == JSON.stringify(settings):
+		return true
+	var is_new := previous == null
+	lobby_loadouts[LOBBY_LAST_LOADOUT] = settings
+	if not _save_lobby_loadouts_file():
+		if is_new:
+			lobby_loadouts.erase(LOBBY_LAST_LOADOUT)
+		else:
+			lobby_loadouts[LOBBY_LAST_LOADOUT] = previous
+		return false
+	lobby_last_loadout_saved.emit()
+	# Nur beim ersten Anlegen muss die Preset-Liste neu aufgebaut werden. Ein
+	# Rebuild bei jeder Regeländerung würde ein offenes Dropdown zurücksetzen.
+	if is_new:
+		lobby_loadouts_changed.emit()
+	return true
+
 func get_lobby_loadout_names() -> Array[String]:
 	var names: Array[String] = []
 	for key in lobby_loadouts.keys():
@@ -1460,6 +2266,8 @@ func save_lobby_loadout(name: String) -> bool:
 	return true
 
 func delete_lobby_loadout(name: String) -> bool:
+	if name == LOBBY_LAST_LOADOUT:
+		return false
 	if not lobby_loadouts.has(name):
 		return false
 	lobby_loadouts.erase(name)
@@ -1486,6 +2294,10 @@ func apply_lobby_settings(settings: Dictionary) -> void:
 	# bewusst deaktiviert, damit ein Preset eine vollständige Konfiguration ist.
 	set_blind_pick_enabled(bool(settings.get("blind_pick_enabled", false)))
 	set_random_pick_enabled(bool(settings.get("random_pick_enabled", false)))
+	set_gamble_enabled(bool(settings.get("gamble_enabled", false)))
+	set_pre_draft_picks(int(settings.get("pre_draft_picks", 0)))
+	set_pre_draft_random(bool(settings.get("pre_draft_random", false)))
+	set_melee_enabled(bool(settings.get("melee_enabled", true)))
 	set_level_modifier_rate_percent(
 		int(settings.get(
 			"level_modifier_rate_percent",
@@ -1494,16 +2306,39 @@ func apply_lobby_settings(settings: Dictionary) -> void:
 	)
 	var level_mods: Variant = settings.get("enabled_level_modifiers", null)
 	if level_mods is Array:
-		set_enabled_level_modifiers(level_mods)
+		# Modifier, die beim Speichern noch nicht existierten, sind an.
+		var mod_list: Array = level_mods.duplicate()
+		var known_mods: Variant = settings.get("known_level_modifiers", null)
+		for id in LevelModifierDefsClass.modifier_ids():
+			var is_new: bool = LATER_LEVEL_MODIFIERS.has(id)
+			if known_mods is Array:
+				is_new = not known_mods.has(id)
+			if is_new and not mod_list.has(id):
+				mod_list.append(id)
+		set_enabled_level_modifiers(mod_list)
 	else:
 		set_enabled_level_modifiers(LevelModifierDefsClass.default_ids())
 	set_base_hp_percent(int(settings.get("base_hp_percent", base_hp_percent)))
 	set_base_damage(float(settings.get("base_damage", base_damage)))
+	# Erst die Level-Sperrliste, dann die Map: Alte Presets ohne Liste
+	# spielen alle Levels.
+	var disabled_maps: Variant = settings.get("disabled_map_ids", [])
+	set_disabled_maps(disabled_maps if disabled_maps is Array else [])
 	if settings.has("map_id"):
 		set_selected_map(str(settings.get("map_id", selected_map_id)))
+	# Alte Presets ohne Liste haben alle Powerups an.
+	var disabled_powerups: Variant = settings.get("disabled_powerup_kinds", [])
+	set_disabled_powerups(disabled_powerups if disabled_powerups is Array else [])
 	var pools: Variant = settings.get("enabled_card_pools", null)
 	if pools is Array:
-		set_enabled_card_pools(pools)
+		# Pools, die beim Speichern noch nicht existierten, sind an.
+		var pool_list: Array = pools.duplicate()
+		var known_pools: Variant = settings.get("known_card_pools", null)
+		var known: Array = known_pools if known_pools is Array else LEGACY_CARD_POOLS
+		for pool in CARD_POOLS:
+			if not known.has(pool) and not pool_list.has(pool):
+				pool_list.append(pool)
+		set_enabled_card_pools(pool_list)
 	var rarity_data: Variant = settings.get("rarity_percentages", null)
 	if rarity_data is Dictionary:
 		for rarity in RARITY_ORDER:
@@ -1516,6 +2351,8 @@ func apply_lobby_settings(settings: Dictionary) -> void:
 			var id := str(card_id)
 			if not id.is_empty() and not banned_card_ids.has(id):
 				banned_card_ids.append(id)
+	var unlocks: Variant = settings.get("pool_unlocked_card_ids", null)
+	set_pool_unlocked_cards(unlocks if unlocks is Array else [])
 	banned_cards_changed.emit()
 
 func get_lobby_loadout_summary(name: String) -> String:
@@ -1529,9 +2366,14 @@ func get_lobby_loadout_summary(name: String) -> String:
 		modifiers.append("Blind")
 	if bool(data.get("random_pick_enabled", false)):
 		modifiers.append("Random")
+	if bool(data.get("gamble_enabled", false)):
+		modifiers.append("Gamble")
 	var modifier_text := ""
 	if not modifiers.is_empty():
 		modifier_text = " · Modifier: %s" % ", ".join(modifiers)
+	var pre_picks := int(data.get("pre_draft_picks", 0))
+	if pre_picks > 0:
+		modifier_text += " · Pre-Draft %d%s" % [pre_picks, " (zufällig)" if bool(data.get("pre_draft_random", false)) else ""]
 	var level_mods: Variant = data.get("enabled_level_modifiers", LevelModifierDefsClass.default_ids())
 	var level_mod_count: int = level_mods.size() if level_mods is Array else 0
 	modifier_text += " · Level-Mod %d %% (%d/%d)" % [
@@ -1539,6 +2381,24 @@ func get_lobby_loadout_summary(name: String) -> String:
 		level_mod_count,
 		LevelModifierDefsClass.MODIFIERS.size(),
 	]
+	var disabled_maps: Variant = data.get("disabled_map_ids", [])
+	var disabled_map_count := 0
+	if disabled_maps is Array:
+		for map_id in MAP_PLAYABLE:
+			if disabled_maps.has(map_id):
+				disabled_map_count += 1
+	if disabled_map_count > 0 and disabled_map_count < MAP_PLAYABLE.size():
+		modifier_text += " · Levels %d/%d" % [MAP_PLAYABLE.size() - disabled_map_count, MAP_PLAYABLE.size()]
+	var disabled_powerups: Variant = data.get("disabled_powerup_kinds", [])
+	var disabled_powerup_count := 0
+	if disabled_powerups is Array:
+		for kind in POWERUP_KINDS:
+			if disabled_powerups.has(kind):
+				disabled_powerup_count += 1
+	if disabled_powerup_count >= POWERUP_KINDS.size():
+		modifier_text += " · Powerups aus"
+	elif disabled_powerup_count > 0:
+		modifier_text += " · Powerups %d/%d" % [POWERUP_KINDS.size() - disabled_powerup_count, POWERUP_KINDS.size()]
 	return "%s · %d Spieler · Ziel %d P · Draft %d/%d · HP %d %% · DMG %d · Map %s · %d Pools · %d Bans%s" % [
 		get_match_mode_name(str(data.get("match_mode", MATCH_MODE_FFA))),
 		int(data.get("player_count", 2)),
@@ -1598,13 +2458,12 @@ func set_network_scores(scores: Array) -> void:
 		player_scores[i] = int(scores[i])
 	scores_changed.emit(get_scores())
 
-func set_network_match_over(winner_index: int, stats: Array = []) -> void:
+func set_network_match_over(winner_index: int, stats: Array = [], reason: String = "") -> void:
 	if stats.is_empty():
 		reset_match_stats()
 	else:
 		set_match_stats(stats)
-	current_state = GameState.GAME_OVER
-	match_over.emit(winner_index)
+	_finish_match(winner_index, reason)
 
 func set_network_info(text: String) -> void:
 	network_info = text

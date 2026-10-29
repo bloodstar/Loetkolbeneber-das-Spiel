@@ -17,6 +17,7 @@ var chain_left: Line2D
 var chain_right: Line2D
 
 func _ready() -> void:
+	add_to_group("chain_platform")
 	_build()
 	if is_replica:
 		set_replica(true)
@@ -154,6 +155,12 @@ func _physics_process(_delta: float) -> void:
 		var weight := Vector2(float(player.get("velocity").x) * 4.0, 1250.0)
 		platform.apply_force(weight, Vector2(local.x, -platform_height * 0.5))
 	platform.angular_velocity = clampf(platform.angular_velocity, -4.0, 4.0)
+
+## Sturmwind: Die Plattform schwingt an ihren Ketten in Windrichtung.
+func apply_wind(wind: float, delta: float) -> void:
+	if is_replica or platform == null:
+		return
+	platform.apply_central_impulse(Vector2(wind * 700.0 * platform.mass * delta, 0.0))
 
 func set_replica(replica: bool) -> void:
 	is_replica = replica

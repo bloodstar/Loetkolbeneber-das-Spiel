@@ -3,6 +3,22 @@ extends Node2D
 
 const TILE_SIZE: float = 36.0
 
+# Neigung in Winkelbeschleunigung (rad/s²), damit sich kleine und große
+# Wippen gleich leicht anfühlen. Die Drehmomente werden daraus über das
+# Trägheitsmoment der Planke berechnet.
+const PLAYER_TILT_BASE: float = 0.9      # Spieler direkt neben dem Drehpunkt
+const PLAYER_TILT_LEVER: float = 3.0     # zusätzlich bis zur Plankenkante
+const SPRING_FREE: float = 7.0           # Rückstellung ohne Belastung
+const DAMP_FREE: float = 3.2             # leicht unterkritisch: kurzes Nachwippen
+const SPRING_LOADED: float = 2.2         # Rückstellung, während jemand draufsteht
+const DAMP_LOADED: float = 1.6
+const MAX_SPIN: float = 6.0              # rad/s
+const BULLET_KICK: float = 0.9           # rad/s bei Kantentreffer mit Grundschaden
+const BULLET_REF_DAMAGE: float = 22.0
+const BLAST_KICK: float = 2.6            # rad/s bei Explosion direkt an der Kante
+const WIND_TILT: float = 2.0             # rad/s² Neigung bei voller Windstärke
+const WIND_SWING: float = 700.0          # px/s² für hängende Wippen
+
 var net_id: int = 0
 var object_type: String = "seesaw"
 var is_replica: bool = false
@@ -17,6 +33,7 @@ var plank: RigidBody2D
 var joint: PinJoint2D
 
 func _ready() -> void:
+	add_to_group("seesaw")
 	_build()
 	if is_replica:
 		set_replica(true)
@@ -66,7 +83,12 @@ func _build() -> void:
 	plank.mass = 1.5
 	plank.gravity_scale = 1.0
 	plank.linear_damp = 2.5
-	plank.angular_damp = 2.2
+	# Die Dämpfung übernimmt die Feder in _physics_process.
+	plank.angular_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
+	plank.angular_damp = 0.0
+	# Fest gesetzt (entspricht dem automatischen Wert), damit die Drehmomente
+	# genau zur gewünschten Winkelbeschleunigung passen.
+	plank.inertia = plank.mass * (plank_width * plank_width + plank_height * plank_height) / 12.0
 	plank.can_sleep = false
 	add_child(plank)
 
@@ -180,7 +202,8 @@ func _build_suspension() -> void:
 func _physics_process(_delta: float) -> void:
 	if is_replica:
 		return
-	var torque := 0.0
+	var half_w := plank_width * 0.5
+	var accel := 0.0
 	var weighting_players := 0
 	for p in get_tree().get_nodes_in_group("player"):
 		var player := p as Node2D
@@ -190,25 +213,78 @@ func _physics_process(_delta: float) -> void:
 		if health != null and float(health) <= 0.0:
 			continue
 		var local := plank.to_local(player.global_position)
-		if absf(local.x) > plank_width * 0.5 - 4.0:
+		if absf(local.x) > half_w - 4.0:
 			continue
 		if local.y > -plank_height * 0.5 + 12.0:
 			continue
 		if local.y < -plank_height * 0.5 - 90.0:
 			continue
-		var side := signf(local.x)
-		torque += side * (240.0 + absf(local.x) * 2.2)
+		var lever := clampf(absf(local.x) / half_w, 0.0, 1.0)
+		accel += signf(local.x) * (PLAYER_TILT_BASE + lever * PLAYER_TILT_LEVER)
 		weighting_players += 1
 
-	if weighting_players == 0:
-		# Sanfte Rückstellung in die Waagerechte, wenn niemand auf der Wippe steht.
-		torque = -plank.rotation * 46.0
+	# Gedämpfte Feder zur Waagerechten. Ohne Belastung zieht sie die Planke
+	# zügig in die Nullstellung zurück, unter Last ist sie weich.
+	var spring := SPRING_FREE if weighting_players == 0 else SPRING_LOADED
+	var damp := DAMP_FREE if weighting_players == 0 else DAMP_LOADED
+	accel -= plank.rotation * spring + plank.angular_velocity * damp
 
-	plank.apply_torque(torque)
-	plank.angular_velocity = clampf(plank.angular_velocity, -4.5, 4.5)
+	plank.apply_torque(accel * plank.inertia)
+	plank.angular_velocity = clampf(plank.angular_velocity, -MAX_SPIN, MAX_SPIN)
 	if absf(plank.rotation) > max_angle:
 		plank.rotation = clampf(plank.rotation, -max_angle, max_angle)
-		plank.angular_velocity = 0.0
+		if signf(plank.angular_velocity) == signf(plank.rotation):
+			# Am Anschlag kurz zurückfedern statt hart zu stoppen.
+			plank.angular_velocity *= -0.25 if absf(plank.angular_velocity) > 1.5 else 0.0
+
+## Projektiltreffer: Drehstoß am Trefferpunkt in Flugrichtung.
+func apply_projectile_hit(hit_position: Vector2, projectile_velocity: Vector2, damage: float = BULLET_REF_DAMAGE) -> void:
+	if is_replica or plank == null or projectile_velocity.length_squared() < 1.0:
+		return
+	var r := plank.to_local(hit_position)
+	var dir := projectile_velocity.normalized().rotated(-plank.global_rotation)
+	var power := clampf(damage / BULLET_REF_DAMAGE, 0.5, 2.5)
+	_kick(r, dir, BULLET_KICK * power)
+
+## Explosionen und Fähigkeiten: Stoß vom Explosionszentrum weg, am nächsten
+## Punkt der Planke. Eine Explosion über einer Seite drückt diese nach unten.
+func apply_blast(blast_position: Vector2, radius: float, strength: float = 1.0) -> void:
+	if is_replica or plank == null or radius <= 0.0:
+		return
+	var half_w := plank_width * 0.5
+	var half_h := plank_height * 0.5
+	var local := plank.to_local(blast_position)
+	var nearest := Vector2(clampf(local.x, -half_w, half_w), clampf(local.y, -half_h, half_h))
+	var dist := local.distance_to(nearest)
+	if dist > radius:
+		return
+	var dir := nearest - local
+	if dir.length_squared() < 1.0:
+		# Explosion direkt auf der Planke: senkrecht von ihrer Seite weg.
+		dir = Vector2.DOWN if local.y <= 0.0 else Vector2.UP
+	var falloff := clampf(1.0 - dist / radius, 0.3, 1.0)
+	_kick(nearest, dir.normalized(), BLAST_KICK * strength * falloff)
+
+func _kick(r_local: Vector2, dir_local: Vector2, amount: float) -> void:
+	var lever := r_local / (plank_width * 0.5)
+	var cross := lever.x * dir_local.y - lever.y * dir_local.x
+	plank.angular_velocity = clampf(plank.angular_velocity + cross * amount, -MAX_SPIN, MAX_SPIN)
+
+## Stößt alle Wippen im Radius an. Nur der Host simuliert, Replikate ignorieren es.
+static func blast_all(tree: SceneTree, blast_position: Vector2, radius: float, strength: float = 1.0) -> void:
+	if tree == null:
+		return
+	for s in tree.get_nodes_in_group("seesaw"):
+		if is_instance_valid(s):
+			s.apply_blast(blast_position, radius, strength)
+
+## Sturmwind: neigt die Planke in Windrichtung, hängende Wippen schwingen mit.
+func apply_wind(wind: float, delta: float) -> void:
+	if is_replica or plank == null:
+		return
+	plank.angular_velocity = clampf(plank.angular_velocity + wind * WIND_TILT * delta, -MAX_SPIN, MAX_SPIN)
+	if suspended:
+		plank.apply_central_impulse(Vector2(wind * WIND_SWING * plank.mass * delta, 0.0))
 
 func set_replica(replica: bool) -> void:
 	is_replica = replica

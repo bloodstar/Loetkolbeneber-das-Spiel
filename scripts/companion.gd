@@ -12,12 +12,18 @@ enum Mode {
 }
 
 const BULLET_SCENE: PackedScene = preload("res://scenes/player/bullet.tscn")
+const DRONE_SHOT_GRAVITY: float = 90.0
 const DRONE_TEXTURE: Texture2D = preload("res://assets/projectiles/tile_0000.png")
 const SHIELD_TEXTURE: Texture2D = preload("res://assets/projectiles/effect_circle.png")
 
 const BASE_MAX_HEALTH: float = 100.0
 const BASE_FIRE_INTERVAL: float = 0.85
 const BASE_DAMAGE_MULT: float = 0.65
+# Lebensverfall: Türme verlieren pro Sekunde 5 % ihres Maximallebens und
+# halten ohne Schaden damit höchstens 20 s. Prozentual statt absolut, damit
+# HP-Upgrades (Turm-Panzerung) die Haltbarkeit gegen Treffer erhöhen, die
+# Lebensdauer aber nicht verlängern.
+const TOWER_DECAY_PER_SECOND: float = 0.05
 const TOWER_COLLISION_LAYER: int = 16
 const TOWER_HIT_RADIUS: float = 14.0
 
@@ -126,6 +132,10 @@ func _physics_process(delta: float) -> void:
 				global_position = global_position.lerp(owner_player.global_position + tower_offset, delta * 4.0)
 		if is_instance_valid(cannon):
 			cannon.set_aim_angle(aim_angle)
+		if not is_replica:
+			_apply_tower_decay(delta)
+			if is_queued_for_deletion():
+				return
 
 	if is_replica:
 		return
@@ -141,6 +151,15 @@ func _physics_process(delta: float) -> void:
 	if _fire_timer <= 0.0:
 		_fire_timer = fire_interval
 		_try_fire()
+
+# Host-autoritativ: Clients erhalten das Leben über die Turm-Snapshots.
+func _apply_tower_decay(delta: float) -> void:
+	if current_health <= 0.0:
+		return
+	current_health = maxf(0.0, current_health - max_health * TOWER_DECAY_PER_SECOND * delta)
+	queue_redraw()
+	if current_health <= 0.0:
+		_destroy_tower()
 
 func _handle_support(delta: float) -> void:
 	if not support or not owner_player.control_enabled:
@@ -185,7 +204,6 @@ func _block_projectile(bullet: Bullet) -> void:
 	if not bullet.block_by_drone():
 		return
 	_spawn_block_flash()
-	SoundManager.play_sound("shield", 0.18, 3.0)
 	if not is_instance_valid(owner_player):
 		return
 	Global.add_match_stat(owner_player.player_index, "damage_blocked", blocked_damage)
@@ -193,21 +211,14 @@ func _block_projectile(bullet: Bullet) -> void:
 	if block_heals_owner and blocked_damage > 0.0 and owner_player.current_health > 0.0:
 		owner_player.heal(blocked_damage)
 
+# Optik und Ton auch für Clients (NetFx). Drohnen hängen am Spieler, der
+# Effekt deshalb an Main.
 func _spawn_block_flash() -> void:
-	var parent := get_parent()
+	var parent := owner_player.get_parent() if is_instance_valid(owner_player) else get_parent()
 	if parent == null:
 		return
-	var ring := Sprite2D.new()
-	ring.texture = SHIELD_TEXTURE
-	ring.modulate = Color(0.65, 1.0, 1.0, 0.9)
-	ring.scale = Vector2(0.35, 0.35)
-	ring.add_to_group("round_effect")
-	parent.add_child(ring)
-	ring.global_position = global_position
-	var tween := ring.create_tween()
-	tween.tween_property(ring, "scale", Vector2(1.15, 1.15), 0.18)
-	tween.parallel().tween_property(ring, "modulate:a", 0.0, 0.18)
-	tween.tween_callback(ring.queue_free)
+	NetFx.emit(parent, "ring", NetFx.with_sound(NetFx.ring_args(global_position,
+		Color(0.65, 1.0, 1.0, 0.9), 0.35, 1.15, 0.18, 0.18), "shield", 0.18, 3.0))
 
 func _try_fire() -> void:
 	if not is_instance_valid(target_enemy) or target_enemy.current_health <= 0.0:
@@ -225,14 +236,16 @@ func _try_fire() -> void:
 	bullet.target_enemy = target_enemy if is_instance_valid(target_enemy) else null
 	bullet.damage = owner_player.bullet_damage * damage_mult
 	bullet.velocity = direction * 680.0
+	# Drohnenschüsse behalten ihre flache Flugbahn (früherer Fallwert 90).
+	bullet.projectile_gravity_mult = DRONE_SHOT_GRAVITY / Bullet.BULLET_GRAVITY
 	bullet.bounces_left = 0
 	bullet.explosion_radius = 0.0
 	bullet.max_lifetime = 2.0
 	bullet.rotation = direction.angle()
+	# Über modulate statt am Sprite: färbt Kugel und Schweif und geht online mit.
+	bullet.modulate = Color(0.65, 0.90, 1.0)
 	get_parent().add_child(bullet)
 	bullet.global_position = get_muzzle_position()
-	if bullet.has_node("Sprite2D"):
-		bullet.get_node("Sprite2D").modulate = Color(0.65, 0.90, 1.0)
 	if is_instance_valid(cannon):
 		cannon.play_recoil()
 
@@ -255,7 +268,7 @@ func hit_tower(bullet: Bullet) -> bool:
 	if is_friendly_attacker(bullet.shooter):
 		return false
 	take_tower_damage(bullet.damage, bullet.shooter)
-	SoundManager.play_sound("hit", 0.18, 1.0)
+	NetFx.emit(get_parent(), "sound", {"snd": ["hit", 0.18, 1.0]})
 	return true
 
 func take_tower_damage(amount: float, attacker = null) -> void:
@@ -300,7 +313,6 @@ func _destroy_tower() -> void:
 		return
 	if is_instance_valid(owner_player):
 		owner_player.towers.erase(self)
-	SoundManager.play_sound("explosion", 0.22, -3.0)
 	_spawn_destroy_effect()
 	queue_free()
 
@@ -308,17 +320,8 @@ func _spawn_destroy_effect() -> void:
 	var parent := get_parent()
 	if parent == null:
 		return
-	var ring := Sprite2D.new()
-	ring.texture = SHIELD_TEXTURE
-	ring.modulate = Color(1.0, 0.55, 0.15, 0.9)
-	ring.scale = Vector2(0.35, 0.35)
-	ring.add_to_group("round_effect")
-	parent.add_child(ring)
-	ring.global_position = global_position
-	var tween := ring.create_tween()
-	tween.tween_property(ring, "scale", Vector2(1.8, 1.8), 0.28)
-	tween.parallel().tween_property(ring, "modulate:a", 0.0, 0.28)
-	tween.tween_callback(ring.queue_free)
+	NetFx.emit(parent, "ring", NetFx.with_sound(NetFx.ring_args(global_position,
+		Color(1.0, 0.55, 0.15, 0.9), 0.35, 1.8, 0.28, 0.28), "explosion", 0.22, -3.0))
 
 func apply_network_state(pos: Vector2, health: float = -1.0, max_health_value: float = -1.0, network_aim: float = 0.0) -> void:
 	if not is_replica:
@@ -327,6 +330,9 @@ func apply_network_state(pos: Vector2, health: float = -1.0, max_health_value: f
 	if max_health_value > 0.0:
 		max_health = max_health_value
 	if health >= 0.0:
+		# Treffer seit dem letzten Snapshot: Kanone kurz aufblitzen lassen.
+		if health < current_health - 0.01 and health > 0.0:
+			_flash_cannon()
 		current_health = health
 	aim_angle = network_aim
 	if is_instance_valid(cannon):

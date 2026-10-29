@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="BattleBalls"
+config/name="Lötkolbeneber"
 run/main_scene="uid://cax1207aidl7f"
 config/features=PackedStringArray("4.6", "Mobile")
 config/icon="res://icon.svg"
@@ -22,6 +22,18 @@ CardDatabase="*res://scripts/autoload/card_database.gd"
 CardStats="*res://scripts/autoload/card_stats.gd"
 SoundManager="*res://scripts/autoload/sound_manager.gd"
 NetworkManager="*res://scripts/autoload/network_manager.gd"
+RoundStats="*res://scripts/autoload/round_stats.gd"
+GameSettings="*res://scripts/autoload/game_settings.gd"
+EOSGRuntime="*uid://7saywdx0ipep"
+HPlatform="*uid://yl2muvqrdiud"
+HAuth="*uid://786t1jiowvvg"
+HAchievements="*uid://bis404dty5u5c"
+HFriends="*uid://uumqbey8ji5t"
+HStats="*uid://dbckdip83oone"
+HLeaderboards="*uid://b06khhf20mplm"
+HLobbies="*uid://6iqvm33q0tb1"
+HP2P="*uid://u6ae5fpm6l8q"
+HSessions="*uid://bieh2rxxahuu2"
 
 [display]
 
@@ -32,12 +44,22 @@ window/size/window_height_override=900
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/build_info/plugin.cfg", "res://addons/epic-online-services-godot/plugin.cfg")
+
+[gui]
+
+timers/tooltip_delay_sec=0.35
+
 [physics]
 
 3d/physics_engine="Jolt Physics"
+2d/solver/solver_iterations=48
 
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="mobile"
+anti_aliasing/quality/msaa_2d=2

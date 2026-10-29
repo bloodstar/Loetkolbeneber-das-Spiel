@@ -1,0 +1,202 @@
+
+# --- Klassen-Outfits ---
+# Jede Klasse trägt ein festes Accessoire. Es sitzt nur an Kopf und Hals,
+# damit Fell, Augen, Hose und Lötkolben (Charakter-Tab) unverändert frei
+# anpassbar bleiben. Die Farben sind fest und gehören zur Klasse.
+
+func _draw_outfit_back(head: Vector2, neck: Vector2, run: float) -> void:
+	match outfit_id:
+		"phantom":
+			var knot := head + Vector2(-7.6, -6.6)
+			_draw_ribbon(knot, 12.5, 0.0, run, Color(0.13, 0.13, 0.20, 1.0), Color(0.04, 0.04, 0.08, 1.0), 1.8)
+			_draw_ribbon(knot + Vector2(0.0, 0.6), 10.0, 1.7, run, Color(0.13, 0.13, 0.20, 1.0), Color(0.04, 0.04, 0.08, 1.0), 1.6)
+		"klinge":
+			var knot := neck + Vector2(-8.0, 1.7)
+			_draw_ribbon(knot, 13.0, 0.4, run, Color(0.84, 0.12, 0.24, 1.0), Color(0.40, 0.04, 0.10, 1.0), 2.3)
+			_draw_ribbon(knot + Vector2(0.0, 0.8), 10.0, 2.1, run, Color(0.72, 0.08, 0.20, 1.0), Color(0.40, 0.04, 0.10, 1.0), 2.0)
+
+func _draw_outfit_front(head: Vector2, neck: Vector2) -> void:
+	match outfit_id:
+		"ignis":
+			_draw_welding_goggles(head)
+		"volt":
+			_draw_volt_cap(head)
+		"spore":
+			_draw_mushroom_cap(head)
+		"nova":
+			_draw_wizard_hat(head)
+		"klinge":
+			_draw_scarf(neck)
+		"bastion":
+			_draw_hard_hat(head)
+		"phantom":
+			_draw_ninja_band(head)
+
+# Wehendes Stoffband nach hinten. Im Stand hängt es schlaff herunter, beim
+# Laufen weht es fast waagerecht hinter der Figur her.
+func _draw_ribbon(start: Vector2, length: float, phase: float, run: float, fill: Color, outline: Color, width: float) -> void:
+	var points := PackedVector2Array()
+	var drop := lerpf(3.6, 1.0, run)
+	var flutter := _time * (4.0 + 8.0 * run) + phase
+	for i in range(8):
+		var t := float(i) / 7.0
+		var wave := sin(flutter - t * 4.2) * t * (0.6 + 0.9 * run)
+		points.append(start + Vector2(-t * length, t * drop + wave))
+	draw_polyline(points, outline, width + 1.0, true)
+	draw_polyline(points, fill, width, true)
+
+# Streifen, der dem Kopfoval folgt (Stirnband, Brillenband).
+func _head_band_points(head: Vector2, dy_top: float, dy_bottom: float, sag: float) -> PackedVector2Array:
+	var top := PackedVector2Array()
+	var bottom := PackedVector2Array()
+	var top_hw := 10.6 * sqrt(maxf(0.0, 1.0 - pow(dy_top / 9.8, 2.0))) + 0.3
+	var bottom_hw := 10.6 * sqrt(maxf(0.0, 1.0 - pow(dy_bottom / 9.8, 2.0))) + 0.3
+	for i in range(9):
+		var u := lerpf(-1.0, 1.0, float(i) / 8.0)
+		var bend := sag * (1.0 - u * u)
+		top.append(head + Vector2(u * top_hw, dy_top + bend))
+		bottom.append(head + Vector2(u * bottom_hw, dy_bottom + bend))
+	bottom.reverse()
+	top.append_array(bottom)
+	return top
+
+func _draw_closed_polygon(points: PackedVector2Array, fill: Color, outline: Color, width: float) -> void:
+	draw_colored_polygon(points, fill)
+	var line := PackedVector2Array(points)
+	line.append(points[0])
+	draw_polyline(line, outline, width, true)
+
+# Obere Hälfte eines Ovals als Kappe/Helm/Hut.
+func _dome_points(center: Vector2, radius_x: float, radius_y: float, sag: float) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	for i in range(17):
+		var angle := PI + PI * float(i) / 16.0
+		points.append(center + Vector2(cos(angle) * radius_x, sin(angle) * radius_y))
+	for i in range(1, 8):
+		var u := 1.0 - 2.0 * float(i) / 8.0
+		points.append(center + Vector2(u * radius_x, sag * (1.0 - u * u)))
+	return points
+
+# Phantom: Ninja-Stirnband mit Metallplatte und Knoten am Hinterkopf.
+func _draw_ninja_band(head: Vector2) -> void:
+	var band := Color(0.13, 0.13, 0.20, 1.0)
+	var band_outline := Color(0.04, 0.04, 0.08, 1.0)
+	_draw_closed_polygon(_head_band_points(head, -8.0, -5.8, 0.6), band, band_outline, 0.7)
+	var plate := Rect2(head + Vector2(-2.7, -7.5), Vector2(5.4, 2.5))
+	draw_rect(plate, Color(0.78, 0.80, 0.86, 1.0), true)
+	draw_rect(plate, band_outline, false, 0.5)
+	draw_line(plate.position + Vector2(0.4, 0.35), plate.position + Vector2(plate.size.x - 0.4, 0.35), Color(1.0, 1.0, 1.0, 0.7), 0.4)
+	draw_arc(head + Vector2(0.0, -6.2), 0.7, 0.0, PI * 1.5, 8, Color(0.30, 0.32, 0.40, 1.0), 0.45, true)
+	_draw_ellipse(head + Vector2(-7.6, -6.6), 1.6, 1.4, band, band_outline, 0.6)
+
+# Ignis: Schweißerbrille auf der Stirn.
+func _draw_welding_goggles(head: Vector2) -> void:
+	var brass := Color(0.86, 0.58, 0.22, 1.0)
+	var brass_dark := Color(0.40, 0.24, 0.08, 1.0)
+	_draw_closed_polygon(_head_band_points(head, -8.0, -6.6, 0.5), Color(0.36, 0.22, 0.14, 1.0), Color(0.18, 0.10, 0.06, 1.0), 0.6)
+	draw_line(head + Vector2(-1.0, -7.4), head + Vector2(1.0, -7.4), brass, 1.0, true)
+	for side: float in [-1.0, 1.0]:
+		var lens := head + Vector2(3.5 * side, -7.5)
+		_draw_ellipse(lens, 2.7, 2.4, brass, brass_dark, 0.6)
+		_draw_ellipse(lens, 1.8, 1.6, Color(0.30, 0.09, 0.04, 1.0), brass_dark, 0.0)
+		draw_circle(lens + Vector2(0.0, 0.4), 0.9, Color(1.0, 0.42, 0.10, 0.45))
+		draw_circle(lens + Vector2(-0.6, -0.6), 0.5, Color(1.0, 0.85, 0.6, 0.9))
+
+# Volt: Kappe mit Blitz und Schirm nach vorne.
+func _draw_volt_cap(head: Vector2) -> void:
+	var cap := Color(1.0, 0.84, 0.18, 1.0)
+	var cap_dark := Color(0.86, 0.62, 0.06, 1.0)
+	var cap_outline := Color(0.45, 0.30, 0.04, 1.0)
+	_draw_closed_polygon(PackedVector2Array([
+		head + Vector2(3.0, -7.9),
+		head + Vector2(14.6, -7.4),
+		head + Vector2(14.2, -5.9),
+		head + Vector2(3.0, -6.2),
+	]), cap_dark, cap_outline, 0.7)
+	_draw_closed_polygon(_dome_points(head + Vector2(0.4, -7.2), 9.9, 5.8, 0.6), cap, cap_outline, 0.8)
+	var bolt := PackedVector2Array()
+	for p: Vector2 in [Vector2(0.8, -3.4), Vector2(-1.6, 0.5), Vector2(0.0, 0.5), Vector2(-0.8, 3.0), Vector2(1.9, -0.9), Vector2(0.3, -0.9)]:
+		bolt.append(head + Vector2(1.0, -10.0) + p * 0.68)
+	_draw_closed_polygon(bolt, Color(0.15, 0.20, 0.48, 1.0), Color(0.06, 0.08, 0.22, 1.0), 0.4)
+	draw_circle(head + Vector2(0.4, -12.9), 0.9, cap_dark)
+
+# Spore: Giftpilz-Hut mit Tupfen, aus dem ab und zu Sporen aufsteigen.
+func _draw_mushroom_cap(head: Vector2) -> void:
+	var cap := Color(0.42, 0.74, 0.22, 1.0)
+	var cap_outline := Color(0.16, 0.34, 0.08, 1.0)
+	var spot := Color(0.93, 0.98, 0.72, 1.0)
+	_draw_ellipse(head + Vector2(0.0, -7.2), 12.2, 1.8, Color(0.92, 0.88, 0.70, 1.0), cap_outline, 0.6)
+	_draw_closed_polygon(_dome_points(head + Vector2(0.0, -7.6), 12.6, 7.0, 0.5), cap, cap_outline, 0.9)
+	draw_circle(head + Vector2(-5.6, -10.2), 1.6, spot)
+	draw_circle(head + Vector2(0.6, -12.4), 1.9, spot)
+	draw_circle(head + Vector2(6.0, -9.8), 1.4, spot)
+	draw_circle(head + Vector2(-1.6, -8.9), 0.9, spot)
+	draw_circle(head + Vector2(9.4, -8.4), 0.8, spot)
+	for i in range(2):
+		var rise := fmod(_time * 3.2 + float(i) * 3.5, 7.0)
+		var fade := 1.0 - rise / 7.0
+		var pos := head + Vector2(-3.0 + float(i) * 6.5 + sin(_time * 2.0 + float(i)) * 1.2, -15.0 - rise)
+		draw_circle(pos, 0.7, Color(0.62, 0.95, 0.35, 0.75 * fade))
+
+# Nova: Zaubererhut mit Stern; um die Spitze kreist ein kleiner Planet.
+func _draw_wizard_hat(head: Vector2) -> void:
+	var hat := Color(0.38, 0.24, 0.76, 1.0)
+	var hat_outline := Color(0.14, 0.07, 0.32, 1.0)
+	var gold := Color(0.98, 0.80, 0.30, 1.0)
+	_draw_ellipse(head + Vector2(0.0, -7.8), 12.2, 2.3, Color(0.29, 0.17, 0.62, 1.0), hat_outline, 0.7)
+	var wobble := sin(_time * 2.4) * 0.6
+	var tip := head + Vector2(-6.4, -18.2 + wobble)
+	_draw_closed_polygon(PackedVector2Array([
+		head + Vector2(-7.0, -8.4),
+		head + Vector2(7.0, -8.4),
+		head + Vector2(5.4, -12.6),
+		head + Vector2(2.6, -16.0),
+		head + Vector2(-1.4, -18.0 + wobble * 0.5),
+		tip,
+		head + Vector2(-3.6, -15.4 + wobble * 0.3),
+		head + Vector2(-5.0, -12.0),
+	]), hat, hat_outline, 0.8)
+	_draw_closed_polygon(PackedVector2Array([
+		head + Vector2(-7.0, -8.4),
+		head + Vector2(7.0, -8.4),
+		head + Vector2(6.3, -10.2),
+		head + Vector2(-6.4, -10.2),
+	]), gold, hat_outline, 0.5)
+	var star := PackedVector2Array()
+	var star_center := head + Vector2(0.8, -13.0)
+	for i in range(10):
+		var radius := 1.9 if i % 2 == 0 else 0.8
+		var angle := -PI * 0.5 + PI * float(i) / 5.0
+		star.append(star_center + Vector2(cos(angle), sin(angle)) * radius)
+	draw_colored_polygon(star, gold)
+	var orbit := _time * 2.6
+	var planet := tip + Vector2(cos(orbit) * 3.4, sin(orbit) * 1.5)
+	draw_circle(planet, 1.0, Color(0.70, 0.92, 1.0, 1.0))
+	draw_circle(planet + Vector2(-0.3, -0.3), 0.4, Color(1.0, 1.0, 1.0, 0.9))
+
+# Klinge: roter Kampfschal um den Hals; die Enden wehen hinterher.
+func _draw_scarf(neck: Vector2) -> void:
+	var scarf := Color(0.84, 0.12, 0.24, 1.0)
+	var scarf_outline := Color(0.40, 0.04, 0.10, 1.0)
+	_draw_closed_polygon(PackedVector2Array([
+		neck + Vector2(-9.4, 0.3),
+		neck + Vector2(0.0, 1.0),
+		neck + Vector2(9.4, 0.3),
+		neck + Vector2(9.8, 2.6),
+		neck + Vector2(0.0, 3.6),
+		neck + Vector2(-9.8, 2.6),
+	]), scarf, scarf_outline, 0.7)
+	draw_line(neck + Vector2(-8.6, 1.6), neck + Vector2(8.6, 1.6), Color(1.0, 0.55, 0.60, 0.55), 0.5, true)
+	_draw_ellipse(neck + Vector2(-8.0, 1.7), 1.9, 1.6, scarf, scarf_outline, 0.6)
+
+# Bastion: Bauhelm mit Stirnlampe.
+func _draw_hard_hat(head: Vector2) -> void:
+	var helmet := Color(0.24, 0.74, 0.60, 1.0)
+	var helmet_light := Color(0.52, 0.92, 0.80, 1.0)
+	var helmet_outline := Color(0.07, 0.30, 0.24, 1.0)
+	_draw_closed_polygon(_dome_points(head + Vector2(0.0, -7.0), 10.0, 6.4, 0.4), helmet, helmet_outline, 0.8)
+	_draw_ellipse(head + Vector2(0.0, -12.2), 1.5, 2.4, helmet_light, helmet_outline, 0.5)
+	_draw_ellipse(head + Vector2(0.0, -6.9), 12.4, 1.6, helmet.darkened(0.15), helmet_outline, 0.7)
+	draw_circle(head + Vector2(0.0, -8.9), 2.6, Color(1.0, 0.95, 0.55, 0.22))
+	draw_rect(Rect2(head + Vector2(-1.8, -10.2), Vector2(3.6, 2.4)), Color(0.22, 0.24, 0.27, 1.0), true)
+	draw_circle(head + Vector2(0.0, -9.0), 1.0, Color(1.0, 0.95, 0.60, 1.0))

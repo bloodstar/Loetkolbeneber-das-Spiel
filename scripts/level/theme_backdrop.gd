@@ -16,6 +16,9 @@ var _map_size: Vector2 = Vector2.ZERO
 var _map_rect: Rect2 = Rect2()
 var _time: float = 0.0
 var _motes: Array[Dictionary] = []
+# Platine: vorberechnete Leiterbahnen (Punktlisten) und Chip-Rechtecke.
+var _traces: Array[PackedVector2Array] = []
+var _chips: Array[Rect2] = []
 
 func configure(p_theme_id: String, p_variant: String, p_accent: Color, map_size: Vector2, seed_value: int) -> void:
 	theme_id = p_theme_id
@@ -29,6 +32,8 @@ func configure(p_theme_id: String, p_variant: String, p_accent: Color, map_size:
 	z_as_relative = false
 	_build_gradient()
 	_build_motes(seed_value)
+	if theme_id == "platine":
+		_build_circuit(seed_value)
 	set_process(true)
 
 func _build_gradient() -> void:
@@ -48,6 +53,13 @@ func _build_gradient() -> void:
 				Color(0.91, 0.80, 0.89, 1.0),
 				Color(0.98, 0.83, 0.87, 1.0),
 				Color(0.82, 0.66, 0.77, 1.0),
+			])
+		"platine":
+			gradient.colors = PackedColorArray([
+				Color(0.010, 0.035, 0.045, 1.0),
+				Color(0.020, 0.075, 0.085, 1.0),
+				Color(0.018, 0.060, 0.070, 1.0),
+				Color(0.008, 0.025, 0.032, 1.0),
 			])
 		"frost":
 			gradient.colors = PackedColorArray([
@@ -129,6 +141,8 @@ func _draw() -> void:
 			_draw_wool()
 		"frost":
 			_draw_frost()
+		"platine":
+			_draw_platine()
 		_:
 			_draw_storybook()
 
@@ -249,6 +263,77 @@ func _draw_neon() -> void:
 		draw_line(Vector2(x2, y), Vector2(x2 + 24.0, y + 24.0), magenta, 1.2, true)
 		draw_circle(Vector2(x2 + 24.0, y + 24.0), 2.4, Color(0.95, 0.30, 0.72, 0.18))
 
+# --- Platine -----------------------------------------------------------------
+
+## Leiterbahnen wie im Hauptmenü: rechtwinklige Züge mit 45-Grad-Knicken,
+## Lötpunkten an den Enden und ein paar Chips. Alles gedämpft, damit die
+## Arena davor gut lesbar bleibt.
+func _build_circuit(seed_value: int) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value ^ 0x51A7
+	_traces.clear()
+	_chips.clear()
+	var step := 36.0
+	var count := int(_canvas_size.x * _canvas_size.y / 26000.0)
+	for i in range(count):
+		var p := Vector2(
+			snappedf(rng.randf_range(0.0, _canvas_size.x), step),
+			snappedf(rng.randf_range(0.0, _canvas_size.y), step)
+		)
+		var pts := PackedVector2Array([p])
+		var dir := [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN][rng.randi_range(0, 3)] as Vector2
+		for seg in range(rng.randi_range(2, 4)):
+			p += dir * step * float(rng.randi_range(2, 6))
+			pts.append(p)
+			# Abwechselnd 45-Grad-Knick und rechter Winkel.
+			if rng.randf() < 0.5:
+				var diag := (dir + Vector2(dir.y, dir.x) * (1.0 if rng.randf() < 0.5 else -1.0))
+				p += diag * step
+				pts.append(p)
+			dir = Vector2(dir.y, dir.x) * (1.0 if rng.randf() < 0.5 else -1.0)
+		_traces.append(pts)
+	for i in range(int(count / 8)):
+		var size := Vector2(rng.randf_range(70.0, 140.0), rng.randf_range(34.0, 54.0))
+		var pos := Vector2(rng.randf_range(0.0, _canvas_size.x - size.x), rng.randf_range(0.0, _canvas_size.y - size.y))
+		_chips.append(Rect2(pos, size))
+
+func _draw_platine() -> void:
+	var trace_color := Color(0.25, 0.91, 0.84, 0.13)
+	var pad_color := Color(0.25, 0.91, 0.84, 0.22)
+	var pink := Color(0.96, 0.36, 0.77, 0.16)
+	for i in range(_traces.size()):
+		var pts := _traces[i]
+		var color := pink if i % 9 == 0 else trace_color
+		draw_polyline(pts, color, 2.0, true)
+		for end in [pts[0], pts[pts.size() - 1]]:
+			draw_arc(end, 5.0, 0.0, TAU, 16, Color(color.r, color.g, color.b, color.a * 1.6), 1.6, true)
+	for chip in _chips:
+		draw_rect(chip, Color(0.0, 0.0, 0.0, 0.32), true)
+		draw_rect(chip, Color(0.25, 0.91, 0.84, 0.08), false, 1.2)
+		var pins := int(chip.size.x / 14.0)
+		for k in range(pins):
+			var x := chip.position.x + 7.0 + float(k) * 14.0
+			draw_rect(Rect2(x - 2.0, chip.position.y - 6.0, 4.0, 5.0), Color(0.7, 0.75, 0.78, 0.12), true)
+			draw_rect(Rect2(x - 2.0, chip.end.y + 1.0, 4.0, 5.0), Color(0.7, 0.75, 0.78, 0.12), true)
+	# Langsame Signalimpulse auf einigen Bahnen.
+	for i in range(0, _traces.size(), 4):
+		var pts := _traces[i]
+		var total := 0.0
+		for k in range(pts.size() - 1):
+			total += pts[k].distance_to(pts[k + 1])
+		if total <= 0.0:
+			continue
+		var travel := fposmod(_time * 60.0 + float(i) * 37.0, total)
+		for k in range(pts.size() - 1):
+			var seg := pts[k].distance_to(pts[k + 1])
+			if travel <= seg:
+				var pos := pts[k].lerp(pts[k + 1], travel / maxf(seg, 0.001))
+				var c := Color(0.96, 0.36, 0.77, 0.55) if i % 8 == 0 else Color(0.55, 1.0, 0.94, 0.5)
+				draw_circle(pos, 3.0, c)
+				draw_circle(pos, 7.0, Color(c.r, c.g, c.b, 0.12))
+				break
+			travel -= seg
+
 func _draw_wool() -> void:
 	var cloud := Color(1.0, 0.96, 0.98, 0.34)
 	var cloud_shadow := Color(0.67, 0.53, 0.67, 0.12)
@@ -340,6 +425,8 @@ func _draw_motes() -> void:
 			color = Color(1.0, 0.86, 0.91, 0.50)
 		"frost":
 			color = Color(0.86, 0.97, 1.0, 0.38)
+		"platine":
+			color = Color(0.45, 1.0, 0.92, 0.30)
 		_:
 			color = Color(1.0, 0.88, 0.52, 0.38)
 	for mote in _motes:
@@ -347,7 +434,7 @@ func _draw_motes() -> void:
 		var y := float(mote["y"])
 		var speed := float(mote["speed"])
 		var drift := float(mote["drift"])
-		if theme_id == "neon":
+		if theme_id == "neon" or theme_id == "platine":
 			y = _map_rect.position.y + fposmod(y - _map_rect.position.y - _time * 18.0 * speed, _map_size.y)
 		elif theme_id == "wool":
 			y = _map_rect.position.y + fposmod(y - _map_rect.position.y + _time * 11.0 * speed, _map_size.y)

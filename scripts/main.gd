@@ -4,6 +4,7 @@ extends Node2D
 @export var player_scene: PackedScene = preload("res://scenes/player/player.tscn")
 @export var bullet_scene: PackedScene = preload("res://scenes/player/bullet.tscn")
 const LevelModifierManagerClass = preload("res://scripts/level_modifier_manager.gd")
+const FloorLavaOverlayClass = preload("res://scripts/level/floor_lava_overlay.gd")
 # Wird von der Testszene gesetzt, um das Hauptmenü zu überspringen.
 @export var skip_menu: bool = false
 
@@ -11,20 +12,39 @@ const LevelModifierManagerClass = preload("res://scripts/level_modifier_manager.
 @onready var camera: DynamicCamera = $DynamicCamera
 @onready var hud: HUD = $HUD
 @onready var card_draft_ui: CardDraftUI = $CardDraftUI
-@onready var lobby: Lobby = $Lobby
+@onready var lobby: GameLobby = $Lobby
 @onready var main_menu: MainMenu = $MainMenu
 @onready var sudden_death_timer: Timer = $SuddenDeathTimer
 @onready var lava_overlay: ColorRect = $LavaOverlay
+# Animierte Lava (Wellen, Blasen) für Sudden Death, Lavaturm und Lava-Flut.
+# Das flache LavaOverlay aus der Szene bleibt dauerhaft versteckt.
+var lava_anim: FloorLavaOverlayClass = null
+# Optionen (Grafik, Audio, Tasten); im Hauptmenü per Knopf, in der Runde per ESC.
+var options_menu: OptionsMenu = null
 
 # Alle aktiven Spieler (Index 1..player_count). Slot = player_index.
 var players: Array[Player] = []
 var modifier_manager: Node = null
 var is_sudden_death: bool = false
+## Sekunden vom Rundenstart (bzw. vom letzten Tod) bis Sudden Death.
+const SUDDEN_DEATH_DELAY := 38.0
+## Sudden-Death-Lava hält so weit über der höchsten Plattform an, dass wer
+## dort steht, noch brennt, aber niemand zwischen Lava und Decke klemmt.
+const SUDDEN_DEATH_LAVA_HEADROOM := 36.0
+## Höchster Stand der Sudden-Death-Lava (Pixel-y), beim Start berechnet.
+var sudden_death_lava_stop_y: float = -INF
 var lava_y_pos: float = 900.0
+# Vertikale Level (z. B. Lavaturm): Lava steigt schon kurz nach dem Start.
+# rising_lava kommt aus dem Map-Profil (delay, speed, stop_y).
+var rising_lava: Dictionary = {}
+var rising_lava_active: bool = false
+var rising_lava_wait: float = -1.0
 # Reihenfolge der Tode in der aktuellen Runde (für Gleichstand bei Doppel-KO).
 var round_death_order: Array[int] = []
 # Verhindert doppelte Statistik-Samples, falls das Match-Ende mehrfach signalisiert wird.
 var card_stats_match_recorded: bool = false
+# Match-Sieger aus dem letzten match_over-Signal, für das Runden-Protokoll.
+var last_match_winner: int = 0
 
 # --- Netzwerk ---
 var is_network_host: bool = false
@@ -40,13 +60,36 @@ var pending_dash: bool = false
 var pending_ability: bool = false
 var pending_block: bool = false
 var pending_reload: bool = false
+var pending_melee: bool = false
+var pending_drop: bool = false
 var remote_bullets: Dictionary = {}
 var remote_towers: Dictionary = {}
+var remote_mines: Dictionary = {}
 # Auf Clients: zuletzt gesehener Lebenszustand pro Slot. Ein leerer Snapshot
 # nach einem lebenden Snapshot ist ein Tod und löst den lokalen Todeston aus.
 var network_alive_slots: Dictionary = {}
 const SNAPSHOT_INTERVAL: float = 1.0 / 25.0
+# Aussehen (Farben, Zauberstab) ändert sich in einer Runde praktisch nie und
+# macht einen Großteil der Spielerdaten aus. Es geht deshalb nur mit jedem
+# n-ten Snapshot und mit dem ersten Snapshot einer Runde raus.
+const SNAPSHOT_APPEARANCE_EVERY: int = 25
+var net_snapshot_count: int = 0
 const INPUT_INTERVAL: float = 1.0 / 30.0
+
+# Kill-Cam: Der Tod, der die Runde entscheidet, läuft in Zeitlupe, die Kamera
+# zoomt nah ran. Erst danach wird die Runde gewertet und der Draft beginnt.
+const KILL_CAM_TIME_SCALE: float = 0.2
+## Dauer in Echtzeit-Sekunden.
+const KILL_CAM_DURATION: float = 1.6
+# Die Testszene schaltet die Kill-Cam ab, damit das Rundenende sofort kommt.
+var kill_cam_enabled: bool = true
+var kill_cam_active: bool = false
+# Jeder Start und Abbruch erhöht den Zähler; ein veralteter Timer tut dann nichts.
+var kill_cam_token: int = 0
+
+# Stechen: kurze Pause mit Ansage, dann startet die Finalrunde.
+const TIEBREAK_DELAY: float = 2.5
+var tiebreak_token: int = 0
 
 # Start-Countdown
 const ROUND_COUNTDOWN_SECONDS: float = 3.0
@@ -65,13 +108,23 @@ func _ready() -> void:
 	sudden_death_timer.timeout.connect(_start_sudden_death)
 	main_menu.start_requested.connect(_on_menu_start_requested)
 	Global.match_over.connect(_on_match_over)
+	Global.tiebreak_started.connect(_on_tiebreak_started)
 	hud.restart_requested.connect(_on_hud_restart_requested)
 	hud.continue_requested.connect(_on_hud_continue_requested)
 
 	# Online-Multiplayer
 	main_menu.host_requested.connect(_on_menu_host_requested)
 	main_menu.join_requested.connect(_on_menu_join_requested)
+	main_menu.host_online_requested.connect(_on_menu_host_online_requested)
+	main_menu.join_online_requested.connect(_on_menu_join_online_requested)
 	main_menu.network_cancel_requested.connect(_on_menu_network_cancel)
+	options_menu = OptionsMenu.new()
+	options_menu.name = "OptionsMenu"
+	add_child(options_menu)
+	options_menu.main_menu_requested.connect(_on_options_main_menu_requested)
+	options_menu.closed.connect(func(): card_draft_ui.set_timers_paused(false))
+	card_draft_ui.options_requested.connect(_open_ingame_options)
+	main_menu.options_requested.connect(func(): options_menu.open_options(false))
 	NetworkManager.join_succeeded.connect(_on_network_join_succeeded)
 	NetworkManager.join_failed.connect(_on_network_join_failed)
 	NetworkManager.host_failed.connect(_on_network_host_failed)
@@ -83,11 +136,16 @@ func _ready() -> void:
 	NetworkManager.input_received.connect(_on_network_input)
 	NetworkManager.draft_start_received.connect(_on_network_draft_start)
 	NetworkManager.draft_pick_received.connect(_on_network_draft_pick)
+	NetworkManager.draft_reoffer_received.connect(_on_network_draft_reoffer)
 	NetworkManager.draft_pick_requested.connect(_on_network_draft_pick_requested)
+	NetworkManager.draft_gamble_flip_received.connect(_on_network_draft_gamble_flip)
+	NetworkManager.draft_gamble_flip_requested.connect(_on_network_draft_gamble_flip_requested)
 	NetworkManager.match_over_received.connect(_on_network_match_over)
 	NetworkManager.tile_broken_received.connect(_on_network_tile_broken)
 	NetworkManager.tile_regrown_received.connect(_on_network_tile_regrown)
 	NetworkManager.zone_spawn_received.connect(_on_network_zone_spawn)
+	NetworkManager.fx_received.connect(_on_network_fx)
+	NetworkManager.kill_cam_received.connect(_on_network_kill_cam)
 	level_generator.tile_broken.connect(_on_level_tile_broken)
 	level_generator.tile_regrown.connect(_on_level_tile_regrown)
 
@@ -97,8 +155,15 @@ func _ready() -> void:
 	modifier_manager.wind_changed.connect(hud.show_wind_notice)
 	modifier_manager.coin_collected.connect(hud.update_bounty_notice)
 	modifier_manager.pinata_hit.connect(hud.update_pinata_notice)
+	modifier_manager.devil_target_changed.connect(hud.show_devil_notice)
 
 	lava_overlay.visible = false
+	lava_anim = FloorLavaOverlayClass.new()
+	lava_anim.auto_floor = false
+	lava_anim.visible = false
+	add_child(lava_anim)
+	# Bots und Hazards finden das Spiel über diese Gruppe (Lava-Oberfläche).
+	add_to_group("main_game")
 
 	if skip_menu:
 		# Direkt in eine Runde springen (z. B. für automatisierte Tests).
@@ -120,18 +185,40 @@ func _on_menu_start_requested() -> void:
 	Global.set_local_player(1)
 	_start_setup_phase()
 
+# ESC-Menü während Runde oder Kartenwahl. Im Draft kommt der Aufruf aus
+# CardDraftUI (main ist dort pausiert); offline stehen dann auch die Draft-Timer.
+func _open_ingame_options() -> void:
+	if main_menu.visible or options_menu.is_open():
+		return
+	SoundManager.play_sound("click")
+	options_menu.open_options(true)
+	if card_draft_ui.visible and not Global.network_mode:
+		card_draft_ui.set_timers_paused(true)
+
 func _input(event: InputEvent) -> void:
+	# ESC öffnet während der Runde das Optionsmenü. Geschlossen wird es von
+	# OptionsMenu selbst (läuft auch bei pausiertem Spiel).
+	if event is InputEventKey and event.pressed and not event.echo \
+			and event.physical_keycode == KEY_ESCAPE \
+			and Global.current_state == Global.GameState.PLAYING \
+			and not main_menu.visible and not options_menu.is_open():
+		get_viewport().set_input_as_handled()
+		_open_ingame_options()
+		return
 	# Die Bot-Steuerung wird ausschließlich in der Lobby gewählt. Während einer
 	# Runde gibt es bewusst keinen F1-Umschalter mehr.
 	if event.is_action_pressed("restart_game") and not event.is_echo():
 		if Global.network_mode:
 			return
-		# Startet den gesamten Setup-Prozess neu (inkl. Lobby)
+		# Laufende Runde komplett aufräumen (Spieler, Overlays, Countdown, Draft,
+		# ESC-Menü), dann den gesamten Setup-Prozess neu starten (inkl. Lobby).
+		_clear_running_round()
 		_start_setup_phase()
 
 # --- Setup Phase Management ---
 
 func _start_setup_phase() -> void:
+	_cancel_kill_cam()
 	# Neues Match: Punktestand und Karten zurücksetzen, dann Lobby öffnen.
 	Global.reset_match()
 	Global.current_state = Global.GameState.LOBBY
@@ -141,7 +228,18 @@ func _start_setup_phase() -> void:
 func _on_lobby_confirmed() -> void:
 	if is_network_host:
 		NetworkManager.send_start_match(_build_network_config())
+	if Global.pre_draft_picks > 0:
+		_start_pre_draft()
+		return
 	_start_fresh_round()
+
+# Pre-Draft: Vor der ersten Runde draften alle Spieler ihre Startkarten. Danach
+# startet _on_draft_sequence_finished wie nach jedem Draft die Runde.
+func _start_pre_draft() -> void:
+	_cancel_kill_cam()
+	Global.current_state = Global.GameState.CARD_DRAFT
+	lobby.close_lobby()
+	card_draft_ui.start_pre_draft(Global.get_active_player_indices())
 
 func _on_lobby_cancelled() -> void:
 	if is_network_host or is_network_client or NetworkManager.is_network_active():
@@ -152,6 +250,7 @@ func _on_lobby_cancelled() -> void:
 	main_menu.open_menu()
 
 func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> void:
+	_cancel_kill_cam()
 	Global.current_state = Global.GameState.PLAYING
 	get_tree().paused = false
 	lobby.close_lobby()
@@ -167,7 +266,7 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 		map_id = Global.resolve_map_id(level_seed)
 	match_map_id = map_id
 	if is_network_host and NetworkManager.has_clients():
-		NetworkManager.send_round_start(level_seed, map_id, Global.points_to_win)
+		NetworkManager.send_round_start(level_seed, map_id, Global.points_to_win, Global.tiebreak_slots)
 
 	_clear_remote_bullets()
 	_clear_remote_towers()
@@ -184,21 +283,32 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	# 2. Level regenerieren. Erst danach die Modifier-Hazards spawnen, damit
 	#    Münzen, Meteore und Heilzonen die neue Karte als Grundlage nutzen.
 	level_generator.generate_level(level_seed, map_id, active_mods)
+	# Hintergrundmusik passend zum Tileset; gleiches Thema läuft einfach weiter.
+	SoundManager.play_music(level_generator.current_theme_id)
 	if modifier_manager != null:
+		modifier_manager.is_replica = is_network_client
 		modifier_manager.start_round_modifiers(active_mods, self, level_generator)
+	if not is_network_client:
+		RoundStats.begin_round(level_seed, map_id, active_mods)
+		CardStats.record_round_start()
 
 	# 3. Reset Sudden Death. Der Timer startet erst nach dem Start-Countdown.
 	is_sudden_death = false
-	lava_overlay.visible = false
-	lava_y_pos = (level_generator.MAP_HEIGHT * level_generator.TILE_SIZE)
-	lava_overlay.position.y = lava_y_pos
+	rising_lava = level_generator.get_rising_lava()
+	rising_lava_active = false
+	rising_lava_wait = -1.0
+	lava_y_pos = (LevelGenerator.map_h * level_generator.TILE_SIZE)
+	lava_anim.visible = false
 	sudden_death_timer.stop()
 	hud.set_sudden_death(false)
 
 	_spawn_players()
+	if Global.is_tiebreak():
+		hud.show_tiebreak_notice(Global.tiebreak_slots)
 	_start_round_countdown()
 
 	if is_network_host and NetworkManager.has_clients():
+		net_snapshot_count = 0
 		_send_snapshot()
 
 # Liefert den Spieler mit dem gegebenen Slot-Index (1..6) oder null.
@@ -212,8 +322,10 @@ func _spawn_players() -> void:
 	_clear_players()
 	network_alive_slots.clear()
 
-	var active_indices := Global.get_active_player_indices()
+	# Im Stechen spawnen nur die Finalisten, verteilt auf die ersten Spawnpunkte.
+	var active_indices := Global.get_round_player_indices()
 	var total := active_indices.size()
+	var tiebreak := Global.is_tiebreak()
 	for i in active_indices:
 		var p: Player = player_scene.instantiate()
 		p.player_index = i
@@ -225,7 +337,8 @@ func _spawn_players() -> void:
 		# Position vor dem Einfügen in den Baum setzen: Sonst registriert die
 		# Physik den Körper kurz bei (0, 0) und die Gummiwände schleudern ihn
 		# beim Rundenstart scheinbar grundlos durch die Arena.
-		p.position = level_generator.get_spawn_position(i, total)
+		var spawn_slot := active_indices.find(i) + 1 if tiebreak else i
+		p.position = level_generator.get_spawn_position(spawn_slot, total)
 		add_child(p)
 		p.died.connect(_on_player_died)
 		players.append(p)
@@ -238,14 +351,30 @@ func _spawn_players() -> void:
 
 	_update_bot_controllers()
 
-	# Kamera folgt allen Spielern.
+	# Kamera folgt allen Spielern. In Scroll-Levels folgt sie nur den
+	# lokalen Spielern und zeigt die übrigen per Randpfeil an.
 	camera.targets.clear()
 	for p in players:
 		camera.add_target(p)
+	_configure_camera_world()
 	_start_camera_round_intro()
 
 	hud.setup_players(players)
 	hud.update_all()
+
+func _configure_camera_world() -> void:
+	var scrolling := level_generator.is_scrolling_map()
+	var local_targets: Array[Node2D] = []
+	if scrolling and not Global.is_spectator:
+		for p in players:
+			if not is_instance_valid(p):
+				continue
+			if Global.network_mode:
+				if p.player_index == Global.local_player_index:
+					local_targets.append(p)
+			elif not p.is_bot:
+				local_targets.append(p)
+	camera.configure_world(Rect2(Vector2.ZERO, level_generator.get_map_pixel_size()), scrolling, local_targets)
 
 # Startet die Kamera nah am eigenen Charakter. Anschließend zoomt sie während
 # des Countdowns zur normalen Übersicht über alle Spieler heraus.
@@ -333,7 +462,10 @@ func _end_round_countdown() -> void:
 
 	hud.show_countdown_go()
 	if not is_network_client:
-		sudden_death_timer.start(38.0)
+		sudden_death_timer.start(SUDDEN_DEATH_DELAY)
+		RoundStats.mark_fight_started()
+		if not rising_lava.is_empty():
+			rising_lava_wait = float(rising_lava.get("delay", 4.0))
 
 	var hide_timer := get_tree().create_timer(0.8)
 	hide_timer.timeout.connect(_hide_countdown_after_start)
@@ -348,16 +480,12 @@ func _cancel_round_countdown() -> void:
 	hud.hide_countdown()
 
 func _play_local_spawn_intro() -> void:
-	if Global.network_mode:
-		var local := get_player(Global.local_player_index)
-		if local and is_instance_valid(local):
-			local.play_spawn_intro()
-	else:
-		# Lokal: eigener Charakter (P1) und alle nicht-Bot-Mitspieler erscheinen
-		# aus einem Portal. Bots bleiben außen vor.
-		for p in players:
-			if is_instance_valid(p) and (p.player_index == 1 or not p.is_bot):
-				p.play_spawn_intro()
+	# Der eigene Charakter und alle menschlichen Mitspieler erscheinen aus
+	# einem Portal, online auf jedem Rechner gleich. Bots bleiben außen vor.
+	var own_index := Global.local_player_index if Global.network_mode else 1
+	for p in players:
+		if is_instance_valid(p) and (p.player_index == own_index or not p.is_bot):
+			p.play_spawn_intro()
 
 func _process(delta: float) -> void:
 	if countdown_active:
@@ -369,31 +497,87 @@ func _process(delta: float) -> void:
 		if not countdown_active and modifier_manager != null:
 			modifier_manager.update_physics_modifiers(delta, players)
 
-		if is_sudden_death:
-			# Lava rises steadily
-			lava_y_pos -= 35.0 * delta
-			lava_overlay.position.y = lava_y_pos
-			lava_overlay.size.y = (level_generator.MAP_HEIGHT * level_generator.TILE_SIZE) - lava_y_pos + 100.0
+		if rising_lava_wait >= 0.0 and not countdown_active:
+			rising_lava_wait -= delta
+			if rising_lava_wait <= 0.0:
+				rising_lava_wait = -1.0
+				_start_rising_lava()
 
-			# Check if players touch lava
+		if is_sudden_death or rising_lava_active:
+			# Lava steigt stetig. Die Turm-Lava hält vor dem Sudden Death unter
+			# der Gipfel-Arena an und zieht danach schneller an.
+			var rise_speed := 35.0
+			if rising_lava_active:
+				var tower_speed := float(rising_lava.get("speed", 20.0))
+				if is_sudden_death:
+					rise_speed = maxf(35.0, tower_speed * 1.5)
+				elif lava_y_pos > float(rising_lava.get("stop_y", 0.0)):
+					rise_speed = tower_speed
+				else:
+					rise_speed = 0.0
+			if is_sudden_death:
+				if lava_y_pos > sudden_death_lava_stop_y:
+					lava_y_pos = maxf(lava_y_pos - rise_speed * delta, sudden_death_lava_stop_y)
+			else:
+				lava_y_pos -= rise_speed * delta
+
+		# Sudden-Death-, Turm- und Flut-Lava teilen sich ein Overlay; es zählt
+		# immer die höchste Oberfläche.
+		_update_lava_overlay()
+		var lava_surface := get_lava_surface_y()
+		if lava_surface < INF:
 			for p in players:
-				if is_instance_valid(p) and p.global_position.y > lava_y_pos:
+				if is_instance_valid(p) and p.global_position.y > lava_surface:
 					p.take_damage(40.0 * delta, Vector2(0, -100.0))
 
 	if is_network_host and NetworkManager.has_clients() and Global.current_state == Global.GameState.PLAYING:
-		net_snapshot_timer += delta
+		# Echtzeit, damit Clients in der Zeitlupe nicht seltener Updates bekommen.
+		net_snapshot_timer += delta / maxf(Engine.time_scale, 0.001)
 		if net_snapshot_timer >= SNAPSHOT_INTERVAL:
 			net_snapshot_timer = 0.0
 			_send_snapshot()
 
+## Höchste aktive Lava-Oberfläche in Pixeln (kleineres y = höher). INF, wenn
+## gerade keine Lava im Level ist. Berücksichtigt Sudden Death, die steigende
+## Lava vertikaler Karten und den Modifier "Lava-Flut".
+func get_lava_surface_y() -> float:
+	var y := INF
+	if is_sudden_death or rising_lava_active:
+		y = lava_y_pos
+	if modifier_manager != null:
+		y = minf(y, modifier_manager.get_lava_flood_y())
+	return y
+
+func _start_rising_lava() -> void:
+	rising_lava_active = true
+	_update_lava_overlay()
+
 func _start_sudden_death() -> void:
+	# Nach Runden- oder Matchende (Draft, Statistik) kein Sudden Death mehr.
+	if Global.current_state != Global.GameState.PLAYING:
+		return
 	is_sudden_death = true
-	lava_overlay.visible = true
-	lava_overlay.position.x = 0
-	lava_overlay.size.x = (level_generator.MAP_WIDTH * level_generator.TILE_SIZE)
-	lava_y_pos = (level_generator.MAP_HEIGHT * level_generator.TILE_SIZE)
+	# Im Lavaturm steigt die Lava schon; sie zieht nur an, statt neu zu starten.
+	if not rising_lava_active:
+		lava_y_pos = (LevelGenerator.map_h * level_generator.TILE_SIZE)
+	sudden_death_lava_stop_y = _compute_sudden_death_lava_stop_y()
+	_update_lava_overlay()
 	hud.set_sudden_death(true)
-	SoundManager.play_sound("explosion", 0.1, 2.0)
+	SoundManager.play_sound("sudden_death", 0.0, 0.0)
+	RoundStats.mark_sudden_death()
+
+## Lava-Endhöhe im Sudden Death: knapp über der höchsten Plattform bzw. der
+## höchsten Kiste (Kistenfestung). Ohne Plattformen steigt sie unbegrenzt.
+func _compute_sudden_death_lava_stop_y() -> float:
+	var top := level_generator.get_highest_platform_top_y()
+	for crate in get_tree().get_nodes_in_group("crate"):
+		# Kisten in Kistenketten hängen frei in der Luft und zählen nicht.
+		if crate is PhysicsCrate and is_instance_valid(crate) and not crate.has_meta("chain_crate"):
+			var half: float = PhysicsCrate.BASE_SIZE * crate.crate_size * 0.5
+			top = minf(top, crate.global_position.y - half)
+	if top == INF:
+		return -INF
+	return top - SUDDEN_DEATH_LAVA_HEADROOM
 
 func _on_player_died(dead_player_index: int) -> void:
 	if Global.current_state != Global.GameState.PLAYING:
@@ -401,6 +585,12 @@ func _on_player_died(dead_player_index: int) -> void:
 	camera.shake(0.55)
 	round_death_order.append(dead_player_index)
 	Global.add_match_stat(dead_player_index, "deaths", 1.0)
+
+	# Jeder Tod startet den Countdown bis Sudden Death neu. Ein bereits
+	# laufendes Sudden Death bleibt aktiv. Nur der Host zählt; Clients
+	# bekommen den Beginn über den Snapshot ("sudden").
+	if not is_network_client and not is_sudden_death and not sudden_death_timer.is_stopped():
+		sudden_death_timer.start(SUDDEN_DEATH_DELAY)
 
 	# Kill-Punkte sofort gutschreiben. Der Schütze wird über die letzte
 	# Schadensquelle am gestorbenen Spieler ermittelt.
@@ -411,13 +601,20 @@ func _on_player_died(dead_player_index: int) -> void:
 			Global.award_kill(killer.player_index, dead_player_index)
 			Global.add_match_stat(killer.player_index, "kills", 1.0)
 			CardStats.record_kill(killer.player_index)
+			RoundStats.record_kill(killer.player_index, dead_player_index)
+
+	# Während der Kill-Cam steht der Rundensieger schon fest. Weitere Tode
+	# zählen nur noch für Punkte und Statistik.
+	if kill_cam_active:
+		return
 
 	# Runde endet in FFA, wenn höchstens noch ein Spieler lebt. In Team-Modi
 	# endet sie, sobald nur noch ein Team lebende Mitglieder hat.
 	var alive: Array[int] = []
 	var alive_teams: Array[int] = []
 	for p in players:
-		if is_instance_valid(p) and p.current_health > 0.0:
+		# Wer per Unsterblichkeit gleich wieder aufsteht, zählt als lebend.
+		if is_instance_valid(p) and (p.current_health > 0.0 or p.is_reviving()):
 			alive.append(p.player_index)
 			if not alive_teams.has(p.team_id):
 				alive_teams.append(p.team_id)
@@ -447,8 +644,77 @@ func _on_player_died(dead_player_index: int) -> void:
 		# Doppel-KO: der zuletzt gestorbene Spieler gewinnt die Runde.
 		winner = round_death_order[round_death_order.size() - 1]
 
-	if winner > 0:
-		Global.award_round(winner, award_survival)
+	if winner <= 0:
+		return
+	if not kill_cam_enabled:
+		_finish_round(winner, award_survival)
+		return
+	var death_point: Vector2 = camera.global_position
+	if dead_player != null and is_instance_valid(dead_player):
+		death_point = dead_player.global_position
+	var killer_node: Player = null
+	if dead_player != null and is_instance_valid(dead_player):
+		var source := dead_player.last_damage_source
+		if source != null and is_instance_valid(source) and source.player_index != dead_player_index:
+			killer_node = source
+	_start_kill_cam(winner, award_survival, death_point, killer_node)
+
+func _finish_round(winner: int, award_survival: bool) -> void:
+	last_match_winner = 0
+	Global.award_round(winner, award_survival)
+	# Nach award_round, damit Rundensieg und Punkte schon verbucht sind.
+	# Endet damit das Match, hat _on_match_over last_match_winner gesetzt.
+	RoundStats.end_round(winner, round_death_order, last_match_winner)
+
+# --- Kill-Cam ---
+
+func _start_kill_cam(winner: int, award_survival: bool, point: Vector2, killer: Player) -> void:
+	kill_cam_active = true
+	kill_cam_token += 1
+	var token := kill_cam_token
+	Engine.time_scale = KILL_CAM_TIME_SCALE
+	camera.start_kill_cam(point, killer)
+	if is_network_host and NetworkManager.has_clients():
+		NetworkManager.send_kill_cam(point, killer.player_index if killer != null else 0, KILL_CAM_DURATION)
+	# Echtzeit-Timer (ignore_time_scale), sonst dauerte die Zeitlupe fünfmal so lang.
+	var timer := get_tree().create_timer(KILL_CAM_DURATION, true, false, true)
+	timer.timeout.connect(_on_kill_cam_finished.bind(token, winner, award_survival))
+
+func _on_kill_cam_finished(token: int, winner: int, award_survival: bool) -> void:
+	if token != kill_cam_token or not kill_cam_active:
+		return
+	_cancel_kill_cam()
+	if Global.current_state != Global.GameState.PLAYING:
+		return
+	_finish_round(winner, award_survival)
+
+## Beendet Zeitlupe und Kill-Cam sofort. Wird auch bei Neustart, Abbruch und
+## Rundenstart aufgerufen, damit das Spiel nie verlangsamt hängen bleibt.
+func _cancel_kill_cam() -> void:
+	kill_cam_token += 1
+	kill_cam_active = false
+	Engine.time_scale = 1.0
+	if camera != null:
+		camera.stop_kill_cam()
+
+func _on_network_kill_cam(point: Vector2, killer_slot: int, duration: float) -> void:
+	if not is_network_client or Global.current_state != Global.GameState.PLAYING:
+		return
+	kill_cam_active = true
+	kill_cam_token += 1
+	var token := kill_cam_token
+	Engine.time_scale = KILL_CAM_TIME_SCALE
+	var killer: Player = null
+	if killer_slot > 0:
+		killer = get_player(killer_slot)
+	camera.start_kill_cam(point, killer)
+	# Fallback: Der Draft vom Host beendet die Kill-Cam normalerweise vorher.
+	var timer := get_tree().create_timer(maxf(0.1, duration), true, false, true)
+	timer.timeout.connect(_on_client_kill_cam_timeout.bind(token))
+
+func _on_client_kill_cam_timeout(token: int) -> void:
+	if token == kill_cam_token:
+		_cancel_kill_cam()
 
 func _best_team_member(team: int, candidates: Array = []) -> int:
 	var pool: Array = candidates
@@ -466,6 +732,9 @@ func _best_team_member(team: int, candidates: Array = []) -> int:
 	return best
 
 func _on_round_ended(winner_index: int) -> void:
+	_cancel_kill_cam()
+	sudden_death_timer.stop()
+	SoundManager.play_sound("round_end", 0.0, 0.0)
 	_cancel_round_countdown()
 	camera.cancel_round_intro()
 	if is_network_client:
@@ -482,19 +751,89 @@ func _on_round_ended(winner_index: int) -> void:
 			losers.append(i)
 
 	# Modifier-Boni (z.B. Beute-Münzen & Piñata): Beste Sammler/Klopfer erhalten Extrakarte!
+	# Die Quelle wird im Draft als "Bonus Zug (Pinata/Gold)" angezeigt.
+	var draft_sources: Array[String] = []
+	for _i in losers:
+		draft_sources.append("")
 	if modifier_manager != null:
-		var bonus_slots: Array[int] = modifier_manager.get_bonus_card_drafters()
-		for b_slot in bonus_slots:
-			losers.append(b_slot)
+		for entry in modifier_manager.get_bonus_card_draft_entries():
+			losers.append(int(entry["slot"]))
+			draft_sources.append(str(entry["source"]))
 
-	card_draft_ui.start_draft_sequence(losers)
+	card_draft_ui.start_draft_sequence(losers, draft_sources)
 
 func _on_match_over(winner_index: int) -> void:
+	_cancel_kill_cam()
+	last_match_winner = winner_index
 	_cancel_round_countdown()
+	sudden_death_timer.stop()
 	if is_network_host and NetworkManager.has_clients():
 		_send_snapshot()
-		NetworkManager.send_match_over(winner_index, Global.get_scores(), Global.get_match_stats())
-	_record_card_statistics(winner_index)
+		NetworkManager.send_match_over(winner_index, Global.get_scores(), Global.get_match_stats(), Global.match_end_reason)
+	# Abgebrochene Matches verfälschen die Karten-Siegquoten nicht.
+	if Global.match_end_reason != "early":
+		_record_card_statistics(winner_index)
+
+# Gleichstand am Ziel: Nach kurzer Ansage starten nur die Finalisten eine
+# neue Runde, ohne Draft. Clients bekommen die Finalisten mit dem Rundenstart.
+func _on_tiebreak_started(slots: Array) -> void:
+	_cancel_kill_cam()
+	sudden_death_timer.stop()
+	_cancel_round_countdown()
+	camera.cancel_round_intro()
+	if is_network_client:
+		return
+	SoundManager.play_sound("round_end", 0.0, 0.0)
+	if is_network_host and NetworkManager.has_clients():
+		_send_snapshot()
+	hud.show_tiebreak_notice(slots, TIEBREAK_DELAY + 0.5)
+	tiebreak_token += 1
+	# Pausiert mit dem Spiel (lokales ESC-Menü), läuft aber in Echtzeit.
+	var timer := get_tree().create_timer(TIEBREAK_DELAY, false, false, true)
+	timer.timeout.connect(_on_tiebreak_delay_finished.bind(tiebreak_token))
+
+func _on_tiebreak_delay_finished(token: int) -> void:
+	if token != tiebreak_token or not Global.is_tiebreak():
+		return
+	if Global.current_state != Global.GameState.CARD_DRAFT:
+		return
+	_start_fresh_round()
+
+# --- Vorzeitiges Match-Ende ---
+
+func _is_match_running() -> bool:
+	return Global.current_state == Global.GameState.PLAYING \
+			or Global.current_state == Global.GameState.CARD_DRAFT
+
+# ESC → "Zum Hauptmenü"/"Spiel verlassen": Läuft ein Match, kommt erst der
+# Win-Screen (Sieger nach Punkten), von dort geht es ins Hauptmenü.
+func _on_options_main_menu_requested() -> void:
+	if _is_match_running() and Global.has_match_progress():
+		if is_network_client:
+			# Wer online verlässt, trennt sofort und sieht den Win-Screen lokal.
+			_disconnect_network_quietly()
+		_end_match_early()
+		return
+	_on_hud_restart_requested()
+
+func _end_match_early() -> void:
+	tiebreak_token += 1
+	_cancel_kill_cam()
+	_cancel_round_countdown()
+	camera.cancel_round_intro()
+	sudden_death_timer.stop()
+	card_draft_ui.close_draft()
+	get_tree().paused = false
+	Global.end_match_early(Global.get_early_end_winner())
+
+# Trennt die Online-Verbindung, ohne den Bildschirm zu wechseln (Win-Screen bleibt).
+func _disconnect_network_quietly() -> void:
+	is_network_host = false
+	is_network_client = false
+	NetworkManager.disconnect_peer()
+	Global.network_mode = false
+	Global.remote_connected = false
+	Global.is_spectator = false
 
 func _record_card_statistics(winner_index: int) -> void:
 	if card_stats_match_recorded:
@@ -547,9 +886,13 @@ func _build_network_config() -> Dictionary:
 		"cards_per_draft": Global.cards_per_draft,
 		"blind_pick_enabled": Global.blind_pick_enabled,
 		"random_pick_enabled": Global.random_pick_enabled,
+		"gamble_enabled": Global.gamble_enabled,
+		"pre_draft_picks": Global.pre_draft_picks,
+		"pre_draft_random": Global.pre_draft_random,
 		"level_modifier_rate_percent": Global.level_modifier_rate_percent,
 		"enabled_level_modifiers": Global.get_enabled_level_modifiers(),
 		"bans": Global.banned_card_ids.duplicate(),
+		"pool_unlocks": Global.pool_unlocked_card_ids.duplicate(),
 		"player_count": Global.player_count,
 		"heroes": Global.player_hero_ids.duplicate(),
 		"kinds": Global.player_kind.duplicate(),
@@ -557,6 +900,8 @@ func _build_network_config() -> Dictionary:
 		"base_damage": Global.base_damage,
 		"rarity_percentages": Global.rarity_percentages.duplicate(),
 		"card_pools": Global.enabled_card_pools.duplicate(),
+		"disabled_maps": Global.disabled_map_ids.duplicate(),
+		"disabled_powerups": Global.disabled_powerup_kinds.duplicate(),
 		"map_id": Global.selected_map_id,
 		"match_mode": Global.match_mode,
 	}
@@ -581,6 +926,9 @@ func _apply_network_config(config: Dictionary) -> void:
 	)
 	Global.set_blind_pick_enabled(bool(config.get("blind_pick_enabled", Global.blind_pick_enabled)))
 	Global.set_random_pick_enabled(bool(config.get("random_pick_enabled", Global.random_pick_enabled)))
+	Global.set_gamble_enabled(bool(config.get("gamble_enabled", Global.gamble_enabled)))
+	Global.set_pre_draft_picks(int(config.get("pre_draft_picks", Global.pre_draft_picks)))
+	Global.set_pre_draft_random(bool(config.get("pre_draft_random", Global.pre_draft_random)))
 	Global.set_level_modifier_rate_percent(
 		int(config.get("level_modifier_rate_percent", Global.level_modifier_rate_percent))
 	)
@@ -593,11 +941,16 @@ func _apply_network_config(config: Dictionary) -> void:
 			Global.set_rarity_percent(rarity, float(rarity_data[rarity]))
 	if config.has("card_pools"):
 		Global.set_enabled_card_pools(config.get("card_pools", []))
+	if config.has("disabled_maps"):
+		Global.set_disabled_maps(config.get("disabled_maps", []))
+	if config.has("disabled_powerups"):
+		Global.set_disabled_powerups(config.get("disabled_powerups", []))
 	if config.has("map_id"):
 		Global.set_selected_map(str(config.get("map_id", Global.MAP_RANDOM)))
 	Global.banned_card_ids.clear()
 	for card_id in config.get("bans", []):
 		Global.banned_card_ids.append(str(card_id))
+	Global.set_pool_unlocked_cards(config.get("pool_unlocks", []))
 	Global.banned_cards_changed.emit()
 	Global.set_base_hp_percent(int(config.get("base_hp_percent", Global.base_hp_percent)))
 	Global.set_base_damage(float(config.get("base_damage", Global.base_damage)))
@@ -611,6 +964,17 @@ func _on_menu_host_requested(port: int) -> void:
 	if err != OK:
 		main_menu.set_network_status("Host konnte nicht gestartet werden. Anderen Port versuchen.", true)
 		return
+	_open_host_lobby()
+
+# Online über Epic: Fehler kommen per host_failed ins Menü.
+func _on_menu_host_online_requested() -> void:
+	if await NetworkManager.host_online():
+		_open_host_lobby()
+
+func _on_menu_join_online_requested(code: String, as_spectator: bool) -> void:
+	await NetworkManager.join_online(code, as_spectator)
+
+func _open_host_lobby() -> void:
 	is_network_host = true
 	is_network_client = false
 	main_menu.close_menu()
@@ -620,6 +984,9 @@ func _on_menu_host_requested(port: int) -> void:
 	Global.remote_connected = false
 	Global.is_spectator = false
 	Global.set_local_player(1)
+	# Beim Hosten ist Slot 2 standardmäßig für einen Mitspieler (Mensch) reserviert.
+	if Global.player_count >= 2 and Global.is_bot_slot(2):
+		Global.set_player_kind(2, Global.PlayerKind.HUMAN)
 	lobby.open_lobby()
 
 func _on_menu_join_requested(address: String, port: int, as_spectator: bool) -> void:
@@ -661,14 +1028,33 @@ func _on_network_peer_left() -> void:
 		return
 	if Global.current_state == Global.GameState.LOBBY:
 		return
+	# Auf dem Win-Screen bleiben, aber ohne den Spieler nicht weiterspielen.
+	if Global.current_state == Global.GameState.GAME_OVER:
+		hud.lock_continue("MITSPIELER HAT VERLASSEN")
+		return
+	if _is_match_running() and Global.has_match_progress():
+		_end_match_early()
+		return
 	_abort_network_match("Mitspieler hat das Spiel verlassen.")
 
 func _on_network_server_closed() -> void:
 	if not is_network_client:
 		return
+	# Win-Screen bleibt stehen; ein laufendes Match endet vorzeitig mit den
+	# zuletzt vom Host gespiegelten Punkten.
+	if Global.current_state == Global.GameState.GAME_OVER:
+		_disconnect_network_quietly()
+		return
+	if _is_match_running() and Global.has_match_progress():
+		_disconnect_network_quietly()
+		_end_match_early()
+		return
 	_abort_network_match("Verbindung zum Host verloren.")
 
 func _abort_network_match(reason: String) -> void:
+	_cancel_kill_cam()
+	if options_menu != null:
+		options_menu.close_options()
 	is_network_host = false
 	is_network_client = false
 	NetworkManager.disconnect_peer()
@@ -695,11 +1081,12 @@ func _on_network_match_start(config: Dictionary) -> void:
 		return
 	_apply_network_config(config)
 
-func _on_network_round_start(level_seed: int, map_id: String, points_to_win: int = 0) -> void:
+func _on_network_round_start(level_seed: int, map_id: String, points_to_win: int = 0, tiebreak_slots: Array = []) -> void:
 	if not is_network_client:
 		return
 	if points_to_win > 0:
 		Global.set_match_target(points_to_win)
+	Global.set_tiebreak_slots(tiebreak_slots)
 	lobby.close_lobby()
 	main_menu.close_menu()
 	_start_fresh_round(level_seed, map_id)
@@ -718,16 +1105,38 @@ func _process_network_client(delta: float) -> void:
 		pending_ability = false
 		pending_block = false
 		pending_reload = false
+		pending_melee = false
+		pending_drop = false
 		return
 
 	if local_shoot_sound_timer > 0.0:
 		local_shoot_sound_timer -= delta
 
+	# Optionsmenü offen: die Runde läuft weiter, die eigene Figur steht still.
+	if GameSettings.gameplay_input_blocked:
+		pending_jump = false
+		pending_jump_release = false
+		pending_dash = false
+		pending_ability = false
+		pending_block = false
+		pending_reload = false
+		pending_melee = false
+		pending_drop = false
+		net_input_timer += delta
+		if net_input_timer >= INPUT_INTERVAL:
+			net_input_timer = 0.0
+			NetworkManager.send_input({
+				"move_x": 0.0, "aim": Vector2.ZERO, "shoot": false, "jump": false,
+				"jump_release": false, "dash": false, "ability": false, "block": false, "reload": false,
+				"melee": false, "drop": false,
+			})
+		return
+
 	var local := get_player(Global.local_player_index)
 
 	if Input.is_action_just_pressed("p1_jump"):
 		pending_jump = true
-		SoundManager.play_sound("click", 0.25, -4.0)
+		SoundManager.play_sound("jump", 0.08, 0.0)
 	if Input.is_action_just_released("p1_jump"):
 		pending_jump_release = true
 	if Input.is_action_just_pressed("p1_dash"):
@@ -736,10 +1145,12 @@ func _process_network_client(delta: float) -> void:
 		pending_block = true
 	if Input.is_action_just_pressed("p1_reload"):
 		pending_reload = true
-	if Input.is_action_just_pressed("p1_ability") \
-			or Input.is_action_just_pressed("p1_ability_alt") \
-			or Input.is_action_just_pressed("p1_ability_f"):
+	if Input.is_action_just_pressed("p1_ability"):
 		pending_ability = true
+	if Input.is_action_just_pressed("p1_melee"):
+		pending_melee = true
+	if Input.is_action_just_pressed("p1_down"):
+		pending_drop = true
 	if Input.is_action_pressed("p1_shoot") and local_shoot_sound_timer <= 0.0:
 		if _can_local_shoot(local):
 			SoundManager.play_sound("shoot", 0.15, 0.0)
@@ -770,6 +1181,8 @@ func _process_network_client(delta: float) -> void:
 		"ability": pending_ability,
 		"block": pending_block,
 		"reload": pending_reload,
+		"melee": pending_melee,
+		"drop": pending_drop,
 	})
 	pending_jump = false
 	pending_jump_release = false
@@ -777,6 +1190,8 @@ func _process_network_client(delta: float) -> void:
 	pending_ability = false
 	pending_block = false
 	pending_reload = false
+	pending_melee = false
+	pending_drop = false
 
 # Verhindert Schussgeräusche, während der lokale Spieler nachlädt oder kein
 # Magazin mehr hat.
@@ -800,38 +1215,35 @@ func _send_snapshot() -> void:
 	if not is_network_host or not NetworkManager.has_clients():
 		return
 	var snap_list: Array = []
+	var with_appearance := net_snapshot_count % SNAPSHOT_APPEARANCE_EVERY == 0
+	net_snapshot_count += 1
 	for i in range(Global.MAX_PLAYERS):
 		snap_list.append({})
 	for p in players:
 		if is_instance_valid(p):
-			snap_list[p.player_index - 1] = _player_snapshot(p)
+			snap_list[p.player_index - 1] = _player_snapshot(p, with_appearance)
 	NetworkManager.send_snapshot({
 		"players": snap_list,
 		"bullets": _bullet_snapshots(),
 		"towers": _tower_snapshots(),
+		"mines": _mine_snapshots(),
 		"map_objects": level_generator.get_moving_object_snapshots(),
+		"statics": level_generator.get_static_object_snapshot(),
 		"scores": Global.get_scores(),
 		"sudden": is_sudden_death,
 		"lava": lava_y_pos,
+		"lava_rising": rising_lava_active,
+		"modifiers": modifier_manager.get_network_snapshot() if modifier_manager != null else {},
 	})
 
-func _player_snapshot(player: Player) -> Dictionary:
+func _player_snapshot(player: Player, with_appearance: bool = true) -> Dictionary:
 	if not player or not is_instance_valid(player) or not player.visible:
 		return {}
-	if player.current_health <= 0.0:
+	if player.current_health <= 0.0 and not player.is_reviving():
 		return {}
-	var pig_colors := player.get_pig_colors()
-	if pig_colors.is_empty():
-		pig_colors = Global.get_pig_appearance(player.player_index)
-	return {
+	var data := {
 		"pos": player.global_position,
 		"vel": player.velocity,
-		"fur": pig_colors["fur"],
-		"eyes": pig_colors["eyes"],
-		"pants": pig_colors["pants"],
-		"wand_shape": str(pig_colors.get("wand_tip_shape", "orb")),
-		"wand_tip": pig_colors.get("wand_tip_color", Color.WHITE),
-		"shot": pig_colors.get("shot_color", Color.WHITE),
 		"hp": player.current_health,
 		"max_hp": player.max_health,
 		"armor": player.armor_percent,
@@ -856,7 +1268,33 @@ func _player_snapshot(player: Player) -> Dictionary:
 		"powerup_damage": player.powerup_damage_timer,
 		"powerup_damage_mult": player.powerup_damage_mult,
 		"powerup_rapid": player.powerup_rapid_fire_timer,
+		"melee_cd": player.melee_cooldown_timer,
+		"melee_cd_max": player.melee_cooldown,
+		"melee_rmult": player.melee_range_mult,
+		"powerup_auto": player.powerup_auto_attack_timer,
+		"powerup_multi": player.powerup_multishot_timer,
+		"powerup_undying": player.powerup_undying_timer,
+		"powerup_revenge": player.powerup_revenge_timer,
+		"powerup_invis": player.powerup_invisible_timer,
+		"revive": player.revive_timer,
+		"melee_seq": player.melee_swing_seq,
+		# Raketensprung und Dash: Clients zeigen Funken- und Geisterspur selbst.
+		"leap": player.is_leaping,
+		"dash": player.is_dashing,
+		"melee_aim": player.melee_swing_dir,
 	}
+	if with_appearance:
+		var pig_colors := player.get_pig_colors()
+		if pig_colors.is_empty():
+			pig_colors = Global.get_pig_appearance(player.player_index)
+		data["fur"] = pig_colors["fur"]
+		data["eyes"] = pig_colors["eyes"]
+		data["pants"] = pig_colors["pants"]
+		data["wand_shape"] = str(pig_colors.get("wand_tip_shape", "orb"))
+		data["tusks"] = str(pig_colors.get("tusk_shape", "small"))
+		data["wand_tip"] = pig_colors.get("wand_tip_color", Color.WHITE)
+		data["shot"] = pig_colors.get("shot_color", Color.WHITE)
+	return data
 
 func _bullet_snapshots() -> Array:
 	var result: Array = []
@@ -899,7 +1337,14 @@ func _on_network_snapshot(data: Dictionary) -> void:
 		_apply_player_snapshot(i + 1, snap_list[i])
 	_sync_remote_bullets(data.get("bullets", []))
 	_sync_remote_towers(data.get("towers", []))
+	_sync_remote_mines(data.get("mines", []))
 	level_generator.apply_moving_object_snapshots(data.get("map_objects", []))
+	var statics = data.get("statics", {})
+	if statics is Dictionary:
+		level_generator.apply_static_object_snapshot(statics)
+	var mod_data = data.get("modifiers", {})
+	if modifier_manager != null and mod_data is Dictionary:
+		modifier_manager.apply_network_snapshot(mod_data)
 
 	var scores = data.get("scores", [])
 	if scores is Array:
@@ -910,6 +1355,7 @@ func _on_network_snapshot(data: Dictionary) -> void:
 		is_sudden_death = sudden
 		hud.set_sudden_death(sudden)
 	lava_y_pos = float(data.get("lava", lava_y_pos))
+	rising_lava_active = bool(data.get("lava_rising", false))
 	_update_lava_overlay()
 
 func _apply_player_snapshot(index: int, data: Dictionary) -> void:
@@ -941,8 +1387,10 @@ func _sync_remote_bullets(list: Array) -> void:
 			b = bullet_scene.instantiate()
 			b.is_replica = true
 			b.net_id = bullet_id
-			add_child(b)
+			# Position vor add_child setzen: _ready() startet dort den Schweif,
+			# sonst beginnt er beim Client im Ursprung (links oben).
 			b.position = entry.get("pos", Vector2.ZERO)
+			add_child(b)
 			remote_bullets[bullet_id] = b
 		b.apply_network_state(entry)
 
@@ -989,6 +1437,40 @@ func _sync_remote_towers(list: Array) -> void:
 				tower.queue_free()
 			remote_towers.erase(tower_id)
 
+# Minen (Karte Minenleger): Clients zeigen nur die Optik; ob sie für den
+# lokalen Spieler sichtbar sind, entscheidet BlockMine selbst.
+func _mine_snapshots() -> Array:
+	var result: Array = []
+	for m in get_tree().get_nodes_in_group("block_mine"):
+		if not is_instance_valid(m) or m.is_replica or m.is_queued_for_deletion():
+			continue
+		result.append(m.get_network_state())
+	return result
+
+func _sync_remote_mines(list: Array) -> void:
+	var seen := {}
+	for entry in list:
+		var mine_id := int(entry.get("id", 0))
+		if mine_id == 0:
+			continue
+		seen[mine_id] = true
+		var mine = remote_mines.get(mine_id, null)
+		if mine == null or not is_instance_valid(mine):
+			mine = BlockMine.new()
+			mine.is_replica = true
+			mine.net_id = mine_id
+			mine.position = entry.get("pos", Vector2.ZERO)
+			add_child(mine)
+			remote_mines[mine_id] = mine
+		mine.apply_network_state(entry)
+
+	for mine_id in remote_mines.keys():
+		if not seen.has(mine_id):
+			var mine = remote_mines[mine_id]
+			if is_instance_valid(mine):
+				mine.remove_replica()
+			remote_mines.erase(mine_id)
+
 func _clear_remote_towers() -> void:
 	for t in remote_towers.values():
 		if is_instance_valid(t):
@@ -1013,6 +1495,7 @@ func _clear_round_effects() -> void:
 			effect.queue_free()
 	remote_bullets.clear()
 	remote_towers.clear()
+	remote_mines.clear()
 	if modifier_manager != null:
 		modifier_manager.clear_round()
 
@@ -1024,24 +1507,58 @@ func _on_network_zone_spawn(data: Dictionary) -> void:
 	if owner and is_instance_valid(owner):
 		owner.spawn_network_zone(data)
 
+# Optik und Ton von Fähigkeiten und Explosionen, die der Host abgespielt hat.
+func _on_network_fx(fx: String, args: Dictionary) -> void:
+	if not is_network_client:
+		return
+	# Eigene Schüsse und Sprünge spielt der Client schon selbst ab.
+	if int(args.get("x", 0)) == Global.local_player_index:
+		return
+	if args.has("o") and int(args["o"]) != Global.local_player_index:
+		return
+	NetFx.play(self, fx, args)
+
 func _update_lava_overlay() -> void:
-	lava_overlay.visible = is_sudden_death
-	lava_overlay.position.x = 0.0
-	lava_overlay.size.x = (level_generator.MAP_WIDTH * level_generator.TILE_SIZE)
-	lava_overlay.position.y = lava_y_pos
-	lava_overlay.size.y = (level_generator.MAP_HEIGHT * level_generator.TILE_SIZE) - lava_y_pos + 100.0
+	var surface := get_lava_surface_y()
+	lava_anim.visible = surface < INF
+	if lava_anim.visible:
+		lava_anim.set_surface_y(surface)
 
 # --- Draft / Match-Ende ---
 
-func _on_network_draft_start(drafter: int, card_ids: Array, picks_total: int) -> void:
+func _on_network_draft_start(drafter: int, card_ids: Array, picks_total: int, bonus_source: String) -> void:
 	if not is_network_client:
 		return
-	card_draft_ui.start_network_draft(drafter, card_ids, picks_total)
+	_cancel_kill_cam()
+	# Pre-Draft: Die Lobby ist beim Client noch offen.
+	if lobby.visible:
+		lobby.close_lobby()
+	if main_menu.visible:
+		main_menu.close_menu()
+	card_draft_ui.start_network_draft(drafter, card_ids, picks_total, bonus_source)
 
 func _on_network_draft_pick(card_id: String) -> void:
 	if not is_network_client or not card_draft_ui.visible:
 		return
 	card_draft_ui.apply_network_pick(card_id)
+
+func _on_network_draft_reoffer(card_ids: Array) -> void:
+	if not is_network_client or not card_draft_ui.visible:
+		return
+	card_draft_ui.apply_network_reoffer(card_ids)
+
+func _on_network_draft_gamble_flip(revealed: int) -> void:
+	if not is_network_client or not card_draft_ui.visible:
+		return
+	card_draft_ui.apply_network_gamble_flip(revealed)
+
+# Gamble: Nur der Slot am Zug darf die nächste Karte umdrehen.
+func _on_network_draft_gamble_flip_requested(slot: int, revealed: int) -> void:
+	if not is_network_host or not card_draft_ui.visible:
+		return
+	if card_draft_ui.current_drafter != slot:
+		return
+	card_draft_ui.apply_network_gamble_request(revealed)
 
 func _on_network_draft_pick_requested(slot: int, card_id: String) -> void:
 	if not is_network_host or not card_draft_ui.visible:
@@ -1054,11 +1571,13 @@ func _on_network_draft_pick_requested(slot: int, card_id: String) -> void:
 		return
 	card_draft_ui.apply_network_pick(card_id)
 
-func _on_network_match_over(winner_index: int, scores: Array, stats: Array) -> void:
+func _on_network_match_over(winner_index: int, scores: Array, stats: Array, reason: String = "") -> void:
 	if not is_network_client:
 		return
+	_cancel_kill_cam()
+	card_draft_ui.close_draft()
 	Global.set_network_scores(scores)
-	Global.set_network_match_over(winner_index, stats)
+	Global.set_network_match_over(winner_index, stats, reason)
 
 func _clear_players() -> void:
 	for p in players:
@@ -1079,6 +1598,8 @@ func _on_hud_continue_requested() -> void:
 		return
 	# Ziel um rund 30 % erhöhen. Punkte, Decks und Match-Statistik bleiben
 	# erhalten; die nächste Runde startet direkt ohne neuen Draft.
+	Global.clear_tiebreak()
+	Global.match_end_reason = ""
 	Global.advance_match_target(0.30)
 	_start_fresh_round()
 
@@ -1089,7 +1610,16 @@ func _on_hud_restart_requested() -> void:
 	# In-Place-Neustart: kein reload_current_scene(), sondern sauberes Aufräumen.
 	Global.reset_match()
 	Global.current_state = Global.GameState.MENU
+	_clear_running_round()
+	main_menu.open_menu()
+
+# Räumt eine laufende Runde vollständig ab (Zeitlupe, Overlays, Countdown,
+# Draft, Spieler, Effekte). Genutzt von "Zurück ins Menü" und F9-Neustart.
+func _clear_running_round() -> void:
+	_cancel_kill_cam()
 	get_tree().paused = false
+	if options_menu != null:
+		options_menu.close_options()
 	lobby.close_lobby()
 	card_draft_ui.close_draft()
 	_cancel_round_countdown()
@@ -1098,4 +1628,3 @@ func _on_hud_restart_requested() -> void:
 	_clear_remote_towers()
 	_clear_round_effects()
 	hud.reset_for_round()
-	main_menu.open_menu()

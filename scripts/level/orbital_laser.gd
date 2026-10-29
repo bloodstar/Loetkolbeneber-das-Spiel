@@ -65,6 +65,11 @@ func _fire_blast() -> void:
 					dir = -dir
 				player.take_damage(damage, dir * 450.0)
 
+	# Der Strahl stößt Wippen an der Stelle an, an der er sie trifft.
+	for s in get_tree().get_nodes_in_group("seesaw"):
+		var hit := Geometry2D.get_closest_point_to_segment(s.global_position, start_point, end_point)
+		s.apply_blast(hit, 70.0, 1.5)
+
 	# Beam fade out
 	var tw := create_tween()
 	tw.tween_property(_line, "width", 0.0, 0.35)

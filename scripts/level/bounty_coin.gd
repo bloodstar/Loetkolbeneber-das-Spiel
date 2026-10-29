@@ -5,6 +5,9 @@ signal collected(player: Node2D)
 
 var _time: float = 0.0
 var _base_y: float = 0.0
+# Netzwerk-Clients zeigen nur eine Kopie der Host-Münze an. Das Aufsammeln
+# entscheidet ausschließlich der Host.
+var is_replica: bool = false
 
 func _ready() -> void:
 	collision_layer = 4
@@ -46,23 +49,35 @@ func _draw() -> void:
 	])
 	draw_colored_polygon(pts, Color(0.85, 0.55, 0.1, 1.0))
 
+# Ruheposition ohne Schwebe-Offset, wird an Clients übertragen.
+func get_base_position() -> Vector2:
+	return Vector2(position.x, _base_y)
+
+func set_base_position(pos: Vector2) -> void:
+	position = pos
+	_base_y = pos.y
+
 func _on_body_entered(body: Node2D) -> void:
+	if is_replica:
+		return
 	# Nur echte Spieler dürfen Münzen aufnehmen. Das Piñata-Lama teilt sich
 	# denselben Collision-Layer und hat ebenfalls take_damage(), darf aber
 	# keine Beute für Slot 1 auslösen.
 	if body is Player:
-		SoundManager.play_sound("coin", 0.22, 0.0)
+		play_collect_effect()
 		collected.emit(body)
-
-		# Sparkle particle effect
-		var sparkle := Node2D.new()
-		get_parent().add_child(sparkle)
-		sparkle.global_position = global_position
-		sparkle.draw.connect(func():
-			sparkle.draw_circle(Vector2.ZERO, 18.0, Color(1.0, 0.9, 0.3, 0.7))
-		)
-		var tw := sparkle.create_tween()
-		tw.tween_property(sparkle, "scale", Vector2(2.5, 2.5), 0.25)
-		tw.tween_callback(sparkle.queue_free)
-
 		queue_free()
+
+func play_collect_effect() -> void:
+	SoundManager.play_sound("coin", 0.22, 0.0)
+
+	# Sparkle particle effect
+	var sparkle := Node2D.new()
+	get_parent().add_child(sparkle)
+	sparkle.global_position = global_position
+	sparkle.draw.connect(func():
+		sparkle.draw_circle(Vector2.ZERO, 18.0, Color(1.0, 0.9, 0.3, 0.7))
+	)
+	var tw := sparkle.create_tween()
+	tw.tween_property(sparkle, "scale", Vector2(2.5, 2.5), 0.25)
+	tw.tween_callback(sparkle.queue_free)

@@ -2,7 +2,7 @@ extends Node2D
 
 ## Zeichnet die Statusanzeige direkt um den Charakter:
 ## - oben: Munitionsstriche oder ein Nachlade-Kreis
-## - unten: Lebensbalken sowie Symbole für Schild, Dash und Fähigkeit
+## - unten: Lebensbalken (mit blauem Schild-Overlay) sowie Symbole für Block, Schild, Dash und Fähigkeit
 ##
 ## Der Node ist ein Kind des Players und übernimmt dessen Skalierung, damit die
 ## Anzeige bei Karten mit Größenänderungen mitwächst.
@@ -23,6 +23,9 @@ const RELOAD_COLOR: Color = Color(0.35, 0.86, 1.0, 0.96)
 const HEALTH_LOW: Color = Color(0.95, 0.23, 0.20, 0.98)
 const HEALTH_HIGH: Color = Color(0.35, 0.94, 0.45, 0.98)
 const SHIELD_COLOR: Color = Color(0.30, 0.78, 1.0, 0.96)
+const SHIELD_OVERLAY_COLOR: Color = Color(0.25, 0.55, 1.0, 0.72)
+const BLOCK_COLOR: Color = Color(0.55, 0.85, 1.0, 0.96)
+const BLOCK_ACTIVE_COLOR: Color = Color(0.92, 0.98, 1.0, 1.0)
 const DASH_COLOR: Color = Color(0.42, 0.88, 1.0, 0.96)
 const ABILITY_COLOR: Color = Color(1.0, 0.82, 0.36, 0.96)
 const READY_GLOW: Color = Color(1.0, 1.0, 1.0, 0.20)
@@ -93,9 +96,25 @@ func _draw_health_bar() -> void:
 	if fill.size.x > 0.0:
 		draw_rect(fill, color, true)
 		draw_rect(Rect2(fill.position, Vector2(fill.size.x, 0.55)), Color(1.0, 1.0, 1.0, 0.24), true)
+	_draw_shield_overlay()
+
+# Aktiver Schild als blaues Overlay über dem Lebensbalken. Die Breite ist
+# relativ zum Maximalleben (50 Schild bei 100 Max HP = halber Balken) und wird
+# auf die Balkenbreite gedeckelt. current_shield wird an alle Clients
+# synchronisiert, daher sehen alle Spieler das Overlay.
+func _draw_shield_overlay() -> void:
+	if player.current_shield <= 0.0:
+		return
+	var ratio: float = clampf(player.current_shield / maxf(1.0, player.max_health), 0.0, 1.0)
+	var overlay := Rect2(-HEALTH_WIDTH * 0.5, HEALTH_Y, HEALTH_WIDTH * ratio, HEALTH_HEIGHT)
+	if overlay.size.x <= 0.0:
+		return
+	draw_rect(overlay, SHIELD_OVERLAY_COLOR, true)
+	draw_rect(Rect2(overlay.position, Vector2(overlay.size.x, 0.55)), Color(0.85, 0.95, 1.0, 0.45), true)
+	draw_rect(Rect2(overlay.end.x - 0.45, HEALTH_Y - 0.5, 0.45, HEALTH_HEIGHT + 1.0), SHIELD_COLOR, true)
 
 func _draw_status_icons() -> void:
-	var icons: Array[String] = []
+	var icons: Array[String] = ["block"]
 	if player.max_shield > 0.0:
 		icons.append("shield")
 	icons.append("dash")
@@ -104,6 +123,8 @@ func _draw_status_icons() -> void:
 	for i in range(icons.size()):
 		var center := Vector2(start_x + float(i) * ICON_SPACING, ICON_Y)
 		match icons[i]:
+			"block":
+				_draw_block_icon(center)
 			"shield":
 				_draw_shield_icon(center)
 			"dash":
@@ -117,11 +138,19 @@ func _draw_icon_background(center: Vector2, ready: bool) -> void:
 	if ready:
 		draw_arc(center, ICON_RADIUS + 1.15, 0.0, TAU, 24, READY_GLOW, 0.55, true)
 
-func _draw_shield_icon(center: Vector2) -> void:
-	var ratio: float = 0.0
-	if player.max_shield > 0.0:
-		ratio = clampf(player.current_shield / player.max_shield, 0.0, 1.0)
-	_draw_icon_background(center, ratio > 0.0)
+# Block (Taste Q): Wappen-Symbol. Während des Blocks hell, danach läuft die
+# Abklingzeit als dunkler Kreissektor ab.
+func _draw_block_icon(center: Vector2) -> void:
+	var cooldown: float = maxf(0.0, player.block_cooldown_timer)
+	var duration: float = maxf(0.001, player.block_cooldown)
+	var active: bool = player.is_blocking
+	var ready: bool = cooldown <= 0.0 and not active
+	_draw_icon_background(center, ready or active)
+	var color: Color = BLOCK_COLOR
+	if active:
+		color = BLOCK_ACTIVE_COLOR
+	elif not ready:
+		color = Color(0.34, 0.48, 0.60, 0.62)
 	var points := PackedVector2Array([
 		center + Vector2(-2.5, -2.2),
 		center + Vector2(0.0, -3.2),
@@ -130,10 +159,24 @@ func _draw_shield_icon(center: Vector2) -> void:
 		center + Vector2(0.0, 3.2),
 		center + Vector2(-2.5, 0.7),
 	])
-	var color: Color = SHIELD_COLOR if ratio > 0.0 else Color(0.30, 0.48, 0.62, 0.48)
-	draw_colored_polygon(points, Color(color.r, color.g, color.b, 0.22 if ratio <= 0.0 else 0.32))
+	draw_colored_polygon(points, Color(color.r, color.g, color.b, 0.55 if active else 0.30))
 	points.append(points[0])
 	draw_polyline(points, color, 0.8, true)
+	if active:
+		draw_arc(center, ICON_RADIUS + 1.15, 0.0, TAU, 24, BLOCK_ACTIVE_COLOR, 0.7, true)
+	elif not ready:
+		_draw_cooldown_overlay(center, ICON_RADIUS + 0.6, cooldown / duration)
+
+# Schild (Karten mit Max-Schild): Blase, der Ring zeigt die Schildfüllung.
+func _draw_shield_icon(center: Vector2) -> void:
+	var ratio: float = 0.0
+	if player.max_shield > 0.0:
+		ratio = clampf(player.current_shield / player.max_shield, 0.0, 1.0)
+	_draw_icon_background(center, ratio > 0.0)
+	var color: Color = SHIELD_COLOR if ratio > 0.0 else Color(0.30, 0.48, 0.62, 0.48)
+	draw_circle(center, 2.4, Color(color.r, color.g, color.b, 0.22 if ratio <= 0.0 else 0.32))
+	draw_arc(center, 2.4, 0.0, TAU, 20, color, 0.8, true)
+	draw_arc(center + Vector2(-0.7, -0.7), 1.0, PI, PI * 1.5, 8, Color(1.0, 1.0, 1.0, 0.45), 0.5, true)
 	if ratio > 0.0:
 		draw_arc(center, ICON_RADIUS + 0.2, -PI * 0.5, -PI * 0.5 + TAU * ratio, 20, SHIELD_COLOR, 0.7, true)
 

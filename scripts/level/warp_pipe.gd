@@ -17,6 +17,8 @@ const PORTAL_CENTER: Vector2 = Vector2(0.0, -24.0)
 
 var can_warp: bool = true
 var warp_cooldown: float = 0.0
+# Client: Teleport und Sperre entscheidet der Host, das Portal zeigt nur an.
+var is_replica: bool = false
 
 var _anim_time: float = 0.0
 var _hide_timer: float = 0.0
@@ -46,13 +48,14 @@ func _process(delta: float) -> void:
 
 	if not can_warp:
 		warp_cooldown = maxf(0.0, warp_cooldown - delta)
-		if warp_cooldown <= 0.0:
+		# Auf Clients schaltet erst der Snapshot das Portal wieder frei.
+		if warp_cooldown <= 0.0 and not is_replica:
 			_reactivate()
 	elif visible:
 		queue_redraw()
 
 func _on_body_entered(body: Node2D) -> void:
-	if not can_warp or not is_instance_valid(target_pipe) or not target_pipe.can_warp:
+	if is_replica or not can_warp or not is_instance_valid(target_pipe) or not target_pipe.can_warp:
 		return
 	if body is CharacterBody2D:
 		# Beide Portale sofort sperren, damit der Teleport nicht erneut auslöst.
@@ -62,6 +65,15 @@ func _on_body_entered(body: Node2D) -> void:
 		body.velocity = Vector2(0.0, -250.0)
 		_begin_cooldown()
 		target_pipe._begin_cooldown()
+
+# Client: Restsperre vom Host übernehmen (0 = bereit).
+func apply_network_cooldown(remaining: float) -> void:
+	if remaining > 0.0:
+		if can_warp:
+			_begin_cooldown()
+		warp_cooldown = remaining
+	elif not can_warp:
+		_reactivate()
 
 func _begin_cooldown() -> void:
 	can_warp = false

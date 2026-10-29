@@ -6,6 +6,9 @@ extends Node
 # Die Verbindung läuft direkt über ENet (UDP). Für Internet-Partien versucht der
 # Host zusätzlich, den Port per UPnP im Router freizugeben.
 
+# Obergrenze für entpackte Snapshots, schützt vor kaputten Paketen.
+const SNAPSHOT_MAX_RAW_BYTES: int = 1 << 20
+
 signal hosting_started(port: int)
 signal host_failed(reason: String)
 signal join_started()
@@ -19,19 +22,25 @@ signal ping_updated()
 
 signal lobby_sync_received(data: Dictionary)
 signal match_start_received(config: Dictionary)
-signal round_start_received(seed: int, map_id: String, points_to_win: int)
+signal round_start_received(seed: int, map_id: String, points_to_win: int, tiebreak_slots: Array)
 signal snapshot_received(data: Dictionary)
 signal input_received(slot: int, data: Dictionary)
-signal draft_start_received(drafter: int, card_ids: Array, picks_total: int)
+signal draft_start_received(drafter: int, card_ids: Array, picks_total: int, bonus_source: String)
 signal draft_pick_received(card_id: String)
+signal draft_reoffer_received(card_ids: Array)
 signal draft_pick_requested(slot: int, card_id: String)
+signal draft_gamble_flip_received(revealed: int)
+signal draft_gamble_flip_requested(slot: int, revealed: int)
 signal draft_finished_received()
-signal match_over_received(winner_index: int, scores: Array, stats: Array)
+signal match_over_received(winner_index: int, scores: Array, stats: Array, reason: String)
+signal kill_cam_received(point: Vector2, killer_slot: int, duration: float)
 signal tile_broken_received(tile_id: int)
 signal tile_regrown_received(tile_id: int)
 signal zone_spawn_received(data: Dictionary)
+signal fx_received(fx: String, args: Dictionary)
 
 const DEFAULT_PORT: int = 7777
+const EPIC_ONLINE_SCRIPT: String = "res://scripts/autoload/epic_online.gd"
 # Ein Host + bis zu fünf Spieler-Clients = 6 Spieler. Zusätzlich sind bis zu
 # vier Zuschauer erlaubt; sie belegen keinen Spieler-Slot.
 const MAX_PLAYER_CLIENTS: int = 5
@@ -53,6 +62,10 @@ var slot_peers: Dictionary = {}
 var spectator_peers: Dictionary = {}
 var peer_pings: Dictionary = {}
 var ping_ms: int = -1
+# Build-Kennung des Hosts (kommt per Lobby-Sync), leer solange unbekannt.
+var host_build_id: String = ""
+# True, solange die Verbindung über Epic Online Services (Lobby-Code) läuft.
+var online_mode: bool = false
 
 var _upnp_thread: Thread = null
 var _ping_timer: float = 0.0
@@ -78,6 +91,8 @@ func _ready() -> void:
 	Global.rarity_percentages_changed.connect(_on_global_rarity_changed)
 	Global.card_pools_changed.connect(_on_global_card_pools_changed)
 	Global.map_changed.connect(_on_global_map_changed)
+	Global.map_pool_changed.connect(_on_global_map_changed)
+	Global.powerup_pool_changed.connect(_on_global_lobby_changed)
 	Global.match_mode_changed.connect(_on_global_match_mode_changed)
 	Global.player_count_changed.connect(_on_global_player_count_changed)
 
@@ -295,10 +310,100 @@ func join_game(address: String, port: int = DEFAULT_PORT, as_spectator: bool = f
 	join_started.emit()
 	return OK
 
+# Online über Epic: Host legt eine Lobby mit Code an (siehe EpicOnline).
+# Liefert true, wenn der Host läuft; sonst kommt host_failed.
+func host_online() -> bool:
+	disconnect_peer()
+	var epic := _get_epic_online()
+	if epic == null:
+		host_failed.emit("Epic-Online ist nicht verfügbar.")
+		return false
+	_set_info("Melde bei Epic an ...")
+	var peer: MultiplayerPeer = await epic.create_host_async()
+	if peer == null:
+		_set_info("")
+		host_failed.emit(epic.last_error)
+		return false
+	multiplayer.multiplayer_peer = peer
+	online_mode = true
+	is_host = true
+	is_client = false
+	is_spectator = false
+	join_as_spectator = false
+	host_port = 0
+	Global.network_mode = true
+	Global.remote_connected = false
+	Global.is_spectator = false
+	Global.set_local_player(1)
+	_set_info("Online-Spiel bereit – Code an Mitspieler schicken.")
+	hosting_started.emit(0)
+	return true
+
+func join_online(code: String, as_spectator: bool = false) -> bool:
+	disconnect_peer()
+	var epic := _get_epic_online()
+	if epic == null:
+		join_failed.emit("Epic-Online ist nicht verfügbar.")
+		return false
+	_set_info("Suche Spiel %s ..." % code)
+	var peer: MultiplayerPeer = await epic.create_client_async(code)
+	if peer == null:
+		_set_info("")
+		join_failed.emit(epic.last_error)
+		return false
+	multiplayer.multiplayer_peer = peer
+	online_mode = true
+	is_host = false
+	is_client = false
+	is_spectator = false
+	join_as_spectator = as_spectator
+	_join_confirmed = false
+	host_port = 0
+	Global.network_mode = true
+	Global.is_spectator = false
+	_set_info("Verbinde über Epic ...")
+	join_started.emit()
+	# EOS meldet einen nicht erreichbaren Host nicht immer selbst.
+	get_tree().create_timer(20.0).timeout.connect(func():
+		if multiplayer.multiplayer_peer == peer and not is_client:
+			disconnect_peer()
+			join_failed.emit("Host antwortet nicht. Code prüfen oder Host neu starten lassen.")
+	)
+	return true
+
+# EpicOnline wird erst bei Bedarf geladen, damit LAN auch ohne EOS-Plugin läuft.
+func _get_epic_online() -> Node:
+	var existing := get_node_or_null("EpicOnline")
+	if existing != null:
+		return existing
+	if not ClassDB.class_exists("EOSGMultiplayerPeer") or get_node_or_null("/root/HAuth") == null:
+		return null
+	var script := load(EPIC_ONLINE_SCRIPT) as GDScript
+	if script == null or not script.can_instantiate():
+		return null
+	var node := script.new() as Node
+	if node == null:
+		return null
+	node.name = "EpicOnline"
+	add_child(node)
+	return node
+
+# Kurzer Hinweis fürs Menü, warum Epic-Online (noch) nicht geht. Leer = bereit.
+func get_online_setup_problem() -> String:
+	var epic := _get_epic_online()
+	if epic == null:
+		return "Epic-Plugin (EOSG) ist nicht aktiviert."
+	return epic.get_setup_problem()
+
 func disconnect_peer() -> void:
 	if multiplayer.multiplayer_peer != null:
 		multiplayer.multiplayer_peer.close()
 		multiplayer.multiplayer_peer = null
+	if online_mode:
+		online_mode = false
+		var epic := get_node_or_null("EpicOnline")
+		if epic != null:
+			epic.stop()
 	is_host = false
 	is_client = false
 	is_spectator = false
@@ -521,6 +626,8 @@ func build_lobby_sync() -> Dictionary:
 	return {
 		"player_count": Global.player_count,
 		"heroes": Global.player_hero_ids.duplicate(),
+		"names": Global.player_names.duplicate(),
+		"melee": Global.player_melee_weapons.duplicate(),
 		"kinds": Global.player_kind.duplicate(),
 		"ready": Global.player_ready.duplicate(),
 		"points_to_win": Global.points_to_win,
@@ -530,15 +637,23 @@ func build_lobby_sync() -> Dictionary:
 		"cards_per_draft": Global.cards_per_draft,
 		"blind_pick_enabled": Global.blind_pick_enabled,
 		"random_pick_enabled": Global.random_pick_enabled,
+		"gamble_enabled": Global.gamble_enabled,
+		"pre_draft_picks": Global.pre_draft_picks,
+		"pre_draft_random": Global.pre_draft_random,
+		"melee_enabled": Global.melee_enabled,
 		"level_modifier_rate_percent": Global.level_modifier_rate_percent,
 		"enabled_level_modifiers": Global.get_enabled_level_modifiers(),
 		"bans": Global.banned_card_ids.duplicate(),
+		"pool_unlocks": Global.pool_unlocked_card_ids.duplicate(),
 		"base_hp_percent": Global.base_hp_percent,
 		"base_damage": Global.base_damage,
 		"rarity_percentages": Global.rarity_percentages.duplicate(),
 		"card_pools": Global.enabled_card_pools.duplicate(),
+		"disabled_maps": Global.disabled_map_ids.duplicate(),
+		"disabled_powerups": Global.disabled_powerup_kinds.duplicate(),
 		"map_id": Global.selected_map_id,
 		"match_mode": Global.match_mode,
+		"build_id": BuildInfo.get_build_id(),
 	}
 
 func sync_lobby() -> void:
@@ -598,11 +713,18 @@ func receive_lobby_sync(data: Dictionary) -> void:
 	lobby_sync_received.emit(data)
 
 func _apply_lobby_sync(data: Dictionary) -> void:
+	host_build_id = str(data.get("build_id", "?"))
 	Global.set_player_count(int(data.get("player_count", Global.player_count)))
 	Global.set_match_mode(str(data.get("match_mode", Global.MATCH_MODE_FFA)))
 	var heroes: Array = data.get("heroes", [])
 	for i in range(mini(heroes.size(), Global.MAX_PLAYERS)):
 		Global.player_hero_ids[i] = str(heroes[i])
+	var names: Array = data.get("names", [])
+	for i in range(mini(names.size(), Global.MAX_PLAYERS)):
+		Global.player_names[i] = Global.sanitize_player_name(str(names[i]))
+	var melee: Array = data.get("melee", [])
+	for i in range(mini(melee.size(), Global.MAX_PLAYERS)):
+		Global.player_melee_weapons[i] = Global.normalize_melee_weapon(str(melee[i]))
 	var kinds: Array = data.get("kinds", [])
 	for i in range(mini(kinds.size(), Global.MAX_PLAYERS)):
 		Global.player_kind[i] = int(kinds[i])
@@ -620,6 +742,10 @@ func _apply_lobby_sync(data: Dictionary) -> void:
 	)
 	Global.set_blind_pick_enabled(bool(data.get("blind_pick_enabled", Global.blind_pick_enabled)))
 	Global.set_random_pick_enabled(bool(data.get("random_pick_enabled", Global.random_pick_enabled)))
+	Global.set_gamble_enabled(bool(data.get("gamble_enabled", Global.gamble_enabled)))
+	Global.set_pre_draft_picks(int(data.get("pre_draft_picks", Global.pre_draft_picks)))
+	Global.set_pre_draft_random(bool(data.get("pre_draft_random", Global.pre_draft_random)))
+	Global.set_melee_enabled(bool(data.get("melee_enabled", Global.melee_enabled)))
 	Global.set_level_modifier_rate_percent(
 		int(data.get("level_modifier_rate_percent", Global.level_modifier_rate_percent))
 	)
@@ -632,11 +758,16 @@ func _apply_lobby_sync(data: Dictionary) -> void:
 			Global.set_rarity_percent(rarity, float(rarity_data[rarity]))
 	if data.has("card_pools"):
 		Global.set_enabled_card_pools(data.get("card_pools", []))
+	if data.has("disabled_maps"):
+		Global.set_disabled_maps(data.get("disabled_maps", []))
+	if data.has("disabled_powerups"):
+		Global.set_disabled_powerups(data.get("disabled_powerups", []))
 	if data.has("map_id"):
 		Global.set_selected_map(str(data.get("map_id", Global.MAP_RANDOM)))
 	Global.banned_card_ids.clear()
 	for card_id in data.get("bans", []):
 		Global.banned_card_ids.append(str(card_id))
+	Global.set_pool_unlocked_cards(data.get("pool_unlocks", []))
 	Global.banned_cards_changed.emit()
 	Global.set_base_hp_percent(int(data.get("base_hp_percent", Global.base_hp_percent)))
 	Global.set_base_damage(float(data.get("base_damage", Global.base_damage)))
@@ -684,25 +815,38 @@ func send_start_match(config: Dictionary) -> void:
 func receive_start_match(config: Dictionary) -> void:
 	match_start_received.emit(config)
 
-func send_round_start(level_seed: int, map_id: String, points_to_win: int = 0) -> void:
+func send_round_start(level_seed: int, map_id: String, points_to_win: int = 0, tiebreak_slots: Array = []) -> void:
 	if not is_host:
 		return
 	for peer_id in _broadcast_targets():
-		receive_round_start.rpc_id(int(peer_id), level_seed, map_id, points_to_win)
+		receive_round_start.rpc_id(int(peer_id), level_seed, map_id, points_to_win, tiebreak_slots)
 
+# tiebreak_slots: im Stechen die Finalisten (nur sie spawnen), sonst leer.
 @rpc("authority", "call_remote", "reliable")
-func receive_round_start(level_seed: int, map_id: String, points_to_win: int = 0) -> void:
-	round_start_received.emit(level_seed, map_id, points_to_win)
+func receive_round_start(level_seed: int, map_id: String, points_to_win: int = 0, tiebreak_slots: Array = []) -> void:
+	round_start_received.emit(level_seed, map_id, points_to_win, tiebreak_slots)
 
 func send_snapshot(data: Dictionary) -> void:
 	if not is_host:
 		return
+	# Komprimiert senden: Ein roher Snapshot ist mehrere KB groß und liegt damit
+	# deutlich über der UDP-MTU (~1400 Byte). Fragmentierte unzuverlässige Pakete
+	# gehen im WLAN komplett verloren, sobald ein Fragment fehlt.
+	var raw := var_to_bytes(data)
+	var packed := raw.compress(FileAccess.COMPRESSION_ZSTD)
 	for peer_id in _broadcast_targets():
-		receive_snapshot.rpc_id(int(peer_id), data)
+		receive_snapshot.rpc_id(int(peer_id), packed, raw.size())
 
 @rpc("authority", "call_remote", "unreliable")
-func receive_snapshot(data: Dictionary) -> void:
-	snapshot_received.emit(data)
+func receive_snapshot(packed: PackedByteArray, raw_size: int) -> void:
+	if raw_size <= 0 or raw_size > SNAPSHOT_MAX_RAW_BYTES:
+		return
+	var raw := packed.decompress(raw_size, FileAccess.COMPRESSION_ZSTD)
+	if raw.size() != raw_size:
+		return
+	var data = bytes_to_var(raw)
+	if data is Dictionary:
+		snapshot_received.emit(data)
 
 func send_input(data: Dictionary) -> void:
 	if is_client:
@@ -717,15 +861,27 @@ func receive_input(data: Dictionary) -> void:
 		return
 	input_received.emit(slot, data)
 
-func send_match_over(winner_index: int, scores: Array, stats: Array = []) -> void:
+# reason wie Global.match_end_reason ("", "tiebreak", "early"); winner 0 = Unentschieden.
+func send_match_over(winner_index: int, scores: Array, stats: Array = [], reason: String = "") -> void:
 	if not is_host:
 		return
 	for peer_id in _broadcast_targets():
-		receive_match_over.rpc_id(int(peer_id), winner_index, scores, stats)
+		receive_match_over.rpc_id(int(peer_id), winner_index, scores, stats, reason)
 
 @rpc("authority", "call_remote", "reliable")
-func receive_match_over(winner_index: int, scores: Array, stats: Array) -> void:
-	match_over_received.emit(winner_index, scores, stats)
+func receive_match_over(winner_index: int, scores: Array, stats: Array, reason: String = "") -> void:
+	match_over_received.emit(winner_index, scores, stats, reason)
+
+# Rundenentscheidender Tod: Clients starten Zeitlupe und Kill-Cam gleichzeitig mit dem Host.
+func send_kill_cam(point: Vector2, killer_slot: int, duration: float) -> void:
+	if not is_host:
+		return
+	for peer_id in _broadcast_targets():
+		receive_kill_cam.rpc_id(int(peer_id), point, killer_slot, duration)
+
+@rpc("authority", "call_remote", "reliable")
+func receive_kill_cam(point: Vector2, killer_slot: int, duration: float) -> void:
+	kill_cam_received.emit(point, killer_slot, duration)
 
 # --- Spezial-Tiles (zerstörbar / Ranken) ---
 
@@ -761,17 +917,41 @@ func send_zone_spawn(data: Dictionary) -> void:
 func receive_zone_spawn(data: Dictionary) -> void:
 	zone_spawn_received.emit(data)
 
-# --- Draft-Synchronisation ---
+# --- Kurze Effekte: Optik und Ton von Fähigkeiten und Explosionen (NetFx) ---
 
-func send_draft_start(drafter: int, card_ids: Array, picks_total: int) -> void:
+func send_fx(fx: String, args: Dictionary) -> void:
 	if not is_host:
 		return
 	for peer_id in _broadcast_targets():
-		receive_draft_start.rpc_id(int(peer_id), drafter, card_ids, picks_total)
+		receive_fx.rpc_id(int(peer_id), fx, args)
 
 @rpc("authority", "call_remote", "reliable")
-func receive_draft_start(drafter: int, card_ids: Array, picks_total: int) -> void:
-	draft_start_received.emit(drafter, card_ids, picks_total)
+func receive_fx(fx: String, args: Dictionary) -> void:
+	fx_received.emit(fx, args)
+
+# --- Draft-Synchronisation ---
+
+# bonus_source: "" für normale Züge, sonst "pinata" oder "gold".
+func send_draft_start(drafter: int, card_ids: Array, picks_total: int, bonus_source: String = "") -> void:
+	if not is_host:
+		return
+	for peer_id in _broadcast_targets():
+		receive_draft_start.rpc_id(int(peer_id), drafter, card_ids, picks_total, bonus_source)
+
+@rpc("authority", "call_remote", "reliable")
+func receive_draft_start(drafter: int, card_ids: Array, picks_total: int, bonus_source: String) -> void:
+	draft_start_received.emit(drafter, card_ids, picks_total, bonus_source)
+
+# Neues Angebot für den nächsten Pick desselben Drafters.
+func send_draft_reoffer(card_ids: Array) -> void:
+	if not is_host:
+		return
+	for peer_id in _broadcast_targets():
+		receive_draft_reoffer.rpc_id(int(peer_id), card_ids)
+
+@rpc("authority", "call_remote", "reliable")
+func receive_draft_reoffer(card_ids: Array) -> void:
+	draft_reoffer_received.emit(card_ids)
 
 func request_draft_pick(card_id: String) -> void:
 	if is_client:
@@ -796,6 +976,30 @@ func send_draft_pick(card_id: String) -> void:
 func receive_draft_pick(card_id: String) -> void:
 	draft_pick_received.emit(card_id)
 
+# Gamble: Host meldet, wie viele Karten des aktuellen Angebots aufgedeckt sind.
+func send_draft_gamble_flip(revealed: int) -> void:
+	if not is_host:
+		return
+	for peer_id in _broadcast_targets():
+		receive_draft_gamble_flip.rpc_id(int(peer_id), revealed)
+
+@rpc("authority", "call_remote", "reliable")
+func receive_draft_gamble_flip(revealed: int) -> void:
+	draft_gamble_flip_received.emit(revealed)
+
+func request_draft_gamble_flip(revealed: int) -> void:
+	if is_client:
+		client_draft_gamble_flip.rpc_id(1, revealed)
+
+@rpc("any_peer", "call_remote", "reliable")
+func client_draft_gamble_flip(revealed: int) -> void:
+	if not is_host:
+		return
+	var slot := get_slot_for_peer(multiplayer.get_remote_sender_id())
+	if slot == 0:
+		return
+	draft_gamble_flip_requested.emit(slot, revealed)
+
 func send_draft_finished() -> void:
 	if not is_host:
 		return
@@ -815,11 +1019,12 @@ func request_pig_appearance(
 		pants: Color,
 		wand_tip_shape: String,
 		wand_tip_color: Color,
-		shot_color: Color
+		shot_color: Color,
+		tusk_shape: String = "small"
 	) -> void:
 	if is_client:
 		client_pig_appearance.rpc_id(
-			1, fur, eyes, pants, wand_tip_shape, wand_tip_color, shot_color
+			1, fur, eyes, pants, wand_tip_shape, wand_tip_color, shot_color, tusk_shape
 		)
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -829,7 +1034,8 @@ func client_pig_appearance(
 		pants: Color,
 		wand_tip_shape: String,
 		wand_tip_color: Color,
-		shot_color: Color
+		shot_color: Color,
+		tusk_shape: String
 	) -> void:
 	if not is_host:
 		return
@@ -837,12 +1043,44 @@ func client_pig_appearance(
 	if slot <= 0:
 		return
 	Global.set_pig_appearance(
-		slot, fur, eyes, pants, wand_tip_shape, wand_tip_color, shot_color
+		slot, fur, eyes, pants, wand_tip_shape, wand_tip_color, shot_color, tusk_shape
 	)
+
+# Benutzername: Der Client meldet ihn, der Host verteilt ihn per Lobby-Sync.
+func request_player_name(player_name: String) -> void:
+	if is_client:
+		client_player_name.rpc_id(1, player_name)
+
+@rpc("any_peer", "call_remote", "reliable")
+func client_player_name(player_name: String) -> void:
+	if not is_host:
+		return
+	var slot := get_slot_for_peer(multiplayer.get_remote_sender_id())
+	if slot <= 0:
+		return
+	Global.set_player_name(slot, player_name)
+
+# Nahkampfwaffe: wie der Name meldet der Client sie, der Host verteilt sie per
+# Lobby-Sync. Treffer berechnet ohnehin nur der Host.
+func request_melee_weapon(weapon_id: String) -> void:
+	if is_client:
+		client_melee_weapon.rpc_id(1, weapon_id)
+
+@rpc("any_peer", "call_remote", "reliable")
+func client_melee_weapon(weapon_id: String) -> void:
+	if not is_host:
+		return
+	var slot := get_slot_for_peer(multiplayer.get_remote_sender_id())
+	if slot <= 0:
+		return
+	Global.set_melee_weapon(slot, weapon_id)
 
 # --- Netzwerk-Info / UPnP ---
 
 func _set_info(text: String) -> void:
+	var epic := get_node_or_null("EpicOnline")
+	if online_mode and is_host and epic != null and not str(epic.online_code).is_empty():
+		text = ("Code: %s  •  " % epic.online_code) + text
 	network_info = text
 	Global.set_network_info(text)
 
@@ -868,7 +1106,7 @@ func _upnp_worker(port: int) -> void:
 	if err == OK:
 		var gateway = upnp.get_gateway()
 		if gateway and gateway.is_valid_gateway():
-			if upnp.add_port_mapping(port, port, "Battle Balls", "UDP", 0) == OK:
+			if upnp.add_port_mapping(port, port, "Loetkolbeneber", "UDP", 0) == OK:
 				mapping_ok = true
 				external_ip = upnp.get_external_ip()
 	call_deferred("_on_upnp_done", mapping_ok, external_ip, port)
