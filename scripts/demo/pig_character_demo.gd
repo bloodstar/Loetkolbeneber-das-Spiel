@@ -1025,4 +1025,3 @@ func _add_anim_button(grid: GridContainer, text: String, anim: String) -> Button
 	button.pressed.connect(_manual_anim.bind(anim))
 	grid.add_child(button)
 	return button
-     

@@ -36,6 +36,8 @@ signal lobby_loadouts_changed()
 signal lobby_last_loadout_saved()
 signal network_status_changed()
 signal pig_appearance_changed(player_index: int)
+# Baukasten-Teile eines Slots haben sich geändert (Host verteilt per Lobby-Sync).
+signal pig_parts_changed()
 
 enum GameState {
 	MENU,
@@ -448,6 +450,9 @@ var default_wand_tip_colors: Array[Color] = [
 ]
 var player_wand_tip_shapes: Array[String] = ["orb", "orb", "orb", "orb", "orb", "orb"]
 var player_tusk_shapes: Array[String] = ["small", "small", "small", "small", "small", "small"]
+# Baukasten-Teile je Slot (Körperform, Augen, Rüssel, Kleidung, Schwanz …),
+# siehe PigModular.PART_OPTIONS. Wird in _ready gefüllt.
+var player_pig_parts: Array[Dictionary] = []
 # Selbst gewählte Benutzernamen; leer = Ersatzname wie "Spieler 2".
 var player_names: Array[String] = ["", "", "", "", "", ""]
 # Gewählte Nahkampfwaffe pro Slot (Schlüssel aus MELEE_WEAPONS).
@@ -530,6 +535,8 @@ func _ready() -> void:
 	_load_lobby_loadouts()
 	_restore_last_lobby_settings()
 	_setup_lobby_settings_autosave()
+	for i in range(MAX_PLAYERS):
+		player_pig_parts.append(PigModular.default_parts())
 	_load_character_customization()
 
 # Versionierung wie bei Karten: Ändert sich ein Basiswert (HP, Schild, Tempo,
@@ -820,6 +827,27 @@ func get_pig_appearance(index: int) -> Dictionary:
 		"shot_color": player_shot_colors[slot - 1],
 	}
 
+func get_pig_parts(index: int) -> Dictionary:
+	var slot := clampi(index, 1, MAX_PLAYERS)
+	if player_pig_parts.size() < slot:
+		return PigModular.default_parts()
+	return player_pig_parts[slot - 1].duplicate()
+
+## Setzt die Baukasten-Teile eines Slots. Wie set_pig_appearance wird der
+## lokale Slot sofort gespeichert; der Host verteilt die Teile per Lobby-Sync.
+## `save` = false beim Übernehmen aus dem Lobby-Sync (kein Profil-Schreiben).
+func set_pig_parts(index: int, parts: Dictionary, save: bool = true) -> void:
+	if index < 1 or index > MAX_PLAYERS or player_pig_parts.size() < index:
+		return
+	var clean := PigModular.normalize_parts(parts)
+	if player_pig_parts[index - 1] == clean:
+		return
+	player_pig_parts[index - 1] = clean
+	pig_appearance_changed.emit(index)
+	pig_parts_changed.emit()
+	if save and index == local_player_index:
+		save_character_customization(index)
+
 func normalize_wand_tip_shape(shape: String) -> String:
 	return shape if WAND_TIP_SHAPES.has(shape) else "orb"
 
@@ -981,6 +1009,7 @@ func reset_pig_appearance(index: int) -> void:
 		default_wand_tip_colors[index - 1],
 		"small"
 	)
+	set_pig_parts(index, PigModular.default_parts())
 
 func apply_saved_character_customization(index: int) -> void:
 	if user_character_customization.is_empty() or index < 1 or index > MAX_PLAYERS:
@@ -1000,6 +1029,8 @@ func apply_saved_character_customization(index: int) -> void:
 		set_player_name(index, str(look["name"]))
 	if look.has("melee_weapon"):
 		set_melee_weapon(index, str(look["melee_weapon"]))
+	if look.get("parts") is Dictionary:
+		set_pig_parts(index, look["parts"])
 
 func save_character_customization(index: int = -1) -> bool:
 	var slot := local_player_index if index < 0 else index
@@ -1009,6 +1040,7 @@ func save_character_customization(index: int = -1) -> bool:
 	user_character_customization = look.duplicate(true)
 	user_character_customization["name"] = player_names[slot - 1]
 	user_character_customization["melee_weapon"] = player_melee_weapons[slot - 1]
+	user_character_customization["parts"] = get_pig_parts(slot)
 	var payload := {
 		"version": 1,
 		"player_name": player_names[slot - 1],
@@ -1021,6 +1053,7 @@ func save_character_customization(index: int = -1) -> bool:
 			"tusk_shape": look["tusk_shape"],
 			"wand_tip_color": _color_to_json(look["wand_tip_color"]),
 			"shot_color": _color_to_json(look["shot_color"]),
+			"parts": PigModular.parts_to_json(get_pig_parts(slot)),
 		},
 	}
 	var file := FileAccess.open(CHARACTER_CUSTOMIZATION_PATH, FileAccess.WRITE)
@@ -1050,6 +1083,8 @@ func _load_character_customization() -> void:
 		return
 	look["name"] = sanitize_player_name(str(parsed.get("player_name", "")))
 	look["melee_weapon"] = normalize_melee_weapon(str(parsed.get("melee_weapon", "iron")))
+	if raw.get("parts") is Dictionary:
+		look["parts"] = PigModular.normalize_parts(raw["parts"])
 	user_character_customization = look
 	apply_saved_character_customization(local_player_index)
 

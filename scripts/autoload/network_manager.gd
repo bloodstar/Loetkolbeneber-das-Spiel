@@ -80,6 +80,7 @@ func _ready() -> void:
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
 	Global.lobby_state_changed.connect(_on_global_lobby_changed)
+	Global.pig_parts_changed.connect(_on_global_lobby_changed)
 	Global.banned_cards_changed.connect(_on_global_lobby_changed)
 	Global.draft_config_changed.connect(_on_global_draft_changed)
 	Global.draft_modifiers_changed.connect(_on_global_draft_modifiers_changed)
@@ -627,6 +628,7 @@ func build_lobby_sync() -> Dictionary:
 		"player_count": Global.player_count,
 		"heroes": Global.player_hero_ids.duplicate(),
 		"names": Global.player_names.duplicate(),
+		"pig_parts": Global.player_pig_parts.duplicate(true),
 		"melee": Global.player_melee_weapons.duplicate(),
 		"kinds": Global.player_kind.duplicate(),
 		"ready": Global.player_ready.duplicate(),
@@ -722,6 +724,13 @@ func _apply_lobby_sync(data: Dictionary) -> void:
 	var names: Array = data.get("names", [])
 	for i in range(mini(names.size(), Global.MAX_PLAYERS)):
 		Global.player_names[i] = Global.sanitize_player_name(str(names[i]))
+	# Baukasten-Teile: set_pig_parts meldet nur echte Änderungen weiter. Den
+	# eigenen Slot bestimmt der Client selbst (sein gespeichertes Profil), sonst
+	# würde ein älterer Host-Stand es beim Beitritt überschreiben.
+	var pig_parts: Array = data.get("pig_parts", [])
+	for i in range(mini(pig_parts.size(), Global.MAX_PLAYERS)):
+		if pig_parts[i] is Dictionary and i + 1 != Global.local_player_index:
+			Global.set_pig_parts(i + 1, pig_parts[i], false)
 	var melee: Array = data.get("melee", [])
 	for i in range(mini(melee.size(), Global.MAX_PLAYERS)):
 		Global.player_melee_weapons[i] = Global.normalize_melee_weapon(str(melee[i]))
@@ -1045,6 +1054,20 @@ func client_pig_appearance(
 	Global.set_pig_appearance(
 		slot, fur, eyes, pants, wand_tip_shape, wand_tip_color, shot_color, tusk_shape
 	)
+
+# Baukasten-Teile: Der Client meldet sie, der Host verteilt sie per Lobby-Sync.
+func request_pig_parts(parts: Dictionary) -> void:
+	if is_client:
+		client_pig_parts.rpc_id(1, parts)
+
+@rpc("any_peer", "call_remote", "reliable")
+func client_pig_parts(parts: Dictionary) -> void:
+	if not is_host:
+		return
+	var slot := get_slot_for_peer(multiplayer.get_remote_sender_id())
+	if slot <= 0:
+		return
+	Global.set_pig_parts(slot, parts)
 
 # Benutzername: Der Client meldet ihn, der Host verteilt ihn per Lobby-Sync.
 func request_player_name(player_name: String) -> void:

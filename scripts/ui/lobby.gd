@@ -145,7 +145,20 @@ var tusk_shape_option: OptionButton = null
 var player_name_edit: LineEdit = null
 # Vier Waffenkacheln unter der Charaktervorschau, Reihenfolge wie MELEE_WEAPONS.
 var melee_weapon_tiles: Array = []
-var character_preview: PigCharacter = null
+var character_preview: PigModular = null
+# Baukasten-Steuerelemente: Teile-Schlüssel (PigModular.PART_OPTIONS) -> OptionButton.
+var part_options: Dictionary = {}
+var part_eye_size_slider: HSlider = null
+var part_snout_size_slider: HSlider = null
+var part_belt_check: CheckButton = null
+var part_belt_slider: HSlider = null
+var part_tail_side_option: OptionButton = null
+var part_tail_visible_check: CheckButton = null
+var hair_color_picker: ColorPickerButton = null
+var top_color_picker: ColorPickerButton = null
+# Regler senden beim Ziehen viele Änderungen; an den Host geht nur der letzte
+# Stand nach kurzer Pause.
+var _parts_send_timer: Timer = null
 var character_preview_wand: MagicWand = null
 var character_preview_wand_pivot: Node2D = null
 var character_hero_icon: TextureRect = null
@@ -558,6 +571,7 @@ func _on_slot_assigned(slot: int) -> void:
 		var look := Global.get_pig_appearance(slot)
 		NetworkManager.request_player_name(Global.get_custom_player_name(slot))
 		NetworkManager.request_melee_weapon(Global.get_melee_weapon(slot))
+		NetworkManager.request_pig_parts(Global.get_pig_parts(slot))
 		NetworkManager.request_pig_appearance(
 			look["fur"],
 			look["eyes"],
@@ -704,7 +718,7 @@ func _build_character_tab() -> void:
 	preview_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	preview_frame.add_child(preview_canvas)
 
-	character_preview = PigCharacter.new()
+	character_preview = PigModular.new()
 	character_preview.position = Vector2(140, 176)
 	character_preview.scale = Vector2(4.4, 4.4)
 	character_preview.animate = true
@@ -778,8 +792,9 @@ func _build_character_tab() -> void:
 	_add_character_name_row(controls)
 	_add_character_color_row(controls, "Fellfarbe", "Grundfarbe von Kopf, Körper und Ohren.", fur_picker)
 	_add_character_color_row(controls, "Augenfarbe", "Farbe der Iris. Die Augen bleiben weiß umrandet.", eye_picker)
-	_add_character_color_row(controls, "Hosenfarbe", "Farbe der kurzen Hose inklusive Gürtel und Hosenbeinen.", pants_picker)
+	_add_character_color_row(controls, "Hosenfarbe", "Farbe von Hose oder Rock inklusive Gürtel.", pants_picker)
 	_add_character_tusk_row(controls)
+	_add_character_parts_section(controls)
 	_add_character_shape_row(controls)
 	_add_character_color_row(controls, "Lötspitzen-Glut", "Farbe, in der die Spitze des Lötkolbens glüht.", wand_tip_picker)
 	_add_character_color_row(controls, "Basis-Schuss", "Farbe der normalen Projektile, bevor Karten sie verändern.", shot_color_picker)
@@ -906,6 +921,190 @@ func _add_character_tusk_row(parent: VBoxContainer) -> void:
 	tusk_shape_option.item_selected.connect(_on_character_tusk_shape_changed)
 	row.add_child(tusk_shape_option)
 
+# Baukasten: Körperform, Gesichtsteile, Frisur, Kleidung und Schwanz.
+const CHARACTER_PART_LABELS: Dictionary = {
+	"body": "Körperform", "eyes": "Augen", "snout": "Rüssel", "nose": "Nasenlöcher",
+	"ears": "Ohren", "hair": "Frisur", "top": "Oberteil", "bottom": "Unterteil",
+	"tail": "Schwanz",
+}
+
+func _add_character_parts_section(parent: VBoxContainer) -> void:
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 12)
+	parent.add_child(header)
+	_add_character_text_column(header, "Aussehen", "Körperform, Gesicht, Frisur, Kleidung und Schwanz frei kombinieren.")
+	var random_button := Button.new()
+	random_button.text = "ZUFÄLLIG"
+	random_button.tooltip_text = "Alle Teile neu würfeln. Farben bleiben."
+	random_button.custom_minimum_size = Vector2(120, 38)
+	random_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	random_button.pressed.connect(_on_character_parts_randomize)
+	header.add_child(random_button)
+
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 6)
+	parent.add_child(grid)
+
+	part_options.clear()
+	for key in ["body", "eyes", "snout", "nose", "ears", "hair", "top", "bottom", "tail"]:
+		var option := OptionButton.new()
+		option.custom_minimum_size = Vector2(200, 32)
+		option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		for entry in PigModular.PART_OPTIONS[key]:
+			option.add_item(str(entry[1]))
+		option.item_selected.connect(func(_index: int): _commit_character_parts())
+		_add_character_grid_row(grid, str(CHARACTER_PART_LABELS[key]), option)
+		part_options[key] = option
+		match key:
+			"eyes":
+				part_eye_size_slider = _make_character_part_slider(PigModular.SIZE_MIN, PigModular.SIZE_MAX, 0.05)
+				_add_character_grid_row(grid, "Augengröße", part_eye_size_slider)
+			"snout":
+				part_snout_size_slider = _make_character_part_slider(PigModular.SIZE_MIN, PigModular.SIZE_MAX, 0.05)
+				_add_character_grid_row(grid, "Rüsselgröße", part_snout_size_slider)
+			"hair":
+				hair_color_picker = _make_character_part_picker()
+				_add_character_grid_row(grid, "Haarfarbe", hair_color_picker)
+			"top":
+				top_color_picker = _make_character_part_picker()
+				_add_character_grid_row(grid, "Oberteil-Farbe", top_color_picker)
+			"bottom":
+				var belt_row := HBoxContainer.new()
+				belt_row.add_theme_constant_override("separation", 8)
+				part_belt_check = CheckButton.new()
+				part_belt_check.tooltip_text = "Gürtel tragen"
+				part_belt_check.toggled.connect(func(_pressed: bool): _commit_character_parts())
+				belt_row.add_child(part_belt_check)
+				part_belt_slider = _make_character_part_slider(PigModular.BELT_WIDTH_MIN, PigModular.BELT_WIDTH_MAX, 0.1)
+				part_belt_slider.tooltip_text = "Gürteldicke"
+				part_belt_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				belt_row.add_child(part_belt_slider)
+				_add_character_grid_row(grid, "Gürtel", belt_row)
+			"tail":
+				var tail_row := HBoxContainer.new()
+				tail_row.add_theme_constant_override("separation", 8)
+				part_tail_side_option = OptionButton.new()
+				part_tail_side_option.add_item("Links")
+				part_tail_side_option.add_item("Rechts")
+				part_tail_side_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				part_tail_side_option.item_selected.connect(func(_index: int): _commit_character_parts())
+				tail_row.add_child(part_tail_side_option)
+				part_tail_visible_check = CheckButton.new()
+				part_tail_visible_check.text = "Sichtbar"
+				part_tail_visible_check.toggled.connect(func(_pressed: bool): _commit_character_parts())
+				tail_row.add_child(part_tail_visible_check)
+				_add_character_grid_row(grid, "Schwanzseite", tail_row)
+
+	_parts_send_timer = Timer.new()
+	_parts_send_timer.one_shot = true
+	_parts_send_timer.wait_time = 0.2
+	_parts_send_timer.timeout.connect(_send_character_parts)
+	parent.add_child(_parts_send_timer)
+
+func _add_character_grid_row(grid: GridContainer, title: String, control: Control) -> void:
+	var label := Label.new()
+	label.text = title
+	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_color_override("font_color", Color(0.86, 0.89, 0.95))
+	grid.add_child(label)
+	control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_child(control)
+
+func _make_character_part_slider(min_value: float, max_value: float, step: float) -> HSlider:
+	var slider := HSlider.new()
+	slider.min_value = min_value
+	slider.max_value = max_value
+	slider.step = step
+	slider.custom_minimum_size = Vector2(160, 28)
+	slider.value_changed.connect(func(_value: float): _commit_character_parts())
+	return slider
+
+func _make_character_part_picker() -> ColorPickerButton:
+	var picker := ColorPickerButton.new()
+	picker.custom_minimum_size = Vector2(120, 32)
+	picker.edit_alpha = false
+	picker.color_changed.connect(func(_color: Color): _commit_character_parts())
+	return picker
+
+## Liest alle Baukasten-Steuerelemente in ein Teile-Dictionary.
+func _character_parts_from_ui() -> Dictionary:
+	var parts := {}
+	for key in part_options.keys():
+		var option: OptionButton = part_options[key]
+		var list: Array = PigModular.PART_OPTIONS[key]
+		parts[key] = str(list[clampi(option.selected, 0, list.size() - 1)][0])
+	parts["eye_size"] = part_eye_size_slider.value
+	parts["snout_size"] = part_snout_size_slider.value
+	parts["belt"] = part_belt_check.button_pressed
+	parts["belt_width"] = part_belt_slider.value
+	parts["tail_side"] = -1.0 if part_tail_side_option.selected == 0 else 1.0
+	parts["tail_visible"] = part_tail_visible_check.button_pressed
+	parts["hair_color"] = hair_color_picker.color
+	# Solange niemand die Haarfarbe anfasst, bleibt sie "automatisch" (folgt dem Fell).
+	var stored: Color = Global.get_pig_parts(_character_slot).get("hair_color", Color(0, 0, 0, 0))
+	if stored.a <= 0.0 and hair_color_picker.color.is_equal_approx(fur_picker.color.darkened(0.18)):
+		parts["hair_color"] = Color(0, 0, 0, 0)
+	parts["top_color"] = top_color_picker.color
+	return parts
+
+## Stellt die Baukasten-Steuerelemente auf die Teile eines Slots (ohne Signale
+## auszuwerten: Aufrufer setzt _updating_character_ui).
+func _refresh_character_parts_ui(parts: Dictionary, can_customize: bool) -> void:
+	if part_options.is_empty():
+		return
+	for key in part_options.keys():
+		var option: OptionButton = part_options[key]
+		var list: Array = PigModular.PART_OPTIONS[key]
+		var index := 0
+		for i in range(list.size()):
+			if str(list[i][0]) == str(parts.get(key, "")):
+				index = i
+				break
+		option.select(index)
+		option.disabled = not can_customize
+	part_eye_size_slider.set_value_no_signal(float(parts.get("eye_size", 1.0)))
+	part_snout_size_slider.set_value_no_signal(float(parts.get("snout_size", 1.0)))
+	part_belt_check.set_pressed_no_signal(bool(parts.get("belt", true)))
+	part_belt_slider.set_value_no_signal(float(parts.get("belt_width", 2.7)))
+	part_tail_side_option.select(0 if float(parts.get("tail_side", -1.0)) < 0.0 else 1)
+	part_tail_visible_check.set_pressed_no_signal(bool(parts.get("tail_visible", true)))
+	# Haarfarbe "automatisch" (Alpha 0) zeigt den aus dem Fell abgeleiteten Ton.
+	var hair: Color = parts.get("hair_color", Color(0, 0, 0, 0))
+	if hair.a <= 0.0:
+		hair = fur_picker.color.darkened(0.18)
+	hair_color_picker.color = hair
+	top_color_picker.color = parts.get("top_color", PigModular.DEFAULT_TOP_COLOR)
+	for control: Control in [part_eye_size_slider, part_snout_size_slider, part_belt_slider]:
+		(control as Range).editable = can_customize
+	for button: BaseButton in [part_belt_check, part_tail_side_option, part_tail_visible_check, hair_color_picker, top_color_picker]:
+		button.disabled = not can_customize
+
+func _commit_character_parts() -> void:
+	if _updating_character_ui or not _character_ui_ready:
+		return
+	var slot := _character_slot
+	if not _can_customize_character_slot(slot):
+		return
+	Global.set_pig_parts(slot, _character_parts_from_ui())
+	if NetworkManager.is_client and slot == Global.local_player_index and _parts_send_timer:
+		_parts_send_timer.start()
+
+func _send_character_parts() -> void:
+	if NetworkManager.is_client and Global.local_player_index >= 1:
+		NetworkManager.request_pig_parts(Global.get_pig_parts(Global.local_player_index))
+
+func _on_character_parts_randomize() -> void:
+	var slot := _character_slot
+	if not _can_customize_character_slot(slot):
+		return
+	SoundManager.play_sound("click")
+	Global.set_pig_parts(slot, PigModular.random_parts(Global.get_pig_parts(slot)))
+	_refresh_character_tab()
+	if NetworkManager.is_client and slot == Global.local_player_index:
+		_send_character_parts()
+
 func _add_character_melee_tiles(parent: VBoxContainer) -> void:
 	var caption := Label.new()
 	caption.text = "NAHKAMPFWAFFE [E]"
@@ -1022,6 +1221,8 @@ func _refresh_character_tab() -> void:
 		player_name_edit.text = Global.get_custom_player_name(look_slot)
 	var melee_id := Global.get_melee_weapon(look_slot)
 	_update_melee_weapon_tiles(melee_id)
+	var parts := Global.get_pig_parts(look_slot)
+	_refresh_character_parts_ui(parts, can_customize)
 	_updating_character_ui = false
 
 	fur_picker.disabled = not can_customize
@@ -1042,6 +1243,7 @@ func _refresh_character_tab() -> void:
 		character_preview.set_outfit(Global.get_player_hero_id(look_slot))
 		character_preview.set_team_color(_character_team_tint(look_slot))
 		character_preview.set_tusk_shape(str(look.get("tusk_shape", "small")))
+		character_preview.apply_parts(parts)
 	if character_preview_wand:
 		character_preview_wand.setup(look["wand_tip_shape"], look["wand_tip_color"])
 		character_preview_wand.set_grip_color(_character_team_tint(look_slot))
@@ -1166,6 +1368,7 @@ func _on_reset_character_colors() -> void:
 	Global.reset_pig_appearance(slot)
 	_refresh_character_tab()
 	if NetworkManager.is_client and slot == Global.local_player_index:
+		NetworkManager.request_pig_parts(Global.get_pig_parts(slot))
 		var look := Global.get_pig_appearance(slot)
 		NetworkManager.request_pig_appearance(
 			look["fur"],
