@@ -8,3 +8,12 @@ Export/
 
 # EOS-Zugangsdaten (lokal)
 eos_config.cfg
+
+# Export-Archive und Builds
+Export.zip
+*.exe
+*.pck
+
+# Lokale Logs und Hilfsdateien
+*.log
+_tmp_check/
