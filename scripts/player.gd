@@ -1416,8 +1416,10 @@ func _spawn_ghost_trail() -> void:
 	if not is_dashing:
 		ghost_timer.stop()
 		return
-	var ghost := PigCharacter.new()
+	var ghost := PigModular.new()
 	ghost.setup(sprite.fur_color, sprite.eye_color, sprite.pants_color)
+	if sprite is PigModular:
+		ghost.apply_parts((sprite as PigModular).get_parts())
 	ghost.set_outfit(sprite.outfit_id)
 	ghost.set_team_color(sprite.team_color)
 	ghost.set_tusk_shape(sprite.tusk_shape)
@@ -1445,6 +1447,10 @@ func _apply_pig_appearance() -> void:
 	# synchronisierten Spielmodus und ist auf Host und Clients gleich.
 	sprite.set_team_color(_team_tint())
 	sprite.set_tusk_shape(str(look.get("tusk_shape", "small")))
+	# Baukasten-Teile (Körperform, Gesicht, Kleidung, Schwanz) kommen auf allen
+	# Rechnern aus Global; Clients erhalten sie per Lobby-Sync.
+	if sprite is PigModular:
+		(sprite as PigModular).apply_parts(Global.get_pig_parts(player_index))
 	wand_tip_shape = str(look["wand_tip_shape"])
 	wand_tip_color = look["wand_tip_color"]
 	shot_color = look["shot_color"]

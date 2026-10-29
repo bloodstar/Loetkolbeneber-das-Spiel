@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3 uid="uid://g1player_scene"]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_script"]
-[ext_resource type="Script" path="res://scripts/pig_character.gd" id="2_pig_script"]
+[ext_resource type="Script" path="res://scripts/pig_modular_character.gd" id="2_pig_script"]
 [ext_resource type="Script" path="res://scripts/magic_wand.gd" id="3_wand_script"]
 [ext_resource type="Script" path="res://scripts/player_status_indicators.gd" id="4_indicators_script"]
 

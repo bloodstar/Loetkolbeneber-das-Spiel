@@ -1141,4 +1141,150 @@ func _draw_nose(
 			_draw_ellipse(center + Vector2(rx * 0.34, ry * 0.05), 1.5 * scale, 0.9 * scale, snout_line, Color(0.0, 0.0, 0.0, 0.0), 0.0)
 		"slits":
 			draw_line(center + Vector2(-rx * 0.34, -ry * 0.22), center + Vector2(-rx * 0.34, ry * 0.28), snout_line, 0.8 * scale, LINE_AA)
-			draw_line(center + Vector2(rx * 0.34, -ry * 0.22), center + Vector2(rx * 0.34, ry * 0.28), snout_line, 0.8
+			draw_line(center + Vector2(rx * 0.34, -ry * 0.22), center + Vector2(rx * 0.34, ry * 0.28), snout_line, 0.8 * scale, LINE_AA)
+		"button":
+			_draw_ellipse(center + Vector2(0.0, -ry * 0.08), rx * 0.34, ry * 0.24, snout.lightened(0.18), snout_line, 0.5 * scale)
+			draw_circle(center + Vector2(-rx * 0.12, -ry * 0.02), 0.45 * scale, snout_line)
+			draw_circle(center + Vector2(rx * 0.12, -ry * 0.02), 0.45 * scale, snout_line)
+		"none":
+			pass
+		_:
+			draw_circle(center + Vector2(-rx * 0.34, ry * 0.04), 0.9 * scale, snout_line)
+			draw_circle(center + Vector2(rx * 0.34, ry * 0.04), 0.9 * scale, snout_line)
+
+## Augenpaar. spacing = halber Augenabstand (Anteil der Kopfbreite), eye_y =
+## Augenhöhe über der Kopfmitte; die Radien je Stil werden mit scale
+## (Körperform × Spieler-Regler) multipliziert.
+func _draw_eyes(s, b: BodySpec, head: Vector2, line: Color) -> void:
+	var spacing := b.head_rx * 0.42
+	var eye_y := head.y - b.head_ry * 0.26
+	var left := Vector2(head.x - spacing, eye_y)
+	var right := Vector2(head.x + spacing, eye_y)
+	var scale := b.eye_scale
+	if s.hurt:
+		_draw_hurt_eyes(left, right, 2.3 * scale, line)
+		return
+	match eye_style:
+		"big":
+			_draw_eye_round(left, 3.4 * scale, 4.0 * scale, line)
+			_draw_eye_round(right, 3.4 * scale, 4.0 * scale, line)
+		"happy":
+			_draw_happy_eye(left, 2.6 * scale, line)
+			_draw_happy_eye(right, 2.6 * scale, line)
+		"sleepy":
+			_draw_sleepy_eye(left, 2.9 * scale, 2.2 * scale, line)
+			_draw_sleepy_eye(right, 2.9 * scale, 2.2 * scale, line)
+		"angry":
+			_draw_eye_round(left, 2.5 * scale, 2.7 * scale, line)
+			_draw_eye_round(right, 2.5 * scale, 2.7 * scale, line)
+			_draw_brow(left, right, scale, line)
+		"button":
+			_draw_button_eye(left, 1.9 * scale, line)
+			_draw_button_eye(right, 1.9 * scale, line)
+		_:
+			_draw_eye_round(left, 2.8 * scale, 3.2 * scale, line)
+			_draw_eye_round(right, 2.8 * scale, 3.2 * scale, line)
+
+func _draw_eye_round(center: Vector2, rx: float, ry: float, line: Color) -> void:
+	_draw_ellipse(center, rx, ry, Color(0.99, 0.97, 0.94, 1.0), line, 0.7)
+	var iris := center + Vector2(0.1, ry * 0.08)
+	var radius := minf(rx, ry)
+	draw_circle(iris, radius * 0.56, eye_color)
+	draw_circle(iris + Vector2(0.0, radius * 0.12), radius * 0.36, Color(0.04, 0.03, 0.05, 1.0))
+	draw_circle(iris + Vector2(-rx * 0.22, -ry * 0.24), rx * 0.22, Color(1.0, 1.0, 1.0, 0.97))
+	draw_circle(iris + Vector2(rx * 0.20, ry * 0.20), rx * 0.10, Color(1.0, 1.0, 1.0, 0.8))
+
+func _draw_happy_eye(center: Vector2, radius: float, line: Color) -> void:
+	draw_arc(center, radius, PI * 1.15, PI * 1.85, 12, line, 1.5, LINE_AA)
+
+func _draw_sleepy_eye(center: Vector2, rx: float, ry: float, line: Color) -> void:
+	_draw_ellipse(center, rx, ry, Color(0.99, 0.97, 0.94, 1.0), line, 0.6)
+	var iris := center + Vector2(0.1, ry * 0.15)
+	draw_circle(iris, minf(rx, ry) * 0.5, eye_color)
+	draw_circle(iris + Vector2(0.0, 0.2), minf(rx, ry) * 0.3, Color(0.04, 0.03, 0.05, 1.0))
+	_draw_ellipse(center + Vector2(0.0, -ry * 0.62), rx * 1.1, ry * 0.6, fur_color, Color(0.0, 0.0, 0.0, 0.0), 0.0)
+	draw_line(center + Vector2(-rx, -ry * 0.15), center + Vector2(rx, -ry * 0.15), line, 1.0, LINE_AA)
+
+func _draw_button_eye(center: Vector2, radius: float, line: Color) -> void:
+	draw_circle(center, radius, eye_color)
+	draw_circle(center + Vector2(-radius * 0.3, -radius * 0.3), radius * 0.28, Color(1.0, 1.0, 1.0, 0.85))
+	draw_arc(center, radius, 0.0, TAU, 16, line, 0.4, LINE_AA)
+
+func _draw_brow(left: Vector2, right: Vector2, scale: float, line: Color) -> void:
+	draw_line(
+		left + Vector2(-2.2 * scale, -2.4 * scale),
+		left + Vector2(2.2 * scale, -1.4 * scale),
+		line,
+		1.6,
+		LINE_AA
+	)
+	draw_line(
+		right + Vector2(-2.2 * scale, -1.4 * scale),
+		right + Vector2(2.2 * scale, -2.4 * scale),
+		line,
+		1.6,
+		LINE_AA
+	)
+
+func _draw_mouth(s, b: BodySpec, center: Vector2, snout_ry: float, line: Color) -> void:
+	var mouth_y := center.y + snout_ry + 1.0
+	if s.hurt:
+		_draw_ellipse(
+			Vector2(center.x, mouth_y - 0.2),
+			2.2 * b.snout_scale,
+			1.5 * b.snout_scale,
+			Color(0.22, 0.06, 0.08, 1.0),
+			line,
+			0.6
+		)
+	else:
+		draw_arc(
+			Vector2(center.x, mouth_y - 0.4),
+			1.7 * b.snout_scale,
+			PI * 0.22,
+			PI * 0.78,
+			10,
+			line,
+			0.8,
+			LINE_AA
+		)
+
+func _draw_tusks_scaled(offset: Vector2, scale: float, fill: Color) -> void:
+	var edge := fill.darkened(0.45)
+	for points in _tusk_points(tusk_shape):
+		for side: float in [-1.0, 1.0]:
+			var mirrored := PackedVector2Array()
+			for point in points:
+				mirrored.append(offset + Vector2(point.x * side * scale, point.y * scale))
+			draw_colored_polygon(mirrored, fill)
+			mirrored.append(mirrored[0])
+			draw_polyline(mirrored, edge, 0.35, LINE_AA)
+
+# --- Geometrie-Helfer ---
+
+## Herz mit runder Unterseite (für den Herz-Rüssel). Ausgangspunkt ist eine
+## Ellipse mit Halbachsen rx/ry um center:
+##   NOTCH_DEPTH  – wie tief die Kerbe oben in der Mitte einschneidet (Anteil von ry)
+##   NOTCH_WIDTH  – wie breit die Kerbe ist (Anteil von rx, Gauß-Breite)
+##   LOBE_LIFT    – wie weit die beiden Bögen links/rechts der Kerbe nach oben wölben
+##   TAPER        – wie stark die untere Hälfte schmaler wird (0 = Ellipse)
+func _soft_heart_points(center: Vector2, rx: float, ry: float, count: int) -> PackedVector2Array:
+	const NOTCH_DEPTH := 0.42
+	const NOTCH_WIDTH := 0.22
+	const LOBE_LIFT := 0.12
+	const TAPER := 0.32
+	var points := PackedVector2Array()
+	for i in count:
+		var a := TAU * float(i) / float(count)
+		var x := cos(a)
+		var y := sin(a)
+		if y < 0.0:
+			# Obere Hälfte: Kerbe in der Mitte, Bögen daneben leicht angehoben.
+			var notch := exp(-pow(x / NOTCH_WIDTH, 2.0))
+			var lobe := sin(absf(x) * PI)
+			y += -y * NOTCH_DEPTH * notch - LOBE_LIFT * lobe * -y
+		else:
+			# Untere Hälfte: zur Mitte hin schmaler, bleibt aber rund.
+			x *= 1.0 - TAPER * y
+		points.append(center + Vector2(x * rx, y * ry))
+	return points
