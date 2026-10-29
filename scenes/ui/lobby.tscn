@@ -1,9 +1,51 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/lobby.gd" id="1_script"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
 bg_color = Color(0.05, 0.06, 0.09, 0.98)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_leave"]
+bg_color = Color(0.55, 0.1, 0.1, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.85, 0.25, 0.25, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+content_margin_left = 12.0
+content_margin_right = 12.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_leave_hover"]
+bg_color = Color(0.7, 0.14, 0.14, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.4, 0.4, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+content_margin_left = 12.0
+content_margin_right = 12.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_leave_pressed"]
+bg_color = Color(0.4, 0.07, 0.07, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.85, 0.25, 0.25, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+content_margin_left = 12.0
+content_margin_right = 12.0
 
 [node name="Lobby" type="CanvasLayer"]
 process_mode = 3
@@ -126,6 +168,19 @@ theme_override_constants/separation = 8
 layout_mode = 2
 theme_override_constants/separation = 16
 
+[node name="BackBtn" type="Button" parent="Panel/Margin/VBox/Footer"]
+custom_minimum_size = Vector2(190, 44)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.92, 0.92, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_leave")
+theme_override_styles/hover = SubResource("StyleBoxFlat_leave_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_leave_pressed")
+theme_override_styles/focus = SubResource("StyleBoxFlat_leave_hover")
+text = "LOBBY VERLASSEN"
+
 [node name="FooterHint" type="Label" parent="Panel/Margin/VBox/Footer"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -134,12 +189,6 @@ theme_override_font_sizes/font_size = 12
 text = "Lokal: Spieler 1 stellt die Lobby ein. Online: Der Host legt Slots, Regeln und Karten fest."
 vertical_alignment = 1
 autowrap_mode = 2
-
-[node name="BackBtn" type="Button" parent="Panel/Margin/VBox/Footer"]
-custom_minimum_size = Vector2(140, 44)
-layout_mode = 2
-theme_override_font_sizes/font_size = 16
-text = "ZURÜCK"
 
 [node name="ReadyBtn" type="Button" parent="Panel/Margin/VBox/Footer"]
 custom_minimum_size = Vector2(170, 44)

@@ -37,15 +37,18 @@ func _ready() -> void:
 		set_replica(true)
 	else:
 		contact_monitor = true
-		max_contacts_reported = 6
-		body_entered.connect(_on_body_entered)
+		max_contacts_reported = 8
 
 func _physics_process(delta: float) -> void:
 	if is_replica:
 		return
+	# Fallende, geschleuderte oder rutschende Kisten verletzen Spieler, die
+	# sie treffen (siehe PhysicsImpact). Kontakte stammen aus dem letzten
+	# Schritt, daher erst prüfen, dann die Geschwindigkeit merken.
+	PhysicsImpact.tick_cooldowns(_hit_cooldowns, delta)
+	var source = last_attacker if is_instance_valid(last_attacker) else null
+	PhysicsImpact.check_players(self, _previous_velocity, _hit_cooldowns, crate_size, 38.0, 1.0, source)
 	_previous_velocity = linear_velocity
-	for key in _hit_cooldowns.keys():
-		_hit_cooldowns[key] = maxf(0.0, float(_hit_cooldowns[key]) - delta)
 	if linear_velocity.y < -900.0 or linear_velocity.y > 900.0:
 		linear_velocity.y = clampf(linear_velocity.y, -900.0, 900.0)
 
@@ -121,6 +124,7 @@ func hit_crate(projectile: Node2D = null) -> void:
 	health -= 1
 	_flash_damage()
 	SoundManager.play_sound("hit", 0.18, -3.0)
+	NetFx.send("mobj", NetFx.mobj_args(self, "hit"))
 	if health <= 0:
 		_break_apart()
 
@@ -146,6 +150,18 @@ func _flash_damage() -> void:
 	var tw := create_tween()
 	tw.tween_property(self, "modulate", Color(1.6, 0.75, 0.55), 0.06)
 	tw.tween_property(self, "modulate", Color.WHITE, 0.12)
+
+# Client: Treffer vom Host (Blitz und Ton).
+func play_network_fx(_method: String) -> void:
+	_flash_damage()
+	SoundManager.play_sound("hit", 0.18, -3.0)
+
+# Client: Kiste ist aus dem Snapshot verschwunden, also zerbrochen.
+func spawn_remote_explosion() -> void:
+	if not _broken:
+		_broken = true
+		_spawn_splinters(global_position)
+	queue_free()
 
 func _break_apart() -> void:
 	if _broken:
@@ -183,26 +199,6 @@ func _spawn_splinters(impact_position: Vector2) -> void:
 	var cleanup := fx.create_tween()
 	cleanup.tween_interval(0.3)
 	cleanup.tween_callback(fx.queue_free)
-
-func _on_body_entered(body: Node) -> void:
-	if is_replica or _broken:
-		return
-	if not (body is Player):
-		return
-	var player := body as Player
-	if player.current_health <= 0.0 or player.is_invulnerable:
-		return
-	var impact_speed := maxf(absf(_previous_velocity.y), absf(linear_velocity.y))
-	if impact_speed < 165.0:
-		return
-	var key := player.get_instance_id()
-	if float(_hit_cooldowns.get(key, 0.0)) > 0.0:
-		return
-	_hit_cooldowns[key] = 0.65
-	var damage := clampf((impact_speed - 140.0) / 11.0, 7.0, 38.0)
-	var source = last_attacker if is_instance_valid(last_attacker) else null
-	player.take_damage(damage, Vector2(0.0, -190.0), source)
-	SoundManager.play_sound("hit", 0.28, 1.0)
 
 func set_replica(replica: bool) -> void:
 	is_replica = replica

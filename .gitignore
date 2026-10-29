@@ -5,3 +5,6 @@
 
 # Lokale Export-Builds
 Export/
+
+# EOS-Zugangsdaten (lokal)
+eos_config.cfg

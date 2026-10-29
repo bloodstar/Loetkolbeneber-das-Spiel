@@ -18,6 +18,7 @@ func _ready() -> void:
 		var width := maxf(1.0, float(overlay_texture.get_width()))
 		sprite.scale = Vector2.ONE * (36.0 / width)
 		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	add_to_group("net_fx_static")
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
 
@@ -39,6 +40,11 @@ func _on_body_entered(body: Node2D) -> void:
 		return
 	_bounce_cooldowns[id] = 0.18
 	body.apply_trampoline_bounce(bounce_force)
+	_play_bounce()
+	NetFx.send("static", NetFx.static_args(self, "bounce"))
+
+# Client: Der Host meldet einen Sprung auf dem Trampolin.
+func play_network_fx(_method: String) -> void:
 	_play_bounce()
 
 func _play_bounce() -> void:

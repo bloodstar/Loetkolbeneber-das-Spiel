@@ -34,6 +34,7 @@ var step_timer: Timer
 var _base_sprite_scale: Vector2 = Vector2(2.0, 2.0)
 
 func _ready() -> void:
+	add_to_group("net_fx_static")
 	if tile_texture:
 		sprite.texture = tile_texture
 		var width := maxf(1.0, float(tile_texture.get_width()))
@@ -78,6 +79,12 @@ func hit_tile(_amount: float = 0.0) -> void:
 	if health <= 0:
 		break_tile()
 	else:
+		_flash_hit()
+		NetFx.send("static", NetFx.static_args(self, "flash"))
+
+# Client: Treffer-Blitz einer noch nicht zerstörten Kachel.
+func play_network_fx(_method: String) -> void:
+	if not is_broken:
 		_flash_hit()
 
 func _flash_hit() -> void:

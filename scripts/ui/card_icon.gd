@@ -14,6 +14,8 @@ var animate: bool = true
 var _timer: float = 0.0
 var _kind: String = "spark"
 var _blocker_drone: bool = false
+# Klassenkarten zeigen unten rechts das Klassen-Icon.
+var _hero_icon: Texture2D = null
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -28,6 +30,7 @@ func setup(p_card: CardData, icon_size: float = 40.0, p_animate: bool = true) ->
 	animate = p_animate
 	_kind = _resolve_kind(card)
 	_blocker_drone = card != null and (card.blocker_drone_count_add > 0 or card.blocker_drone_heal)
+	_hero_icon = CardMechanics.get_hero_icon(card.hero_id) if card != null else null
 	frame = 0
 	_timer = 0.0
 	queue_redraw()
@@ -46,6 +49,19 @@ func _resolve_kind(c: CardData) -> String:
 		return "spark"
 	if c.kamikaze:
 		return "bomb"
+	# Nahkampfkarten: Elementkarten nutzen die Element-Icons, alle anderen ein Schwert.
+	if CardMechanics.has_melee_effect(c):
+		if c.melee_stun_add > 0.0 or c.melee_chain_lightning:
+			return "lightning"
+		if c.melee_poison_stacks_add > 0:
+			return "poison"
+		if c.melee_burn_stacks_add > 0:
+			return "fire"
+		if c.melee_freeze_add > 0.0:
+			return "frost"
+		if c.melee_lifesteal_add > 0.0:
+			return "leech"
+		return "melee"
 	if c.tower_enabled or c.tower_auto_spawn or c.tower_follow \
 			or c.tower_max_health_add > 0 or c.tower_fire_rate_mult < 1.0:
 		return "tower"
@@ -60,7 +76,7 @@ func _resolve_kind(c: CardData) -> String:
 		return "fire"
 	if c.freeze_duration_add > 0.0 or c.frost_nova or c.frost_trail:
 		return "frost"
-	if c.block_bomb:
+	if c.block_bomb or c.block_mine or c.mine_damage_add > 0.0 or c.mine_radius_add > 0.0 or c.mine_instant:
 		return "bomb"
 	if c.block_heal_zone:
 		return "health"
@@ -78,13 +94,15 @@ func _resolve_kind(c: CardData) -> String:
 		return "explosion"
 	if c.homing_strength_add > 0.0:
 		return "homing"
-	if c.bounces_add > 0:
+	if c.bounces_add > 0 or c.border_bounce or c.bounce_split:
 		return "bounce"
+	if c.self_damage_reduction_add > 0.0:
+		return "armor"
 	if c.piercing_add > 0:
 		return "pierce"
 	if c.multishot_add > 0:
 		return "multishot"
-	if c.shield_max_add > 0 or c.shield_regen_mult > 1.0:
+	if c.shield_max_add > 0 or c.shield_regen_mult > 1.0 or c.shield_regen_delay_add < 0.0:
 		return "shield"
 	if c.max_hp_mult > 1.0 or c.max_hp_flat > 0 or c.hp_regen_add > 0.0 or c.hp_regen_always_add > 0.0:
 		return "health"
@@ -98,7 +116,9 @@ func _resolve_kind(c: CardData) -> String:
 		return "rapid"
 	if c.dash_cooldown_mult < 1.0:
 		return "dash"
-	if c.ability_cooldown_mult < 1.0:
+	if c.ability_cooldown_mult < 1.0 or c.ability_damage_mult != 1.0 \
+			or c.ability_radius_mult != 1.0 or c.ability_duration_mult != 1.0 \
+			or c.ability_range_mult != 1.0 or not c.ability_evolution.is_empty():
 		return "ability"
 	return "spark"
 
@@ -109,7 +129,8 @@ func _has_block_effect(c: CardData) -> bool:
 		or c.block_knockback_radius_add > 0.0 \
 		or c.block_knockback_force_add > 0.0 \
 		or c.block_bomb \
-		or c.block_heal_zone
+		or c.block_heal_zone \
+		or c.block_mine
 
 func _alpha(color: Color, alpha: float) -> Color:
 	var result := color
@@ -194,8 +215,20 @@ func _draw() -> void:
 			_draw_bomb(c, s, col, pulse)
 		"ability":
 			_draw_ability(c, s, col)
+		"melee":
+			_draw_melee(c, s, col)
 		_:
 			_draw_spark(c, s, col)
+
+	if _hero_icon != null:
+		_draw_hero_badge(s)
+
+# Klassen-Icon in der Ecke unten rechts, ohne Wackeln, damit es ruhig lesbar bleibt.
+func _draw_hero_badge(s: float) -> void:
+	var badge := clampf(s * 0.42, minf(11.0, s * 0.6), 24.0)
+	var rect := Rect2(size - Vector2(badge, badge), Vector2(badge, badge))
+	draw_circle(rect.get_center(), badge * 0.5, Color(0.04, 0.05, 0.08, 0.9))
+	draw_texture_rect(_hero_icon, rect, false)
 
 func _draw_heart(c: Vector2, s: float, col: Color, pulse: float) -> void:
 	var r := 0.115 * s * pulse
@@ -486,6 +519,18 @@ func _draw_ability(c: Vector2, s: float, col: Color) -> void:
 	for i in range(4):
 		var angle := float(i) * TAU / 4.0 + float(frame) * PI / 8.0
 		draw_circle(c + Vector2(cos(angle), sin(angle)) * 0.12 * s, 0.025 * s, _alpha(col, 0.8))
+
+# Schräges Schwert mit Schweif; der Schweif wandert mit den Frames.
+func _draw_melee(c: Vector2, s: float, col: Color) -> void:
+	var w := maxf(1.6, s * 0.055)
+	var sweep := float(frame) * 0.12
+	draw_arc(c, 0.30 * s, -PI * 0.95 + sweep, -PI * 0.35 + sweep, 16, _alpha(col, 0.45), w * 1.4, true)
+	var hilt := c + Vector2(-0.16, 0.16) * s
+	var tip := c + Vector2(0.22, -0.22) * s
+	draw_line(hilt, tip, col, w * 1.3, true)
+	draw_line(hilt + Vector2(-0.08, -0.08) * s, hilt + Vector2(0.08, 0.08) * s, _alpha(col, 0.9), w, true)
+	draw_line(hilt, hilt + Vector2(-0.09, 0.09) * s, _alpha(col, 0.7), w * 1.2, true)
+	draw_circle(tip, 0.03 * s, _alpha(Color.WHITE, 0.8))
 
 func _draw_spark(c: Vector2, s: float, col: Color) -> void:
 	var base_angle := float(frame) * PI / 8.0

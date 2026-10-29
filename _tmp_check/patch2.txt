@@ -1,0 +1,364 @@
+import sys, io, re
+root = sys.argv[1]
+files = {}
+def get(rel):
+    if rel not in files:
+        files[rel] = io.open(root + '/' + rel, encoding='utf-8', newline='').read()
+    return files[rel]
+def rep(rel, old, new, count=1):
+    s = get(rel)
+    n = s.count(old)
+    if n != count:
+        sys.exit("ANCHOR FAIL %s (found %d, want %d): %r" % (rel, n, count, old[:80]))
+    files[rel] = s.replace(old, new)
+
+if 'TUSK_SHAPES' in get('scripts/autoload/global.gd'):
+    sys.exit('already patched')
+
+# ---------------- global.gd ----------------
+G = 'scripts/autoload/global.gd'
+rep(G, '''const WAND_TIP_SHAPES: Array[String] = ["orb", "star", "crystal", "flame"]
+const WAND_TIP_SHAPE_LABELS: Dictionary = {
+	"orb": "Kegel",
+	"star": "Meißel",
+	"crystal": "Messer",
+	"flame": "Huf",
+}
+''', '''const WAND_TIP_SHAPES: Array[String] = ["orb", "star", "crystal", "flame", "ball", "diamond", "spark", "blaze"]
+const WAND_TIP_SHAPE_LABELS: Dictionary = {
+	"orb": "Kegel",
+	"star": "Meißel",
+	"crystal": "Messer",
+	"flame": "Huf",
+	"ball": "Kugel",
+	"diamond": "Diamant",
+	"spark": "Stern",
+	"blaze": "Flamme",
+}
+# Hauerformen des Ebers (Charakter-Tab).
+const TUSK_SHAPES: Array[String] = ["small", "long", "saber", "double", "stub"]
+const TUSK_SHAPE_LABELS: Dictionary = {
+	"small": "Klein",
+	"long": "Lang",
+	"saber": "Säbel",
+	"double": "Doppelt",
+	"stub": "Stummel",
+}
+const PLAYER_NAME_MAX_LENGTH: int = 16
+''')
+rep(G, 'var player_wand_tip_shapes: Array[String] = ["orb", "orb", "orb", "orb", "orb", "orb"]\n',
+    'var player_wand_tip_shapes: Array[String] = ["orb", "orb", "orb", "orb", "orb", "orb"]\n'
+    'var player_tusk_shapes: Array[String] = ["small", "small", "small", "small", "small", "small"]\n'
+    '# Selbst gewählte Benutzernamen; leer = Ersatzname wie "Spieler 2".\n'
+    'var player_names: Array[String] = ["", "", "", "", "", ""]\n')
+rep(G, '\t\t"wand_tip_shape": player_wand_tip_shapes[slot - 1],\n',
+    '\t\t"wand_tip_shape": player_wand_tip_shapes[slot - 1],\n\t\t"tusk_shape": player_tusk_shapes[slot - 1],\n')
+rep(G, '''func get_wand_tip_shape_label(shape: String) -> String:
+	return str(WAND_TIP_SHAPE_LABELS.get(shape, shape.capitalize()))
+''', '''func get_wand_tip_shape_label(shape: String) -> String:
+	return str(WAND_TIP_SHAPE_LABELS.get(shape, shape.capitalize()))
+
+func normalize_tusk_shape(shape: String) -> String:
+	return shape if TUSK_SHAPES.has(shape) else "small"
+
+func get_tusk_shape_label(shape: String) -> String:
+	return str(TUSK_SHAPE_LABELS.get(shape, shape.capitalize()))
+
+func sanitize_player_name(raw: String) -> String:
+	var clean := raw.replace("\\n", " ").replace("\\r", " ").replace("\\t", " ").strip_edges()
+	return clean.substr(0, PLAYER_NAME_MAX_LENGTH)
+
+# Nur der selbst eingegebene Name (kann leer sein).
+func get_custom_player_name(index: int) -> String:
+	if index < 1 or index > MAX_PLAYERS or is_bot_slot(index):
+		return ""
+	return player_names[index - 1]
+
+# Anzeigename: eingegebener Benutzername oder Ersatz wie "Spieler 2" / "Bot 3".
+func get_player_name(index: int) -> String:
+	var custom := get_custom_player_name(index)
+	if not custom.is_empty():
+		return custom
+	return ("Bot %d" if is_bot_slot(index) else "Spieler %d") % index
+
+func set_player_name(index: int, value: String) -> void:
+	if index < 1 or index > MAX_PLAYERS:
+		return
+	var clean := sanitize_player_name(value)
+	if player_names[index - 1] == clean:
+		return
+	player_names[index - 1] = clean
+	if index == local_player_index:
+		save_character_customization(index)
+	lobby_state_changed.emit()
+''')
+rep(G, '''		shot_color: Color = Color(0, 0, 0, 0)
+	) -> void:
+	if index < 1 or index > MAX_PLAYERS:
+		return
+	var next_shape''', '''		shot_color: Color = Color(0, 0, 0, 0),
+		tusk_shape: String = ""
+	) -> void:
+	if index < 1 or index > MAX_PLAYERS:
+		return
+	var next_shape''')
+rep(G, '\tvar next_shot_color := shot_color if shot_color.a > 0.0 else player_shot_colors[index - 1]\n',
+    '\tvar next_shot_color := shot_color if shot_color.a > 0.0 else player_shot_colors[index - 1]\n'
+    '\tvar next_tusk: String = player_tusk_shapes[index - 1]\n'
+    '\tif not tusk_shape.is_empty():\n\t\tnext_tusk = normalize_tusk_shape(tusk_shape)\n')
+rep(G, '\t\t\tand player_shot_colors[index - 1] == next_shot_color:\n',
+    '\t\t\tand player_shot_colors[index - 1] == next_shot_color \\\n\t\t\tand player_tusk_shapes[index - 1] == next_tusk:\n')
+rep(G, '\tplayer_shot_colors[index - 1] = next_shot_color\n\tpig_appearance_changed.emit(index)\n',
+    '\tplayer_shot_colors[index - 1] = next_shot_color\n\tplayer_tusk_shapes[index - 1] = next_tusk\n\tpig_appearance_changed.emit(index)\n')
+rep(G, '''		"orb",
+		default_wand_tip_colors[index - 1],
+		default_wand_tip_colors[index - 1]
+	)
+''', '''		"orb",
+		default_wand_tip_colors[index - 1],
+		default_wand_tip_colors[index - 1],
+		"small"
+	)
+''')
+rep(G, '''		look["wand_tip_color"],
+		look["shot_color"]
+	)
+''', '''		look["wand_tip_color"],
+		look["shot_color"],
+		str(look.get("tusk_shape", "small"))
+	)
+	if look.has("name"):
+		set_player_name(index, str(look["name"]))
+''')
+rep(G, '\tuser_character_customization = look.duplicate(true)\n',
+    '\tuser_character_customization = look.duplicate(true)\n\tuser_character_customization["name"] = player_names[slot - 1]\n')
+rep(G, '\t\t"version": 1,\n', '\t\t"version": 1,\n\t\t"player_name": player_names[slot - 1],\n')
+rep(G, '\t\t\t"wand_tip_shape": look["wand_tip_shape"],\n',
+    '\t\t\t"wand_tip_shape": look["wand_tip_shape"],\n\t\t\t"tusk_shape": look["tusk_shape"],\n')
+rep(G, '\tuser_character_customization = look\n',
+    '\tlook["name"] = sanitize_player_name(str(parsed.get("player_name", "")))\n\tuser_character_customization = look\n')
+rep(G, '\t\t"wand_tip_shape": shape,\n',
+    '\t\t"wand_tip_shape": shape,\n\t\t"tusk_shape": normalize_tusk_shape(str(raw.get("tusk_shape", "small"))),\n')
+
+# ---------------- network_manager.gd ----------------
+N = 'scripts/autoload/network_manager.gd'
+rep(N, '\t\t"heroes": Global.player_hero_ids.duplicate(),\n',
+    '\t\t"heroes": Global.player_hero_ids.duplicate(),\n\t\t"names": Global.player_names.duplicate(),\n')
+rep(N, '''		Global.player_hero_ids[i] = str(heroes[i])
+''', '''		Global.player_hero_ids[i] = str(heroes[i])
+	var names: Array = data.get("names", [])
+	for i in range(mini(names.size(), Global.MAX_PLAYERS)):
+		Global.player_names[i] = Global.sanitize_player_name(str(names[i]))
+''')
+rep(N, '''		shot_color: Color
+	) -> void:
+	if is_client:
+		client_pig_appearance.rpc_id(
+			1, fur, eyes, pants, wand_tip_shape, wand_tip_color, shot_color
+		)''', '''		shot_color: Color,
+		tusk_shape: String = "small"
+	) -> void:
+	if is_client:
+		client_pig_appearance.rpc_id(
+			1, fur, eyes, pants, wand_tip_shape, wand_tip_color, shot_color, tusk_shape
+		)''')
+rep(N, '''		shot_color: Color
+	) -> void:
+	if not is_host:''', '''		shot_color: Color,
+		tusk_shape: String
+	) -> void:
+	if not is_host:''')
+rep(N, '''		slot, fur, eyes, pants, wand_tip_shape, wand_tip_color, shot_color
+	)
+''', '''		slot, fur, eyes, pants, wand_tip_shape, wand_tip_color, shot_color, tusk_shape
+	)
+
+# Benutzername: Der Client meldet ihn, der Host verteilt ihn per Lobby-Sync.
+func request_player_name(player_name: String) -> void:
+	if is_client:
+		client_player_name.rpc_id(1, player_name)
+
+@rpc("any_peer", "call_remote", "reliable")
+func client_player_name(player_name: String) -> void:
+	if not is_host:
+		return
+	var slot := get_slot_for_peer(multiplayer.get_remote_sender_id())
+	if slot <= 0:
+		return
+	Global.set_player_name(slot, player_name)
+''')
+
+# ---------------- main.gd ----------------
+M = 'scripts/main.gd'
+rep(M, '\t\tdata["wand_shape"] = str(pig_colors.get("wand_tip_shape", "orb"))\n',
+    '\t\tdata["wand_shape"] = str(pig_colors.get("wand_tip_shape", "orb"))\n\t\tdata["tusks"] = str(pig_colors.get("tusk_shape", "small"))\n')
+
+# ---------------- player.gd ----------------
+P = 'scripts/player.gd'
+rep(P, '''	if data.get("fur") is Color and data.get("eyes") is Color and data.get("pants") is Color:
+		sprite.setup(data["fur"], data["eyes"], data["pants"])
+''', '''	if data.get("fur") is Color and data.get("eyes") is Color and data.get("pants") is Color:
+		sprite.setup(data["fur"], data["eyes"], data["pants"])
+	if data.has("tusks"):
+		sprite.set_tusk_shape(str(data["tusks"]))
+''')
+rep(P, '\tsprite.set_outfit(Global.get_player_hero_id(player_index))\n',
+    '\tsprite.set_outfit(Global.get_player_hero_id(player_index))\n\tsprite.set_tusk_shape(str(look.get("tusk_shape", "small")))\n')
+rep(P, '\tghost.set_outfit(sprite.outfit_id)\n', '\tghost.set_outfit(sprite.outfit_id)\n\tghost.set_tusk_shape(sprite.tusk_shape)\n')
+rep(P, '\t\t"pants": sprite.pants_color,\n\t\t"wand_tip_shape": wand_tip_shape,\n',
+    '\t\t"pants": sprite.pants_color,\n\t\t"tusk_shape": sprite.tusk_shape,\n\t\t"wand_tip_shape": wand_tip_shape,\n')
+
+# ---------------- hud.gd ----------------
+H = 'scripts/ui/hud.gd'
+rep(H, '''	var kind := "P%d" % slot
+	if Global.is_bot_slot(slot):
+		kind = "BOT%d" % slot
+	elif Global.network_mode and slot == Global.local_player_index:
+		kind = "DU"
+''', '''	var kind := "P%d" % slot
+	var custom_name := Global.get_custom_player_name(slot)
+	if Global.is_bot_slot(slot):
+		kind = "BOT%d" % slot
+	elif Global.network_mode and slot == Global.local_player_index:
+		kind = "%s (DU)" % custom_name if not custom_name.is_empty() else "DU"
+	elif not custom_name.is_empty():
+		kind = custom_name
+''')
+
+# ---------------- epic_online.gd ----------------
+E = 'scripts/autoload/epic_online.gd'
+rep(E, '''func _display_name() -> String:
+	var user := OS.get_environment("USERNAME")''', '''func _display_name() -> String:
+	var saved_name := str(Global.user_character_customization.get("name", ""))
+	if not saved_name.is_empty():
+		return saved_name.substr(0, 32)
+	var user := OS.get_environment("USERNAME")''')
+
+# ---------------- test_scene.gd ----------------
+T = 'scripts/test_scene.gd'
+rep(T, 'Global.WAND_TIP_SHAPES.size() == 4 and', 'Global.WAND_TIP_SHAPES.size() == 8 and')
+
+# ---------------- lobby.gd ----------------
+L = 'scripts/ui/lobby.gd'
+rep(L, 'var wand_shape_option: OptionButton = null\n',
+    'var wand_shape_option: OptionButton = null\nvar tusk_shape_option: OptionButton = null\nvar player_name_edit: LineEdit = null\n')
+rep(L, '\t_add_character_color_row(controls, "Fellfarbe",',
+    '\t_add_character_name_row(controls)\n\t_add_character_color_row(controls, "Fellfarbe",')
+rep(L, '\t_add_character_shape_row(controls)\n',
+    '\t_add_character_tusk_row(controls)\n\t_add_character_shape_row(controls)\n')
+rep(L, '"Form der Lötspitze: Kegel, Meißel, Messer oder Huf."', '"Form der Lötspitze, z. B. Kegel, Meißel, Kugel oder Diamant."')
+rep(L, 'func _character_slots() -> Array[int]:', '''func _add_character_text_column(row: HBoxContainer, title: String, description: String) -> void:
+	var text_column := VBoxContainer.new()
+	text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_column.add_theme_constant_override("separation", 1)
+	row.add_child(text_column)
+
+	var title_label := Label.new()
+	title_label.text = title
+	title_label.add_theme_font_size_override("font_size", 16)
+	title_label.add_theme_color_override("font_color", Color(0.92, 0.94, 0.98))
+	text_column.add_child(title_label)
+
+	var desc_label := Label.new()
+	desc_label.text = description
+	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc_label.add_theme_font_size_override("font_size", 11)
+	desc_label.add_theme_color_override("font_color", Color(0.50, 0.56, 0.65))
+	text_column.add_child(desc_label)
+
+func _add_character_name_row(parent: VBoxContainer) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	parent.add_child(row)
+	_add_character_text_column(row, "Benutzername", "Wird in Lobby und Spielstand angezeigt (max. %d Zeichen)." % Global.PLAYER_NAME_MAX_LENGTH)
+
+	player_name_edit = LineEdit.new()
+	player_name_edit.custom_minimum_size = Vector2(180, 38)
+	player_name_edit.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	player_name_edit.max_length = Global.PLAYER_NAME_MAX_LENGTH
+	player_name_edit.placeholder_text = "Name eingeben"
+	player_name_edit.text_submitted.connect(_on_player_name_submitted)
+	player_name_edit.focus_exited.connect(_commit_player_name)
+	row.add_child(player_name_edit)
+
+func _add_character_tusk_row(parent: VBoxContainer) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	parent.add_child(row)
+	_add_character_text_column(row, "Hauer", "Form der Eberhauer: Klein, Lang, Säbel, Doppelt oder Stummel.")
+
+	tusk_shape_option = OptionButton.new()
+	tusk_shape_option.custom_minimum_size = Vector2(120, 42)
+	tusk_shape_option.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for i in range(Global.TUSK_SHAPES.size()):
+		tusk_shape_option.add_item(Global.get_tusk_shape_label(Global.TUSK_SHAPES[i]), i)
+	tusk_shape_option.item_selected.connect(_on_character_tusk_shape_changed)
+	row.add_child(tusk_shape_option)
+
+func _character_slots() -> Array[int]:''')
+rep(L, '\twand_shape_option.select(maxi(0, shape_index))\n',
+    '\twand_shape_option.select(maxi(0, shape_index))\n'
+    '\tif tusk_shape_option:\n\t\ttusk_shape_option.select(maxi(0, Global.TUSK_SHAPES.find(str(look.get("tusk_shape", "small")))))\n'
+    '\t# Während der Eingabe nicht überschreiben, sonst springt der Cursor.\n'
+    '\tif player_name_edit and not player_name_edit.has_focus():\n\t\tplayer_name_edit.text = Global.get_custom_player_name(look_slot)\n')
+rep(L, '\twand_shape_option.disabled = not can_customize\n',
+    '\twand_shape_option.disabled = not can_customize\n'
+    '\tif tusk_shape_option:\n\t\ttusk_shape_option.disabled = not can_customize\n'
+    '\tif player_name_edit:\n\t\tplayer_name_edit.editable = can_customize and not Global.is_bot_slot(look_slot)\n')
+rep(L, '\t\tcharacter_preview.set_outfit(Global.get_player_hero_id(look_slot))\n',
+    '\t\tcharacter_preview.set_outfit(Global.get_player_hero_id(look_slot))\n\t\tcharacter_preview.set_tusk_shape(str(look.get("tusk_shape", "small")))\n')
+rep(L, '''func _on_character_wand_shape_changed(_index: int) -> void:
+	_commit_character_appearance()
+''', '''func _on_character_wand_shape_changed(_index: int) -> void:
+	_commit_character_appearance()
+
+func _on_character_tusk_shape_changed(_index: int) -> void:
+	_commit_character_appearance()
+
+func _selected_tusk_shape() -> String:
+	if tusk_shape_option == null:
+		return "small"
+	var index := clampi(tusk_shape_option.selected, 0, Global.TUSK_SHAPES.size() - 1)
+	return Global.TUSK_SHAPES[index]
+
+func _on_player_name_submitted(_text: String) -> void:
+	_commit_player_name()
+	player_name_edit.release_focus()
+
+func _commit_player_name() -> void:
+	if _updating_character_ui or not _character_ui_ready or player_name_edit == null:
+		return
+	var slot := _character_slot
+	if not _can_customize_character_slot(slot) or Global.is_bot_slot(slot):
+		return
+	Global.set_player_name(slot, player_name_edit.text)
+	player_name_edit.text = Global.get_custom_player_name(slot)
+	if NetworkManager.is_client and slot == Global.local_player_index:
+		NetworkManager.request_player_name(Global.get_custom_player_name(slot))
+''')
+rep(L, '\t\ttip_color,\n\t\tshot_color\n\t)\n', '\t\ttip_color,\n\t\tshot_color,\n\t\t_selected_tusk_shape()\n\t)\n')
+rep(L, '\t\t\ttip_color,\n\t\t\tshot_color\n\t\t)\n', '\t\t\ttip_color,\n\t\t\tshot_color,\n\t\t\t_selected_tusk_shape()\n\t\t)\n')
+rep(L, '\t\t\tlook["wand_tip_color"],\n\t\t\tlook["shot_color"]\n\t\t)\n',
+    '\t\t\tlook["wand_tip_color"],\n\t\t\tlook["shot_color"],\n\t\t\tstr(look["tusk_shape"])\n\t\t)\n', count=2)
+rep(L, '\tif slot >= 1 and NetworkManager.is_client and slot == Global.local_player_index:\n\t\tvar look := Global.get_pig_appearance(slot)\n',
+    '\tif slot >= 1 and NetworkManager.is_client and slot == Global.local_player_index:\n\t\tvar look := Global.get_pig_appearance(slot)\n'
+    '\t\tNetworkManager.request_player_name(Global.get_custom_player_name(slot))\n')
+rep(L, 'func _update_titles() -> void:', '''func _slot_name_suffix(slot: int) -> String:
+	var custom := Global.get_custom_player_name(slot)
+	return "" if custom.is_empty() else " · %s" % custom
+
+func _update_titles() -> void:''')
+rep(L, 'title.text = team_prefix + ("SPIELER 1 (HOST) — HELD WÄHLEN" if Global.network_mode else "SPIELER 1 — HELD WÄHLEN")',
+    'title.text = team_prefix + ("SPIELER 1 (HOST)%s — HELD WÄHLEN" if Global.network_mode else "SPIELER 1%s — HELD WÄHLEN") % _slot_name_suffix(1)')
+rep(L, '"SLOT %d / MENSCH%s — %s" % [i, you, state]', '"SLOT %d / MENSCH%s%s — %s" % [i, _slot_name_suffix(i), you, state]')
+rep(L, '"SPIELER %d — HELD WÄHLEN" % i', '"SPIELER %d%s — HELD WÄHLEN" % [i, _slot_name_suffix(i)]')
+
+# ---------------- project.godot (MSAA 2D) ----------------
+PG = 'project.godot'
+if 'msaa_2d' not in get(PG):
+    rep(PG, 'textures/canvas_textures/default_texture_filter=0\n',
+        'textures/canvas_textures/default_texture_filter=0\nanti_aliasing/quality/msaa_2d=2\n')
+
+for rel, s in files.items():
+    io.open(root + '/' + rel, 'w', encoding='utf-8', newline='').write(s)
+    print('wrote', rel)

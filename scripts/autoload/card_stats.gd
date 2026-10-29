@@ -19,6 +19,7 @@ signal rarity_changed()
 const CARD_STATS_PATH: String = "user://card_statistics.json"
 const DOCUMENT_VERSION: int = 1
 const MAX_PROMOTION_LOG: int = 100
+const MAX_VERSION_HISTORY: int = 200
 
 # Auswertung: früh genug für regelmäßige Anpassungen, aber mit genug Daten,
 # damit einzelne Ausreißer keine Kettenreaktion auslösen.
@@ -39,9 +40,20 @@ var storage_path: String = CARD_STATS_PATH
 var statistics: Dictionary = {}
 var rarity_overrides: Dictionary = {}
 var promotion_log: Array = []
+var version_history: Array = []
+var _history_size_at_load: int = 0
 var matches: int = 0
 var last_evaluated_match: int = 0
 var base_rarities: Dictionary = {}
+# Pro Nahkampfwaffe: Spieler-Matches, Siege und verursachter Nahkampfschaden.
+# Gilt immer für die aktuelle Waffenversion (Global.MELEE_WEAPON_DATA).
+var melee_weapon_stats: Dictionary = {}
+# Pro Held: Spieler-Matches und Siege der aktuellen Helden- und Fähigkeitsversion.
+var hero_stats: Dictionary = {}
+# Laufendes Match: wurde es schon gezählt, und welche Karten je Spieler
+# ("slot:card_id") haben bereits ein Match-Sample bekommen.
+var match_counted: bool = false
+var match_counted_cards: Dictionary = {}
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -50,13 +62,16 @@ func _ready() -> void:
 	if _is_automated_test_run():
 		persistence_enabled = false
 		auto_evaluation_enabled = false
+	Global.match_reset.connect(_on_match_reset)
 	_snapshot_base_rarities()
 	_load_document()
 	apply_rarity_overrides()
 	if auto_evaluation_enabled:
 		evaluate_rarity()
 	# Beim ersten Start direkt ein vollständiges Dokument mit allen Karten anlegen.
-	if persistence_enabled and not FileAccess.file_exists(storage_path):
+	# Nach einem Versionswechsel sofort speichern, damit die alten Zähler nur
+	# einmal archiviert werden.
+	if persistence_enabled and (not FileAccess.file_exists(storage_path) or version_history.size() > _history_size_at_load):
 		_save_document()
 
 func _is_automated_test_run() -> bool:
@@ -81,6 +96,7 @@ func _empty_card_stats() -> Dictionary:
 		"wins": 0,
 		"promotions": 0,
 		"last_promotion_match": 0,
+		"melee_damage": 0,
 	}
 
 func _entry(card_id: String) -> Dictionary:
@@ -162,40 +178,110 @@ func record_kill_totals(match_stats: Array) -> void:
 	if changed:
 		statistics_changed.emit()
 
-# Ein Match-Sample entsteht für jede Karte, die am Match-Ende im Deck eines
-# aktiven Spielers lag. Der Gewinner (bzw. das Gewinnerteam) erzeugt Wins.
+# Ein Match-Sample entsteht für jede Karte, die in einem Match im Deck eines
+# aktiven Spielers lag. Gezählt wird schon zu Beginn jeder Runde (siehe
+# record_round_start), damit auch abgebrochene oder abgestürzte Matches
+# mitzählen. Am Match-Ende kommen die Wins für den Gewinner (bzw. das
+# Gewinnerteam) dazu; Karten, die bereits gezählt wurden, zählen nicht doppelt.
 func record_match(winner_index: int) -> void:
-	matches += 1
+	_count_match_participation()
 	var winner_team := -1
 	if winner_index >= 1 and winner_index <= Global.MAX_PLAYERS:
 		winner_team = Global.get_team_for_slot(winner_index)
 
 	for slot in Global.get_active_player_indices():
-		var cards := Global.get_player_cards(slot)
-		if cards.is_empty():
-			continue
 		var won := false
 		if winner_index >= 1:
 			if Global.is_team_mode():
 				won = Global.get_team_for_slot(slot) == winner_team
 			else:
 				won = slot == winner_index
-		for value in cards:
+		_record_melee_match(slot, won)
+		_record_hero_match(slot, won)
+		if not won:
+			continue
+		for value in Global.get_player_cards(slot):
 			var card := value as CardData
 			if card == null:
 				continue
 			var entry := _entry(card.id)
 			if entry.is_empty():
 				continue
-			entry["matches"] = int(entry.get("matches", 0)) + 1
-			if won:
-				entry["wins"] = int(entry.get("wins", 0)) + 1
+			entry["wins"] = int(entry.get("wins", 0)) + 1
 			statistics[card.id] = entry
 
+	# Das Match ist abgeschlossen; eine Verlängerung („Weiter“) zählt als neues.
+	_on_match_reset()
 	statistics_changed.emit()
 	if auto_evaluation_enabled and matches - last_evaluated_match >= EVALUATION_INTERVAL_MATCHES:
 		evaluate_rarity()
 	_save_document()
+
+# Nahkampfschaden des Matches geht an die Karten im Deck und an die gewählte
+# Waffe. Läuft auf Host und Clients (Clients haben die Host-Matchwerte).
+func _record_melee_match(slot: int, won: bool) -> void:
+	var melee_damage := int(round(Global.get_match_stat(slot, "melee_damage")))
+	var weapon_id := Global.get_melee_weapon(slot)
+	var weapon: Dictionary = melee_weapon_stats.get(weapon_id, {"matches": 0, "wins": 0, "melee_damage": 0})
+	weapon["matches"] = int(weapon.get("matches", 0)) + 1
+	weapon["wins"] = int(weapon.get("wins", 0)) + (1 if won else 0)
+	weapon["melee_damage"] = int(weapon.get("melee_damage", 0)) + melee_damage
+	melee_weapon_stats[weapon_id] = weapon
+	if melee_damage <= 0:
+		return
+	for value in Global.get_player_cards(slot):
+		var card := value as CardData
+		if card == null:
+			continue
+		var entry := _entry(card.id)
+		if entry.is_empty():
+			continue
+		entry["melee_damage"] = int(entry.get("melee_damage", 0)) + melee_damage
+		statistics[card.id] = entry
+
+func _record_hero_match(slot: int, won: bool) -> void:
+	var hero_id := Global.get_player_hero_id(slot)
+	var hero: Dictionary = hero_stats.get(hero_id, {"matches": 0, "wins": 0})
+	hero["matches"] = int(hero.get("matches", 0)) + 1
+	hero["wins"] = int(hero.get("wins", 0)) + (1 if won else 0)
+	hero_stats[hero_id] = hero
+
+# Wird vom Host bzw. Offline-Spiel zu Beginn jeder Runde aufgerufen. Zählt
+# neu hinzugekommene Karten sofort und speichert, damit ein Absturz mitten im
+# Match keine Daten verliert.
+func record_round_start() -> void:
+	if _count_match_participation():
+		statistics_changed.emit()
+	_save_document()
+
+func _on_match_reset() -> void:
+	match_counted = false
+	match_counted_cards.clear()
+
+# Zählt jede Karte pro Spieler höchstens einmal je Match und das Match selbst
+# beim ersten Aufruf. Gibt true zurück, wenn sich etwas geändert hat.
+func _count_match_participation() -> bool:
+	var changed := false
+	if not match_counted:
+		match_counted = true
+		matches += 1
+		changed = true
+	for slot in Global.get_active_player_indices():
+		for value in Global.get_player_cards(slot):
+			var card := value as CardData
+			if card == null:
+				continue
+			var key := "%d:%s" % [slot, card.id]
+			if match_counted_cards.has(key):
+				continue
+			var entry := _entry(card.id)
+			if entry.is_empty():
+				continue
+			match_counted_cards[key] = true
+			entry["matches"] = int(entry.get("matches", 0)) + 1
+			statistics[card.id] = entry
+			changed = true
+	return changed
 
 # Vergleicht Karten innerhalb ihrer aktuellen Seltenheit. Pro Seltenheit wird
 # höchstens die Karte mit dem größten Winrate-Vorsprung eine Stufe angehoben.
@@ -358,9 +444,13 @@ func get_statistics_document() -> Dictionary:
 # automatisierten Tests genutzt, damit Testdaten die echte Datei nicht verändern.
 func reset_statistics(clear_overrides: bool = true) -> void:
 	statistics.clear()
+	melee_weapon_stats.clear()
+	hero_stats.clear()
 	promotion_log.clear()
+	version_history.clear()
 	matches = 0
 	last_evaluated_match = 0
+	_on_match_reset()
 	if clear_overrides:
 		rarity_overrides.clear()
 	apply_rarity_overrides()
@@ -380,6 +470,7 @@ func reload_from_disk() -> void:
 	statistics.clear()
 	rarity_overrides.clear()
 	promotion_log.clear()
+	version_history.clear()
 	matches = 0
 	last_evaluated_match = 0
 	_load_document()
@@ -412,11 +503,14 @@ func _build_document() -> Dictionary:
 		var offers := int(entry.get("offers", 0))
 		card_documents[card_id] = {
 			"title": card.title,
+			"version": card.version,
+			"fingerprint": card.get_balance_fingerprint(),
 			"rarity": card.rarity,
 			"base_rarity": get_base_rarity(card_id),
 			"offers": offers,
 			"picks": int(entry.get("picks", 0)),
 			"kills": int(entry.get("kills", 0)),
+			"melee_damage": int(entry.get("melee_damage", 0)),
 			"matches": match_count,
 			"wins": int(entry.get("wins", 0)),
 			"promotions": int(entry.get("promotions", 0)),
@@ -424,6 +518,38 @@ func _build_document() -> Dictionary:
 			"pick_rate": _ratio(float(entry.get("picks", 0)), float(offers)),
 			"kill_rate": _ratio(float(entry.get("kills", 0)), float(match_count)),
 			"win_rate": _ratio(float(entry.get("wins", 0)), float(match_count)),
+			"melee_damage_per_match": _ratio(float(entry.get("melee_damage", 0)), float(match_count)),
+		}
+
+	var weapon_documents: Dictionary = {}
+	for weapon_id in Global.MELEE_WEAPONS:
+		var weapon: Dictionary = melee_weapon_stats.get(weapon_id, {})
+		var weapon_matches := int(weapon.get("matches", 0))
+		weapon_documents[weapon_id] = {
+			"title": Global.get_melee_weapon_label(weapon_id),
+			"version": Global.get_melee_weapon_version(weapon_id),
+			"fingerprint": Global.get_melee_weapon_fingerprint(weapon_id),
+			"matches": weapon_matches,
+			"wins": int(weapon.get("wins", 0)),
+			"melee_damage": int(weapon.get("melee_damage", 0)),
+			"win_rate": _ratio(float(weapon.get("wins", 0)), float(weapon_matches)),
+			"melee_damage_per_match": _ratio(float(weapon.get("melee_damage", 0)), float(weapon_matches)),
+		}
+
+	var hero_documents: Dictionary = {}
+	for hero_id in Global.heroes.keys():
+		var hero_data: HeroData = Global.heroes[hero_id]
+		var hero: Dictionary = hero_stats.get(hero_id, {})
+		var hero_matches := int(hero.get("matches", 0))
+		hero_documents[hero_id] = {
+			"title": hero_data.name,
+			"version": hero_data.version,
+			"fingerprint": hero_data.get_balance_fingerprint(),
+			"ability_version": hero_data.ability_version,
+			"ability_fingerprint": hero_data.get_ability_fingerprint(),
+			"matches": hero_matches,
+			"wins": int(hero.get("wins", 0)),
+			"win_rate": _ratio(float(hero.get("wins", 0)), float(hero_matches)),
 		}
 
 	return {
@@ -446,8 +572,11 @@ func _build_document() -> Dictionary:
 		"matches": matches,
 		"last_evaluated_match": last_evaluated_match,
 		"cards": card_documents,
+		"melee_weapons": weapon_documents,
+		"heroes": hero_documents,
 		"rarity_overrides": rarity_overrides.duplicate(true),
 		"promotion_log": promotion_log.duplicate(true),
+		"version_history": version_history.duplicate(true),
 	}
 
 func _load_document() -> void:
@@ -480,6 +609,13 @@ func _load_document() -> void:
 			if CardDatabase.get_card(card_id) != null and Global.RARITY_ORDER.has(rarity):
 				rarity_overrides[card_id] = rarity
 
+	var raw_history: Variant = data.get("version_history", [])
+	if raw_history is Array:
+		for value in raw_history:
+			if value is Dictionary:
+				version_history.append(value.duplicate(true))
+	_history_size_at_load = version_history.size()
+
 	var raw_cards: Variant = data.get("cards", {})
 	if raw_cards is Dictionary:
 		for key in raw_cards.keys():
@@ -488,6 +624,8 @@ func _load_document() -> void:
 			if CardDatabase.get_card(card_id) == null or not (raw_entry is Dictionary):
 				continue
 			var raw: Dictionary = raw_entry
+			if not _accept_stored_version(CardDatabase.get_card(card_id), raw):
+				continue
 			var match_count := maxi(0, int(raw.get("matches", 0)))
 			statistics[card_id] = {
 				"offers": maxi(0, int(raw.get("offers", 0))),
@@ -497,7 +635,90 @@ func _load_document() -> void:
 				"wins": clampi(int(raw.get("wins", 0)), 0, match_count),
 				"promotions": maxi(0, int(raw.get("promotions", 0))),
 				"last_promotion_match": maxi(0, int(raw.get("last_promotion_match", 0))),
+				"melee_damage": maxi(0, int(raw.get("melee_damage", 0))),
 			}
+
+	melee_weapon_stats.clear()
+	var raw_weapons: Variant = data.get("melee_weapons", {})
+	if raw_weapons is Dictionary:
+		for key in raw_weapons.keys():
+			var weapon_id := str(key)
+			var raw_weapon: Variant = raw_weapons[key]
+			if not Global.MELEE_WEAPONS.has(weapon_id) or not (raw_weapon is Dictionary):
+				continue
+			if not _accept_stored_entry("melee_weapon_id", weapon_id, raw_weapon,
+					{"version": Global.get_melee_weapon_version(weapon_id)},
+					{"fingerprint": Global.get_melee_weapon_fingerprint(weapon_id)}):
+				continue
+			var weapon_matches := maxi(0, int(raw_weapon.get("matches", 0)))
+			melee_weapon_stats[weapon_id] = {
+				"matches": weapon_matches,
+				"wins": clampi(int(raw_weapon.get("wins", 0)), 0, weapon_matches),
+				"melee_damage": maxi(0, int(raw_weapon.get("melee_damage", 0))),
+			}
+
+	hero_stats.clear()
+	var raw_heroes: Variant = data.get("heroes", {})
+	if raw_heroes is Dictionary:
+		for key in raw_heroes.keys():
+			var hero_id := str(key)
+			var raw_hero: Variant = raw_heroes[key]
+			if not Global.heroes.has(hero_id) or not (raw_hero is Dictionary):
+				continue
+			var hero_data: HeroData = Global.heroes[hero_id]
+			if not _accept_stored_entry("hero_id", hero_id, raw_hero,
+					{"version": hero_data.version, "ability_version": hero_data.ability_version},
+					{"fingerprint": hero_data.get_balance_fingerprint(), "ability_fingerprint": hero_data.get_ability_fingerprint()}):
+				continue
+			var hero_matches := maxi(0, int(raw_hero.get("matches", 0)))
+			hero_stats[hero_id] = {
+				"matches": hero_matches,
+				"wins": clampi(int(raw_hero.get("wins", 0)), 0, hero_matches),
+			}
+
+# Wie _accept_stored_version, aber für Waffen und Helden: versions und
+# fingerprints sind {Feldname: aktueller Wert}. Fehlende Versionen gelten als 1.
+func _accept_stored_entry(id_key: String, entry_id: String, raw: Dictionary, versions: Dictionary, fingerprints: Dictionary) -> bool:
+	var changed_versions := false
+	for field in versions.keys():
+		if int(raw.get(field, 1)) != int(versions[field]):
+			changed_versions = true
+	if not changed_versions:
+		for field in fingerprints.keys():
+			var stored := str(raw.get(field, ""))
+			if not stored.is_empty() and stored != str(fingerprints[field]):
+				var version_field := "ability_version" if field == "ability_fingerprint" else "version"
+				push_warning("CardStats: Werte von '%s' wurden geändert, aber %s ist noch %d. Bitte erhöhen." % [entry_id, version_field, int(versions.get(version_field, 1))])
+		return true
+	var archived := raw.duplicate(true)
+	archived[id_key] = entry_id
+	archived["archived_at"] = Time.get_datetime_string_from_system(true)
+	for field in versions.keys():
+		archived["replaced_by_" + field] = versions[field]
+	version_history.append(archived)
+	while version_history.size() > MAX_VERSION_HISTORY:
+		version_history.pop_front()
+	return false
+
+# Prüft, ob gespeicherte Zähler zur aktuellen Kartenversion gehören. Ältere
+# Dateien ohne Versionsfeld gelten als Version 1. Bei einem Versionswechsel
+# werden die alten Zähler archiviert und die Karte startet bei null.
+func _accept_stored_version(card: CardData, raw: Dictionary) -> bool:
+	var stored_version := int(raw.get("version", 1))
+	var stored_fingerprint := str(raw.get("fingerprint", ""))
+	var fingerprint := card.get_balance_fingerprint()
+	if stored_version == card.version:
+		if not stored_fingerprint.is_empty() and stored_fingerprint != fingerprint:
+			push_warning("CardStats: Werte von '%s' wurden geändert, aber version ist noch %d. Bitte version erhöhen." % [card.id, card.version])
+		return true
+	var archived := raw.duplicate(true)
+	archived["card_id"] = card.id
+	archived["archived_at"] = Time.get_datetime_string_from_system(true)
+	archived["replaced_by_version"] = card.version
+	version_history.append(archived)
+	while version_history.size() > MAX_VERSION_HISTORY:
+		version_history.pop_front()
+	return false
 
 func _save_document() -> void:
 	if not persistence_enabled:

@@ -7,6 +7,8 @@ signal restart_requested
 # Host-Verbesserung: Match mit erhöhtem Ziel weiterführen.
 signal continue_requested
 
+const RadarChartScript = preload("res://scripts/ui/radar_chart.gd")
+
 @onready var player_boxes: HBoxContainer = $Top/PlayerBoxes
 @onready var score_label: Label = $Top/Center_Box/ScoreLabel
 @onready var sudden_death_label: Label = $Top/Center_Box/SuddenDeathLabel
@@ -34,8 +36,27 @@ var _upgrade_bar: PanelContainer = null
 var _upgrade_flow: HFlowContainer = null
 var _upgrade_title: Label = null
 var _tab_overlay: Control = null
+# Eigene Ebene über der Kartenwahl (CardDraftUI liegt auf Layer 10), damit
+# Tab auch während der Upgrade-Phase sichtbar ist.
+var _tab_layer: CanvasLayer = null
+# Die Punkteübersicht oben rechts (Center_Box) wandert während der Kartenwahl
+# auf diese Ebene über dem Draft-Hintergrund und danach zurück in die Top-Leiste.
+var _score_layer: CanvasLayer = null
+var _score_holder: HBoxContainer = null
+var _score_box_index: int = -1
+# Übersicht aller Spieler nach Match-Ende (Button im Game-Over-Panel).
+var _overview: Control = null
+var _tab_scroll: ScrollContainer = null
+var _overview_scroll: ScrollContainer = null
+var _overview_content: VBoxContainer = null
+var _overview_tabs: HBoxContainer = null
+var _overview_button: Button = null
 var _tab_content: VBoxContainer = null
 var _tab_refresh_timer: float = 0.0
+# Ohne Blind Pick lassen sich im Tab-Overlay auch andere Spieler ansehen.
+var _tab_player_tabs: HBoxContainer = null
+var _tab_view_slot: int = -1
+var _tab_player_tabs_key: String = ""
 
 # Level Modifier UI
 var _modifier_container: VBoxContainer = null
@@ -44,6 +65,8 @@ var _event_timer: float = 0.0
 var _stamp_overlay: Control = null
 
 const TAB_REFRESH_INTERVAL: float = 0.35
+const HUD_RELOAD_RING_SIZE: float = 14.0
+const HUD_RELOAD_COLOR: Color = Color(0.35, 0.86, 1.0, 0.96)
 const MAX_UPGRADE_ICONS: int = 16
 
 func _ready() -> void:
@@ -67,20 +90,56 @@ func _ready() -> void:
 	_update_ping()
 	_update_score()
 
+# Mausrad scrollt das offene Stats-Fenster. Das Tab-Overlay ignoriert die Maus
+# (Klicks sollen ins Spiel bzw. die Kartenwahl durchgehen), daher von Hand.
+const STATS_WHEEL_STEP: int = 70
+
+func _input(event: InputEvent) -> void:
+	var key := event as InputEventKey
+	if key != null and key.pressed and not key.echo and _tab_overlay != null and _tab_overlay.visible:
+		if key.keycode >= KEY_1 and key.keycode <= KEY_9 and _can_browse_tab_players():
+			var slots: Array[int] = Global.get_active_player_indices()
+			var idx := int(key.keycode - KEY_1)
+			if idx < slots.size():
+				_select_tab_player(slots[idx])
+			get_viewport().set_input_as_handled()
+		return
+	var mb := event as InputEventMouseButton
+	if mb == null or not mb.pressed:
+		return
+	if mb.button_index != MOUSE_BUTTON_WHEEL_UP and mb.button_index != MOUSE_BUTTON_WHEEL_DOWN:
+		return
+	var target: ScrollContainer = null
+	if _overview != null and _overview.visible:
+		target = _overview_scroll
+	elif _tab_overlay != null and _tab_overlay.visible:
+		target = _tab_scroll
+	if target == null:
+		return
+	var dir := -1 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1
+	target.scroll_vertical += dir * STATS_WHEEL_STEP
+	get_viewport().set_input_as_handled()
+
 func _process(delta: float) -> void:
+	_update_reload_indicators()
+	_sync_score_box_layer()
 	if _event_timer > 0.0:
 		_event_timer -= delta
 		if _event_timer <= 0.0 and _event_label != null:
 			_event_label.visible = false
 
+	if _overview != null and _overview.visible and not game_over_panel.visible:
+		_overview.visible = false
 	if _tab_overlay == null:
 		return
 	var wants_overlay := Input.is_physical_key_pressed(KEY_TAB) and _can_show_tab_overlay()
 	if wants_overlay:
 		if not _tab_overlay.visible:
+			_tab_view_slot = _tab_target_slot()
 			_refresh_tab_overlay()
 			_tab_overlay.visible = true
 			_tab_refresh_timer = 0.0
+			_refresh_hover_under_overlay()
 		_tab_refresh_timer -= delta
 		if _tab_refresh_timer <= 0.0:
 			_refresh_tab_overlay()
@@ -142,19 +201,43 @@ func _build_box(index: int) -> Dictionary:
 	shield_bar.add_theme_stylebox_override("fill", shield_style)
 	box.add_child(shield_bar)
 
+	# Munitionszeile: Text plus Nachlade-Kreis wie am Spieler. Während des
+	# Nachladens ersetzt der Kreis die Zahlen und zeigt den Fortschritt.
+	# Munition, Fähigkeit, Block und Nahkampf bleiben in der Übersicht
+	# ausgeblendet; die Anzeigen am Spieler und im Tab-Bogen zeigen sie.
+	var ammo_row := HBoxContainer.new()
+	ammo_row.add_theme_constant_override("separation", 4)
+	ammo_row.visible = false
+	box.add_child(ammo_row)
+
 	var ammo_label := Label.new()
 	ammo_label.add_theme_font_size_override("font_size", 11)
-	box.add_child(ammo_label)
+	ammo_row.add_child(ammo_label)
+
+	var ammo_ring := Control.new()
+	ammo_ring.custom_minimum_size = Vector2(HUD_RELOAD_RING_SIZE, HUD_RELOAD_RING_SIZE)
+	ammo_ring.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	ammo_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ammo_ring.visible = false
+	ammo_row.add_child(ammo_ring)
 
 	var ability_label := Label.new()
 	ability_label.add_theme_font_size_override("font_size", 11)
+	ability_label.visible = false
 	box.add_child(ability_label)
 
 	var block_label := Label.new()
 	block_label.add_theme_font_size_override("font_size", 11)
 	block_label.add_theme_color_override("font_color", Color(0.55, 0.85, 1.0, 1.0))
 	block_label.text = "Block [Q]: BEREIT"
+	block_label.visible = false
 	box.add_child(block_label)
+
+	var melee_label := Label.new()
+	melee_label.add_theme_font_size_override("font_size", 11)
+	melee_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.42, 1.0))
+	melee_label.visible = false
+	box.add_child(melee_label)
 
 	var cards_label := Label.new()
 	cards_label.add_theme_font_size_override("font_size", 10)
@@ -167,8 +250,10 @@ func _build_box(index: int) -> Dictionary:
 		"hp": hp_bar,
 		"shield": shield_bar,
 		"ammo": ammo_label,
+		"ammo_ring": ammo_ring,
 		"ability": ability_label,
 		"block": block_label,
+		"melee": melee_label,
 		"cards": cards_label,
 	}
 	boxes[index] = ui
@@ -182,9 +267,10 @@ func _connect_player(player: Player, ui: Dictionary) -> void:
 		ui["shield"].value = cur_s
 		ui["shield"].visible = max_s > 0.0
 	)
-	player.ammo_changed.connect(func(cur, max_a):
-		ui["ammo"].text = _ammo_text(cur, max_a, player.is_reloading)
+	player.ammo_changed.connect(func(_cur, _max_a):
+		_update_ammo_row(ui, player)
 	)
+	ui["ammo_ring"].draw.connect(_draw_hud_reload_ring.bind(ui["ammo_ring"], player))
 	player.ability_cooldown_updated.connect(func(cur, _max_c):
 		if cur <= 0.0:
 			ui["ability"].text = "%s: BEREIT!" % player.ability_name
@@ -213,24 +299,60 @@ func update_all() -> void:
 			tag = "[BOT] "
 		else:
 			tag = "[P%d] " % p.player_index
-		ui["name"].text = "%s%s (%s)" % [tag, hero.name, hero.role]
+		ui["name"].text = "%s%s" % [tag, hero.name]
 		if Global.is_team_mode():
 			ui["name"].add_theme_color_override("font_color", Global.get_team_color(p.team_id))
 		else:
 			ui["name"].add_theme_color_override("font_color", hero.color_tint)
-		ui["ammo"].text = _ammo_text(p.current_ammo, p.max_ammo, p.is_reloading)
+		_update_ammo_row(ui, p)
 		if p.ability_timer <= 0.0:
 			ui["ability"].text = "%s: BEREIT!" % p.ability_name
 		else:
 			ui["ability"].text = "%s: %.1fs" % [p.ability_name, p.ability_timer]
 		ui["block"].text = _block_text(p.is_blocking, p.block_cooldown_timer)
+		ui["melee"].text = _melee_text(p)
 		ui["cards"].text = "Upgrades: %d" % Global.get_player_cards(p.player_index).size()
 	_update_score()
 
 func _ammo_text(current: int, maximum: int, reloading: bool) -> String:
 	if reloading:
-		return "Munition: NACHLADEN (%d / %d)" % [current, maximum]
+		return "Munition:"
 	return "Munition: %d / %d" % [current, maximum]
+
+func _update_ammo_row(ui: Dictionary, p: Player) -> void:
+	ui["ammo"].text = _ammo_text(p.current_ammo, p.max_ammo, p.is_reloading)
+	var ring: Control = ui["ammo_ring"]
+	ring.visible = p.is_reloading
+	if ring.visible:
+		ring.queue_redraw()
+
+# Hält Text und Nachlade-Kreis jeden Frame aktuell. Clients bekommen
+# is_reloading/reload_timer per Sync, ohne dass ammo_changed feuert.
+func _update_reload_indicators() -> void:
+	for p in tracked_players:
+		if not is_instance_valid(p):
+			continue
+		var ui: Dictionary = boxes.get(p.player_index, {})
+		if ui.is_empty():
+			continue
+		var ring: Control = ui["ammo_ring"]
+		if ring.visible != p.is_reloading or p.is_reloading:
+			_update_ammo_row(ui, p)
+
+# Gleiche Optik wie der Nachlade-Kreis über dem Charakter
+# (player_status_indicators.gd), nur in HUD-Größe.
+func _draw_hud_reload_ring(ring: Control, p: Player) -> void:
+	if not is_instance_valid(p):
+		return
+	var center: Vector2 = ring.size * 0.5
+	var radius: float = HUD_RELOAD_RING_SIZE * 0.5 - 2.5
+	ring.draw_circle(center, radius + 2.0, Color(0.015, 0.02, 0.035, 0.66))
+	ring.draw_arc(center, radius, 0.0, TAU, 32, Color(0.92, 0.96, 1.0, 0.16), 2.0, true)
+	var duration: float = maxf(0.001, p.reload_time)
+	var remaining: float = clampf(p.reload_timer / duration, 0.0, 1.0)
+	if remaining > 0.0:
+		ring.draw_arc(center, radius, -PI * 0.5, -PI * 0.5 + TAU * remaining, 32, HUD_RELOAD_COLOR, 2.6, true)
+	ring.draw_circle(center, 2.0, HUD_RELOAD_COLOR)
 
 func _block_text(active: bool, cooldown: float) -> String:
 	if active:
@@ -238,6 +360,14 @@ func _block_text(active: bool, cooldown: float) -> String:
 	if cooldown <= 0.0:
 		return "Block [Q]: BEREIT"
 	return "Block [Q]: %.1fs" % cooldown
+
+func _melee_text(p: Player) -> String:
+	var label := Global.get_melee_weapon_label(Global.get_melee_weapon(p.player_index))
+	if p.powerup_auto_attack_timer > 0.0:
+		label += " (AUTO %ds)" % ceili(p.powerup_auto_attack_timer)
+	if p.melee_cooldown_timer <= 0.0:
+		return "%s [E]: BEREIT" % label
+	return "%s [E]: %.1fs" % [label, p.melee_cooldown_timer]
 
 func _update_score() -> void:
 	# Die aktuellen Punkte stehen direkt neben jedem Fortschrittsbalken.
@@ -525,12 +655,17 @@ func _build_tab_overlay() -> void:
 	_tab_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_tab_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tab_overlay.visible = false
-	add_child(_tab_overlay)
+	_tab_layer = CanvasLayer.new()
+	_tab_layer.name = "CharacterOverlayLayer"
+	_tab_layer.layer = 20
+	add_child(_tab_layer)
+	_tab_layer.add_child(_tab_overlay)
 
 	var dim := ColorRect.new()
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	dim.color = Color(0.01, 0.02, 0.04, 0.78)
-	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Fängt die Maus ab, damit darunterliegende Draft-Karten keine Tooltips zeigen.
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	_tab_overlay.add_child(dim)
 
 	var center := CenterContainer.new()
@@ -539,7 +674,7 @@ func _build_tab_overlay() -> void:
 	_tab_overlay.add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(820, 560)
+	panel.custom_minimum_size = Vector2(980, 760)
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.07, 0.09, 0.13, 0.98)
@@ -560,10 +695,23 @@ func _build_tab_overlay() -> void:
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(margin)
 
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 8)
+	outer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	margin.add_child(outer)
+
+	_tab_player_tabs = HBoxContainer.new()
+	_tab_player_tabs.add_theme_constant_override("separation", 6)
+	_tab_player_tabs.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tab_player_tabs.visible = false
+	outer.add_child(_tab_player_tabs)
+
 	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	margin.add_child(scroll)
+	outer.add_child(scroll)
+	_tab_scroll = scroll
 
 	_tab_content = VBoxContainer.new()
 	_tab_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -571,12 +719,88 @@ func _build_tab_overlay() -> void:
 	_tab_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scroll.add_child(_tab_content)
 
+# Ein schon offener Tooltip einer Draft-Karte verschwindet erst, wenn die GUI
+# den Hover neu auswertet; eine Maus-Bewegung ohne Versatz löst das sofort aus.
+func _refresh_hover_under_overlay() -> void:
+	var motion := InputEventMouseMotion.new()
+	motion.position = get_viewport().get_mouse_position()
+	motion.global_position = motion.position
+	Input.parse_input_event(motion)
+
 func _can_show_tab_overlay() -> bool:
 	if Global.is_spectator or Global.local_player_index < 1:
 		return false
-	if game_over_panel.visible:
+	if game_over_panel.visible or GameSettings.gameplay_input_blocked:
 		return false
-	return Global.current_state == Global.GameState.PLAYING
+	return Global.current_state == Global.GameState.PLAYING or _is_draft_active()
+
+# Hebt die Punkteübersicht über die Kartenwahl (Layer 10), solange der Draft
+# offen ist. Position und Größe entsprechen der Top-Leiste.
+func _sync_score_box_layer() -> void:
+	var center_box := score_label.get_parent() as Control
+	if center_box == null:
+		return
+	var draft := _draft_ui()
+	var wants_layer := draft != null and draft.visible
+	if wants_layer:
+		if _score_holder != null and center_box.get_parent() == _score_holder:
+			return
+		if _score_layer == null:
+			_score_layer = CanvasLayer.new()
+			_score_layer.name = "DraftScoreLayer"
+			_score_layer.layer = 11
+			add_child(_score_layer)
+			_score_holder = HBoxContainer.new()
+			_score_holder.name = "DraftScoreHolder"
+			_score_holder.anchor_left = 1.0
+			_score_holder.anchor_right = 1.0
+			_score_holder.offset_left = -20.0 - center_box.custom_minimum_size.x
+			_score_holder.offset_right = -20.0
+			_score_holder.offset_top = 12.0
+			_score_holder.offset_bottom = 118.0
+			_score_holder.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+			_score_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_score_layer.add_child(_score_holder)
+		_score_box_index = center_box.get_index()
+		center_box.reparent(_score_holder, false)
+	elif _score_holder != null and center_box.get_parent() == _score_holder:
+		var top: Control = $Top
+		center_box.reparent(top, false)
+		if _score_box_index >= 0:
+			top.move_child(center_box, mini(_score_box_index, top.get_child_count() - 1))
+
+func _draft_ui() -> CardDraftUI:
+	return get_parent().get_node_or_null("CardDraftUI") as CardDraftUI
+
+func _is_draft_active() -> bool:
+	if Global.current_state == Global.GameState.CARD_DRAFT:
+		return true
+	var draft := _draft_ui()
+	return draft != null and draft.visible
+
+# Online zeigt Tab immer die eigenen Werte, lokal die des gerade wählenden
+# Spielers, weil sich dort alle einen Bildschirm teilen.
+func _tab_target_slot() -> int:
+	if Global.network_mode:
+		return Global.local_player_index
+	var draft := _draft_ui()
+	if draft != null and draft.visible:
+		return draft.current_drafter
+	return Global.local_player_index
+
+# Während der Kartenwahl ist die Spielfigur meist schon entfernt (Tod). Ein
+# nicht eingehängter Player rechnet über apply_stats() dieselben Werte aus
+# Held + Karten aus, die er nächste Runde haben wird. Drohnen bekommen dabei
+# Netzwerk-IDs, deshalb wird der Zähler danach zurückgesetzt.
+func _create_stat_preview(slot: int) -> Player:
+	if slot < 1 or Global.get_hero(Global.get_player_hero_id(slot)) == null:
+		return null
+	var saved_companion_id := Companion._next_net_id
+	var preview := Player.new()
+	preview.player_index = slot
+	preview.apply_stats()
+	Companion._next_net_id = saved_companion_id
+	return preview
 
 func _add_tab_heading(text: String, color: Color) -> Label:
 	var label := Label.new()
@@ -658,8 +882,12 @@ func _create_tab_card(card: CardData) -> PanelContainer:
 	if evolution_banner != null:
 		text_box.add_child(evolution_banner)
 
+	var unlock_label := CardMechanics.make_unlock_label(card, 9, false)
+	if unlock_label != null:
+		text_box.add_child(unlock_label)
+
 	var description := Label.new()
-	description.text = card.description
+	description.text = CardMechanics.format_description(card.description)
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	description.add_theme_font_size_override("font_size", 11)
 	description.add_theme_color_override("font_color", Color(0.70, 0.74, 0.82, 1.0))
@@ -671,11 +899,86 @@ func _create_tab_card(card: CardData) -> PanelContainer:
 func _refresh_tab_overlay() -> void:
 	if _tab_content == null:
 		return
+	var keep_scroll := _tab_scroll.scroll_vertical if _tab_scroll != null else 0
 	_clear_ui_children(_tab_content)
-	var p := _local_player()
+	var slot := _tab_target_slot()
+	if _can_browse_tab_players() and Global.get_active_player_indices().has(_tab_view_slot):
+		slot = _tab_view_slot
+	_tab_view_slot = slot
+	_rebuild_tab_player_tabs(slot)
+	var preview: Player = null
+	var p: Player = _tracked_player(slot)
+	# Kartenwahl oder tot (Figur entfernt): Werte aus Held + Karten berechnen.
+	if _is_draft_active() or p == null:
+		preview = _create_stat_preview(slot)
+		p = preview
 	if p == null:
 		return
+	_fill_tab_overlay(p, preview != null)
+	if preview != null:
+		preview.free()
+	# Der Inhalt wird alle 0,35 s neu gebaut; Scrollposition beibehalten.
+	if _tab_scroll != null:
+		_tab_scroll.set_deferred("scroll_vertical", keep_scroll)
 
+# Blind Pick hält die Karten der anderen online geheim; dann bleibt Tab beim
+# eigenen Bogen. Sonst zeigt eine Leiste alle Spieler zum Umschalten.
+func _can_browse_tab_players() -> bool:
+	return not (Global.blind_pick_enabled and Global.network_mode)
+
+func _tracked_player(slot: int) -> Player:
+	for p in tracked_players:
+		if is_instance_valid(p) and p.player_index == slot:
+			return p
+	return null
+
+func _select_tab_player(slot: int) -> void:
+	if slot == _tab_view_slot:
+		return
+	SoundManager.play_sound("click")
+	_tab_view_slot = slot
+	if _tab_scroll != null:
+		_tab_scroll.scroll_vertical = 0
+	_refresh_tab_overlay()
+	_tab_refresh_timer = TAB_REFRESH_INTERVAL
+
+# Die Knöpfe werden nur bei geänderter Auswahl neu gebaut, sonst ginge ein
+# Klick zwischen zwei Aktualisierungen (alle 0,35 s) verloren.
+func _rebuild_tab_player_tabs(selected: int) -> void:
+	if _tab_player_tabs == null:
+		return
+	var slots: Array[int] = Global.get_active_player_indices()
+	if not _can_browse_tab_players() or slots.size() < 2:
+		_tab_player_tabs.visible = false
+		_tab_player_tabs_key = ""
+		return
+	var key := "%d|%s" % [selected, str(slots)]
+	_tab_player_tabs.visible = true
+	if key == _tab_player_tabs_key:
+		return
+	_tab_player_tabs_key = key
+	_clear_ui_children(_tab_player_tabs)
+	for i in slots.size():
+		var s_idx: int = slots[i]
+		var hero: HeroData = Global.get_hero(Global.get_player_hero_id(s_idx))
+		var btn := Button.new()
+		btn.text = "%d  %s" % [i + 1, _player_display_name(s_idx)]
+		btn.toggle_mode = true
+		btn.button_pressed = (s_idx == selected)
+		btn.focus_mode = Control.FOCUS_NONE
+		btn.add_theme_font_size_override("font_size", 13)
+		if hero != null:
+			btn.add_theme_color_override("font_color", hero.color_tint)
+		btn.pressed.connect(_select_tab_player.bind(s_idx), CONNECT_DEFERRED)
+		_tab_player_tabs.add_child(btn)
+	var hint := Label.new()
+	hint.text = "Taste 1-%d oder Klick: Spieler wechseln" % slots.size()
+	hint.add_theme_font_size_override("font_size", 11)
+	hint.add_theme_color_override("font_color", Color(0.55, 0.62, 0.72, 1.0))
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tab_player_tabs.add_child(hint)
+
+func _fill_tab_overlay(p: Player, is_preview: bool, for_overview: bool = false) -> void:
 	var hero: HeroData = Global.get_hero(Global.get_player_hero_id(p.player_index))
 	var hero_name := hero.name if hero != null else "Spieler %d" % p.player_index
 	var hero_color := hero.color_tint if hero != null else Color(0.55, 0.85, 1.0)
@@ -690,6 +993,13 @@ func _refresh_tab_overlay() -> void:
 	var subtitle := Label.new()
 	var role_text := hero.role if hero != null else ""
 	subtitle.text = "%s  ·  TAB loslassen zum Schließen" % role_text
+	if not for_overview and p.player_index != Global.local_player_index and _can_browse_tab_players():
+		title.text = "CHARAKTERBOGEN · %s" % _player_display_name(p.player_index).to_upper()
+	if for_overview:
+		title.text = "%s · %s" % [_player_display_name(p.player_index).to_upper(), "%d Punkte" % Global.player_scores[p.player_index - 1]]
+		subtitle.text = "%s  ·  Endstand mit allen Karten" % role_text
+	elif is_preview:
+		subtitle.text = "%s  ·  Werte für die nächste Runde  ·  TAB loslassen zum Schließen" % role_text
 	subtitle.add_theme_font_size_override("font_size", 11)
 	subtitle.add_theme_color_override("font_color", Color(0.55, 0.62, 0.72, 1.0))
 	subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -714,13 +1024,22 @@ func _refresh_tab_overlay() -> void:
 	_add_stat_cell(stats_grid, "NACHLADEN", "%.2f s" % p.reload_time, Color(0.85, 0.85, 0.90))
 	_add_stat_cell(stats_grid, "SPRÜNGE", "%d" % p.max_jumps, Color(0.70, 0.85, 1.0))
 	_add_stat_cell(stats_grid, "BLOCK", "%s · %.1f s / %.1f s" % ["AKTIV" if p.is_blocking else "BEREIT", p.block_cooldown, p.block_duration], Color(0.55, 0.85, 1.0))
+	var melee_id := Global.get_melee_weapon(p.player_index)
+	var melee_data := Global.get_melee_weapon_data(melee_id)
+	if Global.melee_enabled:
+		_add_stat_cell(stats_grid, "NAHKAMPF", "%s · %d · %.1f s" % [Global.get_melee_weapon_label(melee_id), int(round(float(melee_data["damage"]) * p.melee_damage_mult)), p.melee_cooldown], Color(1.0, 0.72, 0.42))
 	_add_stat_cell(stats_grid, "FÄHIGKEIT", "%s (%.1f s)" % [p.ability_name, p.ability_max_cooldown], hero_color)
 	_add_stat_cell(stats_grid, "KILLS", "%d" % int(Global.get_match_stat(p.player_index, "kills")), Color(0.85, 0.90, 1.0))
 	_add_stat_cell(stats_grid, "TODE", "%d" % int(Global.get_match_stat(p.player_index, "deaths")), Color(0.95, 0.55, 0.55))
 	_add_stat_cell(stats_grid, "SCHADEN GESAMT", "%d" % int(Global.get_match_stat(p.player_index, "damage_dealt")), Color(1.0, 0.65, 0.35))
 	_add_stat_cell(stats_grid, "HEILUNG", "%d" % int(Global.get_match_stat(p.player_index, "healing_done")), Color(0.45, 0.95, 0.50))
 
+	_add_modifier_totals(p)
+
 	var cards := Global.get_player_cards(p.player_index)
+	_add_tab_heading("KARTENVERTEILUNG", Color(0.55, 0.85, 1.0))
+	_tab_content.add_child(RadarChartScript.build_card_charts(cards, 4, Vector2(225, 190)))
+
 	_add_tab_heading("UPGRADE-KARTEN (%d)" % cards.size(), Color(1.0, 0.72, 0.30))
 	if cards.is_empty():
 		var empty := Label.new()
@@ -741,6 +1060,133 @@ func _refresh_tab_overlay() -> void:
 	for card in cards:
 		card_grid.add_child(_create_tab_card(card))
 
+# Summen aller Karten-Modifier, die nicht schon oben unter ATTRIBUTE stehen.
+# Gezeigt wird nur, was vom Grundwert abweicht, damit die Liste kurz bleibt.
+func _add_modifier_totals(p: Player) -> void:
+	var rows: Array = []
+	var shot := Color(1.0, 0.65, 0.35)
+	var effect := Color(0.75, 0.95, 0.55)
+	var ability := Color(0.82, 0.68, 1.0)
+	var defense := Color(0.55, 0.85, 1.0)
+	if p.explosion_radius > 0.0:
+		rows.append(["EXPLOSIONSRADIUS", "%d px" % int(round(p.explosion_radius)), shot])
+	if p.multishot > 0:
+		rows.append(["MEHRFACHSCHUSS", "+%d Projektile" % p.multishot, shot])
+	if p.spread_angle > 0.0:
+		rows.append(["STREUUNG", "%.0f°" % p.spread_angle, shot])
+	if p.bounces > 0:
+		rows.append(["ABPRALLER", "%d" % p.bounces, shot])
+	if p.border_bounce:
+		rows.append(["GUMMIWAND", "AN", shot])
+	if p.bounce_split:
+		rows.append(["ZELLTEILUNG", "2 x 60 %", shot])
+	if p.self_damage_reduction > 0.0:
+		rows.append(["SELBSTSCHADEN", "-%.0f %%" % (minf(p.self_damage_reduction, Player.MAX_SELF_DAMAGE_REDUCTION) * 100.0), defense])
+	if p.piercing > 0:
+		rows.append(["DURCHSCHLAG", "%d" % p.piercing, shot])
+	if p.homing > 0.0:
+		rows.append(["ZIELSUCHE", "%.2f" % p.homing, shot])
+	if not is_equal_approx(p.bullet_speed, 650.0):
+		rows.append(["GESCHOSSTEMPO", "%d" % int(round(p.bullet_speed)), shot])
+	if not is_equal_approx(p.bullet_size, 1.0):
+		rows.append(["GESCHOSSGRÖSSE", "x%.2f" % p.bullet_size, shot])
+	if not is_equal_approx(p.projectile_gravity_mult, 1.0):
+		rows.append(["GESCHOSS-FALL", "x%.2f" % p.projectile_gravity_mult, shot])
+	if not is_equal_approx(p.knockback_mult, 1.0):
+		rows.append(["RÜCKSTOSS", "x%.2f" % p.knockback_mult, shot])
+	var melee := Color(1.0, 0.72, 0.42)
+	if not is_equal_approx(p.melee_damage_mult, 1.0):
+		rows.append(["NAHKAMPF-SCHADEN", "x%.2f" % p.melee_damage_mult, melee])
+	if p.melee_range_bonus > 0.0:
+		rows.append(["NAHKAMPF-REICHWEITE", "+%.2f Felder" % p.melee_range_bonus, melee])
+	if p.melee_arc_bonus > 0.0:
+		rows.append(["NAHKAMPF-BOGEN", "+%.0f°" % p.melee_arc_bonus, melee])
+	if not is_equal_approx(p.melee_knockback_mult, 1.0):
+		rows.append(["NAHKAMPF-RÜCKSTOSS", "x%.2f" % p.melee_knockback_mult, melee])
+	if p.melee_freeze > 0.0:
+		rows.append(["NAHKAMPF-FROST", "%.1f s" % p.melee_freeze, melee])
+	if p.melee_poison_stacks > 0:
+		rows.append(["NAHKAMPF-GIFT", "%d Stapel" % p.melee_poison_stacks, melee])
+	if p.melee_burn_stacks > 0:
+		rows.append(["NAHKAMPF-BRAND", "%d Stapel" % p.melee_burn_stacks, melee])
+	if p.melee_stun > 0.0:
+		rows.append(["NAHKAMPF-BETÄUBUNG", "%.2f s" % p.melee_stun, melee])
+	if p.melee_wall_stun_bonus > 0.0:
+		rows.append(["WANDKLATSCHER", "+%.1f s" % p.melee_wall_stun_bonus, melee])
+	if p.melee_lifesteal > 0.0:
+		rows.append(["NAHKAMPF-LEBENSRAUB", "%.0f %%" % (p.melee_lifesteal * 100.0), melee])
+	if p.melee_execute_bonus > 0.0:
+		rows.append(["GNADENSTOSS", "+%.0f %%" % (p.melee_execute_bonus * 100.0), melee])
+	if p.melee_chain_lightning:
+		rows.append(["NAHKAMPF-KETTENBLITZ", "AN", melee])
+	if p.melee_echo:
+		rows.append(["NACHSCHLAG", "AN", melee])
+	if p.melee_parry:
+		rows.append(["PARADE", "AN", melee])
+	if p.lifesteal_percent > 0.0:
+		rows.append(["LEBENSRAUB", "%.0f %%" % (p.lifesteal_percent * 100.0), effect])
+	if p.poison_stacks > 0:
+		rows.append(["GIFT", "%d Stapel · %.1f / Tick" % [p.poison_stacks, p.poison_damage_per_tick], effect])
+	if p.freeze_duration > 0.0:
+		rows.append(["EINFRIEREN", "%.1f s" % p.freeze_duration, effect])
+	if p.max_shield > 0.0 and not is_equal_approx(p.shield_regen_delay, Player.SHIELD_REGEN_DELAY):
+		rows.append(["SCHILD-PAUSE", "%.1f s" % p.shield_regen_delay, defense])
+	if p.max_shield > 0.0 and not is_equal_approx(p.shield_regen_mult, 1.0):
+		rows.append(["SCHILD-AUFLADUNG", "%.0f / s" % (Player.SHIELD_REGEN_PER_SEC * p.shield_regen_mult), defense])
+	if p.hp_regen > 0.0:
+		rows.append(["LEBENSREGENERATION", "%.1f / s" % p.hp_regen, effect])
+	if p.hp_regen_always > 0.0:
+		rows.append(["DAUERHEILUNG", "%.1f / s" % p.hp_regen_always, effect])
+	if p.reflect_low_hp_bonus > 0.0:
+		rows.append(["REFLEXION BEI WENIG HP", "+%.0f %%" % (p.reflect_low_hp_bonus * 100.0), defense])
+	if p.reflect_heal_percent > 0.0:
+		rows.append(["HEILUNG DURCH REFLEXION", "%.0f %%" % (p.reflect_heal_percent * 100.0), defense])
+	if p.block_reflect_damage_add > 0.0:
+		rows.append(["BLOCK-REFLEXSCHADEN", "+%.0f" % p.block_reflect_damage_add, defense])
+	if p.block_knockback_radius > 0.0:
+		rows.append(["BLOCK-STOSSRADIUS", "%d px" % int(round(p.block_knockback_radius)), defense])
+	if p.block_mine:
+		rows.append(["MINEN", "%.0f Schaden · %.0f Felder%s" % [p.block_mine_damage,
+			p.block_mine_radius / Player.BLOCK_MINE_TILE, " · sofort" if p.block_mine_instant else ""], defense])
+	if not is_equal_approx(p.dash_cooldown, 1.8):
+		rows.append(["DASH-ABKLINGZEIT", "%.2f s" % p.dash_cooldown, defense])
+	if not is_equal_approx(p.ability_damage_mult, 1.0):
+		rows.append(["FÄHIGKEIT SCHADEN", "x%.2f" % p.ability_damage_mult, ability])
+	if not is_equal_approx(p.ability_radius_mult, 1.0):
+		rows.append(["FÄHIGKEIT RADIUS", "x%.2f" % p.ability_radius_mult, ability])
+	if not is_equal_approx(p.ability_duration_mult, 1.0):
+		rows.append(["FÄHIGKEIT DAUER", "x%.2f" % p.ability_duration_mult, ability])
+	if not is_equal_approx(p.ability_range_mult, 1.0):
+		rows.append(["FÄHIGKEIT REICHWEITE", "x%.2f" % p.ability_range_mult, ability])
+	if not is_equal_approx(p.powerup_strength_mult, 1.0):
+		rows.append(["POWERUP-WIRKUNG", "x%.2f" % p.powerup_strength_mult, effect])
+	if p.powerup_pickup_range > 0.0:
+		rows.append(["POWERUP-SAMMELREICHWEITE", "+%.0f Felder" % (p.powerup_pickup_range / Player.POWERUP_PICKUP_TILE), effect])
+	if p.drone_count > 0:
+		rows.append(["DROHNEN", "%d" % p.drone_count, ability])
+	if p.blocker_drone_count > 0:
+		rows.append(["SCHUTZDROHNEN", "%d" % p.blocker_drone_count, ability])
+	if p.tower_enabled:
+		rows.append(["TURM", "%d HP · Feuerrate x%.2f" % [int(round(p.tower_max_health)), p.tower_fire_rate_mult], ability])
+
+	_add_tab_heading("KARTEN-BONI (SUMMEN)", Color(0.75, 0.95, 0.55))
+	if rows.is_empty():
+		var none := Label.new()
+		none.text = "Noch keine Boni über die Grundwerte hinaus."
+		none.add_theme_font_size_override("font_size", 12)
+		none.add_theme_color_override("font_color", Color(0.55, 0.62, 0.72, 1.0))
+		none.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_tab_content.add_child(none)
+		return
+	var grid := GridContainer.new()
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 4)
+	grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tab_content.add_child(grid)
+	for row in rows:
+		_add_stat_cell(grid, row[0], row[1], row[2])
+
 func set_sudden_death(active: bool) -> void:
 	sudden_death_label.visible = active
 
@@ -750,6 +1196,8 @@ func reset_for_round() -> void:
 	countdown_label.visible = false
 	if _tab_overlay != null:
 		_tab_overlay.visible = false
+	if _overview != null:
+		_overview.visible = false
 	if _modifier_container != null:
 		for c in _modifier_container.get_children():
 			_modifier_container.remove_child(c)
@@ -771,14 +1219,14 @@ func _build_modifier_ui() -> void:
 	_modifier_container.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_modifier_container.anchor_left = 1.0
 	_modifier_container.anchor_right = 1.0
-	_modifier_container.offset_left = -370.0
+	_modifier_container.offset_left = -42.0
 	_modifier_container.offset_right = -18.0
 	_modifier_container.offset_top = 132.0
-	_modifier_container.offset_bottom = 840.0
+	_modifier_container.offset_bottom = 420.0
 	_modifier_container.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_modifier_container.grow_vertical = Control.GROW_DIRECTION_END
 	_modifier_container.alignment = BoxContainer.ALIGNMENT_BEGIN
-	_modifier_container.add_theme_constant_override("separation", 10)
+	_modifier_container.add_theme_constant_override("separation", 2)
 	_modifier_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_modifier_container.visible = false
 	add_child(_modifier_container)
@@ -808,47 +1256,19 @@ func show_level_modifiers(mod_details: Array[Dictionary]) -> void:
 		return
 
 	_modifier_container.visible = true
+	# Nur das Icon, ohne Rahmen und Titel, halb so groß wie zuvor.
 	for mod in mod_details:
-		var badge := PanelContainer.new()
-		badge.custom_minimum_size = Vector2(0.0, 72.0)
-		var sb := StyleBoxFlat.new()
-		var col: Color = mod.get("color", Color.WHITE)
-		sb.bg_color = Color(col.r * 0.16, col.g * 0.16, col.b * 0.16, 0.94)
-		sb.border_color = col
-		sb.set_border_width_all(2)
-		sb.set_corner_radius_all(10)
-		sb.content_margin_left = 12
-		sb.content_margin_right = 14
-		sb.content_margin_top = 8
-		sb.content_margin_bottom = 8
-		badge.add_theme_stylebox_override("panel", sb)
-
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 10)
-		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		badge.add_child(row)
-
 		var icon_label := Label.new()
 		icon_label.text = str(mod.get("icon", "?"))
-		icon_label.custom_minimum_size = Vector2(42.0, 0.0)
+		icon_label.custom_minimum_size = Vector2(24.0, 24.0)
 		icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		icon_label.add_theme_font_size_override("font_size", 40)
+		icon_label.add_theme_font_size_override("font_size", 20)
+		icon_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.8))
+		icon_label.add_theme_constant_override("outline_size", 3)
+		icon_label.tooltip_text = str(mod.get("description", ""))
 		icon_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		row.add_child(icon_label)
-
-		var lbl := Label.new()
-		lbl.text = str(mod.get("title", "Modifier"))
-		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		lbl.add_theme_font_size_override("font_size", 26)
-		lbl.add_theme_color_override("font_color", col.lightened(0.25))
-		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		row.add_child(lbl)
-
-		badge.tooltip_text = str(mod.get("description", ""))
-		_modifier_container.add_child(badge)
+		_modifier_container.add_child(icon_label)
 
 # Einstiegspunkt: Wird von modifier_manager.modifiers_rolled verbunden.
 # Aktualisiert die Dauerleiste oben UND spielt die Stempel-Animation.
@@ -1035,12 +1455,21 @@ func update_pinata_notice(slot: int, total_dmg: float) -> void:
 	var name_str := "P%d" % slot
 	show_modifier_event("🦙 %s führt am Piñata-Lama (%d Schaden)!" % [name_str, int(total_dmg)], Color(1.0, 0.4, 0.8), 2.0)
 
+func show_devil_notice(slot: int, angry: bool) -> void:
+	var name_str := Global.get_player_name(slot)
+	if angry:
+		show_modifier_event("😡 Der Teufel ist wütend auf %s! (5 s)" % name_str, Color(1.0, 0.35, 0.1), 2.5)
+	else:
+		show_modifier_event("😈 Der Teufel jagt jetzt %s!" % name_str, Color(1.0, 0.45, 0.35), 2.0)
+
 func show_countdown_number(value: int) -> void:
+	SoundManager.play_sound("countdown", 0.0, 0.0)
 	countdown_label.text = str(value)
 	countdown_label.modulate = Color(1.0, 0.75, 0.2, 1.0)
 	countdown_label.visible = true
 
 func show_countdown_go() -> void:
+	SoundManager.play_sound("countdown_go", 0.0, 0.0)
 	countdown_label.text = "LOS!"
 	countdown_label.modulate = Color(0.45, 1.0, 0.45, 1.0)
 	countdown_label.visible = true
@@ -1060,9 +1489,11 @@ func _on_match_over(winner_idx: int) -> void:
 	game_over_panel.offset_top = -320.0
 	game_over_panel.offset_right = 540.0
 	game_over_panel.offset_bottom = 320.0
-	var hero: HeroData = Global.get_hero(Global.get_player_hero_id(winner_idx))
+	var hero: HeroData = Global.get_hero(Global.get_player_hero_id(winner_idx)) if winner_idx > 0 else null
 	var kind := ""
-	if Global.is_team_mode():
+	if winner_idx <= 0 or hero == null:
+		winner_label.text = "⚖ UNENTSCHIEDEN ⚖"
+	elif Global.is_team_mode():
 		var team := Global.get_team_for_slot(winner_idx)
 		winner_label.text = "🏆 TEAM %s GEWINNT DAS MATCH! 🏆" % Global.get_team_name(team)
 	elif Global.is_bot_slot(winner_idx):
@@ -1071,16 +1502,40 @@ func _on_match_over(winner_idx: int) -> void:
 		kind = "DU"
 	else:
 		kind = "SPIELER %d" % winner_idx
-	if not Global.is_team_mode():
+	if winner_idx > 0 and hero != null and not Global.is_team_mode():
 		winner_label.text = "🏆 %s (%s) GEWINNT DAS MATCH! 🏆" % [hero.name.to_upper(), kind]
+	if Global.match_end_reason == "early":
+		winner_label.text += "\nMatch vorzeitig beendet · Wertung nach Punkten"
+	elif Global.match_end_reason == "tiebreak":
+		winner_label.text += "\nIm Stechen entschieden"
 	_build_match_stats()
+	_ensure_overview_button()
 	restart_btn.text = "HAUPTMENÜ" if Global.network_mode else "NOCHMAL"
 	# Nur der Host darf das Match verlängern. Clients sehen den Button
 	# deaktiviert und warten auf die nächste Runde des Hosts.
 	var can_continue := not Global.network_mode or NetworkManager.is_host
 	continue_btn.disabled = not can_continue
 	continue_btn.text = "WEITERSPIELEN (+30 % ZIEL)" if can_continue else "WARTE AUF HOST ..."
-	SoundManager.play_sound("confirm")
+	# Ein abgebrochenes Match wird nicht verlängert.
+	continue_btn.visible = Global.match_end_reason != "early"
+	SoundManager.play_sound("match_win", 0.0, 0.0)
+
+func lock_continue(text: String) -> void:
+	continue_btn.disabled = true
+	continue_btn.text = text
+
+# Ansage fürs Stechen: wer gegen wen um den Matchsieg kämpft.
+func show_tiebreak_notice(slots: Array, duration: float = 3.0) -> void:
+	var names: Array[String] = []
+	if Global.is_team_mode():
+		for slot in slots:
+			var team_name := "TEAM %s" % Global.get_team_name(Global.get_team_for_slot(int(slot)))
+			if not names.has(team_name):
+				names.append(team_name)
+	else:
+		for slot in slots:
+			names.append(_player_display_name(int(slot)))
+	show_modifier_event("STECHEN! %s" % " vs ".join(names), Color(1.0, 0.82, 0.35, 1.0), duration)
 
 func _build_match_stats() -> void:
 	for child in game_over_vbox.get_children():
@@ -1102,12 +1557,13 @@ func _build_match_stats() -> void:
 	block.add_child(heading)
 
 	var grid := GridContainer.new()
-	grid.columns = 9
+	grid.columns = 10
+	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	grid.add_theme_constant_override("h_separation", 16)
 	grid.add_theme_constant_override("v_separation", 4)
 	block.add_child(grid)
 
-	var headers := ["Spieler", "Punkte", "Kills", "Tode", "Schaden", "Block", "Heilung", "Treffer", "Runden"]
+	var headers := ["Spieler", "Punkte", "Kills", "Tode", "Schaden", "Nahkampf", "Block", "Heilung", "Treffer", "Runden"]
 	for text in headers:
 		var header := Label.new()
 		header.text = text
@@ -1135,6 +1591,8 @@ func _build_match_stats() -> void:
 			str(int(stats.get("kills", 0.0))),
 			str(int(stats.get("deaths", 0.0))),
 			str(int(stats.get("damage_dealt", 0.0))),
+			# Gewählte Waffe und davon verursachter Schaden.
+			"%s · %d" % [Global.get_melee_weapon_label(Global.get_melee_weapon(slot)), int(stats.get("melee_damage", 0.0))],
 			str(int(stats.get("damage_blocked", 0.0))),
 			str(int(stats.get("healing_done", 0.0))),
 			_format_accuracy(stats),
@@ -1160,10 +1618,13 @@ func _build_match_stats() -> void:
 func _player_display_name(slot: int) -> String:
 	var hero: HeroData = Global.get_hero(Global.get_player_hero_id(slot))
 	var kind := "P%d" % slot
+	var custom_name := Global.get_custom_player_name(slot)
 	if Global.is_bot_slot(slot):
 		kind = "BOT%d" % slot
 	elif Global.network_mode and slot == Global.local_player_index:
-		kind = "DU"
+		kind = "%s (DU)" % custom_name if not custom_name.is_empty() else "DU"
+	elif not custom_name.is_empty():
+		kind = custom_name
 	var prefix := ""
 	if Global.is_team_mode():
 		prefix = "[%s] " % Global.get_team_name(Global.get_team_for_slot(slot))
@@ -1180,6 +1641,7 @@ func _match_summary_text(mvp_index: int) -> String:
 	var damage_leader := Global.get_match_stat_leader("damage_dealt")
 	var block_leader := Global.get_match_stat_leader("blocked_hits")
 	var heal_leader := Global.get_match_stat_leader("healing_done")
+	var melee_leader := Global.get_match_stat_leader("melee_damage")
 	var lines: Array[String] = []
 	lines.append("★ Bester Spieler: %s" % _leader_text(mvp_index, "gesamtwert"))
 	lines.append("Meister Schaden: %s" % _leader_text(damage_leader, "damage_dealt"))
@@ -1189,6 +1651,8 @@ func _match_summary_text(mvp_index: int) -> String:
 		int(Global.get_match_stat(block_leader, "damage_blocked")),
 	])
 	lines.append("Meiste Heilung: %s" % _leader_text(heal_leader, "healing_done"))
+	if melee_leader > 0 and Global.get_match_stat(melee_leader, "melee_damage") > 0.0:
+		lines.append("Meister Nahkampf: %s" % _leader_text(melee_leader, "melee_damage"))
 	return "\n".join(lines)
 
 func _leader_text(slot: int, key: String) -> String:
@@ -1199,6 +1663,8 @@ func _leader_text(slot: int, key: String) -> String:
 		value = " · %d Schaden" % int(Global.get_match_stat(slot, key))
 	elif key == "healing_done":
 		value = " · %d HP" % int(Global.get_match_stat(slot, key))
+	elif key == "melee_damage":
+		value = " · %d Schaden mit %s" % [int(Global.get_match_stat(slot, key)), Global.get_melee_weapon_label(Global.get_melee_weapon(slot))]
 	elif key == "blocked_hits":
 		value = ""
 	elif key == "gesamtwert":
@@ -1206,11 +1672,143 @@ func _leader_text(slot: int, key: String) -> String:
 	return _player_display_name(slot) + value
 
 func _on_restart_pressed() -> void:
+	if _overview != null:
+		_overview.visible = false
 	SoundManager.play_sound("click")
 	restart_requested.emit()
 
 func _on_continue_pressed() -> void:
 	if continue_btn.disabled:
 		return
+	if _overview != null:
+		_overview.visible = false
 	SoundManager.play_sound("click")
 	continue_requested.emit()
+
+# --- Übersicht aller Spieler nach Match-Ende ---
+
+func _ensure_overview_button() -> void:
+	if _overview_button == null:
+		_overview_button = Button.new()
+		_overview_button.text = "ALLE SPIELER, KARTEN & STATS"
+		_overview_button.custom_minimum_size = Vector2(320, 44)
+		_overview_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		_overview_button.add_theme_font_size_override("font_size", 18)
+		_overview_button.pressed.connect(func():
+			SoundManager.play_sound("click")
+			_show_match_overview(Global.local_player_index)
+		)
+		game_over_vbox.add_child(_overview_button)
+	game_over_vbox.move_child(_overview_button, continue_btn.get_index())
+
+func _build_overview() -> void:
+	_overview = Control.new()
+	_overview.name = "MatchOverview"
+	_overview.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_overview.mouse_filter = Control.MOUSE_FILTER_STOP
+	_overview.visible = false
+	_tab_layer.add_child(_overview)
+
+	var dim := ColorRect.new()
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0.01, 0.02, 0.04, 0.85)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_overview.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_overview.add_child(center)
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(1100, 820)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.07, 0.09, 0.13, 0.98)
+	style.set_corner_radius_all(14)
+	style.border_width_left = 4
+	style.border_width_top = 4
+	style.border_width_right = 4
+	style.border_width_bottom = 4
+	style.border_color = Color(1.0, 0.72, 0.30, 0.85)
+	panel.add_theme_stylebox_override("panel", style)
+	center.add_child(panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_top", 16)
+	margin.add_theme_constant_override("margin_bottom", 16)
+	panel.add_child(margin)
+
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 10)
+	margin.add_child(outer)
+
+	var header := HBoxContainer.new()
+	outer.add_child(header)
+	var title := Label.new()
+	title.text = "MATCH-ÜBERSICHT · ALLE SPIELER"
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_color_override("font_color", Color(1.0, 0.72, 0.30))
+	header.add_child(title)
+	var close := Button.new()
+	close.text = "SCHLIESSEN"
+	close.custom_minimum_size = Vector2(150, 36)
+	close.pressed.connect(func():
+		SoundManager.play_sound("click")
+		_overview.visible = false
+	)
+	header.add_child(close)
+
+	_overview_tabs = HBoxContainer.new()
+	_overview_tabs.add_theme_constant_override("separation", 6)
+	outer.add_child(_overview_tabs)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	outer.add_child(scroll)
+	_overview_scroll = scroll
+
+	_overview_content = VBoxContainer.new()
+	_overview_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_overview_content.add_theme_constant_override("separation", 10)
+	scroll.add_child(_overview_content)
+
+func _show_match_overview(slot: int) -> void:
+	if _overview == null:
+		_build_overview()
+	var slots: Array = Global.get_active_player_indices()
+	if slots.is_empty():
+		return
+	if not slots.has(slot):
+		slot = slots[0]
+
+	_clear_ui_children(_overview_tabs)
+	for s_idx in slots:
+		var hero: HeroData = Global.get_hero(Global.get_player_hero_id(s_idx))
+		var btn := Button.new()
+		btn.text = _player_display_name(s_idx)
+		btn.toggle_mode = true
+		btn.button_pressed = (s_idx == slot)
+		btn.add_theme_font_size_override("font_size", 13)
+		if hero != null:
+			btn.add_theme_color_override("font_color", hero.color_tint)
+		var target: int = s_idx
+		btn.pressed.connect(func():
+			SoundManager.play_sound("click")
+			_show_match_overview.call_deferred(target)
+		)
+		_overview_tabs.add_child(btn)
+
+	_clear_ui_children(_overview_content)
+	var preview := _create_stat_preview(slot)
+	if preview != null:
+		# _fill_tab_overlay schreibt in _tab_content; kurz umlenken.
+		var saved_content := _tab_content
+		_tab_content = _overview_content
+		_fill_tab_overlay(preview, true, true)
+		_tab_content = saved_content
+		preview.free()
+	_overview.visible = true

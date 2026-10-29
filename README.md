@@ -1,362 +1,718 @@
-# 🎮 Battle Balls
+# 🐗 Lötkolbeneber – Spiel-Wiki
 
-Ein rasantes 2D-Multiplayer-Plattform-Duellspiel für **2–6 Spieler** in **Godot 4.6**, inspiriert von:
-- **[Rounds](https://landfall.se/rounds)**: Arena-Kämpfe, physikbasiertes Gunplay und der ikonische **5-Karten-Upgrade-Draft** für die Rundenverlierer!
-- **[Bapbap](https://bapbap.gg/)**: Einzigartige Hero-Klassen mit passiven Traits und aktiven Fähigkeiten.
-- **Super Mario**: Dynamisch generierte Sidescroller-Arenen mit Sprungfedern, magischen Portalen, Herzblöcken, Stacheln und steigender Sudden-Death-Lava.
-- **Integrierte Bot-KI**: Jeder Slot kann ein Bot sein – sofortiges Solo-Testen, Koop-Training oder gemischte Online-Runden ohne zweiten Mitspieler.
+Lötkolbeneber ist ein schnelles 2D-Plattform-Duellspiel für **2–6 Spieler** (lokal, LAN oder übers Internet), gebaut mit **Godot 4.6**. Schweine mit glühenden Lötkolben kämpfen in Arenen, wer eine Runde verliert, darf sich eine neue Upgrade-Karte aussuchen.
+
+Vorbilder:
+- **[Rounds](https://landfall.se/rounds)**: Arena-Kämpfe, Gunplay mit Physik und der Karten-Draft für die Rundenverlierer.
+- **[Bapbap](https://bapbap.gg/)**: Helden-Klassen mit Passiv und aktiver Fähigkeit.
+- **Super Mario**: Sprungfedern, Portale, Herzblöcke, Stacheln und steigende Lava.
+
+> Dieses Wiki öffnet sich auch direkt aus dem Spiel: Hauptmenü → **WIKI**. Früher hieß das Spiel **Battle Balls** bzw. DopDop.
 
 ---
 
-## 🌟 Features
+## 📑 Inhalt
 
-### 1. Bapbap Hero-Klassen
-| Held | Rolle | HP / Tempo | Passive Fähigkeit | Aktive Fähigkeit |
-| :--- | :--- | :--- | :--- | :--- |
-| **Ignis** | Pyro Skirmisher | 100 HP / 310 Speed | **Afterburner**: Hinterlässt Feuerspur beim Dash | **Rocket Leap**: Explosiver Sprung mit AOE-Knockback |
-| **Volt** | Hyper Speedster | 85 HP / 350 Speed | **Overcharge**: Permanenter Doppelsprung | **Flash Blink**: Sofortiger 220px Teleport |
-| **Spore** | Toxic Alchemist | 105 HP / 295 Speed | **Spore Coat**: Angriffe vergiften Gegner (DoT) | **Spore Burst**: Hinterlässt toxische Giftgaswolke |
-| **Nova** | Gravity Mage | 95 HP / 290 Speed | **Schwerelos**: Höherer Sprung | **Singularität**: Gravitationskern zieht Gegner heran und schädigt sie |
-| **Klinge** | Blade Dancer | 110 HP / 315 Speed | **Klingentanz**: 15 Start-Schild und hohe Grundgeschwindigkeit | **Klingensturm**: Rundumschlag mit Rückstoß und kurzer Unverwundbarkeit |
-| **Bastion** | Field Engineer | 125 HP / 270 Speed | **Aurora**: Doppelte Schild-Regeneration | **Heilfeld**: Heilt über Zeit und baut Schild auf |
-| **Phantom** | Shadow Assassin | 90 HP / 325 Speed | **Nachtwind**: Höchste Grundgeschwindigkeit | **Schattensprung**: Teleport mit Treffer und Unverwundbarkeit |
+1. [Schnellstart](#-schnellstart)
+2. [Steuerung](#-steuerung)
+3. [Helden](#-helden)
+4. [Kampf-Mechaniken](#-kampf-mechaniken)
+5. [Nahkampf](#-nahkampf)
+6. [Lobby & Match-Regeln](#-lobby--match-regeln)
+7. [Spielmodi](#-spielmodi)
+8. [Karten-Draft](#-karten-draft)
+9. [Karten-Übersicht](#-karten-übersicht)
+10. [Maps & Spielfeld-Objekte](#-maps--spielfeld-objekte)
+11. [Runden-Modifier](#-runden-modifier)
+12. [Bots](#-bots)
+13. [Online & LAN](#-online--lan)
+14. [Hauptmenü & Optionen](#-hauptmenü--optionen)
+15. [Statistiken, HUD & Feedback](#-statistiken-hud--feedback)
+16. [Dateien & Speicherorte](#-dateien--speicherorte)
+17. [Für Entwickler](#-für-entwickler)
 
-Die HP-Spalte zeigt den **Heldenwert**. In der Lobby lässt sich ein **Basis-HP-Faktor von 50–300 %** einstellen (Standard **100 %**), der diese Werte vor Kartenboni skaliert. Die Klassenunterschiede bleiben dadurch erhalten (z. B. Bastion 125 HP vs. Volt 85 HP bei 100 %). Der Basis-Schaden eines Schusses liegt standardmäßig bei **22**.
+---
 
-#### Waffen & Munition
-Jede Klasse besitzt eigene Waffenbasiswerte. Alle Charaktere führen einen **einhändigen Zauberstab** mit frei wählbarer Spitzenform (**Kugel, Stern, Kristall, Flamme**) und Spitzenfarbe. Der Stab wird prozedural gezeichnet und richtet sich wie zuvor die Waffe zum Ziel aus. Statt eines festen 5-Schuss-Magazins starten die meisten Helden mit **3 Munition**; **Volt** und **Klinge** haben **4**, **Phantom** nur **2**. Das Grund-Feuerintervall ist kürzer als früher (0,35 s), dafür ist die Nachladezeit länger als früher (1,0 s). Dadurch sind Bursts schneller, aber längere Kämpfe werden stärker vom Nachladen bestimmt.
+## 🚀 Schnellstart
+
+1. Spiel starten → Hauptmenü → **SPIEL STARTEN**. Du landest in der **Lobby**.
+2. Spielerzahl wählen, freie Slots als **Bot** oder **Mensch** einstellen, Helden aussuchen.
+3. Im Tab **Charakter** Name, Farben, Hauer, Lötspitze und Nahkampfwaffe einstellen.
+4. **Bereit** drücken und **Kampf starten**.
+5. Wer eine Runde verliert, wählt eine Karte. Wer zuerst die Zielpunktzahl erreicht (Standard **500**), gewinnt das Match.
+
+Online mit Freunden: Hauptmenü → **ONLINE SPIELEN** → **Online hosten** und den 6-stelligen Code weitergeben (siehe [Online & LAN](#-online--lan)).
+
+---
+
+## 🎮 Steuerung
+
+Alle Tasten lassen sich unter **Optionen → Steuerung** neu belegen. Hier steht die Standardbelegung.
+
+### Spieler 1 (Maus & Tastatur, auch online)
+
+| Aktion | Taste |
+| :--- | :--- |
+| Bewegen | `A` / `D` |
+| Durchfallen (Einweg-Steg) | `S` |
+| Springen, Wandsprung | `Leertaste` (gedrückt halten = höher) |
+| Zielen | Mauszeiger |
+| Schießen | `Linksklick` |
+| Dash / Ausweichen | `Shift` (kurz unverwundbar) |
+| Block | `Q` |
+| Nachladen | `R` |
+| Nahkampf | `E` |
+| Heldenfähigkeit | `Rechtsklick` |
+
+### Spieler 2 (nur lokaler 2-Spieler-Modus am selben PC)
+
+| Aktion | Taste |
+| :--- | :--- |
+| Bewegen | `←` / `→` |
+| Springen | `↑` |
+| Durchfallen (Einweg-Steg) | `↓` |
+| Zielen | Pfeiltasten |
+| Schießen | `.` (Punkt) |
+| Dash | `/` |
+| Block | `M` |
+| Nachladen | `L` |
+| Nahkampf | `K` |
+| Heldenfähigkeit | `,` (Komma) |
+
+### Allgemeine Tasten
+
+| Taste | Wirkung |
+| :--- | :--- |
+| `Tab` (halten) | Charakterblatt mit allen Werten, Karten-Boni und Netzdiagrammen der eigenen Kartenverteilung, auch während der Kartenwahl |
+| `Esc` | Optionen öffnen. Lokal pausiert das Spiel, online läuft die Runde weiter |
+| `F9` | Match zurücksetzen und zurück in die Lobby (nur lokal) |
+
+---
+
+## 🐷 Helden
+
+Es gibt **7 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am Kopf.
+
+| Held | Rolle | HP | Tempo | Schild | Passiv | Fähigkeit | Outfit |
+| :--- | :--- | ---: | ---: | ---: | :--- | :--- | :--- |
+| **Ignis** | Pyro Skirmisher | 100 | 310 | 0 | **Afterburner**: Dash hinterlässt eine echte Feuerspur, Gegner darin brennen | **Rocket Leap**: Explosiver Sprung, 35 Schaden im Einschlag (Radius 140) | Schweißerbrille |
+| **Volt** | Hyper Speedster | 85 | 350 | 0 | **Overcharge**: Doppelsprung von Anfang an | **Flash Blink**: Teleport 260 px, 20 Schaden und 1,2 s Frost am Ziel | Gelbe Kappe mit Blitz |
+| **Spore** | Toxic Alchemist | 105 | 295 | 10 | **Spore Coat**: Treffer vergiften (2 Stapel) | **Spore Burst**: Giftwolke, 9 Schaden/s für 3,5 s | Pilzhut |
+| **Nova** | Gravity Mage | 95 | 290 | 10 | **Schwerelos**: Höchste Sprungkraft | **Singularität**: Kern zieht Gegner 2 s lang zur Mitte (kein Schaden) | Zauberhut mit Mini-Planet |
+| **Klinge** | Blade Dancer | 110 | 315 | 15 | **Klingentanz**: Start-Schild und hohes Tempo | **Klingensturm**: Rundumschlag mit Rückstoß, 0,5 s unverwundbar | Roter Schal |
+| **Bastion** | Field Engineer | 125 | 270 | 20 | **Aurora**: Doppelte Schild-Regeneration | **Heilfeld**: 4 s lang 8 HP und 10 Schild alle 0,5 s | Bauhelm mit Lampe |
+| **Phantom** | Shadow Assassin | 90 | 325 | 5 | **Nachtwind**: Sehr schnell, kürzestes Feuerintervall | **Schattensprung**: Teleport 260 px mit Treffer, 0,9 s unverwundbar | Ninja-Stirnband |
+
+Die genauen Zahlen der Fähigkeiten stehen im Spiel unter **HELDEN** im Hauptmenü und im Tooltip der Heldenwahl. Sie kommen direkt aus den Konstanten in `player.gd`, stimmen also immer.
+
+### Waffe & Munition
+
+Alle Eber schießen mit einem **Lötkolben**. Basis-Schaden pro Schuss ist **22** (in der Lobby einstellbar).
 
 | Held | Munition | Feuerintervall | Nachladezeit |
 | :--- | ---: | ---: | ---: |
-| **Ignis** | 3 | 0,22 s | 1,8 s |
-| **Volt** | 4 | 0,17 s | 2,1 s |
-| **Spore** | 3 | 0,28 s | 1,6 s |
-| **Nova** | 3 | 0,30 s | 2,0 s |
-| **Klinge** | 4 | 0,20 s | 1,9 s |
-| **Bastion** | 3 | 0,30 s | 2,2 s |
-| **Phantom** | 2 | 0,14 s | 1,6 s |
+| Ignis | 3 | 0,22 s | 1,2 s |
+| Volt | 4 | 0,17 s | 1,4 s |
+| Spore | 3 | 0,28 s | 1,05 s |
+| Nova | 3 | 0,30 s | 1,35 s |
+| Klinge | 4 | 0,20 s | 1,25 s |
+| Bastion | 3 | 0,30 s | 1,45 s |
+| Phantom | 2 | 0,14 s | 1,05 s |
 
-Munition, Feuerrate und Nachladezeit lassen sich über Karten verbessern: **Quick Draw**, **Schnelle Hände**, **Schnellfeuer** und **Gatling Surge** erhöhen die Feuerrate bzw. das Magazin; **Großes Magazin** und **Notvorrat** geben zusätzliche Munition; **Schnelllader**, **Taktisches Magazin** und **Feldwartung** verkürzen die Nachladezeit. Werte werden pro Karte addiert bzw. multipliziert und gelten für alle folgenden Runden.
-
-**Universeller Block (Q)**: Jeder Spieler – unabhängig von der Klasse – kann mit **Q** kurz blocken. Der Block **verhindert 0,5 Sekunden lang Schaden vollständig**, **reflektiert gegnerische Projektile** und hat **4 Sekunden Cooldown**. Karten verbessern Dauer und Cooldown oder lösen beim Blocken Bomben, Heilzonen und Rückstoß aus. Die frühere Titan-Klasse mit ihrer exklusiven Barriere wurde dafür entfernt.
-
-*Tipp: Im Hauptmenü auf „Spiel starten“ klicken – danach landet man in der Lobby.*
+Die HP-Werte gelten bei **Basis-HP-Faktor 100 %**. In der Lobby lässt sich der Faktor von 50–300 % einstellen, die Unterschiede zwischen den Klassen bleiben dabei erhalten.
 
 ---
 
-### 2. Lobby & Match-Regeln
-Nach dem Start im Hauptmenü öffnet sich die **Lobby**:
-- **2–6 Spieler**: Über „Spieler“ (2–6) werden die Slots festgelegt. Jeder Slot ab 2 kann als **Bot** oder **Mensch** konfiguriert werden – online übernimmt ein beitretender Client automatisch einen freien Mensch- oder Bot-Slot.
-- **Dynamische Heldenwahl**: Pro Slot erscheint eine eigene Heldenreihe mit allen **7 Klassen**. Jede Klasse besitzt ein eigenes, farblich passendes Icon; es erscheint im Helden-Grid, in der Slot-Kopfzeile und in der Charaktervorschau. Jeder menschliche Spieler wählt seinen Helden selbst; der Host kann zusätzlich die Helden der Bots festlegen.
-- **Bereit-System**: Die **Bereit**-Schaltfläche sitzt unten direkt neben **Kampf starten**. Lokal meldet sie alle menschlichen Slots gemeinsam bereit, online schaltet jeder Client seinen eigenen Slot um; Bots sind automatisch bereit. Die Bereit-Anzeigen in den Heldenslots bleiben als Statusübersicht sichtbar und leuchten grün, sobald der jeweilige Slot bereit ist. Der Start ist erst möglich, wenn alle Slots bereit sind und jeder Mensch-Slot einen verbundenen Client hat.
-- **Host**: Spieler 1 ist Host und darf Spielerzahl, Slot-Typen (Bot/Mensch), Match-Regeln, **Spielfeld/Map**, Draft-Konfiguration, **Kartenpools** und Kartenbans ändern sowie das Match starten.
-- **Charakteranpassung**: Im Lobby-Tab **Charakter** stellt jeder Spieler Fell-, Augen- und Hosenfarbe seines Schweins, die **Form und Farbe der Zauberstabspitze** sowie die **Farbe des Basis-Schusses** ein. Lokal lässt sich der gewünschte Spieler-Slot auswählen; online bearbeitet jeder Client seinen eigenen Slot, und alle Anpassungen werden über den Host synchronisiert. Die Vorschau zeigt Charakter und Stab live. Das Profil des lokalen Nutzers wird ohne separaten Speichern-Knopf automatisch in `user://character_customization.json` gesichert und beim nächsten Start wieder geladen. Der Reiter erscheint nicht mehr während der Kartenauswahl.
-- **Lobby-Loadouts**: Im Tab **Regeln** kann der Host komplette Regel-Presets unter einem Namen **speichern, laden und löschen**. Ein Loadout enthält Modus, Spielerzahl, Match-/Überlebens-/Kill-Punkte, Basis-HP-Faktor, Basis-Schaden, Draft-Konfiguration inklusive Draft-Modifier, Map, aktive Kartenpools, Kartenbans und Seltenheits-Prozente. Mitgeliefert sind **Standard**, **Schnell & Wild**, **Team 2v2** und **Chaos**; eigene Presets landen in `user://lobby_loadouts.json`. Beim Laden werden Modus und Spielerzahl zuerst gesetzt, überzählige Online-Clients sauber freigegeben und danach alle übrigen Regeln angewendet. Im Online-Modus darf nur der Host Loadouts verwalten; die angewendeten Einstellungen werden wie gewohnt an alle Clients synchronisiert.
-- **Punkte für Match-Sieg**: 100–5000, Standard **500**. Wer zuerst diese Punktzahl erreicht, gewinnt das Match.
-- **Weiterspielen nach dem Match-Ende**: Der Host kann im Sieger-Panel **WEITERSPIELEN** wählen. Punktestände, Decks und Match-Statistik bleiben erhalten, das Match-Ziel steigt um **30 % der bisherigen Zielpunktzahl** (mindestens auf den aktuellen Führenden plus diesen Zuschlag) und die nächste Runde startet direkt ohne neuen Draft. Im Online-Modus entscheidet nur der Host; Clients warten auf die neue Runde.
-- **Punkte & Fortschrittsbalken im HUD**: Oben rechts steht nur das Match-Ziel. Jede Spielerzeile zeigt darunter einen kompakten Balken in der Heldenfarbe und den aktuellen Punktestand direkt rechts neben dem Balken; im Team-Modus füllen sich die Balken in der jeweiligen Teamfarbe (ROT/BLAU/GRÜN). Die Balkenlänge entspricht dem Anteil an der eingestellten Zielpunktzahl.
-- **Punkte für Überleben**: 0–500, Standard **50** pro Runde für den letzten Überlebenden.
-- **Punkte pro Kill**: 0–500, Standard **50** pro Abschuss; wird dem Schützen sofort gutgeschrieben.
-- **Basis-HP-Faktor**: einstellbar von **50–300 %**, Standard **100 %** (= Heldenwert). Der Faktor skaliert die klassenabhängigen Start-HP vor allen Kartenboni; Helden behalten ihre Unterschiede.
-- **Basis-Schaden pro Schuss**: einstellbar von **1–200**, Standard **22**; gilt vor Helden- und Kartenmodifikatoren.
-- **Karten-Draft konfigurieren**: „Wähle **X von Y** Karten“ – Standard **1 von 5**.
-- **Draft-Modifier**: Im Regeln-Tab lassen sich zwei optionale Modi aktivieren. **Blind pick** verdeckt das Kartenangebot und die gewählte Karte **nur online vor anderen menschlichen Spielern**; der aktive Spieler sieht seine Auswahl weiterhin. Lokal gegen Bots ist Blind pick ohne Wirkung und der Schalter deaktiviert. **Random pick** zieht automatisch eine zufällige Karte aus dem Angebot und deaktiviert die manuelle Auswahl; online entscheidet der Host autoritativ, damit alle Clients dieselbe Karte erhalten. Beide Modifier werden über Lobby-Sync und Loadouts verteilt.
-- **Kartenpools**: Im Karten-Tab lassen sich die Pools **Kern**, **Offensive**, **Defensive**, **Bewegung** und **Chaos** einzeln aktivieren. Nur Karten aus aktiven Pools erscheinen im Draft; mindestens ein Pool bleibt aktiv. Der Button **Alle Pools** aktiviert wieder das komplette Set.
-- **Seltenheits-Prozente**: Für **Common, Uncommon, Rare, Epic und Legendary** lässt sich jeweils ein Prozentwert von **0–100 %** einstellen (Standard **50 / 25 / 15 / 8 / 2**). Die Summe wird automatisch normalisiert; sind alle Werte 0 %, werden alle Seltenheiten gleich behandelt. Die Hintergrund-Statistik kann überdurchschnittliche Karten dauerhaft in eine höhere Seltenheit aufwerten (siehe Abschnitt 4).
-- **Draft-Anzeige in der Lobby**: Die Lobby zeigt dauerhaft Spielerzahl, `Draft: X/Y`, aktive Draft-Modifier, Zielpunkte, Überlebens-/Kill-Punkte, den Basis-HP-Faktor, Basis-Schaden, die **Map** und den **kleinsten Kartenpool pro aktivem Helden** (`Pool min. X/Held`). Die Zahl kann kleiner als die Gesamtzahl aller Karten sein, weil klassenspezifische Karten nur für den passenden Helden zählen und Ausbaukarten erst nach ihrer Grundkarte verfügbar sind.
-- **Powerup-Karten sperren**: gesperrte Karten erscheinen in keinem Draft mehr; es müssen immer genug Karten für das komplette Angebot verfügbar bleiben. Die Sperrliste ist nach Seltenheit gruppiert. Klassenspezifische Karten zählen dabei nur für den passenden Helden.
-- **Start-Countdown**: Nach dem Rundenaufbau läuft ein großer **3-Sekunden-Countdown**. Erst danach werden Bewegung, Schießen, Dash, Fähigkeit, Bot-KI und Begleiter aktiv. Die Kamera beginnt nah am eigenen Charakter und zoomt während des Countdowns zur Übersicht über alle Spieler heraus; der eigene Charakter erscheint dabei sichtbar aus einem farblich zur Klasse passenden Portal. Sudden Death beginnt erst nach dem Countdown.
-- **Statusanzeige am Charakter**: Über dem Helden zeigen kleine Striche die Munition bzw. ein Ring die verbleibende Nachladezeit. Unter dem Helden liegen Lebensbalken und Symbole für Schild, Dash und Fähigkeit; laufende Cooldowns werden transparent überblendet. Vergiftete Charaktere erhalten einen dezenten Grünton und lassen kleine grüne Bläschen aufsteigen; der Gift-Tick-Sound bleibt dabei leise im Hintergrund.
-- **Lauf- und Trefferanimationen**: Die prozedural gezeichneten Schweine laufen mit gangabhängigem Beinschwung, Körperwippen, Vorwärtsneigung und flatternden Ohren; in der Luft werden die Beine angezogen. Treffer lösen ein kurzes Stauchen, Zittern, rotes Aufblitzen, geschlossene Augen und kleine Blutspritzer aus. Netzwerk-Clients sehen die Trefferanimation ebenfalls, sobald die HP im Snapshot sinken.
-- **Todes-Sound**: Beim Tod eines Charakters erklingt ein kurzer, absteigender Sound mit Aufprallakzent. Er wird lokal und auf Netzwerk-Clients jeweils genau einmal pro Tod abgespielt; auf Clients wird dafür der Wechsel des Spieler-Snapshots von lebend zu leer ausgewertet.
-- **Free-for-All mit Punkten**: Eine Runde endet, sobald höchstens noch ein Spieler lebt. Der Überlebende erhält den Überlebensbonus, jeder Kill gibt sofort Punkte. Bei Doppel-KO gibt es keinen Überlebensbonus; der zuletzt gestorbene Spieler bleibt nur für den Draft-Ablauf der Rundensieger.
-- **Bot-Steuerung nur in der Lobby**: Slot-Typen werden ausschließlich in der Lobby festgelegt. Während der Runde gibt es bewusst keinen F1- oder HUD-Umschalter.
-- **Zurück**: führt ohne Match-Start zurück ins Hauptmenü.
+## 🥊 Kampf-Mechaniken
 
-Die Auswahl liegt zentral in `Global` (Slot-Arrays für Spieleranzahl, Bot/Mensch, Helden, Ready-Status, Scores, Match-Regeln, Kartenpools, Sperrliste und Draft-Modifier). Im Online-Modus übermitteln Netzwerk-Clients ihre eigene Heldenwahl und ihren Ready-Status, während Spielerzahl, Slot-Typen, Match-Regeln, Kartenpools, Kartenbans, Draft-Modifier und der Start beim Host liegen.
+### Schüsse
 
----
+- **Ballistik**: Schüsse fallen unter Schwerkraft und fliegen in einem Bogen. Karten wie **Leichtes Geschoss** machen die Bahn flacher, **Schweres Geschoss** und **Mörser** steiler und stärker. Drohnenschüsse fliegen flacher. Solange eine Kugel steigt, bremst die Schwerkraft doppelt so stark: Ein Schuss senkrecht nach oben kommt etwa 12 Kacheln hoch und fällt dir nach gut 3 s wieder auf den Kopf.
+- **Leuchtspur**: Jeder Schuss zieht eine Spur in deiner gewählten **Schussfarbe**. Blitz-Schüsse knistern.
+- **Zielsuche** (Homing): Weit weg lenken Geschosse kaum, nah am Gegner sehr stark. Weite Schüsse fliegen also erst im Bogen und korrigieren kurz vor dem Ziel.
+- **Durchschlag**: Jeder Punkt Durchschlag geht durch einen weiteren Gegner **und** durch eine halbe Kachel feste Wand oder eine ganze Kachel zerstörbaren Block. Diagonale Schüsse kosten gleich viel. Die Rand-Felswand, Fässer, Herzblöcke und Türme lassen sich nicht durchschießen.
+- **Eigene Schüsse**: Sobald eine Kugel deinen Körper verlassen hat, kann sie dich selbst treffen, etwa wenn ein Schuss nach oben auf deinen Kopf zurückfällt, vom Wind zurückgeweht wird oder abprallt. Selbstschaden ist halbiert.
+- **Abpraller**: Geschosse prallen von Oberflächen ab. Wer schon Abpraller hat, bekommt drei Ausbaukarten angeboten:
+  - **Gummiwand** (legendär): Kugeln prallen auch am Kartenrand ab, ohne einen Abpraller zu verbrauchen.
+  - **Gummipuffer** (episch): 50 % weniger Selbstschaden durch eigene Kugeln, Explosionen und Flächen.
+  - **Zellteilung** (episch): Bei jedem Abprall teilt sich die Kugel in zwei kleinere mit je 60 % Schaden. Höchstens 3 Teilungen pro Schuss (also maximal 8 Teile).
+- **Projektil-Kollision**: Schüsse von Gegnern stoßen in der Luft zusammen. Stärke = Schaden × Größe. Sind beide ähnlich stark (Verhältnis ab 0,7), löschen sie sich aus. Sonst fliegt der stärkere geschrumpft weiter.
+- **Rückstoß**: Treffer schubsen spürbar. Kurz danach ist die Steuerung des Ziels gedämpft, damit der Stoß wirkt.
 
-### 3. Der 5-Karten-Draft (Rounds Roguelike Comeback)
-Alle Rundenverlierer bekommen nach jeder Niederlage **Y zufällige Karten** (Common, Uncommon, Rare, Epic, Legendary) und wählen davon **X** aus. Jede Karte darf pro Spieler nur **einmal** im Deck liegen; besessene Karten werden nicht erneut angeboten. Upgrades stapeln sich über das Match:
-- **Blind pick**: Nur online gegen menschliche Spieler: Andere sehen nur Kartenrückseiten und die gewählte Karte wird als **Karte verdeckt** aufgelöst. Der aktive Spieler sieht Angebot und eigene Wahl normal. In lokalen Bot-Matches wird Blind pick ignoriert.
-- **Random pick**: Nach kurzer Anzeige wird automatisch eine gleichverteilte Zufallskarte aus den verbleibenden Angeboten gezogen. Bei mehreren Picks wiederholt sich das; online zieht immer der Host, damit die Clients synchron bleiben.
-- **Seltenheits-Prozente**: Seltene Karten erscheinen nicht in jedem Draft. Für jede Seltenheit wird in der Lobby ein eigener Prozentanteil eingestellt (Standard **Common 50 %, Uncommon 25 %, Rare 15 %, Epic 8 %, Legendary 2 %**). Die Anteile werden automatisch normalisiert und gelten für Einzelkarten wie komplette Talentgruppen. Sind alle Werte 0 %, sind alle Seltenheiten gleich wahrscheinlich.
-- **Kartenrahmen**: Im Draft und in der öffentlichen Auflösung zeigt der **äußere Rahmen die Seltenheit** (Grau/Grün/Blau/Lila/Gold) und der **innere Rahmen die Effektfarbe** der Karte.
-- **Karten-Icons**: Jede Karte erhält ein kleines, prozedural gezeichnetes Icon, das zu ihrem Effekt passt (z. B. Herz für Heilung, Schneeflocke für Frost, Turm für Turmbau, Panzerplatte für Rüstung, Spiegelpfeile für Reflexion). Die Icons animieren mit **4 Frames** und laufen im Draft sowie in der öffentlichen Auflösung.
-- **Mechanik-Tooltips**: Karten mit besonderen Mechaniken wie **Gift, Frost, Feuer, Blitz, Explosion, Abpraller, Durchschlag, Schild, Rüstung, Schadensreflexion, Block, Dash, Heldenfähigkeit, Turm oder Drohne** erklären diese beim Hovern. Die Texte kommen zentral aus `CardMechanics` und erscheinen im Draft, in der Lobby-Sperrliste und in der HUD-Upgrade-Leiste.
-- **Projektilballistik**: Normale Projektile haben eine leichte Schwerkraft und fliegen in einem flachen Bogen. **Leichtes Geschoss** und **Präzisionsmörser** flachen die Flugbahn ab; **Schweres Geschoss**, **Mörser** und **Belagerungsmörser** verstärken den Bogen und erhöhen den Schaden.
-- **Mechanik-Voraussetzungen**: Karten, die eine Mechanik nur verstärken, ohne sie selbst zu verleihen, werden nur angeboten, wenn der Spieler die Mechanik bereits besitzt. Beispiel: **Schildschnellbau** erscheint nur mit einer Schildquelle (Basisschild oder Schildkarte), **Turm-Panzerung** und **Schnellfeuer-Geschütz** nur mit der Turm-Fähigkeit. **Ausweichrolle** und **Fokuskristall** sind an Dash bzw. Heldenfähigkeit gebunden; beides besitzen aktuell alle Spieler, daher bleiben diese Karten universal verfügbar.
+### Block (`Q`)
 
-#### Kartenpools
-Jede Karte gehört zu genau einem Pool. Bestehende Karten werden anhand ihrer Effekte automatisch zugeordnet; Ausbaukarten erben den Pool ihrer Grundkarte. Die Lobby filtert das Draft-Angebot nach den aktiven Pools:
+Jeder Held kann blocken: **0,5 s kein Schaden**, gegnerische Projektile werden **zurückgeworfen**, **4 s Abklingzeit**. Ein aktiver Block fängt auch Nahkampfschläge ab. Block-Karten verlängern ihn oder lösen Bomben, Heilzonen, Minen und Rückstoß aus.
 
-| Pool | Inhalt | Neue Karten |
-| :--- | :--- | :--- |
-| **Kern** | Grundwerte, Munition, Utility | **Notvorrat** (+2 Munition, +15% Nachladegeschwindigkeit), **Fokuskristall** (-15% Ability-CD, -6% Feuerrate) |
-| **Offensive** | Schaden, Projektile, Elemente | **Splittergeschoss** (+1 Schuss, +6° Streuung, -10% Schaden), **Panzerbrecher** (+30% Schaden, +1 Durchschlag), **Brandkapsel** (Feuerzone), **Kettenreaktion** (Blitz + Kettenblitz), **Leichtes Geschoss** (-35% Projektil-Schwerkraft, +10% Schaden), **Schweres Geschoss** (+45% Projektil-Schwerkraft, +20% Schaden), **Mörser** (+80% Projektil-Schwerkraft, +25% Schaden, +18px Explosionsradius) |
-| **Defensive** | Leben, Schild, Rüstung, Reflexion, Block, Regeneration | **Sanitäter** (+1,2 HP/s, +15 HP), **Bollwerk** (+30 Schild, +0,15s Block), **Zweites Herz** (+50 HP, +0,5 HP/s), **Tank-Panzerung** (neunstufiger Evolutionsbaum) |
-| **Bewegung** | Tempo, Sprünge, Dash, Größe | **Federstiefel** (+20% Sprung, +1 Sprung), **Windschatten** (+20% Tempo, -20% Dash-CD), **Leichtgewicht** (-15% Größe, +8% Tempo, -8% HP) |
-| **Chaos** | Riskante Karten mit Nebenwirkungen | **Instabiler Kern** (Kamikaze, +15% Tempo, +20 HP), **Wandelnder Koloss** (+35% Größe, +40 HP, -10% Tempo) |
+### Dash (`Shift`)
 
-- **Common – Grundwerte**: Karten wie **Vitaler Kern** (+30 Max HP), **Leichtfüßig** (+5% Tempo, -10% Schwerkraft), **Scharfe Munition** (+20% Schaden), **Abpraller** (+1 Abpraller), **Schnellfeuer** (+18% Feuerrate) und **Rückstoßfeder** (+25% Rückstoß) verbessern die Basiswerte.
-- **Uncommon – Spezialisierung**: **Regenerationsserum** (1,5 HP/s nach 3s ohne Schaden), **Blutdurst** (+12% Lebensraub), **Kompakte Statur** (15% kleinere Spielfigur), **Zwillingsschuss** (+1 Projektil), **Flipper-Modus** (+3 Abpraller), **Leichtes Geschoss** (flache Flugbahn, +10% Schaden) und **Schweres Geschoss** (steiler Bogen, +20% Schaden).
-- **Rare – Machtspitzen**: **Giftklinge** (+50% Gift-Schaden), **Schnelllader** (+35% Nachladegeschwindigkeit), **Windläufer** (+25% Tempo), **Doppelsprung** (+1 Luft-Sprung) und **Ricochet-Kern** (+5 Abpraller).
-- **Bouncy Balls**: Geschosse prallen bis zu 2x von Oberflächen ab.
-- **Homing Micro-Seekers**: Geschosse korrigieren ihren Flugwinkel zum Gegner.
-- **Cluster Warhead**: Geschosse explodieren beim Einschlag in 3 Schrapnells.
-- **Vampiric Leech**: Wandelt 25% des ausgeteilten Schadens in Lebenspunkte um.
-- **Ricochet Frenzy (Epic)**: Geschosse prallen bis zu 5x ab und gewinnen mit jedem Abprall Schaden.
-- **Glass Cannon (Epic)**: +130% Schaden, -40% Max HP.
-- **Martyrdom Shockwave (Legendary)**: Beim K.O. explodiert der Spieler in einer gewaltigen Druckwelle.
-- **Chronos Drive (Legendary)**: -50% Dash-Cooldown, +2 Extra Air Jumps.
-- *...und viele weitere Synergie-Karten!*
+Kurzer Sprint mit kurzer Unverwundbarkeit. Ignis hinterlässt dabei Feuer.
 
-#### Klassenspezifische Upgrade-Karten
-Jeder Held hat **3 exklusive Karten**, die nur im Draft des passenden Helden auftauchen. Im Draft-Angebot und in der öffentlichen Auflösung sind sie mit einem Klassen-Badge markiert:
+### Leben, Schild & Regeneration
 
-| Held | Klassenkarten |
+- **HP-Regeneration** (durch Karten) läuft sofort, auch direkt nach einem Treffer.
+- **Schild** lädt sich erst **3 s nach dem letzten Treffer** wieder auf. Karten verkürzen die Pause (nie unter 0,5 s). Schild-Upgrade-Karten erscheinen erst, wenn man mindestens **25 Schild** hat.
+- Über der HP-Leiste zeigt ein **blauer Balken** den aktuellen Schild.
+- **Rüstung** senkt jeden eingehenden Schaden prozentual, höchstens **75 %**.
+- **Schadensreflexion** wirft einen Teil des erlittenen Schadens auf den Angreifer zurück, höchstens **60 %**. Reflektierter Schaden wird nicht noch einmal reflektiert.
+
+### Statuseffekte
+
+| Effekt | Wirkung |
 | :--- | :--- |
-| **Ignis** | **Nachbrenner** (+20% Tempo, -20% Dash-CD, +15% Sprung), **Sprengkern** (+45px Explosionsradius, +25% Schaden, -10% Feuerrate), **Überhitzung** (+30% Feuerrate, +25% Projektilgeschwindigkeit, -15% Ability-CD) |
-| **Volt** | **Overclock** (-25% Ability-CD, +15% Tempo, +20% Feuerrate), **Statisches Feld** (+2 Abpraller, +30% Projektilgeschwindigkeit, +1 Durchschlag), **Kinetische Ladung** (-35% Dash-CD, +1 Luft-Sprung, +20% Tempo) |
-| **Spore** | **Virulenter Stamm** (+4 Gift-Stapel, +15% Schaden), **Mycelnetz** (+35 Max HP, +25 Schild, +20% Schild-Regeneration), **Toxische Blüte** (+3 Gift-Stapel, +45px Explosionsradius, +15% Lebensraub) |
-| **Nova** | **Schwerkraftkern** (+40px Explosionsradius, +15% Schaden), **Leerer Raum** (-20% Ability-CD, +12% Projektilgeschwindigkeit), **Supernova** (+70px Explosionsradius, +25% Schaden, -10% Tempo) |
-| **Klinge** | **Wirbelklinge** (+25% Schaden, +15% Feuerrate), **Klingenreflexe** (-30% Dash-CD, +12% Tempo), **Duellklinge** (+40 Max HP, +15% Lebensraub, +10% Schaden) |
-| **Bastion** | **Energieschild** (+40 Schild, +25% Schild-Regeneration), **Feldwartung** (+40% Schild-Regeneration, +15% Nachladegeschwindigkeit), **Bastionsfestung** (+60 Schild, +25 Max HP, -10% Tempo) |
-| **Phantom** | **Schattenklinge** (+20% Schaden, +2 Durchschlag), **Schattensprung** (-25% Ability-CD, +1 Luft-Sprung), **Todeskuss** (+35% Schaden, +15% Lebensraub, -10% Max HP) |
+| Gift | Schaden in Ticks, das Schwein wird grünlich und blubbert |
+| Brand | Feuerschaden in Ticks |
+| Frost | Verlangsamt |
+| Betäubung | Keine Bewegung für kurze Zeit |
+| Wand-Betäubung | Nach einem Hammerschlag: wer gegen Wand oder Decke prallt, ist betäubt |
 
-#### Talentbaum-Karten
-Zusätzlich gibt es **12 globale Talentbaum-Familien**: zehn klassische Familien mit je **1 Grundkarte + 2 Ausbaukarten**, **Leichte Schuhe** mit dem Ausbau **Windschuhe** und die **Tank-Panzerung** mit einem neunstufigen Evolutionsbaum. Eine Ausbaukarte erscheint erst im Draft, wenn die Grundkarte bereits im eigenen Deck liegt. Sind beide Zweige einer Familie noch offen, werden sie gemeinsam angeboten (z. B. **Mehr Türme** und **Folgende Türme**). Die Zweigwahl ist **exklusiv**: Sobald ein Zweig gewählt wurde, werden der andere Zweig und seine Nachfolger nicht mehr angeboten. Jede Karte ist pro Spieler nur einmal verfügbar.
+### Flächeneffekte
 
-Türme besitzen standardmäßig **100 Leben**, zeigen darüber einen Lebensbalken und werden als kleine, zum Ziel ausgerichtete Kanonen dargestellt. Gegnerische Treffer und Explosionen beschädigen sie; Freundschaftsfeuer nicht. Die Turm-Karten **Turm-Panzerung** (+75 Turm-Leben) und **Schnellfeuer-Geschütz** (25 % schnellere Schüsse) erscheinen nur, wenn die Turm-Fähigkeit bereits im Deck liegt.
-
-| Familie | Grundkarte | Ausbau A | Ausbau B |
-| :--- | :--- | :--- | :--- |
-| **Turm** | **Turm**: Spezialfähigkeit platziert eine automatisch angreifende Kanone mit 100 Leben. | **Mehr Türme**: Alle 5 Sekunden entsteht ein weiterer Turm an der aktuellen Position. | **Folgende Türme**: Türme folgen der Spielfigur. |
-| **Giftschuss** | **Giftschuss**: +2 Gift-Stapel, +25% Gift-Schaden. | **Giftwolke**: Giftwolke an jeder Einschlagstelle. | **Giftspur**: Giftspur hinter dem Charakter, ohne Selbstschaden. |
-| **Blitzschuss** | **Blitzschuss**: Betäubt Gegner für 0,1 Sekunden. | **Kettenblitz**: Springt auf nahe Gegner über und betäubt erneut. | **Blitz-Orb**: Erzeugt am Einschlag eine betäubende Blitzzone. |
-| **Frostschuss** | **Frostschuss**: Geschosse verlangsamen Gegner für 0,8 Sekunden. | **Eisnova**: Gefrierende Fläche am Einschlag. | **Eisbahn**: Verlangsamende Spur hinter dem Charakter. |
-| **Explosivschuss** | **Explosivschuss**: +30px Explosionsradius, +5% Schaden. | **Großer Knall**: +60px Explosionsradius, +15% Schaden. | **Splitterbomben**: Explosionen zerfallen in vier Splitterbomben. |
-| **Feuersturm** | **Feuersturm**: Geschosse entzünden Gegner. | **Brandherd**: Brennender Boden am Einschlag. | **Feuerspur**: Brennende Spur hinter dem Charakter, ohne Selbstschaden. |
-| **Wächterdrohne** | **Wächterdrohne**: Eine Drohne umkreist und beschießt Gegner. | **Zwillingsdrohne**: Eine zweite Drohne begleitet dich. | **Regenerationsdrohne**: Drohnen regenerieren zusätzlich laufend Lebenspunkte. |
-| **Schutzdrohne** | **Schutzdrohne**: Eine Drohne umkreist dich und fängt gegnerische Schüsse ab. | **Heilende Schutzdrohne**: Jeder abgefangene Schuss heilt dich um den geblockten Schaden. | **Schutzdrohnen-Schwarm**: Zwei weitere Schutzdrohnen kreisen um dich. |
-| **Mörser** | **Mörser**: +80% Projektil-Schwerkraft, +25% Schaden, +18px Explosionsradius. | **Präzisionsmörser**: +30% Schaden, -45% Projektil-Schwerkraft, +20% Projektilgeschwindigkeit. | **Belagerungsmörser**: +40% Schaden, +50% Projektil-Schwerkraft, +30px Explosionsradius. |
-| **Rückstoßfeder** | **Rückstoßfeder**: +25% Rückstoß. | **Druckkammer**: +35% Rückstoß, +10% Projektilgeschwindigkeit. | **Schockgeschoss**: +45% Rückstoß, +8% Schaden. |
-
-#### Tank-Panzerung (Evolutionsbaum)
-Die Tank-Familie ist ein neunstufiger Evolutionsbaum und deckt jede Seltenheit ab. **Rüstung** reduziert eingehenden Schaden prozentual, bevor Schild und Leben getroffen werden; mehrere Rüstungskarten addieren sich bis maximal **75 %**. **Schadensreflexion** wirft einen Anteil des tatsächlich erlittenen Schadens an den angreifenden Spieler zurück; der Anteil addiert sich bis maximal **60 %**. Reflektierter Schaden wird nicht erneut reflektiert.
-
-| Seltenheit | Karte | Effekt | Voraussetzung |
-| :--- | :--- | :--- | :--- |
-| **Common** | **Tankplatte** | +30 Max HP, +5% Rüstung | Grundkarte |
-| **Uncommon** | **Stahlhaut** | +18% Max HP, +6% Rüstung | Tankplatte (Zweig A) |
-| **Uncommon** | **Dornenhaut** | +25 Max HP, +8% Rüstung, 8% Reflexion | Tankplatte (Zweig B) |
-| **Rare** | **Festungspanzer** | +25% Max HP, +10% Rüstung, -5% Tempo | Stahlhaut |
-| **Rare** | **Reflektorplatte** | +40 Max HP, +12% Rüstung, 12% Reflexion | Dornenhaut |
-| **Epic** | **Titanenbollwerk** | +25% Max HP, +12% Rüstung, 10% Reflexion, -8% Tempo | Festungspanzer |
-| **Epic** | **Spiegelpanzer** | +50 Max HP, +14% Rüstung, 18% Reflexion | Reflektorplatte |
-| **Legendary** | **Ewige Bastion** | +35% Max HP, +18% Rüstung, 15% Reflexion, -10% Tempo | Titanenbollwerk |
-| **Legendary** | **Spiegelkoloss** | +60 Max HP, +16% Rüstung, 22% Reflexion | Spiegelpanzer |
-
-Der Kartenpool umfasst damit **175 Karten** (146 Grund-/Klassenkarten inkl. 11 Block-Karten + 29 Talent-Ausbaukarten), verteilt auf die fünf Draft-Pools **Kern**, **Offensive**, **Defensive**, **Bewegung** und **Chaos**. Talentbaum-Karten sind in Lobby, Draft und Auflösung mit einem **Evolution**-Banner markiert.
-
-Treffer verursachen einen spürbaren Rückstoß. Für kurze Zeit ist die Bewegungskontrolle des getroffenen Ziels reduziert, damit der Impuls nicht sofort von Eingabe und Reibung geschluckt wird; die **Rückstoßfeder**-Familie verstärkt diesen Effekt für alle vom Spieler verursachten Treffer.
-
-#### Block-Karten (universell)
-Block-Karten verbessern die Q-Fähigkeit jedes Spielers:
-- **Common**: **Blockübung** (+0,15s Dauer), **Schnelle Deckung** (-15% Cooldown).
-- **Uncommon**: **Verstärkte Deckung** (+0,2s Dauer), **Schildstoß** (Block stößt Gegner weg).
-- **Rare**: **Blockbombe** (Explosion beim Blocken), **Heilzone** (Heilfeld am Block-Standort), **Druckwelle** (starker Rückstoß), **Ausdauerblock** (+0,3s Dauer, -10% Cooldown).
-- **Epic**: **Konterblitz** (reflektierte Projektile +50% Schaden), **Block-Experte** (-30% Cooldown, +0,2s Dauer), **Unzerbrechlich** (+0,4s Dauer, -10% Cooldown).
+Feuerböden, Giftwolken, Eisflächen, Blitzzonen, Singularität und Heilfelder werden als Zonen gezeichnet. Feuer landet immer auf dem Boden darunter und fährt auf beweglichen Plattformen, Wippen und Kisten mit.
 
 ---
 
-### 4. Kartenstatistik & automatische Seltenheits-Anpassung
-Ein Hintergrunddienst führt eine dauerhafte Statistikdatei unter `user://card_statistics.json`. Alle abgeschlossenen Matches – lokal, mit Bots und online – fließen ein. Gespeichert wird pro Karte:
+## 🔨 Nahkampf
 
-- **Pickrate** (`picks / offers`): Wie oft eine angebotene Karte tatsächlich gewählt wurde.
-- **Killrate** (`kills / matches`): Kills pro Match, in dem die Karte im Deck lag. Ein Kill wird allen Karten im Deck des Schützen gutgeschrieben.
-- **Winrate** (`wins / matches`): Anteil der Matches, in denen die Karte am Match-Ende im Deck lag und der Spieler bzw. das Team gewonnen hat.
+Jeder Eber hat eine Nahkampfwaffe auf `E` (P2: `K`). Gewählt wird sie im Lobby-Tab **Charakter**, sie wird im Profil gespeichert. Reichweite wird in Feldern (36 px) ab dem Körperrand gemessen. Wände blockieren den Schlag. Der Schlag trifft auch Blöcke, Kisten, Fässer und Türme.
 
-Das Dokument enthält alle registrierten Karten, auch solche ohne bisherige Drafts, und zusätzlich Seltenheits-Overrides sowie ein Promotion-Log. Die Auswertung läuft automatisch nach jeweils **3 abgeschlossenen Matches** (beim Start wird eine fällige Auswertung nachgeholt). Verglichen werden Karten innerhalb ihrer aktuellen Seltenheit. Eine Karte wird um **eine Stufe** aufgewertet, wenn sie:
+| Waffe | Form | Schaden | Reichweite | Rückstoß | Abklingzeit | Besonderheit |
+| :--- | :--- | ---: | ---: | :--- | ---: | :--- |
+| **Lötkolben** | gerader Stich | 50 | 3 Felder | stark | 1,4 s | |
+| **Schwert** | 60°-Bogen | 30 | 3 Felder | wenig | 0,9 s | |
+| **Hammer** | 90°-Bogen | 20 | 1 Feld | sehr stark | 1,1 s | Prallt das Ziel danach an Wand oder Decke: 0,8 s betäubt |
+| **Flegel** | 360° rundum | 30 | 2 Felder | mittel | 1,2 s | |
 
-- mindestens **8 Match-Samples** besitzt,
-- seit ihrer letzten Aufwertung mindestens **8 Matches** vergangen sind,
-- eine geglättete Winrate von mindestens **55 %** erreicht und
-- mindestens **15 Prozentpunkte** über dem gewichteten Durchschnitt der anderen Karten derselben Seltenheit liegt.
+**Parade** (Legendary): Ist der Schlag bereit (nicht auf Abklingzeit), schlägt die Waffe von selbst in Richtung eines gegnerischen Projektils, sobald es in Reichweite ist und auf dich zufliegt, und wirft es zurück. Der Schlag trifft dabei normal und startet die Abklingzeit. Ein manueller Schlag pariert ebenfalls. Gilt auch für Bots und online.
 
-Pro Auswertung wird höchstens die stärkste Karte jeder Seltenheit aufgewertet; **Legendary** ist die Obergrenze. Aufwertungen werden sofort auf die `CardData`-Ressourcen angewendet und beim nächsten Start aus der Statistikdatei wiederhergestellt. Dadurch verschieben sich auch die Draft-Gewichtung und die Anzeige in Lobby, Draft und Auflösung automatisch. Es gibt bewusst keine automatische Abwertung. Wird `user://card_statistics.json` gelöscht, starten alle Karten wieder mit ihrer ursprünglichen Seltenheit.
+Das Powerup **Auto-Angriff** und der Runden-Modifier **Brawl** verstärken den Nahkampf. Ist Nahkampf in den Lobby-Regeln aus, erscheinen beide nicht.
 
----
-
-### 5. Sieben feste Arenen mit eigenen Tilesets
-Jede Runde spielt auf einer von sieben Arenen. Jede Map besitzt ein **festes Tileset** und ein **festes Layout-Profil**, damit die Optik nicht mehr zufällig aus allen Tile-Stilen zusammengemischt wird. Der Host wählt die Map in der Lobby unter **Regeln → Spielfeld**. **Zufällig** löst deterministisch aus dem Runden-Seed eine konkrete Map auf; Host und Clients erhalten immer dieselbe Arena. Im Online-Modus bauen Host und Client die Map aus dem gemeinsamen Seed und der übertragenen Map-ID:
-
-| Map | Tileset | Layout | Besonderheiten |
-| --- | --- | --- | --- |
-| **Grasarena** | Gras/Erde, Holzplattformen, Pflanzen | Schlanke, schwebende Balken | Zentrale Luft-Wippe, Kisten, Ranken, Eisflächen |
-| **Wüstenruine** | Sandstein, Holzbohlen, Kakteen | Offene schwebende Inseln | Kettenplattformen, Kisten, TNT-Fässer |
-| **Eisgrotte** | Schnee, Eisblöcke, Kristalle | Drei luftige Plattform-Etagen | Schwebende Wippe, Kettenplattform, Kisten, Eis |
-| **Neonfabrik** | Blaue Tech-Blöcke, Rohre, Displays | Schlanke Tech-Balken | Zentrale Luft-Wippe, Ketten, Kisten, TNT |
-| **Weite Wiese** | Gras/Erde, Holzplattformen, Pflanzen | Nur wenige, weit auseinanderliegende Balken | Übersichtliche Duellfläche, ein Kistenstapel, Powerups |
-| **Wolkeninsel** | Schnee, Eisblöcke, Kristalle | Wenige schwebende Eisinseln | Große Sprünge, Eisflächen, ein Kistenstapel |
-| **Kistenfestung** | Sandstein, Holzkisten | Ausschließlich Holzkisten, keine festen Plattformen | Große zentrale Wippe mit Kistentürmen, zerstörbare Laufwege |
-
-- **Keine Seiten- oder Deckenwände**: Die Arena ist nach oben und zu den Seiten offen.
-- **Mehr Platz**: Die Arenen sind von 38×22 auf 44×25 Kacheln gewachsen – rund 32 % mehr Fläche für längere Wege und größere Kistenaufbauten.
-- **Schlanke Plattformen statt Treppen**: Mit Ausnahme der Kistenfestung bestehen die Arenen aus ein Kachel hohen Balken und schwebenden Inseln. Zwischen den Ebenen bleiben mindestens zwei freie Kacheln (72 px) Kopfraum; die Sprungkraft der Helden ist so abgestimmt, dass jede Drei-Kachel-Stufe sicher erreichbar bleibt.
-- **Sichere, verteilte Spawns**: Spawn-Kandidaten sind alle freien Standflächen auf Boden und Plattformen; in der Kistenfestung kommen exponierte Kistenoberseiten hinzu. Federn, Portale, Stacheln, Fässer, Kisten, Powerups, Eis und Spezialkacheln werden ausgeschlossen, und über der Standfläche bleiben zwei Reihen Kopfraum frei. Die Spieler werden per Farthest-Point über das ganze Level verteilt und dabei auf drei Höhenbänder (hoch, niedrig, mittel) gesetzt, statt alle am Boden zu starten. Die Auswahl ist für Host und Clients deterministisch.
-- **Rundenstart ohne Altlasten**: Beim Start einer neuen Runde werden Projektile, Türme, Flächeneffekte und kurzlebige visuelle Effekte (Explosionen, Blitze, Schockwellen, Geister usw.) der Vorrunde entfernt. Status- und Powerup-Effekte starten mit den frisch erzeugten Spielern.
-- **Gummiwand**: Außerhalb der Karte liegt ein viergeteilter Rahmen in der Akzentfarbe der Map. Wer ihn berührt, nimmt Schaden und wird mit Nachdruck zurück in Richtung Kartenmitte geschleudert.
-- **Zerstörbare Blöcke**: Halten 3 Treffer aus und verschwinden dann dauerhaft – neue Wege und Sichtlinien entstehen.
-- **Starke Ranken**: Solide grüne Rankenbrücken, die nur durch Beschuss brechen und nach 8 Sekunden nachwachsen (Grasarena).
-- **Schwache Ranken**: Zerbrechen bereits beim Darübergehen und wachsen nach 4,5 Sekunden nach. Nicht zu lange stehen bleiben! (Grasarena)
-- **Eisflächen**: Blau schimmernde Zonen mit deutlich reduzierter Beschleunigung und Reibung – Schwung holen, aber rechtzeitig bremsen.
-- **Sprungfedern (Jump Pads)**: Katapultieren Spieler hoch in die Luft für akrobatische Ausweichmanöver.
-- **Magische Portale**: Verknüpfte Portalpaare teleportieren Spieler blitzschnell über das Kampffeld. Nach einer Benutzung verschwinden beide Portale für **10 Sekunden** und erscheinen anschließend mit einer kurzen Öffnungsanimation wieder.
-- **Herz-Blöcke (Mystery Blocks)**: Von unten anspringen oder anschießen belohnt mit +30 HP Heilung!
-- **Stachelfallen**: Gefährliche Zonen, die Schaden zufügen und Spieler wegschleudern.
-- **Sudden-Death-Lava**: Dauert ein Duell nach dem Start-Countdown länger als 38 Sekunden, steigt von unten glühende Lava empor!
-
-#### Bewegliche Map-Objekte
-Die beweglichen Elemente sind reine Spielfeld-Objekte, keine Upgrade-Karten. Der Host simuliert ihre Physik autoritativ; Clients erhalten kompakte Transform-Snapshots und zeigen eingefrorene Replikate.
-
-- **Wippe**: Eine zentral in der Luft aufgehängte Holzplanke. Spielergewicht kippt sie zur schwereren Seite; ohne Belastung richtet sie sich langsam wieder waagerecht aus.
-- **Kettenplattform**: Eine an zwei Ketten hängende Plattform, die beim Landen und Bewegen von Spielern schwingt.
-- **Fass**: Rollt und wird durch Projektiltreffer oder Explosionen weggeschleudert.
-- **TNT-Fass**: Beginnt nach einem Treffer **3 Sekunden lang zu blinken** und explodiert erst danach. Die Explosion verursacht Flächenschaden mit Abstand-Falloff und zündet benachbarte TNT-Fässer in einer Kettenreaktion. Clients sehen die Explosion auch dann, wenn das Fass aus dem Host-Snapshot verschwindet.
-- **Holzkisten**: Physikalische Bauklötze in drei Größen, die zu stapelbaren Türmen aufgeschichtet werden. Stapel können durch Beschuss, Explosionen oder Spielerkollisionen ins Rutschen geraten und zusammenbrechen. Eine fallende Kiste verursacht Schaden, wenn sie mit ausreichender Geschwindigkeit auf einem Spieler landet.
-- **Kistenfestung**: Die einzige Arena ohne feste Plattformen. Stabile Kistentürme bilden die Laufwege, während die große Mittelwippe auf beiden Seiten mit Kisten beladen ist. Zerstörte Kisten verändern die Wege dauerhaft.
-- **Powerups**: Schweben als farbige Orbs auf den Plattformen oder fallen aus zerstörten Kisten. Je nach Map sind Anzahl und Verteilung unterschiedlich. Effekte: **Heilung**, **kurze Unverwundbarkeit**, **Schadensboost** und **Dauerfeuer** für wenige Sekunden.
+Nahkampf-Karten (Pool **Nahkampf**, 19 Karten) wirken nur auf den `E`-Schlag, siehe [Karten-Übersicht](#nahkampf-karten).
 
 ---
 
-### 6. Bot-KI (Solo-Test & gemischte Runden)
-- Jeder Slot ab 2 kann in der Lobby als **Bot** oder **Mensch** konfiguriert werden. Standardmäßig ist Slot 2 ein Bot; für ein 6-Spieler-Solo-Match einfach fünf Bots einstellen.
-- Die KI sucht den **nächstgelegenen lebenden Gegner**, springt über Hindernisse, zielt mit dynamischer Streuung, feuert mit Sichtlinien-Prüfung, nutzt Dashs & Fähigkeiten und wählt nach Rundenverlusten selbstständig Synergie-Karten aus.
-- Slot-Typen werden **ausschließlich in der Lobby** gewählt. Während der Runde gibt es keinen F1- oder HUD-Umschalter. Im Online-Modus simuliert der Host alle Bots; Clients steuern nur ihren eigenen Slot.
+## 🏆 Lobby & Match-Regeln
+
+Die Lobby hat mehrere Tabs. **Spieler 1 ist Host** und stellt Regeln, Map und Karten ein.
+
+### Slots & Helden
+
+- **2–6 Spieler**. Jeder Slot ab 2 ist **Bot** oder **Mensch**.
+- Pro Slot gibt es eine Heldenreihe mit allen 7 Klassen und farbigen Icons. Menschen wählen selbst, der Host wählt für Bots.
+- **Bereit**: Lokal meldet der Knopf alle Menschen bereit, online jeder Client sich selbst. Bots sind automatisch bereit. Gestartet wird erst, wenn alle bereit sind.
+
+### Tab Charakter
+
+- **Name** (bis 16 Zeichen), erscheint in Lobby, HUD und Statistik.
+- **Fell-, Augen- und Hosenfarbe**.
+- **Hauer**: Klein, Lang, Säbel, Doppelt, Stummel.
+- **Lötspitze**: 8 Formen (Kegel, Meißel, Messer, Huf, Kugel, Diamant, Stern, Flamme) plus Glutfarbe.
+- **Schussfarbe**.
+- **Nahkampfwaffe**.
+- Die Vorschau zeigt alles live. Das Profil wird automatisch gespeichert und online an alle verteilt.
+
+### Tab Regeln
+
+| Einstellung | Bereich | Standard |
+| :--- | :--- | :--- |
+| Spielmodus | FFA, 2v2, 3v3, 2v2v2 | FFA |
+| Punkte für Match-Sieg | 100–5000 | 500 |
+| Punkte für Überleben (pro Runde) | 0–500 | 50 |
+| Punkte pro Kill | 0–500 | 50 |
+| Basis-HP-Faktor | 50–300 % | 100 % |
+| Basis-Schaden pro Schuss | 1–200 | 22 |
+| Karten-Draft | Wähle X von Y | 1 von 5 |
+| Draft-Modifier | Blind pick, Random pick, Gamble | aus |
+| Pre-Draft | 0–10 Picks vor Matchbeginn, optional zufällig | 0 (aus) |
+| Spielfeld | eine der 23 Maps oder Zufällig | Zufällig |
+| Runden-Modifier | Auswahl + Rate 0–200 % | alle, 100 % |
+
+**Loadouts**: Der Host kann komplette Regel-Sets speichern, laden und löschen. Mitgeliefert sind **Standard**, **Schnell & Wild**, **Team 2v2** und **Chaos**.
+
+### Tab Karten
+
+- **Kartenpools** (Haupt-Tags) einzeln an- und ausschalten: Offensive, Defensive, Bewegung, Nahkampf. Mindestens einer bleibt aktiv. Die früheren Pools Kern und Chaos sind in Offensive bzw. Defensive aufgegangen.
+- **Netzdiagramme** unter den Pools zeigen, wie sich alle verfügbaren Karten verteilen: auf die Haupt-Tags, je Haupt-Tag auf seine Sub-Tags und auf die Seltenheiten. So sieht man, ob es für alle Werte ähnlich viele Karten gibt.
+- **Seltenheits-Prozente** für Common/Uncommon/Rare/Epic/Legendary (Standard 50 / 25 / 15 / 8 / 2). Die Summe wird automatisch normalisiert.
+- **Karten sperren**: Gesperrte Karten kommen in keinem Draft mehr, nach Seltenheit sortiert. Karten aus abgeschalteten Pools stehen dort abgedunkelt als gesperrt („Pool aus“). Der Host kann sie einzeln wieder freigeben („freigegeben“); Ausbaukarten einer freigegebenen Grundkarte sind dann ebenfalls frei. Wird der Pool wieder eingeschaltet, verfallen die Einzelfreigaben.
+- **Filter ▾** filtert die Kartenliste nach Haupt-Tags und Sub-Tags. Innerhalb einer Gruppe reicht ein Treffer (oder), Haupt- und Sub-Tags zusammen müssen beide passen (und).
+- Die Lobby zeigt `Pool min. X/Held`, also wie viele Karten der kleinste Helden-Pool noch hat.
+
+### Tab Levels
+
+- Zeigt **alle Maps mit Vorschaubild**. Die Bilder rendert das Spiel beim ersten Öffnen des Reiters selbst aus dem Level-Generator, neue Maps tauchen also automatisch auf.
+- **Klick aufs Bild** öffnet die Großansicht mit Beschreibung. Mit `←`/`→` blättern, mit `Esc` oder Klick daneben schließen.
+- Der Schalter neben dem Namen **schaltet ein Level ab**. Abgeschaltete Levels kommen bei **Zufällig** nicht mehr dran und sind unter Regeln → Spielfeld ausgegraut. **ALLE AN** / **ALLE AUS** schalten alles auf einmal. Ist kein Level aktiv, lässt sich das Match nicht starten.
+- Die Auswahl gehört zu den Lobby-Regeln: Sie landet im Preset **Last** und in gespeicherten Loadouts, und der Host überträgt sie an alle Clients.
+- Die Vorschau zeigt einen Beispiel-Aufbau. Zusätzliche Plattformen und Objekte werden jede Runde neu verteilt.
+
+### Tab Powerups
+
+- Zeigt **alle Powerups** (Heilung, Schutz, Schaden, Dauerfeuer, Auto-Angriff, Multishot, Unsterblichkeit, Rache, Unsichtbar) so, wie sie in der Arena liegen, mit ihrer Wirkung.
+- Der Schalter **schaltet ein Powerup ab**. Abgeschaltete Powerups erscheinen weder zufällig in der Arena noch aus Kisten noch beim Modifier **Powerup-Regen**. **ALLE AN** / **ALLE AUS** schalten alles auf einmal.
+- Sind alle aus, laufen die Runden ohne Powerups: Der Modifier Powerup-Regen wird nicht gezogen und die Powerup-Karten (Powerup-Verstärker, Powerup-Magnet) kommen nicht in den Draft. Auto-Angriff erscheint zusätzlich nur, wenn Nahkampf an ist.
+- Die Auswahl gehört zu den Lobby-Regeln: Sie landet im Preset **Last** und in gespeicherten Loadouts, und der Host überträgt sie an alle Clients. Alte Loadouts haben alle Powerups an.
+
+### Ablauf einer Runde
+
+0. **Pre-Draft** (nur wenn eingestellt): Vor der ersten Runde draftet jeder Spieler seine Startkarten.
+1. **3-Sekunden-Countdown**. Die Kamera startet nah an deinem Eber, der aus einem Portal in Klassenfarbe kommt, und zoomt dann heraus.
+2. Kämpfen, bis nur noch ein Spieler (bzw. ein Team) lebt. Kills geben sofort Punkte, der Überlebende den Überlebensbonus.
+3. Beim entscheidenden Tod läuft eine kurze **Kill-Cam** in Zeitlupe.
+4. Die Verlierer wählen Karten, dann startet die nächste Runde.
+5. **Sudden Death**: Dauert eine Runde nach dem Countdown länger als **38 s**, steigt Lava auf. Der Zähler startet bei jedem Tod neu. Die Lava hält knapp unter der höchsten Plattform an.
+
+**Weiterspielen**: Nach dem Match-Sieg kann der Host **WEITERSPIELEN** wählen. Punkte und Decks bleiben, das Ziel steigt um 30 %.
 
 ---
 
-### 7. Spielmodi: FFA, 2v2, 3v3 & 2v2v2
-Der Host wählt den Modus im Lobby-Tab **Regeln**. Die Spielerzahl wird dabei automatisch auf die benötigte Größe gesetzt; nur **FFA** erlaubt frei 2–6 Spieler.
+## 👥 Spielmodi
 
 | Modus | Spieler | Teams | Aufteilung |
 | :--- | :--- | :--- | :--- |
-| **FFA** | 2–6 | jeder für sich | Slot = eigenes Team |
-| **2v2** | 4 | 2 | 1+2 vs. 3+4 |
-| **3v3** | 6 | 2 | 1+2+3 vs. 4+5+6 |
+| **FFA** | 2–6 | jeder für sich | jeder Slot ist ein Team |
+| **2v2** | 4 | 2 | 1+2 gegen 3+4 |
+| **3v3** | 6 | 2 | 1+2+3 gegen 4+5+6 |
 | **2v2v2** | 6 | 3 | 1+2 / 3+4 / 5+6 |
 
-- **Rundenende:** In Team-Modi endet die Runde erst, wenn nur noch **ein Team** lebende Mitglieder hat. Ein einzelner Tod beendet die Runde also nicht vorzeitig.
-- **Kein Freundschaftsfeuer:** Schaden von Teammitgliedern wird ignoriert – das gilt auch für Flächenfähigkeiten, TNT und reflektierte Projektile. Gegnerische Projektile werden von Teammitgliedern körperlich geblockt, verursachen aber keinen Schaden. KI, Türme und Drohnen wählen ausschließlich Gegner außerhalb des eigenen Teams.
-- **Halber Selbstschaden:** Eigene Explosionen und selbst ausgelöste TNT-Fässer verursachen nur **50 %** des normalen Schadens. Schaden an Teammitgliedern bleibt weiterhin deaktiviert.
-- **Team-Punkte:** Die Teamwertung ist die Summe der individuellen Punkte aller Mitglieder. Das Match endet, sobald ein Team die eingestellte Zielpunktzahl erreicht. Einzelne Punkte, Kills, Schaden und der MVP bleiben weiterhin pro Spieler sichtbar.
-- **Draft:** Nach einer verlorenen Runde draften **alle Mitglieder des bzw. der Verliererteams**; das Gewinnerteam erhält keine Karten.
-- **Anzeige:** HUD und Lobby zeigen Teamnamen (ROT/BLAU/GRÜN), Team-Punkte und Team-Tags. Das Match-Ende-Panel kürt das Siegerteam; die Statistik-Tabelle bleibt spielerbezogen.
-- Der Modus wird in Lobby und Startkonfiguration synchronisiert. Clients berechnen dieselben Teams aus Modus und Slot-Zuordnung.
+- Eine Team-Runde endet erst, wenn nur noch **ein Team** lebt.
+- **Kein Freundschaftsfeuer**, auch nicht durch Flächen, TNT oder reflektierte Schüsse. Teamkollegen blocken gegnerische Schüsse körperlich.
+- **Eigene Explosionen** machen nur 50 % Schaden an dir selbst.
+- Team-Punkte sind die Summe der Spielerpunkte. Nach einer verlorenen Runde draften alle Mitglieder der Verliererteams.
+- Teamfarben: ROT, BLAU, GRÜN.
 
 ---
 
-## 🌐 Online-Multiplayer (2–6 Spieler)
+## 🃏 Karten-Draft
 
-Das Spiel nutzt **ENet über UDP** (Standardport **7777**) und kommt ohne Relay-Server aus. Der Host ist Slot 1 und autoritativ: Er simuliert die Runde, zieht die Draft-Karten und entscheidet über Runden-/Match-Ende. Bis zu **5 Clients** verbinden sich als Slots 2–6, senden ihre Eingaben an den Host und sehen die Welt als Replik. Nicht belegte Slots können Bots sein.
+Nach jeder verlorenen Runde bekommt jeder Verlierer **Y zufällige Karten** und wählt **X** davon. Bei mehreren Picks wird nach jeder Wahl ein **komplett neues Angebot** gezogen, ohne die Karten der vorherigen Angebote (reicht der Pool nicht, dürfen sie wieder kommen). Online zieht der Host jedes Angebot. Karten stapeln sich über das ganze Match. Jede Karte gibt es pro Spieler nur einmal.
 
-### 1. Verbindung herstellen
-1. **Alle** starten dieselbe Spielversion (idealerweise die exportierte `.exe`).
-2. **Host**: Hauptmenü → **ONLINE SPIELEN** → Port stehen lassen (`7777`) → **HOST ÖFFNEN**.
-3. **Mitspieler**: Hauptmenü → **ONLINE SPIELEN** → IP-Adresse des Hosts und Port eingeben → **BEITRETEN**. Jeder weitere Freund nutzt dieselbe Adresse. Für einen **Zuschauer** vor dem Beitreten **„Als Zuschauer beitreten“** aktivieren.
-4. Der Host stellt in der Lobby die **Spielerzahl (2–6)** und pro Slot **Bot/Mensch** ein. Jeder Client erhält automatisch einen freien Slot; ist kein Mensch-Slot frei, übernimmt er einen Bot-Slot. **Zuschauer** belegen keinen Slot, senden keine Eingaben und sehen Lobby, Match, Draft und Snapshots wie die Spieler.
-5. Jeder Mensch wählt seinen Helden und setzt **Bereit**. Der Host stellt **Spielmodus**, Regeln, **Spielfeld/Map**, Draft, **Kartenpools** und Kartenbans ein, setzt ebenfalls **Bereit** und startet.
+- **Seltenheit**: Common (grau), Uncommon (grün), Rare (blau), Epic (lila), Legendary (gold). Der **äußere Rahmen** zeigt die Seltenheit, der **innere** die Effektfarbe.
+- **Icons**: Jede Karte hat ein kleines animiertes Icon passend zum Effekt.
+- **Werte-Zeilen**: Jeder Effekt einer Karte steht in einer eigenen Zeile.
+- **Mechanik-Tooltips**: Beim Hovern erklärt die Karte Begriffe wie Gift, Frost, Durchschlag, Rüstung, Reflexion, Turm oder Drohne.
+- **Klassen-Badge**: Klassenkarten sind markiert und erscheinen nur beim passenden Helden.
+- **Evolution-Banner**: Talentbaum-Karten sind als Evolution markiert.
+- **Voraussetzungen**: Karten, die eine Mechanik nur verstärken, erscheinen erst, wenn du sie schon hast (z. B. Turm-Panzerung nur mit Turm, Schild-Upgrades erst ab 25 Schild). Solche Karten tragen im Draft, in der Lobby und im Tab-Blatt die orange Zeile **BENÖTIGT: …**; der Tooltip listet unter **FREISCHALTUNG** alle Bedingungen (Klasse, Grundkarte und Zweig bei Evolutionen, Mechanik mit Beispielkarten).
+- **Tab halten** zeigt während der Wahl dein Charakterblatt mit den Werten der nächsten Runde.
 
-> **Ping-Anzeige:** Lobby und HUD zeigen die gemessene Verbindungslatenz. Der Host sieht die Werte aller Mitspieler und Zuschauer (`P2 35 ms`, `Z1 48 ms`), Clients sehen ihren eigenen Ping. Die Farbe wechselt von Grün über Gelb zu Rot; die Messung läuft etwa einmal pro Sekunde über eigene, unzuverlässige Ping-RPCs.
+### Pre-Draft
 
-> **Steuerung im Online-Modus:** Jeder Client spielt mit der **P1-Steuerung** (WASD + Maus). Die Pfeiltasten-Steuerung gilt nur für den lokalen 2-Spieler-Modus am selben Rechner.
+Lobby-Regel unter **Tab Regeln → Karten-Draft**. Steht **Pre-Draft** auf mehr als 0, draften alle Spieler (auch Bots) direkt nach dem Start nacheinander so viele Karten, bevor die erste Runde beginnt. Jeder Pick bekommt wie sonst ein neues Angebot mit Y Karten, die Draft-Modifier gelten auch hier. Mit dem Schalter **Pre-Draft-Karten zufällig wählen** werden diese Picks automatisch zufällig gezogen (online zieht der Host), die Drafts nach den Runden bleiben normal. Die Regel landet in **Last**, in Loadouts und wird online an alle übertragen. **Weiterspielen** startet keinen neuen Pre-Draft.
 
-### 2. Die richtige IP-Adresse finden
+### Draft-Modifier
 
-**Im selben WLAN (LAN):**
-- Die Lobby zeigt die lokale IPv4 des Hosts an (z. B. `192.168.1.42`). Diese IP + Port `7777` gibt der Host an die Mitspieler weiter.
+- **Draft-Steuerung**: A/D (oder Pfeiltasten) markiert eine Karte, die Leertaste wählt sie. Maus und Zifferntasten gehen weiterhin.
+- **Blind pick**: Nur online gegen Menschen. Die anderen sehen nur Kartenrückseiten, die Wahl wird als „Karte verdeckt“ gezeigt. Lokal gegen Bots ohne Wirkung.
+- **Random pick**: Es wird automatisch eine Zufallskarte gezogen. Online zieht der Host.
+- **Gamble**: Die Karten liegen verdeckt, die Rückseite zeigt die Farbe der Seltenheit. Von links nach rechts wird einzeln aufgedeckt: Entweder nimmt man die offene Karte oder dreht die nächste um. Dann läuft ein Feuerbalken von unten nach oben über die offene Karte, danach ist sie verkohlt und weg. Die letzte Karte muss man nehmen. Steuerung: Mit A/D markiert man die offene Karte oder die nächste Rückseite, die Leertaste nimmt bzw. dreht um. Enter nimmt direkt die offene Karte, Klick und Zifferntasten gehen auch. Nach dem Pick werden kurz alle übrigen Karten aufgedeckt. Bots sehen die Rückseiten auch und drehen weiter, wenn rechts eine seltenere Karte liegt. Mit Random pick ohne Wirkung. Bei mehreren Picks gilt das für jedes neue Angebot.
 
-**Über das Internet – Weg A: UPnP (automatisch):**
-- Viele Router erlauben Programmen, den UDP-Port selbst freizugeben. Das Spiel versucht das automatisch und zeigt bei Erfolg die **öffentliche IP + Port** in der Lobby an.
-- Diese Adresse teilt der Host den Mitspielern mit. Fertig.
+### Kartenstatistik & automatische Aufwertung
 
-**Über das Internet – Weg B: Portfreigabe im Router (falls UPnP scheitert):**
-1. Im Router eine **Portweiterleitung** für **UDP 7777** auf die lokale IPv4 des Host-Rechners einrichten.
-2. Die eigene **öffentliche IPv4** ermitteln (z. B. über eine Suchmaschine „meine IP“).
-3. Mitspieler tragen `öffentliche IP` + Port `7777` ein.
-4. In der Windows-Firewall Godot bzw. die Spiel-`.exe` für **private Netzwerke** erlauben.
+Das Spiel führt im Hintergrund `card_statistics.json` mit **Pickrate**, **Killrate** und **Winrate** jeder Karte, inklusive Nahkampfschaden. Alle 3 abgeschlossenen Matches wird ausgewertet. Eine Karte steigt um eine Seltenheit auf, wenn sie:
 
-**Über das Internet – Weg C: ZeroTier oder Tailscale (empfohlen, wenn Weg A/B nicht gehen):**
-- Beide installieren **ZeroTier** oder **Tailscale** (kostenlos für Privatnutzung) und treten demselben virtuellen Netzwerk bei.
-- Der Host teilt seine **virtuelle IP** (bei Tailscale meist `100.x.x.x`, bei ZeroTier z. B. `10.x.x.x`).
-- Die Mitspieler tragen diese IP + Port `7777` ein. Router und Firewall müssen dafür meist nicht angepasst werden.
-- Das ist besonders hilfreich bei **CGNAT** (wenn die öffentliche IP vom Provider geteilt wird und Portfreigaben nicht funktionieren).
+- mindestens 8 Match-Samples hat,
+- seit der letzten Aufwertung 8 Matches vergangen sind,
+- eine geglättete Winrate von mindestens 55 % hat und
+- mindestens 15 Prozentpunkte über dem Schnitt ihrer Seltenheit liegt.
 
-### 3. Was synchronisiert wird
-- Spielerzahl, Slot-Typen (Bot/Mensch), Heldenwahl, Ready-Status, Match-Regeln, **Spielmodus (FFA/2v2/3v3/2v2v2)**, **Spielfeld/Map**, Draft-Konfiguration, **Kartenpools**, Kartenbans, **Basis-HP-Faktor**, **Basis-Schaden**, **Match-/Überlebens-/Kill-Punkte** und **Seltenheits-Prozente**.
-- **Charakteranpassung**: Online-Clients senden Änderungen für ihren eigenen Slot an den Host; die Spieler-Snapshots übertragen Fell-, Augen- und Hosenfarbe, Zauberstabspitze und Schussfarbe anschließend an alle Clients. Beim Beitritt wird das lokal gespeicherte Nutzerprofil auf den zugewiesenen Slot angewendet und einmalig synchronisiert.
-- Level (gemeinsamer Seed + konkrete Map-ID), Spielerpositionen aller Slots, Geschosse, Treffer, Leben/Schilde, **bewegliche Map-Objekte**, Lava und Sudden Death.
-- Start-Countdown: Alle Seiten zeigen **3, 2, 1, LOS!**; der Host gibt die Steuerung nach Ablauf frei.
-- Türme werden als Netzwerk-Entitäten repliziert. Flächeneffekte (Gift, Feuer, Eis, Blitz, Singularität, Heilfeld) und Spuren werden per zuverlässigem RPC erzeugt. Drohnen laufen auf den Clients visuell mit.
-- Spezial-Tiles: Zerstörte Blöcke und nachwachsende Ranken werden per zuverlässigem RPC synchronisiert. Eisflächen und die Gummiwand werden host-seitig simuliert.
-- Draft-Angebot und Picks (der Host bestätigt jede Wahl), Punkte, Rundensieger/Teams und Match-Ende.
-- **Zuschauer** erhalten dieselben Start-, Runden- und Snapshot-Nachrichten wie Spieler, aber keinen Spieler-Slot. Lobby-Sync und Match-Broadcasts gehen an Spieler **und** Zuschauer.
-- **Match-Statistiken** (Kills, Tode, Schaden, Block, Heilung, Trefferquote, Runden) werden host-seitig geführt und beim Match-Ende an alle Clients übertragen.
-- Alle Clients sehen dasselbe Sieger-Panel inklusive Statistik-Tabelle und MVP; „HAUPTMENÜ“ trennt die Verbindung und führt zurück ins Menü. „WEITERSPIELEN“ ist host-exklusiv und startet mit erhöhtem Ziel eine neue Runde, ohne Punkte oder Decks zurückzusetzen.
+Pro Auswertung steigt höchstens eine Karte je Seltenheit auf, Legendary ist das Maximum. Abgewertet wird nie. Wer die Datei löscht, setzt alle Seltenheiten zurück.
 
 ---
 
-### 7. Feedback, Match-Statistiken & Helden-Stats
-- **Projektilballistik & -trails**: Jedes normale Geschoss fällt leicht unter Schwerkraft und zieht eine kurze, in der **konfigurierten Schussfarbe** eingefärbte Leuchtspur hinter sich her. Mörser-Karten verstärken den Bogen, Präzisionskarten flachen ihn ab. Die Spur funktioniert auch für replizierte Projektile auf Clients.
-- **Screenshake**: Treffer, geblockte Treffer, Kills, Explosionen und TNT-Fässer lösen einen kurzen, schadensabhängigen Kamera-Shake aus. Sehr kleine Effekte bleiben bewusst dezent, damit das Zielen nicht leidet.
-- **Nachspiel-Statistik**: Das Match-Ende-Panel zeigt eine Tabelle mit Punkten, Kills, Toden, ausgeteiltem Schaden, blockiertem Schaden, Heilung, Trefferquote und gewonnenen Runden pro Spieler.
-- **MVP & Rekorde**: Der **beste Spieler** wird aus Punkten, Kills, Schaden, Block, Heilung, Runden und Toden berechnet. Zusätzlich werden **Meister Schaden**, **meiste blockierte Treffer** und **meiste Heilung** namentlich hervorgehoben.
-- **Helden-Stats-Screen**: Im Hauptmenü öffnet **HELDEN-STATS** eine Übersicht aller Charaktere mit HP (inkl. aktuellem Basis-HP-Faktor), Schild, Tempo, Sprungkraft, Schusschaden, aktiver Fähigkeit, Passiv und Kurzbeschreibung.
-- Match-Statistiken werden bei jedem neuen Match zurückgesetzt und host-seitig geführt; die Werte sind damit auch im Online-Modus für alle Spieler identisch.
+## 📚 Karten-Übersicht
 
-### 4. Bekannte Grenzen
-- Bis zu **6 Spieler** (Host + 5 Spieler-Clients) plus bis zu **4 Zuschauer**; einen Relay-Modus gibt es nicht.
-- Zuschauer können nur in der Lobby beitreten, nicht mitten in einem laufenden Match.
-- Kein Reconnect mitten im Match: Verlässt ein **Spieler** das Spiel, kehrt der Host ins Hauptmenü zurück (und umgekehrt). Ein Zuschauer kann die Partie jederzeit verlassen, ohne das Match zu unterbrechen.
-- Bots werden ausschließlich host-seitig simuliert. Ein Client kann einen Bot-Slot nicht selbst übernehmen, solange das Match läuft.
-- Kern-Entitäten (Türme, Flächeneffekte, Geschosse) werden repliziert; einzelne Partikel-/Sound-Effekte werden weiterhin host-seitig berechnet und können bei Clients fehlen.
-- Bei sehr hoher Latenz können Positionen leicht nachziehen – der Host bleibt aber immer die Wahrheit.
+Insgesamt gibt es über **230 Karten**: rund 210 in den Pools Offensive, Defensive und Bewegung, dazu 19 im Pool Nahkampf. Hier die wichtigsten Gruppen.
 
-### 5. Typische Probleme
+### Kartenpools
+
+| Pool | Inhalt | Beispiele |
+| :--- | :--- | :--- |
+| **Offensive** | Schaden, Munition, Projektile, Elemente | Splittergeschoss, Panzerbrecher, Brandkapsel, Kettenreaktion, Leichtes/Schweres Geschoss, Mörser, Notvorrat, Fokuskristall, Weitstrahler, Kraftladung |
+| **Defensive** | Leben, Schild, Rüstung, Reflexion, Block, Größe | Sanitäter, Bollwerk, Zweites Herz, Tank-Panzerung, Stachelweste, Dornenthron, Riese, Wandelnder Koloss |
+| **Bewegung** | Tempo, Sprünge, Dash, Größe | Federstiefel, Windschatten |
+| **Nahkampf** | Nur für den `E`-Schlag | Schleifstein, Frostklinge, Parade, Meister der Werkbank |
+
+Weitere bekannte Karten: **Lebensquell** (Max-HP), **Scharfe Munition** (+20 % Schaden), **Abpraller**, **Splittergeschoss** (+1 Projektil), **Flipper-Modus**, **Blutdurst** (Lebensraub), **Homing Micro-Seekers** (Zielsuche), **Cluster Warhead**, **Ricochet Frenzy**, **Martyrdom Shockwave** (Explosion beim K.O.), **Chronos Drive**. Munition und Nachladen verbessern **Quick Draw**, **Schnellfeuer**, **Gatling Surge**, **Großes Magazin**, **Schnelllader**, **Taktisches Magazin** und **Feldwartung**.
+
+**Duplikat-Abgleich (28.10.2026):** Pro Effekt soll es je Seltenheit möglichst nur eine Karte geben. Strikt schwächere Karten derselben Seltenheit wurden entfernt (u. a. Gummigeschoss, Wirbelsturm, Treffsicher, Schnelle Hände, Vitaler Kern, Panzerplatte, Raketenschuh, Leichtgewicht, Giftkern, Explosionswelle, Instabiler Kern). Notvorrat ist jetzt Uncommon, Quick Draw Rare, Martyrdom Shockwave Epic. Ähnliche Karten sind **Evolutionen** einer Grundkarte: Sie kommen nur, wenn man die Grundkarte besitzt, wer einen Zweig nimmt, bekommt den anderen nicht mehr, und die Werte kommen zur Grundkarte dazu.
+
+| Grundkarte | Zweig A | Zweig B |
+| :--- | :--- | :--- |
+| Abpraller (Common, +1) | Bouncy Balls (Uncommon, +1, +15 % Projektilgeschw.) | Stabilisator (Uncommon, +1, +15 % Projektilgröße) |
+| Flipper-Modus (Rare, +3 Abpraller) | Ricochet Frenzy (Epic, +3, +15 % Projektilgeschw., +20 % Schaden pro Abpraller) | Flummi-Kern (Epic, +3, +15 % Projektilgröße) |
+| Scharfe Munition (Common, +20 % Schaden) | Wuchtgeschoss (Uncommon, +20 %) | Heavy Bullets (Uncommon, +15 %, +40 % Projektilgröße) |
+| Scharfschütze (Common, +30 % Projektilgeschw.) | Railgun-Munition (Uncommon, +30 %, +8 % Schaden) | Fast Forward (Uncommon, +30 %, +12 % Tempo) |
+| Splittergeschoss (Uncommon, +1 Projektil) | Splitterladung (Rare, +1, enge schnelle Salve) | Leichte Schrotflinte (Rare, +2, breit) |
+| Zäher Kern (Common, +24 % Max HP) | Lebensquell (Uncommon, +20 %) | Schwarzes Herz (Uncommon, +30 %, −6 % Tempo) |
+| Regenerationsmodul (Common, +1 HP/s) | Regenerationsserum (Uncommon, +1 HP/s) | Sanitäter (Uncommon, +0,6 HP/s, +30 Max HP) |
+| Blutdurst (Uncommon, +12 % Lebensraub) | Vampiric Leech (Rare, +15 %) | Vampirklinge (Rare, +20 %, −10 % Max HP) |
+| Kompaktkern (Common, −10 % Größe) | Kompakte Statur (Uncommon, −5 %, +8 % Tempo) | Schlanker Körper (Uncommon, −10 %, +10 % Sprungkraft) |
+| Feather Shoes (Uncommon, +1 Luft-Sprung) | Federstiefel (Rare, +1 Luft-Sprung, +10 % Sprungkraft) | – |
+| Verstärkte Deckung (Uncommon, +0,3 s Block) | Ausdauerblock (Rare, +0,3 s, −10 % Abklingzeit) | – |
+| Weitstrahler (Common, +25 % Fähigkeitsgröße) | Flächenbrecher (Common, +50 % Fähigkeitsgröße) | – |
+| Kraftladung (Common, +25 % Fähigkeitsschaden) | Überladung (Common, +50 % Fähigkeitsschaden) | – |
+| Powerup-Verstärker (Common, +25 % Powerup-Wirkung) | Powerup-Magnet (Common, +25 % Powerup-Wirkung, +2 Felder Sammelreichweite) | – |
+
+Max-HP- und Schild-Boni auf Karten wurden verdoppelt, damit man nicht zu schnell stirbt.
+
+### Sub-Tags
+
+Jede Karte hat neben ihrem Pool (Haupt-Tag) beliebig viele **Sub-Tags**. Sie werden automatisch aus den Kartenwerten abgeleitet und erscheinen in der Lobby-Kartenliste unter dem Titel.
+
+| Haupt-Tag | Sub-Tags |
+| :--- | :--- |
+| **Offensive** | Schaden, Feuerrate (inkl. Munition/Nachladen), Projektil, Bounce, Durchschlag, Zielsuche, Mehrfachschuss, Explosion, Element, Begleiter |
+| **Defensive** | Leben, Heilung, Schild, Block, Rüstung, Reflexion |
+| **Bewegung** | Tempo, Sprung, Dash, Schwerkraft, Größe (kleiner oder größer) |
+| **Nahkampf** | Klinge, Reichweite, Schlagtempo, Rückstoß, Kontrolle, Elementarhieb |
+| **Allgemein** | Fähigkeit (Heldenfähigkeit), Powerup (verstärkt eingesammelte Powerups), Unique (eigene Spezialmechanik) |
+
+Sub-Tags gelten poolübergreifend: Eine Defensive-Karte kann z. B. auch „Tempo“ haben.
+
+Kartentexte nutzen für gleiche Effekte immer dieselben Begriffe: **Tempo** (Laufgeschwindigkeit), **Max HP**, **Schild**, **Schaden**, **Feuerrate**, **Munition**, **Projektilgeschwindigkeit**, **Projektilgröße**, **Abpraller**, **Durchschlag**, **Explosionsradius**, **Sprungkraft**, **Luft-Sprung**, **Größe**, **Giftstapel**, **Giftschaden**, **HP/s Regeneration** sowie **Dash-**, **Block-**, **Fähigkeits-** und **Nahkampf-Abklingzeit**.
+
+### Klassenkarten (je 3 pro Held)
+
+| Held | Klassenkarten |
+| :--- | :--- |
+| **Ignis** | Nachbrenner, Sprengkern, Überhitzung |
+| **Volt** | Overclock, Statisches Feld, Kinetische Ladung |
+| **Spore** | Virulenter Stamm, Mycelnetz, Toxische Blüte |
+| **Nova** | Schwerkraftkern, Leerer Raum, Supernova |
+| **Klinge** | Wirbelklinge, Klingenreflexe, Duellklinge |
+| **Bastion** | Energieschild, Feldwartung, Bastionsfestung |
+| **Phantom** | Schattenklinge, Schattensprung, Todeskuss |
+
+### Fähigkeitskarten (je 4 pro Held)
+
+Eine Grundkarte (Rare) mit zwei exklusiven Evolutionen (Epic) und eine Einzelkarte (Uncommon). Evolutionen erscheinen erst mit der Grundkarte, und nur ein Zweig ist wählbar.
+
+| Held | Grundkarte | Evolution A | Evolution B | Einzelkarte |
+| :--- | :--- | :--- | :--- | :--- |
+| **Ignis** | Raketentriebwerk | Napalm-Landung | Splitterlandung | Kurze Zündschnur |
+| **Volt** | Hochspannung | Kettenblink | Gewitterspur | Restladung |
+| **Spore** | Dichter Nebel | Ätzender Nebel | Symbiose | Sporenvorrat |
+| **Nova** | Ereignishorizont | Implosion | Doppelstern | Massenanziehung |
+| **Klinge** | Geschliffene Klingen | Echowirbel | Blutrausch | Tanzschritt |
+| **Bastion** | Verstärkte Emitter | Schutzkuppel | Pulsfeld | Notfallprotokoll |
+| **Phantom** | Lautlose Klinge | Schattenschnitt | Lähmendes Mal | Lange Schatten |
+
+**Für alle Helden:** **Weitstrahler** (+25 % Fähigkeitsgröße) mit Evolution **Flächenbrecher** (+50 %) und **Kraftladung** (+25 % Fähigkeitsschaden) mit Evolution **Überladung** (+50 %), alle Common. Die Boni multiplizieren sich (Grundkarte + Evolution = ×1,875). *Fähigkeitsgröße* vergrößert Wirkungsradius und Effektfläche der Klassenfähigkeit samt Evolutionen (Einschlag, Schockwelle, Giftwolke, Sog, Klingenwirbel, Heilfeld-Optik, Schattenschnitt, Napalm, Blitzzonen, Splitter-Explosionen), aber **nicht** die Teleport-, Sprung- oder Wurfweite. *Fähigkeitsschaden* erhöht allen Schaden der Fähigkeit inklusive Kettenblitz, Splitter, Blitzzonen und Gift von „Ätzender Nebel“; bei Bastion steigen Heilung und Schild. Novas Singularität selbst macht keinen Schaden, deshalb bekommt Nova Kraftladung und Überladung erst angeboten, wenn „Implosion“ im Deck ist. Gesamtwerte sind gedeckelt (Größe ×2,5, Schaden ×4).
+
+### Talentbäume
+
+Eine Ausbaukarte erscheint erst, wenn die Grundkarte im Deck liegt. Wer einen Zweig wählt, bekommt den anderen nicht mehr angeboten.
+
+| Familie | Grundkarte | Ausbau A | Ausbau B |
+| :--- | :--- | :--- | :--- |
+| **Turm** | Turm: Fähigkeit stellt eine Kanone (100 Leben) auf | Mehr Türme: alle 5 s ein weiterer | Folgende Türme: folgen dir |
+| **Giftschuss** | +2 Gift-Stapel | Giftwolke am Einschlag | Giftspur hinter dir |
+| **Blitzschuss** | 0,1 s Betäubung | Kettenblitz | Blitz-Orb am Einschlag |
+| **Frostschuss** | 0,8 s Verlangsamung | Eisnova am Einschlag | Eisbahn hinter dir |
+| **Explosivschuss** | +30 px Explosion | Großer Knall (+60 px) | Splitterbomben |
+| **Feuersturm** | Geschosse entzünden | Brandherd am Einschlag | Feuerspur hinter dir |
+| **Wächterdrohne** | Drohne schießt mit | Zwillingsdrohne | Regenerationsdrohne |
+| **Schutzdrohne** | Drohne fängt Schüsse ab | Heilende Schutzdrohne | Schutzdrohnen-Schwarm |
+| **Mörser** | Steiler Bogen, mehr Schaden | Präzisionsmörser | Belagerungsmörser |
+| **Rückstoßfeder** | +25 % Rückstoß | Druckkammer | Schockgeschoss |
+| **Leichte Schuhe** | Tempo | Windschuhe | |
+| **Minenleger** | Blocken legt eine unsichtbare Mine | Sofortzünder: explodiert ohne Verzögerung | |
+| **Tank-Panzerung** | siehe unten | | |
+
+**Türme** haben 100 Leben und verlieren 5 % davon pro Sekunde, halten also höchstens 20 s. Gegner und Explosionen beschädigen sie. Turm-Panzerung und Schnellfeuer-Geschütz gibt es nur mit Turm.
+
+### Tank-Panzerung (Evolutionsbaum)
+
+| Seltenheit | Zweig A (Rüstung) | Zweig B (Reflexion) |
+| :--- | :--- | :--- |
+| Common | Tankplatte (+Max-HP, +5 % Rüstung) | Tankplatte |
+| Uncommon | Stahlhaut | Dornenhaut (8 % Reflexion) |
+| Rare | Festungspanzer | Reflektorplatte (12 %) |
+| Epic | Titanenbollwerk | Spiegelpanzer (18 %) |
+| Legendary | Ewige Bastion | Spiegelkoloss (22 %) |
+
+Dazu kommen einzelne Reflexions-Karten im Pool Defensive: **Stachelweste**, **Rachepanzer**, **Blutspiegel**, **Vergeltungsschild** und **Dornenthron**. Manche reflektieren mehr unter 35 % Leben oder heilen dich mit.
+
+### Block-Karten
+
+| Seltenheit | Karten |
+| :--- | :--- |
+| Common | Blockübung (+0,15 s), Schnelle Deckung (−15 % Abklingzeit) |
+| Uncommon | Verstärkte Deckung (+0,3 s, Evolution: Ausdauerblock), Schildstoß (stößt weg) |
+| Rare | Blockbombe, Heilzone, Druckwelle |
+| Epic | Konterblitz (+50 % auf reflektierte Schüsse), Block-Experte, Unzerbrechlich |
+
+**Minen:** Mit **Minenleger** (Rare) lässt jeder Block eine Mine fallen, die auf dem Boden darunter liegen bleibt und auf Plattformen und Wippen mitfährt. Gegner sehen sie nicht (online gar nicht, am selben Bildschirm nur schwach). Nach 2 s ist sie scharf. Läuft ein Gegner darüber, blinkt sie und explodiert 1,5 s später: 50 Schaden, 2 Felder Explosionsradius, nur gegen Gegner. Höchstens 8 Minen pro Spieler, bei der neunten verschwindet die älteste. Nur mit Minenleger im Deck gibt es **Minenschaden** (Rare, +50 Schaden) und **Minenreichweite** (Uncommon, +1 Feld Explosionsradius). Evolution A **Sofortzünder** (Epic) lässt Minen ohne Verzögerung explodieren.
+
+### Nahkampf-Karten
+
+| Seltenheit | Karten |
+| :--- | :--- |
+| Common | Schleifstein (+25 % Schaden), Langer Griff (+0,5 Felder), Leichter Griff (−15 % Abklingzeit), Schwerer Kopf (+40 % Rückstoß) |
+| Uncommon | Frostklinge (1,2 s Frost), Giftzahn (+3 Gift), Glühende Spitze (3 Brand), Weiter Schwung (+30° Bogen), Gnadenstoß (+60 % unter 35 % Leben) |
+| Rare | Elektroschocker (0,35 s Betäubung), Wandklatscher (Wand-Betäubung für alle Waffen), Blutklinge (25 % Lebensraub), Meisterschliff |
+| Epic | Hochspannung (Kettenblitz), Nachschlag (zweiter Schlag 60 %), Eiskern |
+| Legendary | Meister der Werkbank, Gewitterschlag, Parade (bereiter Schlag löst von selbst aus und wirft anfliegende Projektile zurück) |
+
+---
+
+## 🌍 Maps & Spielfeld-Objekte
+
+Der Host wählt die Map unter **Regeln → Spielfeld**. **Zufällig** zieht pro Runde eine der aktiven Maps (abschaltbar im Reiter **Levels**), alle Spieler bekommen dieselbe.
+
+| Map | Art | Besonderheiten |
+| :--- | :--- | :--- |
+| **Grasarena** | Arena | Luftige Balken, zentrale Wippe, Kisten, Ranken |
+| **Wüstenruine** | Arena | Offene Sandinseln, Kettenplattformen, TNT |
+| **Eisgrotte** | Arena | Glatte Eisflächen, schwebende Wippe, Kistenstapel |
+| **Neonfabrik** | Arena | Technik-Balken, Ketten, Kisten, Powerups |
+| **Weite Wiese** | Arena | Wenige Plattformen, viel Platz für Duelle |
+| **Wolkeninsel** | Arena | Kleine Wolkeninseln, weite Sprünge, Wolkenfähre |
+| **Uhrwerk** | Arena | Großes Zifferblatt in der Mitte: Der lange Minutenzeiger dreht sich in 16 s einmal herum, man fährt auf ihm mit. Aufzüge an den Seiten, aus zwei Trichtern fallen alle 10 s Kugeln, die der Zeiger herumschiebt |
+| **Hauptplatine** | Arena | Leuchtende Leiterplatte, Datenbus-Shuttle, Chips als Deckung |
+| **Kistenfestung** | Arena | Nur Holzkisten, große Wippe mit Kistentürmen |
+| **Sonnentempel** | Arena | Riesige hohle Pyramide über drei Viertel der Breite (drüberlaufen oder unten hinein), Kistenkette über der Spitze |
+| **Kettenwerk** | Arena | Neon-Halle voller Kistenketten, Einweg-Stege |
+| **Wollhaus** | Arena | Haus mit vier Räumen, Luken und begehbarem Dach, Kisten an Ketten |
+| **Eispyramiden** | Arena | Zwei große hohle Eispyramiden über fast die ganze Breite, Kistenkette zwischen den Spitzen |
+| **Serverhaus** | Arena | Rechenzentrum mit vier Räumen, tief gespannte Kistenketten zum Rand |
+| **Gitterzaun** | Arena | Gitter aus fünf senkrechten Ketten (Decke bis Boden) und vier waagrechten Ketten, große Kisten an jeder Kreuzung, Einweg-Stege an den Rändern |
+| **Trümmerfeld** | Arena | Offen: zerstörbare Mauerreste, Torbogen in der Mitte, viele Fässer und Kisten |
+| **Schrottplatz** | Arena | Offen: Blockhaufen, Kisten an Deckenketten, viel TNT |
+| **Schneefeld** | Arena | Offen: Schneeburgen aus zerstörbaren Blöcken, Tiefschnee und Eis |
+| **Wollmarkt** | Arena | Offen: Marktstände mit Einweg-Dächern auf zerstörbaren Pfosten, Trampoline |
+| **Kugellawine** | Arena | Zwei Schrägen unter der Decke voller Kugeln hinter einer Kettensperre. Sie reißt nach 7 s (oder früher, wenn man sie zerschießt), dann rollt die Lawine über ein Satteldach durch die Arena. In der Höhle unter dem Dach dreht sich ein Rührbalken: Kleine Kugeln rollen darunter durch, große schiebt er an |
+| **Kugelbahn** | Arena | Doppelte, gespiegelte Zickzack-Kugelbahn. Oben an jeder Bahn erscheint alle 5 s eine Kugel, oft mit bis zu zwei kleinen Kugeln davor, und rollt bis auf den Boden. Die Schrägen sind Einweg-Rampen: von unten durchspringen, mit `S` / `↓` durchfallen, Kugeln rollen oben darauf. Leiter aus Einweg-Stegen in der Mitte |
+| **Kugelkette** | Arena | Lange Kette quer unter der Decke zwischen zwei Randleisten, oben drauf viele Kugeln aller Größen. Zerschießt man ein Glied, regnet alles in die Arena |
+| **Kugelmühle** | Arena | Zwei gegenläufige Windmühlen-Kreuze. Aus Trichtern fallen alle 5 s Kugeln auf die Flügel, die sie anheben und zur Mitte schleudern. Leiter aus Einweg-Stegen in der Mitte, Steg-Treppen außen |
+| **Pilzpfad** | Scrollt seitlich | Gruben, Treppen, Herz-Block, Fähre, Portale |
+| **Gletscherpass** | Scrollt seitlich | Aufzüge im Abgrund, Eisfähre, hängende Wippe |
+| **Lavaturm** | Scrollt nach oben | Lava steigt schon ab 4 s, Gipfel-Arena |
+| **Himmelsleiter** | Scrollt nach oben | Feder, Aufzug, Wolkenfähre, Gipfelportal |
+
+Auf Scroll-Maps folgt die Kamera dir. Gegner außerhalb des Bildes zeigen Pfeile am Rand.
+
+### Spielfeld
+
+- **Gummiwand**: Um die Karte liegt ein Rahmen mit Stacheldraht (rote Dornen zeigen ins Feld). Wer ihn berührt, nimmt Schaden (roter Plasma-Schlag am Rand, online für alle sichtbar) und wird Richtung Bildschirmmitte zurückgeschleudert (Mitte aller Spieler, online für alle gleich; in Scroll-Levels gerade zurück ins Feld). Mit dem Modifier **Höhle** sind es feste Felswände.
+- **Spawns** sind jede Runde anders, verteilt über das Level und auf verschiedene Höhen.
+- Jede neue Runde räumt Projektile, Türme und Effekte der Vorrunde weg.
+
+### Objekte
+
+| Objekt | Verhalten |
+| :--- | :--- |
+| **Zerstörbare Blöcke** | Halten 3 Treffer, dann weg |
+| **Starke Ranken** | Brechen nur durch Beschuss, wachsen nach 8 s nach |
+| **Schwache Ranken** | Brechen beim Drüberlaufen, wachsen nach 4,5 s nach |
+| **Eisflächen** | Rutschig, wenig Reibung |
+| **Sprungfedern** | Katapultieren hoch in die Luft |
+| **Portale** | Teleportieren, danach 10 s weg |
+| **Herz-Blöcke** | Von unten anspringen oder anschießen: +30 HP |
+| **Stacheln** | Schaden und Wegschleudern |
+| **Wippe** | Kippt unter Gewicht, Schüssen und Explosionen, federt zurück |
+| **Kettenplattform** | Hängt an Ketten und schwingt |
+| **Einweg-Steg** | Dünner Steg mit kleinen Pfeilen darunter: von unten durchspringen, oben landen. Mit `S` / `↓` fällst du hindurch. Schüsse von unten fliegen durch |
+| **Kistenkette** | Kisten verschiedener Größe an Ketten, gespannt zwischen Plattformen oder vom Kartenrand, oder frei hängend. Spieler, Kisten und Schüsse prallen ab, man kann darauf laufen. Glieder halten 2 Treffer (Schüsse oder Schläge), Kisten 2 Treffer; dann reißt die Kette dort und die Teile fallen. Explosionen und Kugeln schubsen Glieder nur, sie reißen sie nicht. Beim Spawn schwingt die Kette gedämpft in ihre Ruhelage |
+| **Kettengitter** | Netz aus Ketten mit Kisten an den Kreuzungen (Gitterzaun). Jedes Kettenstück reißt einzeln, eine zerstörte Kreuzungskiste löst die angrenzenden Stücke |
+| **Pyramide** | Großes hohles Dreieck: Die Schrägen sind begehbar, unten ist sie offen. Innen führen Einweg-Stege bis unter die Spitze |
+| **Haus** | Vier Räume: unten Türen, oben Fenster, Einweg-Luken in der Zwischendecke über kleinen Plattformen. Außen führen Leisten zum Fenster und aufs Satteldach |
+| **Aufzug / Fähre** | Fährt zwischen zwei Punkten und nimmt dich mit |
+| **Drehbalken** | Dreht sich gleichmäßig um seine Nabe (Uhrzeiger, Rührbalken, Windmühlen-Kreuz). Man fährt darauf mit, bis er zu steil wird. Kugeln, Kisten und Fässer schiebt und schleudert er weg. Schüsse prallen ab wie an einer Wand |
+| **Fass** | Rollt und fliegt bei Treffern weg, fallende Fässer machen Schaden |
+| **TNT-Fass** | Blinkt 3 s nach einem Treffer, dann Explosion mit Kettenreaktion |
+| **Holzkisten** | Stapelbar, kippen um. Fallende oder geschleuderte Kisten machen Schaden (bis 38) |
+| **Rollende Kugeln** | 0,5, 1 oder 2 Kacheln groß, aus Gummi, Holz oder Eisen. Rollen Schrägen hinab und verletzen, wen sie treffen: je schneller und schwerer, desto mehr. Gummi: wie ein Strandball, sehr leicht und etwas schwebend, fliegt bei Schüssen, Schlägen, Explosionen und Anrempeln weit weg, hält sehr viel aus, wenig Schaden (bis 16). Holz: mittel, bis 30 Schaden, splittert bei harten Aufprallen. Eisen: sehr schwer, bis 55 Schaden, zertrümmert Kisten und Blöcke. Große Kugeln halten doppelt so viel aus und treffen härter, kleine halten halb so viel aus und treffen schwächer. Wer draufsteht, rollt sie weg, wer dagegenläuft, schiebt sie an. Wer obendrauf steht oder dagegen läuft, nimmt keinen Schaden |
+| **Kettensperre** | Hält Kugeln auf einer Schräge zurück, blinkt rot kurz bevor sie reißt. Reißt nach Treffern oder nach Ablauf der Zeit |
+| **Powerups** | Heilung (35 HP), Schutz (3 s Unverwundbarkeit), Schaden (6 s +65 %), Dauerfeuer (5 s), Auto-Angriff (8 s: halbe Nahkampf-Abklingzeit, die Nahkampfwaffe schlägt selbst nach Gegnern in Reichweite), Multishot (8 s: jeder Schuss feuert 3 Projektile im Fächer), Unsterblichkeit (stirbst du in den nächsten 10 s, liegst du 2 s unverwundbar am Boden und stehst mit halbem Leben und 1 s Schutz wieder auf; der Tod zählt nicht, kein Kill für den Gegner; Todes-Effekte wie die Kamikaze-Explosion lösen trotzdem aus), Rache (5 s 100 % Dornenschaden: Angreifer bekommen den Schaden, den sie dir machen, zurück), Unsichtbar (6 s: Gegner sehen deinen Charakter samt Lebensleiste nicht, Schüsse und Effekte bleiben sichtbar; online sieht dein Team dich schwach, am geteilten Bildschirm bleibt gegen menschliche Gegner nur ein Hauch übrig; Bots, Auto-Angriff und Zielsuche nehmen dich nicht ins Visier, treffen kannst du trotzdem). Aktive Powerups lassen den Körper in ihrer Farbe schimmern und zeigen eine Aura: Schutz eine Schildblase, Unsterblichkeit einen Heiligenschein, Rache einen drehenden Stachelkranz, alle anderen ein loderndes Energiefeld in ihrer Farbe; in der letzten Sekunde flackert die Aura. Powerups erscheinen 30 % seltener als in den Map-Werten angegeben (zufällig in der Arena, aus Kisten und beim Powerup-Regen). Einzeln abschaltbar im Lobby-Reiter **Powerups**. **Powerup-Verstärker** (+25 %) und seine Evolution **Powerup-Magnet** (weitere +25 %, +2 Felder Sammelreichweite: Powerups fliegen dir aus der Nähe zu) verlängern die Dauer bzw. erhöhen die Heilung |
+
+---
+
+## 🎲 Runden-Modifier
+
+Jede Runde können zufällig Modifier aktiv sein. Bei Rate 100 %: 53 % keine, 33 % einer, 10 % zwei, 3 % drei, 1 % vier. Unter 100 % fällt öfter einer weg, über 100 % kommt öfter einer dazu. Der Host schaltet im Regeln-Tab einzelne Modifier an oder aus (**ALLE** / **KEINE**).
+
+| | Modifier | Wirkung |
+| :---: | :--- | :--- |
+| ⛰ | Höhle | Feste Felswände statt Gummiwand |
+| 💣 | TNT-Depot | Mehr TNT, alle 10 s regnen 5 TNT-Kisten |
+| 🌪 | Sturmwind | Alle 10 s ein Windstoß (3,5 s), schiebt Spieler und bremst Schüsse |
+| 🔴 | Orbital-Laser | Alle 10 s ein angekündigter Riesenlaser quer über die Map (50 Schaden) |
+| 🪙 | Münzbeute | Münzen im Level, wer die meisten hat, bekommt eine Extrakarte |
+| 💚 | Wandernde Heilzone | Schwebender Heilkreis wandert über die Map, 16 HP/s |
+| 🦙 | Piñata-Lama | Unsterbliches Lama flieht vor dem Führenden. Meister Schaden bekommt eine Extrakarte |
+| 🌙 | Mondgravitation | 50 % Gravitation |
+| 🪨 | Schwerewelt | 60 % mehr Gravitation |
+| 🌋 | Der Boden ist Lava | Der unterste Boden brennt |
+| 🌊 | Lava-Flut | Alle 30 s steigt Lava auf ein Drittel bis die Hälfte der Höhe und sinkt wieder |
+| ☄ | Meteoritenschauer | Alle 12 s 3 Meteore mit Zielkreuzen |
+| ❄ | Glatteis-Welt | Alle Plattformen spiegelglatt |
+| 🐷 | Mini-Chaos | Alle 35 % kleiner und flinker |
+| 💥 | Schadensrausch | +35 % Schaden für alle |
+| 💨 | Turboschweine | Alle 30 % schneller |
+| 🪂 | Luftakrobatik | +1 Sprung in der Luft für alle |
+| 🌿 | Regeneration | Alle heilen 4 HP/s |
+| 🛡 | Startschild | Bonusschild in Höhe von 30 % der Max-HP |
+| 📦 | Kistenregen | Alle 9 s drei Holzkisten |
+| 🎁 | Powerup-Regen | Etwa drei zusätzliche Powerups beim Start (vier, abzüglich 30 %) |
+| ⚪ | Kugelregen | Alle 4 s fallen fünf Kugeln (Gummi, Holz, Eisen) vom Himmel |
+| 🎳 | Kugelhagel | Alle 16 s (erstmals nach 6 s) prasseln 24 Kugeln auf einmal über die ganze Breite herab |
+| 🌀 | Zone | Sturmkreis wie in Fortnite: startet größer als die Map, schrumpft in drei Stufen (gestrichelte Vorschau), am Ende wandert ein kleiner Kreis über die Map. Außerhalb 6 bis 16 HP/s, im Sudden Death doppelt so schnell und immer über der Lava |
+| 🌑 | Nacht | Jeder sieht nur einen kleinen Lichtkreis |
+| 😈 | Heiße Kartoffel | Ein kleines fliegendes Teufelschwein (fliegt durch Wände) jagt zuerst den Führenden und schießt gerade Feuerbälle auf ihn (8 Schaden, alle 1,2 s, nur mit Sichtlinie). Ein Hörnchen-Pfeil zeigt das Ziel. Trifft das Ziel den Teufel (Schuss, Explosion oder Nahkampf), jagt er einen anderen Spieler. Trifft ihn jemand anderes, wird dieser sein Ziel und der Teufel ist 5 s wütend: schneller, schießt alle 0,5 s und lässt sich nicht weitergeben |
+| 🔨 | Brawl | Nahkampfwaffen: 50 % mehr Reichweite, halbe Abklingzeit |
+
+Extrakarten aus Münzbeute und Piñata-Lama erscheinen im Draft als **Bonus Zug (Gold)** bzw. **Bonus Zug (Pinata)**. Währenddessen regnen Goldmünzen bzw. Konfetti und Bonbons über den Bildschirm.
+
+---
+
+## 🤖 Bots
+
+- Jeder Slot ab 2 kann ein Bot sein. Für ein Solo-Match einfach bis zu fünf Bots einstellen.
+- Bots suchen den nächsten Gegner, springen über Hindernisse, lassen sich durch Einweg-Stege fallen, gleichen den Geschossbogen aus, schießen nur mit Sichtlinie, nutzen Dash, Fähigkeit und Nahkampf, flüchten vor Lava und wählen selbst passende Karten. Bei der Heißen Kartoffel schießen sie als Ziel auf den Teufel und halten sonst das Feuer zurück, wenn er in der Schusslinie schwebt.
+- Online simuliert der Host alle Bots.
+
+---
+
+## 🌐 Online & LAN
+
+Bis zu **6 Spieler** (Host + 5) plus bis zu **4 Zuschauer**. Der Host ist Slot 1 und rechnet die ganze Runde, die anderen senden nur Eingaben. Online spielt jeder mit der **P1-Steuerung**.
+
+### Übers Internet mit Code (Epic, empfohlen)
+
+1. **Host**: Hauptmenü → **ONLINE SPIELEN** → **Online hosten**.
+2. Oben in der Lobby steht ein **6-stelliger Code** mit Kopier-Knopf. Den an die Freunde schicken.
+3. **Mitspieler**: **ONLINE SPIELEN** → Code eintragen → **Mit Code beitreten**.
+
+Kein Portfreigeben nötig. Läuft über Epic Online Services, ein Epic-Konto braucht niemand. Wichtig: Host und Mitspieler müssen an **verschiedenen PCs** sitzen.
+
+### Im LAN oder per IP
+
+1. **Host**: **ONLINE SPIELEN** → Port `7777` lassen → **SPIEL HOSTEN**. Die Lobby zeigt die lokale IP (z. B. `192.168.1.42`).
+2. **Mitspieler**: IP und Port eintragen → **BEITRETEN**. Für Zuschauer vorher **„Als Zuschauer beitreten“** anhaken.
+
+Übers Internet per IP: Das Spiel versucht **UPnP** automatisch. Klappt das nicht, im Router **UDP 7777** weiterleiten oder **ZeroTier/Tailscale** nutzen (gut bei CGNAT).
+
+### Gut zu wissen
+
+- **Ping** steht in Lobby und HUD (grün, gelb, rot).
+- Synchronisiert werden Lobby-Einstellungen, Charaktere, Namen, Map, alle Objekte, Lava, Modifier, Draft, Punkte, Kill-Cam und Statistik.
+- Zuschauer können nur in der Lobby beitreten.
+- Kein Reconnect: Verlässt ein Spieler das Match, geht es zurück ins Menü.
+
+### Typische Probleme
+
 | Problem | Lösung |
 | :--- | :--- |
-| „Verbindung fehlgeschlagen“ | Prüfen, ob der Host wirklich im Online-Panel hosted, IP/Port stimmen und beide dieselbe Version nutzen. |
-| Freund kommt nicht rein, LAN geht aber | Windows-Firewall (UDP 7777) und Router-Portfreigabe prüfen; sonst ZeroTier/Tailscale nutzen. |
-| UPnP-Meldung „nicht möglich“ | Kein Fehler des Spiels – Router unterstützt es nicht. Port manuell freigeben oder ZeroTier/Tailscale verwenden. |
-| Verbindung bricht ab | Host oder Client hat das Spiel beendet. Beide zurück ins Menü und neu hosten/beitreten. |
-| Client steuert falsch | Im Online-Modus gilt WASD + Maus (P1-Bindings), nicht die Pfeiltasten. |
+| „Verbindung fehlgeschlagen“ | Gleiche Spielversion? Host wirklich offen? IP, Port oder Code richtig? |
+| Code-Beitritt hängt | Nicht am selben PC hosten und beitreten. Protokoll steht in `epic_online.log` |
+| LAN geht, Internet per IP nicht | Firewall und Router-Portfreigabe prüfen, sonst Code-Beitritt oder ZeroTier/Tailscale |
+| UPnP „nicht möglich“ | Router kann es nicht, Port manuell freigeben |
+| Client steuert falsch | Online gilt WASD + Maus |
 
 ---
 
-## 🕹️ Steuerung
+## 🔧 Hauptmenü & Optionen
 
-### Spieler 1 (Maus & Tastatur)
-- **Bewegen**: `A` / `D`
-- **Springen & Wandabsprung**: `Leertaste` (gedrückt halten für höheren Sprung)
-- **Zielen**: Mauszeiger
-- **Schießen**: `Linksklick`
-- **Dash / Ausweichen**: `Shift` (kurze Unverwundbarkeit)
-- **Block**: `Q` (0,5s schadensimmun + Projektilreflexion, 4s Cooldown)
-- **Nachladen**: `R`
-- **Held-Fähigkeit**: `Rechtsklick` oder `E` (alternativ `F`)
+Das Hauptmenü im **Platinen-Look**: leuchtende Leiterbahnen, zwei Eber mit Lötkolben, die Knöpfe in der Mitte.
 
-### Spieler 2 (Tastatur / lokaler 2-Spieler-Modus)
-*Gilt nur für den lokalen 2-Spieler-Modus. Der Online-Client nutzt die P1-Steuerung.*
-- **Bewegen**: `Pfeiltaste Links` / `Rechts`
-- **Springen**: `Pfeiltaste Hoch`
-- **Zielen**: Pfeiltasten
-- **Schießen**: `.` (Punkt)
-- **Dash**: `/` (Schrägstrich)
-- **Block**: `M`
-- **Nachladen**: `L`
-- **Held-Fähigkeit**: `,` (Komma)
+| Knopf | Wirkung |
+| :--- | :--- |
+| **SPIEL STARTEN** | Lokale Lobby |
+| **ONLINE SPIELEN** | Hosten oder beitreten (Code oder IP) |
+| **HELDEN** | Übersicht aller Helden mit Werten und Fähigkeiten |
+| **WIKI** | Öffnet dieses Wiki im Browser |
+| **OPTIONEN** | Einstellungen |
+| **BEENDEN** | Spiel schließen |
 
-### Globale Tasten
-- `F9`: Match zurücksetzen und zurück in die Lobby (im Online-Modus deaktiviert)
+**Optionen** gibt es im Hauptmenü und in der Runde über `Esc`:
+
+- **Grafik**: Fenster, Vollbild oder Vollbild-Fenster (randlos).
+- **Audio**: Gesamt, Effekte und Musik, je 0–100 %.
+- **Effekt-Set** (Soundpaket): Arena (Standard), Retro, Handgemacht (Foley), Modernes Sci-Fi, Kräftig & echt, Magie & Zauber, Werkstatt & Metall, Weich & verspielt und optional **Eigene Mischung**. Mit **PROBE** anhören. Gilt nur auf deinem PC.
+- **Steuerung**: Feld anklicken, neue Taste drücken. Doppelte Belegungen werden angezeigt, **STANDARD WIEDERHERSTELLEN** setzt alles zurück.
+
+Jede Map-Stilrichtung hat eine eigene, ruhige **Hintergrundmusik**.
+
+---
+
+## 📊 Statistiken, HUD & Feedback
+
+- **HUD**: Oben rechts das Match-Ziel, pro Spieler ein Punktebalken (im Team-Modus in Teamfarbe), Nahkampf-Status `[E]: BEREIT`.
+- **Am Charakter**: Munitionsstriche bzw. Nachlade-Ring, Lebensbalken mit Schild-Overlay, Symbole für Block (mit Abklingzeit-Anzeige), Schild, Dash und Fähigkeit.
+- **Tab-Charakterblatt**: Alle Werte, die Nahkampfwaffe und **KARTEN-BONI (SUMMEN)**. Geht auch während der Kartenwahl und wenn du tot bist. Ohne Blind Pick zeigt oben eine Leiste alle Spieler: bei gehaltenem Tab mit den Tasten 1–9 oder per Klick umschalten. Mit Blind Pick (online) bleibt es beim eigenen Blatt.
+- **Kill-Cam**: Beim rundenentscheidenden Tod läuft das Spiel 1,6 s lang in Zeitlupe (20 %), die Kamera zoomt auf den Treffer.
+- **Screenshake** bei Treffern, Kills und Explosionen.
+- **Trefferanimation**: Stauchen, Zittern, rotes Aufblitzen, Blutspritzer. Dazu ein Todes-Sound.
+- **Match-Ende**: Tabelle mit Punkten, Kills, Toden, Schaden, Block, Heilung, Trefferquote, Runden und Nahkampf. Dazu **MVP**, **Meister Schaden**, **meiste Blocks**, **meiste Heilung** und **Meister Nahkampf**.
+- **ALLE SPIELER, KARTEN & STATS**: Nach dem Match für jeden Spieler das komplette Blatt mit Karten.
+- **Rundenstatistik**: Jede Runde wird als Zeile in `round_stats.jsonl` gespeichert (für Balancing).
+- **Balance-Statistik im Spiel**: Optionen → **STATISTIK**. Sortierbare Tabellen (Spaltenkopf anklicken) für **Karten**, **Waffen** und **Helden**, getrennt nach Version: Runden, geglättete Siegquote, Vergleich mit derselben Seltenheit, Kills/Tode pro Runde, Schadens- und Heilanteil, Nahkampfschaden, Pickquote und Aufstiegsvorschläge. Filter: nur menschliche Spieler, nur aktuelle Versionen, Mindestrunden für Vorschläge. Bei Helden zusätzlich **Fähigk./R** und **Fähigk.-Anteil**: Schaden aus direkten Treffern der Heldenfähigkeit samt Evolutionen (Brand/Gift danach zählt nicht), erfasst seit 28.10.2026. Die Seite **Hinweise** listet Vorschläge, Werte ohne neue Version und die automatischen Aufstiege. Hältst du die Maus 0,5 s über eine Kartenzeile oder einen Kartennamen unter Hinweise, erscheint die Karte unten links. Rechnet genauso wie `tools/analyze_round_stats.py`.
+
+---
+
+## 💾 Dateien & Speicherorte
+
+Spieldaten liegen unter `%APPDATA%\Godot\app_userdata\Lötkolbeneber\`. Beim ersten Start übernimmt das Spiel automatisch die Daten aus dem alten Ordner `BattleBalls`.
+
+| Datei | Inhalt |
+| :--- | :--- |
+| `settings.cfg` | Optionen: Grafik, Lautstärke, Effekt-Set, Tasten |
+| `character_customization.json` | Dein Charakter, Name, Nahkampfwaffe |
+| `lobby_loadouts.json` | Eigene Regel-Presets |
+| `card_statistics.json` | Kartenstatistik und Aufwertungen |
+| `round_stats.jsonl` | Eine Zeile pro gespielter Runde |
+| `epic_online.log` | Protokoll der Epic-Verbindung |
+| `wiki.html` | Kopie dieses Wikis, wird beim Klick auf **WIKI** angelegt |
+| `logs/` | Godot-Logs |
+
+---
+
+## 🧰 Für Entwickler
+
+### Wichtige Skripte
+
+| Datei | Zweck |
+| :--- | :--- |
+| `scripts/autoload/global.gd` | Helden, Maps, Modi, Lobby-Zustand, Nahkampfwaffen |
+| `scripts/autoload/card_database.gd` | Alle Karten |
+| `scripts/autoload/network_manager.gd` | ENet- und Epic-Netzwerk |
+| `scripts/autoload/epic_online.gd` | Epic-Login und Lobby-Code |
+| `scripts/autoload/sound_manager.gd` | Sounds, Effekt-Sets, Musik |
+| `scripts/autoload/game_settings.gd` | Optionen und Tastenbelegung |
+| `scripts/autoload/card_stats.gd`, `round_stats.gd` | Statistik |
+| `scripts/balance_report.gd`, `scripts/ui/stats_screen.gd` | Balance-Statistik im Optionsmenü |
+| `scripts/main.gd` | Rundenablauf, Snapshots, Kill-Cam, Lava |
+| `scripts/player.gd` | Spieler, Fähigkeiten (Konstanten oben), Nahkampf |
+| `scripts/bullet.gd` | Ballistik, Durchschlag, Zielsuche, Kollision |
+| `scripts/level_generator.gd` | Maps und Tilesets, Einweg-Stege, Pyramide, Haus |
+| `scripts/level/crate_chain.gd`, `chain_link.gd` | Kistenketten (Bauplan, Gelenke, Netzwerk) |
+| `scripts/level_modifier_defs.gd` | Liste der Runden-Modifier |
+| `scripts/main_menu.gd` | Hauptmenü inkl. Wiki-Knopf |
+| `scripts/ui/hud.gd` | HUD, Tab-Blatt, Match-Ende |
+
+### Werkzeuge
+
+- `godot --headless res://tools/level_check.tscn` prüft alle Maps auf unerreichbare Flächen (`-- --seeds=24 --maps=pilzpfad --ascii` für eine Textkarte).
+- `tools/analyze_round_stats.py` wertet `round_stats.jsonl` aus, getrennt nach Version von Karten, Nahkampfwaffen, Helden und Heldenfähigkeiten. Dieselbe Rechnung steckt in `scripts/balance_report.gd` (Optionen → STATISTIK); Änderungen in beiden nachziehen.
+
+### Balance-Versionen
+
+Damit die Statistik alte und neue Werte nicht vermischt, tragen Karten, Nahkampfwaffen, Helden und Heldenfähigkeiten eine Versionsnummer. **Regel: Zahl geändert, die beeinflusst, wie stark etwas ist → Version +1. Nur Name, Text oder Farbe geändert → nichts tun.**
+
+| Was geändert | Wo erhöhen |
+| :--- | :--- |
+| Karte | `cX.version` in `card_database.gd` |
+| Nahkampfwaffe | `"version"` im Eintrag von `MELEE_WEAPON_DATA` in `global.gd` |
+| Held: Basiswerte oder Passiv | `x.version` in `Global._setup_heroes` |
+| Heldenfähigkeit: Konstanten oben in `player.gd` oder `ability_cooldown` | `x.ability_version` in `Global._setup_heroes` |
+
+Vergessen ist nicht schlimm: Ein automatischer Fingerabdruck merkt geänderte Werte, das Spiel gibt dann eine Warnung aus und das Auswerteskript meldet „Werte ohne neue Version geändert“.
+- `tools/build_sound_packs.py` baut die Effekt-Sets, `tools/compose_music.py` die Musik.
+- `tools/build_wiki.py` baut aus dieser README die Browser-Fassung `docs/wiki.html` (braucht Python und pandoc).
+
+### Export
+
+- Windows-Export legt die EXE mit eingebettetem PCK an und packt den Ordner danach als ZIP.
+- `eos_config.cfg`, `assets/audio/packs/mix.json` und `docs/wiki.html` werden über den Export-Filter mitgenommen.
+- Nach Änderungen an dieser README `docs/wiki.html` neu bauen, sonst zeigt der Knopf im Spiel den alten Stand.

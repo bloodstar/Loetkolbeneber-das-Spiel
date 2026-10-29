@@ -76,6 +76,8 @@ func _ready() -> void:
 
 	# Lobby-Loadouts: Preset speichern, verändern, wieder laden und löschen.
 	var original_lobby_settings := Global.get_current_lobby_settings()
+	# Während des Tests darf "Last" nicht mit Testwerten überschrieben werden.
+	Global.lobby_autosave_enabled = false
 	var test_loadout_name := "_integration_test_%d" % Time.get_ticks_msec()
 	Global.set_match_mode(Global.MATCH_MODE_FFA)
 	Global.set_player_count(3)
@@ -83,10 +85,12 @@ func _ready() -> void:
 	Global.set_draft_config(2, 7)
 	Global.set_blind_pick_enabled(true)
 	Global.set_random_pick_enabled(true)
+	Global.set_pre_draft_picks(3)
+	Global.set_pre_draft_random(true)
 	Global.set_base_hp_percent(130)
 	Global.set_base_damage(33.0)
 	Global.set_selected_map("eisgrotte")
-	Global.set_enabled_card_pools(["Kern", "Chaos"])
+	Global.set_enabled_card_pools(["Offensive", "Bewegung"])
 	Global.set_rarity_percent("Epic", 33.0)
 	Global.banned_card_ids.clear()
 	Global.banned_card_ids.append("blockbombe")
@@ -99,6 +103,8 @@ func _ready() -> void:
 	Global.set_draft_config(1, 3)
 	Global.set_blind_pick_enabled(false)
 	Global.set_random_pick_enabled(false)
+	Global.set_pre_draft_picks(0)
+	Global.set_pre_draft_random(false)
 	Global.set_base_hp_percent(60)
 	Global.set_base_damage(5.0)
 	Global.set_selected_map(Global.MAP_RANDOM)
@@ -112,21 +118,46 @@ func _ready() -> void:
 	assert(Global.draft_picks == 2 and Global.cards_per_draft == 7, "Loaded loadout should restore the draft config")
 	assert(Global.blind_pick_enabled, "Loaded loadout should restore Blind pick")
 	assert(Global.random_pick_enabled, "Loaded loadout should restore Random pick")
+	assert(Global.pre_draft_picks == 3 and Global.pre_draft_random, "Loaded loadout should restore the Pre-Draft rule")
 	var lobby_sync_preview := NetworkManager.build_lobby_sync()
 	assert(bool(lobby_sync_preview.get("blind_pick_enabled", false)), "Lobby sync should include Blind pick")
 	assert(bool(lobby_sync_preview.get("random_pick_enabled", false)), "Lobby sync should include Random pick")
+	assert(int(lobby_sync_preview.get("pre_draft_picks", 0)) == 3 and bool(lobby_sync_preview.get("pre_draft_random", false)), "Lobby sync should include Pre-Draft")
 	assert(Global.base_hp_percent == 130 and is_equal_approx(Global.base_damage, 33.0), "Loaded loadout should restore HP and damage")
 	assert(Global.selected_map_id == "eisgrotte", "Loaded loadout should restore the map")
-	assert(Global.enabled_card_pools == ["Kern", "Chaos"], "Loaded loadout should restore enabled card pools")
+	assert(Global.enabled_card_pools == ["Offensive", "Bewegung"], "Loaded loadout should restore enabled card pools")
 	assert(is_equal_approx(Global.get_rarity_percent("Epic"), 33.0), "Loaded loadout should restore rarity weights")
 	assert(Global.banned_card_ids.has("blockbombe"), "Loaded loadout should restore banned cards")
 	assert(Global.delete_lobby_loadout(test_loadout_name), "Lobby loadout should be deletable")
 	assert(not Global.has_lobby_loadout(test_loadout_name), "Deleted lobby loadout should be gone")
 	Global.apply_lobby_settings(original_lobby_settings)
 
+	# Automatisches "Last"-Loadout und Standard-Reset.
+	assert(Global.has_lobby_loadout(Global.LOBBY_LAST_LOADOUT), "The auto-saved Last loadout should exist")
+	assert(not Global.delete_lobby_loadout(Global.LOBBY_LAST_LOADOUT), "The Last loadout must not be deletable")
+	Global.apply_default_lobby_settings()
+	assert(Global.points_to_win == 500 and Global.player_count == 2, "Default button should restore standard rules")
+	assert(int(Global.get_lobby_loadout(Global.LOBBY_LAST_LOADOUT).get("points_to_win", 0)) == 500, "Defaults should be written to Last")
+	Global.apply_lobby_settings(original_lobby_settings)
+	Global.save_last_lobby_settings()
+	# Autosave-Timer: Eine Regeländerung muss kurz danach in "Last" landen.
+	Global.lobby_autosave_enabled = true
+	Global.set_scoring_config(4321, 50, 50)
+	await get_tree().create_timer(Global.LOBBY_AUTOSAVE_DELAY + 0.4).timeout
+	assert(
+		int(Global.get_lobby_loadout(Global.LOBBY_LAST_LOADOUT).get("points_to_win", 0)) == 4321,
+		"Autosave timer should persist rule changes as Last"
+	)
+	Global.apply_lobby_settings(original_lobby_settings)
+	Global.save_last_lobby_settings()
+	# Ab hier keine echten Schreibzugriffe mehr auf die Loadout-Datei.
+	Global.lobby_autosave_enabled = false
+
 	var main_scene = load("res://scenes/main.tscn")
 	var main = main_scene.instantiate()
 	main.skip_menu = true
+	# Rundenende sofort, ohne Zeitlupe (die Tests prüfen den Draft direkt nach dem Tod).
+	main.kill_cam_enabled = false
 	add_child(main)
 
 	# Notbremse: Falls eine Assertion fehlschlägt, beendet der Test trotzdem.
@@ -145,6 +176,50 @@ func _ready() -> void:
 	assert(main.lobby.loadout_option != null, "Lobby should build the loadout selector")
 	assert(main.lobby.loadout_save_btn != null, "Lobby should build the loadout save button")
 	assert(main.lobby.loadout_name_edit != null, "Lobby should build the loadout name field")
+	assert(main.lobby.loadout_reset_btn != null, "Lobby should build the reset-to-default button")
+	# Preset laden: Werte müssen in Global und in den Lobby-Controls landen.
+	# Deterministisches Test-Preset, damit alte gespeicherte Presets ohne
+	# spätere Felder (z. B. Modifier-Rate) das Ergebnis nicht verfälschen.
+	var loadout_backup := Global.get_current_lobby_settings()
+	var ui_preset_name := "_ui_preset_%d" % Time.get_ticks_msec()
+	Global.set_player_count(3)
+	Global.set_scoring_config(650, 25, 45)
+	Global.set_draft_config(2, 6)
+	Global.set_base_hp_percent(115)
+	Global.set_base_damage(27.0)
+	Global.set_enabled_level_modifiers(["wind", "zone"])
+	Global.set_level_modifier_rate_percent(180)
+	Global.set_melee_enabled(false)
+	Global.set_selected_map("eisgrotte")
+	Global.set_rarity_percent("Rare", 42.0)
+	Global.save_lobby_loadout(ui_preset_name)
+	Global.apply_lobby_settings(loadout_backup)
+	main.lobby._sync_from_global()
+	main.lobby._refresh_loadout_controls()
+	var preset_index := Global.get_lobby_loadout_names().find(ui_preset_name)
+	assert(preset_index >= 0, "Test preset should be listed")
+	main.lobby.loadout_option.select(preset_index)
+	main.lobby._on_loadout_selected(preset_index)
+	main.lobby._on_loadout_load_pressed()
+	assert(Global.player_count == 3 and Global.points_to_win == 650, "Loading a preset should update Global rules")
+	assert(Global.survival_points == 25 and Global.kill_points == 45, "Loading a preset should update scoring in Global")
+	assert(int(main.lobby.player_count_spin.value) == 3, "Loading a preset should update the player count control")
+	assert(int(main.lobby.score_spin.value) == 650, "Loading a preset should update the scoring control")
+	assert(int(main.lobby.survival_spin.value) == 25 and int(main.lobby.kill_spin.value) == 45, "Loading a preset should update survival and kill controls")
+	assert(int(main.lobby.picks_spin.value) == 2 and int(main.lobby.offer_spin.value) == 6, "Loading a preset should update the draft controls")
+	assert(int(main.lobby.base_hp_spin.value) == 115 and int(main.lobby.base_damage_spin.value) == 27, "Loading a preset should update HP and damage controls")
+	assert(int(main.lobby.modifier_rate_spin.value) == 180, "Loading a preset should update the modifier rate control")
+	assert(not main.lobby.melee_enabled_check.button_pressed, "Loading a preset should update the melee toggle")
+	assert(is_equal_approx(float(main.lobby.rarity_spins["Rare"].value), 42.0), "Loading a preset should update rarity controls")
+	assert(
+		main.lobby.map_option.get_item_text(main.lobby.map_option.selected) == Global.get_map_name("eisgrotte"),
+		"Loading a preset should update the map selector"
+	)
+	Global.delete_lobby_loadout(ui_preset_name)
+	Global.apply_lobby_settings(loadout_backup)
+	Global.save_last_lobby_settings()
+	main.lobby._sync_from_global()
+	main.lobby._refresh_loadout_controls()
 	assert(main.lobby.blind_pick_check != null, "Lobby should build the Blind pick toggle")
 	assert(main.lobby.random_pick_check != null, "Lobby should build the Random pick toggle")
 	var blind_pick_backup := Global.blind_pick_enabled
@@ -160,7 +235,7 @@ func _ready() -> void:
 
 	# Runden-Modifier-Reiter: Rate, Auswahl und Host-Sperre.
 	assert(main.lobby.modifier_rate_spin != null, "Lobby should build the modifier rate selector")
-	assert(main.lobby.modifier_checks.size() == 20, "Lobby should list all 20 round modifiers")
+	assert(main.lobby.modifier_checks.size() == LevelModifierDefsClass.MODIFIERS.size(), "Lobby should list all round modifiers")
 	assert(main.lobby.modifier_all_btn != null and main.lobby.modifier_none_btn != null, "Lobby should offer select-all/none buttons")
 	var level_rate_backup: int = Global.level_modifier_rate_percent
 	var level_mods_backup: Array[String] = Global.get_enabled_level_modifiers()
@@ -174,7 +249,7 @@ func _ready() -> void:
 	var wind_check := main.lobby.modifier_checks["wind"] as CheckButton
 	assert(wind_check != null and not wind_check.button_pressed, "Disabled modifiers should uncheck in the lobby")
 	main.lobby._on_all_modifiers_pressed()
-	assert(Global.get_enabled_level_modifier_count() == 20, "All button should enable every modifier")
+	assert(Global.get_enabled_level_modifier_count() == LevelModifierDefsClass.MODIFIERS.size(), "All button should enable every modifier")
 	Global.set_level_modifier_rate_percent(level_rate_backup)
 	Global.set_enabled_level_modifiers(level_mods_backup)
 	main.lobby._refresh_modifier_controls()
@@ -223,7 +298,11 @@ func _ready() -> void:
 	assert(main.lobby.character_hero_icon != null and main.lobby.character_hero_icon.texture != null, "Character tab should show the selected class icon")
 	assert(main.lobby.ready_btn != null, "Lobby should build the footer ready button")
 	# Charakteranpassung lebt in der Lobby und ist pro Spieler-Slot verfügbar.
-	assert(main.lobby.tabs.get_tab_count() == 5, "Lobby should have five tabs")
+	assert(main.lobby.tabs.get_tab_count() == 7, "Lobby should have seven tabs")
+	assert(main.lobby.tabs.get_tab_title(5) == "Levels", "Lobby should provide a levels tab")
+	assert(main.lobby.tabs.get_tab_title(6) == "Powerups", "Lobby should provide a powerups tab")
+	assert(main.lobby.powerup_cards.size() == Global.POWERUP_KINDS.size(), "Powerups tab should list every powerup")
+	assert(main.lobby.level_cards.size() == Global.MAP_PLAYABLE.size(), "Levels tab should list every playable map")
 	assert(main.lobby.tabs.get_tab_title(1) == "Charakter", "Lobby should provide a character tab")
 	assert(main.lobby.tabs.get_tab_title(4) == "Modifier", "Lobby should provide a modifier tab")
 	assert(main.lobby.character_tab != null and main.lobby.character_slot_option != null, "Lobby should build the character controls")
@@ -233,7 +312,7 @@ func _ready() -> void:
 	assert(main.lobby.shot_color_picker != null, "Lobby should offer a base shot color")
 	assert(main.lobby.character_preview_wand != null, "Character preview should show the wand")
 	assert(
-		Global.WAND_TIP_SHAPES.size() == 4 and Global.WAND_TIP_SHAPES.has("star"),
+		Global.WAND_TIP_SHAPES.size() == 8 and Global.WAND_TIP_SHAPES.has("star"),
 		"Four wand tip shapes should be available"
 	)
 	var original_character_slot: int = main.lobby._character_slot
@@ -383,18 +462,37 @@ func _ready() -> void:
 	assert(CardDatabase.get_card("heilzone") != null, "Block heal zone card should exist")
 	assert(CardDatabase.get_card("druckwelle") != null, "Block knockback card should exist")
 	assert(CardDatabase.get_card("spiegelblock") != null, "Block reflect card should exist")
+	# Minenleger: Grundkarte, Evolution A und Minen-Karten mit Bedingung "mine".
+	var mine_card := CardDatabase.get_card("minenleger")
+	assert(mine_card != null and mine_card.block_mine, "Mine layer card should exist")
+	assert(CardDatabase.get_card("minen_sofortzuender").parent_card_id == "minenleger", "Instant mine should evolve Minenleger")
+	assert(CardDatabase.get_card("minenschaden").required_mechanic == "mine", "Mine damage needs mine mechanic")
+	assert(CardDatabase.get_card("minenreichweite").required_mechanic == "mine", "Mine radius needs mine mechanic")
+	assert(not CardDatabase.is_card_available_for_player(CardDatabase.get_card("minenschaden"), "", []), "Mine damage hidden without Minenleger")
 	# Kartenpools: jede Karte gehört zu genau einem gültigen Pool.
 	for card in CardDatabase.all_cards:
 		assert(Global.CARD_POOLS.has(card.pool), "Card %s has invalid pool %s" % [card.id, card.pool])
 	assert(Global.enabled_card_pools.size() == Global.CARD_POOLS.size(), "All card pools should be enabled by default")
-	for new_card_id in ["splittergeschoss", "panzerbrecher", "brandkapsel", "kettenreaktion", "sanitaeter", "bollwerk", "zweites_herz", "federstiefel", "windschatten", "leichtgewicht", "notvorrat", "fokuskristall", "instabiler_kern", "wandelnder_koloss", "leichtes_geschoss", "schweres_geschoss", "moerser", "moerser_praezision", "moerser_belagerung", "rueckstossfeder", "druckkammer", "schockgeschoss"]:
+	for new_card_id in ["splittergeschoss", "panzerbrecher", "brandkapsel", "kettenreaktion", "sanitaeter", "bollwerk", "zweites_herz", "federstiefel", "windschatten", "notvorrat", "fokuskristall", "wandelnder_koloss", "leichtes_geschoss", "schweres_geschoss", "moerser", "moerser_praezision", "moerser_belagerung", "rueckstossfeder", "druckkammer", "schockgeschoss", "weitstrahler", "kraftladung", "powerup_verstaerker"]:
 		assert(CardDatabase.get_card(new_card_id) != null, "New pool card %s should exist" % new_card_id)
-	# Pool-Filter: Ohne Chaos dürfen keine Chaos-Karten angeboten werden.
-	Global.set_enabled_card_pools(["Kern", "Offensive", "Defensive", "Bewegung"])
-	assert(not CardDatabase.is_card_pool_enabled(CardDatabase.get_card("instabiler_kern")), "Chaos cards should be filtered out")
+	# Duplikat-Abgleich: ähnliche Karten sind jetzt Evolutionen einer Grundkarte.
+	for evo_id in ["bouncy_balls", "stabilisator", "lebensquell", "schwarzes_herz", "regenerationsserum", "sanitaeter", "vampiric_leech", "vampirklinge", "kompakte_statur", "schlanker_koerper", "splitterladung", "leichte_schrotflinte", "railgun_munition", "fast_forward", "wuchtgeschoss", "heavy_bullets", "federstiefel", "ausdauerblock", "ricochet_frenzy", "flummi_kern", "flaechenbrecher", "ueberladung", "powerup_magnet"]:
+		var evo := CardDatabase.get_card(evo_id)
+		var evo_parent := CardDatabase.get_card(evo.parent_card_id)
+		assert(evo_parent != null and evo_parent.parent_card_id.is_empty(), "%s should evolve from a base card" % evo_id)
+		assert(evo.pool == evo_parent.pool, "%s should share the pool of its base card" % evo_id)
+		assert(Global.RARITY_ORDER.find(evo.rarity) >= Global.RARITY_ORDER.find(evo_parent.rarity), "%s must not be rarer than its base card" % evo_id)
+		assert(not CardDatabase.is_card_available_for_player(evo, "ignis", []), "%s needs its base card first" % evo_id)
+	# Nova: Fähigkeitsschaden-Karten erst mit Implosion.
+	assert(not CardDatabase.is_card_available_for_player(CardDatabase.get_card("kraftladung"), "nova", []), "Kraftladung needs Implosion for Nova")
+	assert(CardDatabase.is_card_available_for_player(CardDatabase.get_card("kraftladung"), "nova", ["nova_implosion"]), "Kraftladung unlocks with Implosion")
+	assert(CardDatabase.is_card_available_for_player(CardDatabase.get_card("kraftladung"), "ignis", []), "Kraftladung is free for other heroes")
+	# Pool-Filter: Ohne Defensive dürfen keine Defensive-Karten angeboten werden.
+	Global.set_enabled_card_pools(["Offensive", "Bewegung", "Nahkampf"])
+	assert(not CardDatabase.is_card_pool_enabled(CardDatabase.get_card("wandelnder_koloss")), "Defensive cards should be filtered out")
 	var filtered_offer := CardDatabase.get_draft_offer(20, [], "ignis", [])
 	for card in filtered_offer:
-		assert(card.pool != "Chaos", "Filtered draft must not contain Chaos cards")
+		assert(card.pool != "Defensive", "Filtered draft must not contain Defensive cards")
 	Global.set_all_card_pools(true)
 	assert(Global.enabled_card_pools.size() == Global.CARD_POOLS.size(), "All pools should be restorable")
 	# Tank-Panzerung: eine Karte pro Seltenheit und ein zusammenhängender Baum.
@@ -526,6 +624,8 @@ func _ready() -> void:
 	evolution_banner.free()
 	assert(CardMechanics.make_evolution_banner(moerser, 10) == null, "Base cards should not create an evolution banner")
 	assert(CardMechanics.tooltip(moerser_praezision).contains("EVOLUTION"), "Evolution tooltip should name the evolution")
+	assert(CardMechanics.format_description("Flavor.\n+20% Schaden, -10% Tempo.") == "Flavor.\n+20% Schaden\n-10% Tempo", "Card stats should be shown one per line")
+	assert(CardMechanics.format_description("Heilt 2,5 HP pro Sekunde, auch während du Schaden nimmst.") == "Heilt 2,5 HP pro Sekunde, auch während du Schaden nimmst.", "Prose with commas should stay on one line")
 	# Mechanik-Voraussetzungen: Verstärkerkarten erscheinen nur mit passender Mechanik.
 	var ausweichrolle := CardDatabase.get_card("ausweichrolle")
 	assert(ausweichrolle.required_mechanic == "dash", "Ausweichrolle should require dash")
@@ -533,8 +633,18 @@ func _ready() -> void:
 	var schildschnellbau := CardDatabase.get_card("schildschnellbau")
 	assert(schildschnellbau.required_mechanic == "shield", "Schildschnellbau should require a shield source")
 	assert(not CardDatabase.is_card_available_for_player(schildschnellbau, "ignis", []), "Ignis without shield must not see Schildschnellbau")
-	assert(CardDatabase.is_card_available_for_player(schildschnellbau, "bastion", []), "Bastion has a base shield")
-	assert(CardDatabase.is_card_available_for_player(schildschnellbau, "ignis", ["tactical_vest"]), "A shield card should unlock Schildschnellbau")
+	assert(not CardDatabase.is_card_available_for_player(schildschnellbau, "bastion", []), "Bastion's 20 base shield is below the 25 shield threshold")
+	for bounce_id in ["gummiwand", "gummipuffer", "zellteilung"]:
+		var bounce_card := CardDatabase.get_card(bounce_id)
+		assert(bounce_card != null and bounce_card.required_mechanic == "bounce", "%s should require bounces" % bounce_id)
+		assert(not CardDatabase.is_card_available_for_player(bounce_card, "ignis", []), "%s must not appear without bounces" % bounce_id)
+		assert(CardDatabase.is_card_available_for_player(bounce_card, "ignis", ["stabilisator"]), "%s should appear once the player has bounces" % bounce_id)
+	assert(CardDatabase.is_card_available_for_player(schildschnellbau, "bastion", ["hartschale"]), "Bastion with +40 shield passes the 25 shield threshold")
+	assert(CardDatabase.is_card_available_for_player(schildschnellbau, "ignis", ["tactical_vest"]), "A 30 shield card should unlock Schildschnellbau")
+	assert(CardMechanics.unlock_short_text(schildschnellbau) == "BENÖTIGT: 25 SCHILD", "Shield upgrades should show their unlock condition")
+	assert(CardMechanics.unlock_short_text(CardDatabase.get_card("gummiwand")) == "BENÖTIGT: ABPRALLER", "Bounce upgrades should show their unlock condition")
+	assert(CardMechanics.tooltip(CardDatabase.get_card("gummiwand")).contains("FREISCHALTUNG"), "Card tooltip should list unlock conditions")
+	assert(CardMechanics.unlock_short_text(CardDatabase.get_card("ausweichrolle")).is_empty(), "Dash is always available, so no condition is shown")
 	# Mechanik-Tooltips erklären Gift und Frost.
 	var gift_tooltip := CardMechanics.tooltip(CardDatabase.get_card("giftkapsel"))
 	assert(gift_tooltip.contains("GIFT"), "Poison cards should explain the poison mechanic")
@@ -574,12 +684,48 @@ func _ready() -> void:
 	assert(Global.resolve_map_id(12345) == "wuestenruine", "Selected map should override the seed")
 	Global.set_selected_map(Global.MAP_RANDOM)
 	assert(Global.MAP_PLAYABLE.has(Global.resolve_map_id(12345)), "Random map should resolve to a playable map")
+	# Levels-Reiter: abgeschaltete Maps kommen bei "Zufällig" nicht mehr dran.
+	var only_map: String = Global.MAP_PLAYABLE[0]
+	var others: Array = Global.MAP_PLAYABLE.duplicate()
+	others.erase(only_map)
+	Global.set_disabled_maps(others)
+	for check_seed in [1, 77, 12345, 999999]:
+		assert(Global.resolve_map_id(check_seed) == only_map, "Random map should skip disabled levels")
+	Global.set_map_enabled(only_map, false)
+	assert(not Global.has_enabled_maps(), "All levels may be switched off")
+	Global.set_map_enabled(only_map, true)
+	assert(Global.get_current_lobby_settings()["disabled_map_ids"].size() == others.size(), "Disabled levels should be part of the lobby settings")
+	Global.set_selected_map(others[0])
+	assert(Global.is_map_enabled(others[0]), "Choosing a fixed map should enable it again")
+	Global.set_map_enabled(others[0], false)
+	assert(Global.selected_map_id == Global.MAP_RANDOM, "Disabling the fixed map should fall back to random")
+	Global.set_disabled_maps(Global.MAP_PLAYABLE)
+	assert(not Global.has_enabled_maps(), "Disabling every level should be possible")
+	main.lobby._update_status()
+	assert(main.lobby.start_btn.disabled, "Without an active level the match must not start")
+	Global.set_disabled_maps([])
+	# Powerups-Reiter: Sperrliste, Presets und Powerup-Karten.
+	Global.set_powerup_enabled("heal", false)
+	assert(not Global.get_active_powerup_kinds().has("heal"), "Disabled powerups should not spawn")
+	assert(Array(Global.get_current_lobby_settings()["disabled_powerup_kinds"]).has("heal"), "Disabled powerups should be part of the lobby settings")
+	Global.set_disabled_powerups(Global.POWERUP_KINDS)
+	assert(not Global.has_active_powerups(), "All powerups may be switched off")
+	assert(not CardDatabase.is_card_available_for_player(CardDatabase.get_card("powerup_verstaerker"), "ignis", []), "Powerup cards need active powerups")
+	Global.set_disabled_powerups([])
+	assert(CardDatabase.is_card_available_for_player(CardDatabase.get_card("powerup_verstaerker"), "ignis", []), "Powerup card is offered with active powerups")
+	var powerup_preset := Global.get_current_lobby_settings()
+	powerup_preset["disabled_powerup_kinds"] = ["damage", "unknown"]
+	Global.apply_lobby_settings(powerup_preset)
+	assert(Global.disabled_powerup_kinds.size() == 1 and Global.disabled_powerup_kinds.has("damage"), "Presets should restore known disabled powerups only")
+	powerup_preset.erase("disabled_powerup_kinds")
+	Global.apply_lobby_settings(powerup_preset)
+	assert(Global.disabled_powerup_kinds.is_empty(), "Old presets without the list enable every powerup")
 	assert(Global.MAP_PLAYABLE.has(main.match_map_id), "Match should use a concrete playable map")
 	assert(level.MAP_PROFILES.has(level.current_map_id), "Level should use a known map profile")
 	assert(str(level.MAP_PROFILES["weite"].get("archetype", "")) == "sparse", "Weite Wiese should use the sparse layout")
 	assert(str(level.MAP_PROFILES["wolkeninsel"].get("archetype", "")) == "sparse", "Wolkeninsel should use the sparse layout")
 	assert(bool(level.MAP_PROFILES["kistenfestung"].get("crate_fortress", false)), "Kistenfestung should use the crate fortress layout")
-	assert(LevelGenerator.TILESET_THEMES.size() == 4, "There should be four visual tileset themes")
+	assert(LevelGenerator.TILESET_THEMES.size() == 5, "There should be five visual tileset themes")
 	# Die Plattformebenen müssen genug Kopfraum für die Charaktere bieten.
 	# Zwei freie Kacheln über jeder Plattformoberkante entsprechen 72 px.
 	var low_platform_ceiling := false
@@ -656,6 +802,11 @@ func _ready() -> void:
 			object_counts[kind] = int(object_counts.get(kind, 0)) + 1
 		assert(int(object_counts.get("crate", 0)) > 0, "Map %s should spawn physics crates" % check_map_id)
 		assert(int(object_counts.get("powerup", 0)) > 0, "Map %s should spawn at least one powerup" % check_map_id)
+		var check_layout: Dictionary = LevelGenerator.LAYOUTS.get(check_map_id, {})
+		if not (check_layout.get("crate_chains", []) as Array).is_empty():
+			assert(int(object_counts.get("crate_chain", 0)) > 0, "Map %s should build its crate chains" % check_map_id)
+		if not (check_layout.get("oneway", []) as Array).is_empty():
+			assert(not map_check_level._oneway_cells.is_empty(), "Map %s should build its one-way platforms" % check_map_id)
 		# Theme-Metadaten und geladene Materialien. Layout und Theme bleiben
 		# getrennt, aber jede Karte muss ein vollständiges Tileset besitzen.
 		var theme_id := str(map_check_level.current_theme_id)
@@ -1051,11 +1202,36 @@ func _ready() -> void:
 	assert(p1.powerup_damage_timer >= 5.9 and p1.powerup_damage_mult > 1.0, "Damage powerup should boost projectile damage")
 	p1.apply_powerup("rapid_fire")
 	assert(p1.powerup_rapid_fire_timer >= 4.9, "Rapid-fire powerup should allow continuous shooting")
+	# Powerup-Karten verlängern die Wirkung.
+	p1.powerup_strength_mult = 1.5
+	p1.powerup_invuln_timer = 0.0
+	p1.apply_powerup("invulnerability")
+	assert(p1.powerup_invuln_timer >= 4.4, "Powerup cards should extend powerup durations")
+	p1.powerup_strength_mult = 1.0
 	p1.current_health = p1.max_health
 	p1.powerup_invuln_timer = 0.0
 	p1.powerup_damage_timer = 0.0
 	p1.powerup_damage_mult = 1.0
 	p1.powerup_rapid_fire_timer = 0.0
+	p1.is_invulnerable = false
+	# Multishot, Rache und Unsterblichkeit.
+	p1.apply_powerup("multishot")
+	assert(p1.powerup_multishot_timer >= 7.9, "Multishot powerup should last 8 s")
+	p1.powerup_multishot_timer = 0.0
+	p1.apply_powerup("revenge")
+	assert(is_equal_approx(p1.get_current_reflect_percent(), 1.0), "Revenge powerup should reflect all damage")
+	p1.powerup_revenge_timer = 0.0
+	p1.apply_powerup("invisible")
+	assert(p1.is_invisible() and p1.powerup_invisible_timer >= 5.9, "Invisible powerup should last 6 s")
+	p1.powerup_invisible_timer = 0.0
+	p1.apply_powerup("undying")
+	p1.take_damage(99999.0)
+	assert(p1.is_reviving() and not p1.is_dead, "Undying powerup should turn a death into a revive")
+	assert(p1.powerup_undying_timer <= 0.0, "Undying is used up by the lethal hit")
+	p1._finish_powerup_revive()
+	assert(p1.current_health > 0.0 and not p1.is_reviving(), "Revived player should stand up with health")
+	p1.current_health = p1.max_health
+	p1.powerup_invuln_timer = 0.0
 	p1.is_invulnerable = false
 	# Projektil-Schwerkraft: Karten modifizieren den Multiplikator, der Spieler
 	# reicht ihn an jedes neue Projektil weiter.
@@ -1208,6 +1384,18 @@ func _ready() -> void:
 	assert(default_tower.cannon != null, "Tower should render a cannon")
 	assert(default_tower.cannon.z_index == -1, "Health bar should draw above the cannon")
 	assert(default_tower.collision_layer == 16, "Towers should use the dedicated tower collision layer")
+	default_tower._apply_tower_decay(1.0)
+	assert(is_equal_approx(default_tower.current_health, 95.0), "Towers should lose 5% max health per second")
+	default_tower._apply_tower_decay(19.0)
+	assert(default_tower.current_health <= 0.0 and default_tower.is_queued_for_deletion(), "Towers should expire after 20 seconds")
+	var armored_decay := Companion.new()
+	armored_decay.mode = Companion.Mode.TOWER
+	armored_decay.owner_player = p1
+	armored_decay.max_health = 175.0
+	main.add_child(armored_decay)
+	armored_decay._apply_tower_decay(10.0)
+	assert(is_equal_approx(armored_decay.current_health, 87.5), "Tower decay should scale with max health")
+	armored_decay.queue_free()
 	default_tower.queue_free()
 
 	assert(Global.add_card_to_player(1, tower_armor), "Tower armor should be addable")
@@ -1300,6 +1488,24 @@ func _ready() -> void:
 	p1.take_damage(40.0, Vector2.ZERO, p2)
 	assert(is_equal_approx(p1.current_health, 60.0), "Damage reflection should not change the damage taken by the tank")
 	assert(is_equal_approx(p2.current_health, 90.0), "Damage reflection should hurt the attacking player")
+	# Zwei Reflexions-Tanks: reflektierter Schaden wird nicht erneut reflektiert.
+	p2.current_health = 100.0
+	p2.damage_reflect_percent = 0.5
+	p1.current_health = 100.0
+	p1.take_damage(40.0, Vector2.ZERO, p2)
+	assert(is_equal_approx(p1.current_health, 60.0) and is_equal_approx(p2.current_health, 90.0), "Reflected damage must not bounce back between two reflect tanks")
+	p2.damage_reflect_percent = 0.0
+	# Rache-Bonus unter 35 % Leben und Blutspiegel-Heilung.
+	p1.reflect_low_hp_bonus = 0.25
+	p1.reflect_heal_percent = 0.5
+	p1.current_health = 50.0
+	p2.current_health = 100.0
+	p1.take_damage(20.0, Vector2.ZERO, p2)
+	assert(is_equal_approx(p2.current_health, 90.0), "Low-HP reflect bonus should add to the base reflection")
+	assert(is_equal_approx(p1.current_health, 35.0), "Reflect heal should restore half the reflected damage")
+	p1.reflect_low_hp_bonus = 0.0
+	p1.reflect_heal_percent = 0.0
+	assert(CardDatabase.get_card("blutspiegel") != null and CardDatabase.get_card("blutspiegel").pool == "Defensive", "Reflect tank cards should be in the Defensive pool")
 	Global.get_player_cards(1).clear()
 	Global.get_player_cards(1).append_array(tank_deck_backup)
 	p1.apply_stats()
@@ -1459,8 +1665,8 @@ func _ready() -> void:
 	print("[TEST] Verifying Level Modifier System...")
 	var mod_mgr = main.modifier_manager
 	assert(mod_mgr != null, "Main game should have an active modifier manager")
-	assert(LevelModifierDefsClass.MODIFIERS.size() == 20, "Exactly 20 level modifiers should be defined")
-	assert(mod_mgr.MODIFIERS.size() == 20, "Modifier manager should use the shared 20 modifier definitions")
+	assert(LevelModifierDefsClass.MODIFIERS.size() == 22, "Exactly 22 level modifiers should be defined")
+	assert(mod_mgr.MODIFIERS.size() == 22, "Modifier manager should use the shared 22 modifier definitions")
 
 	# Konfiguration: Rate 0 schaltet alles aus, Filterung und 200 % werden geprüft.
 	var config_rate_backup: int = Global.level_modifier_rate_percent
@@ -1660,12 +1866,13 @@ func _ready() -> void:
 	assert(main.hud._modifier_container.get_child_count() == 2, "HUD should show 2 badges")
 	assert(main.hud._modifier_container is VBoxContainer, "HUD modifier badges should stack vertically at the screen edge")
 	assert(is_equal_approx(main.hud._modifier_container.anchor_left, 1.0), "HUD modifier badges should be anchored to the right")
-	var first_badge := main.hud._modifier_container.get_child(0) as PanelContainer
-	assert(first_badge != null, "HUD modifier badge should be a panel")
-	var first_row := first_badge.get_child(0) as HBoxContainer
-	assert(first_row != null and first_row.get_child_count() >= 2, "HUD modifier badge should contain icon and title")
-	var badge_title := first_row.get_child(1) as Label
-	assert(badge_title.get_theme_font_size("font_size") >= 20, "HUD badge title should be enlarged")
+	# Nur Icons: jedes Badge ist ein einzelnes Label mit dem Modifier-Icon, ohne Titel.
+	for badge_i in range(hud_test_mods.size()):
+		var icon_badge := main.hud._modifier_container.get_child(badge_i) as Label
+		assert(icon_badge != null, "HUD modifier badge should be a plain icon label")
+		assert(icon_badge.get_child_count() == 0, "HUD modifier badge should not contain a title or frame")
+		assert(icon_badge.text == str(hud_test_mods[badge_i]["icon"]), "HUD modifier badge should show only the modifier icon")
+		assert(not (str(hud_test_mods[badge_i]["title"]) in icon_badge.text), "HUD modifier badge should not show the title")
 
 	main.hud.show_wind_notice(true, 1.0)
 	assert(main.hud._event_label.visible, "HUD event label should display wind notice")

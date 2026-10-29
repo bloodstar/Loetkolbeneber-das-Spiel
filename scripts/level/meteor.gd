@@ -46,7 +46,7 @@ func _draw() -> void:
 	draw_line(Vector2.ZERO, Vector2(-25, -35), Color(1.0, 0.3, 0.0, 0.6), 14.0)
 
 func _explode() -> void:
-	SoundManager.play_sound("explosion", 0.2, 0.0)
+	SoundManager.play_sound("explosion_big", 0.15, -2.0)
 	if is_instance_valid(_crosshair):
 		_crosshair.queue_free()
 
@@ -61,6 +61,8 @@ func _explode() -> void:
 	)
 	tw.tween_property(shock, "scale", Vector2(2.5, 2.5), 0.3)
 	tw.tween_callback(shock.queue_free)
+
+	Seesaw.blast_all(get_tree(), target_position, 100.0, 1.6)
 
 	# Damage nearby players
 	for player in _players_ref:

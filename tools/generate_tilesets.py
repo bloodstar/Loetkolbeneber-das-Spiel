@@ -719,6 +719,163 @@ def trampoline_overlay(variant: int) -> Image.Image:
 # Theme definitions and generation
 
 
+# ---------------------------------------------------------------------------
+# Platine: dunkle Leiterplatte, leuchtende Cyan-Leiterbahnen, pinke Akzente.
+# Passt zum Neon-Platinen-Hauptmenü.
+
+PCB_BOARD = (7, 24, 28, 255)
+PCB_BOARD_DARK = (4, 14, 18, 255)
+PCB_TRACE = (64, 232, 214, 235)
+PCB_TRACE_DIM = (40, 150, 142, 150)
+PCB_GLOW = (150, 255, 240, 255)
+PCB_PINK = (246, 92, 196, 235)
+PCB_CHIP = (14, 18, 22, 255)
+PCB_PIN = (176, 188, 194, 255)
+
+
+def pcb_pad(d: ImageDraw.ImageDraw, x: float, y: float, r: float = 1.5, color=PCB_TRACE):
+    ellipse(d, (x - r, y - r, x + r, y + r), fill=PCB_BOARD_DARK, outline=color, width=0.7)
+
+
+def pcb_via(d: ImageDraw.ImageDraw, x: float, y: float, color=PCB_TRACE):
+    ellipse(d, (x - 1.2, y - 1.2, x + 1.2, y + 1.2), fill=color)
+    ellipse(d, (x - 0.45, y - 0.45, x + 0.45, y + 0.45), fill=PCB_BOARD_DARK)
+
+
+def pcb_chip(d: ImageDraw.ImageDraw, x0: float, y0: float, x1: float, y1: float, pins: int = 3):
+    step = (x1 - x0) / (pins + 1)
+    for i in range(pins):
+        px = x0 + step * (i + 1)
+        rect(d, (px - 0.7, y0 - 1.6, px + 0.7, y0), PCB_PIN)
+        rect(d, (px - 0.7, y1, px + 0.7, y1 + 1.6), PCB_PIN)
+    rounded(d, (x0, y0, x1, y1), 0.6, fill=PCB_CHIP, outline=(40, 52, 58, 255), width=0.5)
+    ellipse(d, (x0 + 1.0, y0 + 1.0, x0 + 2.2, y0 + 2.2), fill=(52, 64, 70, 255))
+
+
+def platine_ground_top(variant: int) -> Image.Image:
+    img = canvas()
+    vertical_gradient(img, (9, 30, 34, 255), (4, 13, 17, 255))
+    d = draw_of(img)
+    # Leuchtende Kupferkante als Lauffläche.
+    rect(d, (0, 0, TILE, 5.2), (5, 18, 22, 255))
+    rect(d, (0, 0, TILE, 1.8), PCB_GLOW)
+    rect(d, (0, 1.8, TILE, 4.2), (38, 196, 182, 255))
+    line(d, [(0, 5.2), (TILE, 5.2)], (3, 10, 13, 255), 0.9)
+    # Steckkontakt-Finger unter der Kante.
+    for i in range(4):
+        x = 2.5 + i * 9.0
+        rounded(d, (x, 7.0, x + 4.6, 12.5), 0.8, fill=(214, 168, 72, 230), outline=(120, 88, 30, 255), width=0.4)
+    if variant == 0:
+        line(d, [(4.8, 12.5), (4.8, 20.0), (12.0, 27.0), (24.0, 27.0)], PCB_TRACE, 0.8)
+        pcb_pad(d, 24.0, 27.0)
+        line(d, [(31.0, 12.5), (31.0, 33.0)], PCB_TRACE_DIM, 0.6)
+    elif variant == 1:
+        line(d, [(13.8, 12.5), (13.8, 18.0), (20.0, 24.0), (20.0, 32.0)], PCB_TRACE, 0.8)
+        pcb_via(d, 20.0, 32.0, PCB_PINK)
+        line(d, [(22.8, 12.5), (22.8, 16.0), (30.0, 23.0), (TILE, 23.0)], PCB_TRACE_DIM, 0.6)
+    else:
+        pcb_chip(d, 8.0, 19.0, 26.0, 28.0, 4)
+        line(d, [(31.8, 12.5), (31.8, 30.0), (28.0, 34.0)], PCB_TRACE, 0.7)
+    add_noise(img, 910 + variant, [(64, 232, 214, 45), (246, 92, 196, 35), (120, 170, 170, 45)], 14, 3.0)
+    return img
+
+
+def platine_fill(variant: int) -> Image.Image:
+    img = canvas()
+    vertical_gradient(img, (7, 24, 28, 255), (4, 13, 17, 255))
+    d = draw_of(img)
+    if variant == 0:
+        line(d, [(0, 9.0), (12.0, 9.0), (21.0, 18.0), (21.0, TILE)], PCB_TRACE_DIM, 0.7)
+        line(d, [(0, 27.0), (8.0, 27.0)], PCB_TRACE_DIM, 0.6)
+        pcb_via(d, 8.0, 27.0)
+        line(d, [(30.0, 0), (30.0, 12.0), (TILE, 18.0)], (40, 150, 142, 110), 0.6)
+    elif variant == 1:
+        line(d, [(9.0, 0), (9.0, 14.0), (18.0, 23.0), (TILE, 23.0)], PCB_TRACE_DIM, 0.7)
+        pcb_pad(d, 26.0, 9.0, 1.4, (246, 92, 196, 140))
+        line(d, [(26.0, 10.4), (26.0, 16.0)], (246, 92, 196, 110), 0.55)
+    else:
+        line(d, [(0, 18.0), (TILE, 18.0)], PCB_TRACE_DIM, 0.6)
+        line(d, [(18.0, 0), (18.0, 18.0)], PCB_TRACE_DIM, 0.6)
+        pcb_via(d, 18.0, 18.0)
+        for x, y in ((6.0, 30.0), (30.0, 30.0)):
+            pcb_via(d, x, y, (40, 150, 142, 160))
+    add_noise(img, 960 + variant, [(64, 232, 214, 30), (120, 170, 170, 35)], 12, 2.0)
+    return img
+
+
+def platine_platform(variant: int) -> Image.Image:
+    img = canvas()
+    vertical_gradient(img, (10, 34, 38, 255), (4, 13, 17, 255), 4, 36)
+    d = draw_of(img)
+    rect(d, (0, 0, TILE, 3.6), (5, 18, 22, 255))
+    rect(d, (0, 0, TILE, 1.3), PCB_GLOW)
+    line(d, [(0, 3.6), (TILE, 3.6)], (38, 196, 182, 230), 0.8)
+    # Durchgehende Leiterbahn, damit lange Balken wie eine Bahn wirken.
+    line(d, [(0, 12.0), (TILE, 12.0)], PCB_TRACE, 0.8)
+    if variant == 0:
+        pcb_pad(d, 9.0, 12.0)
+        line(d, [(27.0, 12.0), (27.0, 22.0)], PCB_TRACE_DIM, 0.6)
+        pcb_via(d, 27.0, 22.0, PCB_PINK)
+    elif variant == 1:
+        rect(d, (12.0, 17.0, 24.0, 22.0), (40, 30, 24, 255))
+        for x in (14.0, 22.0):
+            rect(d, (x - 1.2, 16.6, x + 1.2, 22.4), (196, 160, 80, 255))
+        rect(d, (17.0, 17.0, 18.6, 22.0), PCB_PINK)
+    else:
+        pcb_chip(d, 6.0, 17.0, 20.0, 26.0, 3)
+        pcb_via(d, 28.0, 21.0)
+    line(d, [(0, 34.4), (TILE, 34.4)], (64, 232, 214, 70), 1.3)
+    return img
+
+
+def platine_destructible(variant: int) -> Image.Image:
+    img = canvas()
+    d = draw_of(img)
+    # Ein Chip-Block mit Beinchen, der Risse bekommt.
+    for i in range(4):
+        x = 7.0 + i * 7.3
+        rect(d, (x - 1.0, 1.0, x + 1.0, 4.0), PCB_PIN)
+        rect(d, (x - 1.0, TILE - 4.0, x + 1.0, TILE - 1.0), PCB_PIN)
+    rounded(d, (2.0, 4.0, TILE - 2.0, TILE - 4.0), 1.6, fill=PCB_CHIP, outline=(64, 232, 214, 200), width=0.8)
+    ellipse(d, (4.5, 6.5, 7.0, 9.0), fill=(52, 64, 70, 255))
+    line(d, [(9.0, 15.0), (27.0, 15.0)], (246, 92, 196, 200), 0.9)
+    line(d, [(9.0, 19.5), (22.0, 19.5)], (64, 232, 214, 170), 0.7)
+    crack(d, [(20, 5), (16, 12), (21, 18), (17, 26), (22, 31)] if variant == 0 else [(10, 5), (13, 13), (10, 21), (16, 27), (14, 31)], (210, 255, 248, 180), 0.7)
+    return img
+
+
+def platine_deco(variant: int) -> Image.Image:
+    img = canvas()
+    d = draw_of(img)
+    if variant == 0:
+        # Elektrolytkondensator
+        line(d, [(15, 36), (15, 31)], PCB_PIN, 0.8)
+        line(d, [(21, 36), (21, 31)], PCB_PIN, 0.8)
+        rounded(d, (11.0, 14.0, 25.0, 31.5), 2.2, fill=(22, 52, 70, 255), outline=(64, 232, 214, 220), width=0.8)
+        rect(d, (21.0, 14.5, 24.0, 31.0), (200, 220, 230, 160))
+        ellipse(d, (11.0, 12.0, 25.0, 16.0), fill=(150, 170, 180, 255))
+    elif variant == 1:
+        # Leuchtdiode in Pink
+        line(d, [(16, 36), (16, 26)], PCB_PIN, 0.8)
+        line(d, [(20, 36), (20, 28)], PCB_PIN, 0.8)
+        ellipse(d, (10.0, 9.0, 26.0, 25.0), fill=(246, 92, 196, 45))
+        rounded(d, (13.0, 14.0, 23.0, 27.0), 4.5, fill=(246, 92, 196, 230), outline=(255, 190, 235, 255), width=0.6)
+        ellipse(d, (15.0, 16.0, 18.0, 19.0), fill=(255, 235, 250, 230))
+    elif variant == 2:
+        # Widerstand, stehend
+        line(d, [(18, 36), (18, 30)], PCB_PIN, 0.8)
+        line(d, [(18, 16), (18, 10), (22, 10)], PCB_PIN, 0.8)
+        rounded(d, (14.0, 16.0, 22.0, 30.0), 3.0, fill=(214, 190, 140, 255), outline=(120, 98, 60, 255), width=0.5)
+        for y, c in ((19.0, (246, 92, 196, 255)), (22.5, (30, 30, 30, 255)), (26.0, (64, 232, 214, 255))):
+            rect(d, (14.4, y, 21.6, y + 1.6), c)
+    else:
+        # Kleiner Chip mit Statuslicht
+        pcb_chip(d, 9.0, 24.0, 27.0, 33.5, 4)
+        ellipse(d, (22.0, 26.5, 25.0, 29.5), fill=(64, 232, 214, 255))
+    return img
+
+
+
 THEMES = {
     "storybook": {
         "ground_top": storybook_ground_top,
@@ -748,6 +905,13 @@ THEMES = {
         "destructible": frost_destructible,
         "deco": frost_deco,
     },
+    "platine": {
+        "ground_top": platine_ground_top,
+        "fill": platine_fill,
+        "platform": platine_platform,
+        "destructible": platine_destructible,
+        "deco": platine_deco,
+    },
 }
 
 
@@ -770,7 +934,7 @@ def generate() -> None:
 
 def contact_sheet() -> Path:
     roles = ["ground_top_0", "fill_0", "platform_0", "destructible_0", "deco_0"]
-    extra = {"storybook": ["vine_strong_0", "vine_weak_0"], "neon": [], "wool": ["trampoline_0"], "frost": ["ice_0", "snow_0"]}
+    extra = {"storybook": ["vine_strong_0", "vine_weak_0"], "neon": [], "wool": ["trampoline_0"], "frost": ["ice_0", "snow_0"], "platine": []}
     scale = 3
     cell = TILE * scale + 12
     sheet = Image.new("RGBA", (cell * 7 + 24, cell * len(THEMES) + 24), (9, 13, 21, 255))

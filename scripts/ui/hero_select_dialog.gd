@@ -58,6 +58,10 @@ func _create_hero_card(hero: HeroData, p_idx: int) -> Button:
 	]
 	btn.text = text_content
 	btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	btn.tooltip_text = "%s (%.1fs Cooldown)\n%s\n%s" % [
+		hero.ability_name, hero.ability_cooldown, hero.ability_desc,
+		Global.get_hero_ability_details(hero),
+	]
 	
 	btn.pressed.connect(func():
 		_select_hero(btn, p_idx)

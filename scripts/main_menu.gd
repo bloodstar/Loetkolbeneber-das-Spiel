@@ -7,6 +7,10 @@ signal start_requested
 signal host_requested(port: int)
 signal join_requested(address: String, port: int, as_spectator: bool)
 signal network_cancel_requested
+# Online über Epic Online Services (Lobby-Code statt IP).
+signal host_online_requested
+signal join_online_requested(code: String, as_spectator: bool)
+signal options_requested
 
 @onready var main_box: VBoxContainer = $Panel/VBox
 @onready var start_btn: Button = $Panel/VBox/StartBtn
@@ -15,6 +19,15 @@ signal network_cancel_requested
 var hero_stats_btn: Button = null
 var hero_stats_panel: PanelContainer = null
 var hero_stats_grid: GridContainer = null
+var options_btn: Button = null
+var wiki_btn: Button = null
+
+# Das Wiki (aus README.md gebaut, siehe tools/build_wiki.py) liegt im PCK.
+# Der Browser kann dort nicht lesen, darum wird es vor dem Öffnen nach
+# user:// kopiert. Eine wiki.html im Ordner der Exe hat Vorrang.
+const WIKI_SOURCE: String = "res://docs/wiki.html"
+const WIKI_COPY: String = "user://wiki.html"
+const WIKI_FILE_NAME: String = "wiki.html"
 
 @onready var network_panel: PanelContainer = $Panel/NetworkPanel
 @onready var host_port_spin: SpinBox = $Panel/NetworkPanel/Margin/VBox/HostRow/HostPortSpin
@@ -25,6 +38,10 @@ var hero_stats_grid: GridContainer = null
 @onready var join_btn: Button = $Panel/NetworkPanel/Margin/VBox/JoinRow/JoinBtn
 @onready var net_status: Label = $Panel/NetworkPanel/Margin/VBox/NetStatus
 @onready var net_back_btn: Button = $Panel/NetworkPanel/Margin/VBox/NetBackBtn
+var epic_host_btn: Button = null
+var epic_code_edit: LineEdit = null
+var epic_join_btn: Button = null
+var epic_hint: Label = null
 
 func _ready() -> void:
 	start_btn.pressed.connect(_on_start_pressed)
@@ -35,9 +52,100 @@ func _ready() -> void:
 	net_back_btn.pressed.connect(_on_net_back_pressed)
 	network_panel.visible = false
 	main_box.visible = true
+	_build_epic_section()
 	_build_hero_stats_ui()
+	_build_wiki_button()
+	_build_options_button()
+	_build_version_label()
+	_style_menu_buttons()
+	main_box.child_entered_tree.connect(_on_menu_child_added)
+	var backdrop := get_node_or_null("Panel/Backdrop") as MainMenuBackdrop
+	if backdrop != null:
+		backdrop.frame_target = main_box
+
+func _build_options_button() -> void:
+	options_btn = Button.new()
+	options_btn.name = "OptionsBtn"
+	options_btn.text = "OPTIONEN"
+	options_btn.custom_minimum_size = Vector2(360, 56)
+	options_btn.pressed.connect(_on_options_pressed)
+	main_box.add_child(options_btn)
+	main_box.move_child(options_btn, quit_btn.get_index())
+
+func _on_options_pressed() -> void:
+	SoundManager.play_sound("click")
+	options_requested.emit()
+
+func _build_wiki_button() -> void:
+	wiki_btn = Button.new()
+	wiki_btn.name = "WikiBtn"
+	wiki_btn.text = "WIKI"
+	wiki_btn.tooltip_text = "Anleitung mit allen Funktionen im Browser öffnen."
+	wiki_btn.custom_minimum_size = Vector2(360, 56)
+	wiki_btn.pressed.connect(_on_wiki_pressed)
+	main_box.add_child(wiki_btn)
+	main_box.move_child(wiki_btn, quit_btn.get_index())
+
+func _on_wiki_pressed() -> void:
+	SoundManager.play_sound("click")
+	# 1. wiki.html neben der Exe (nur im Export): lässt sich ohne Neuexport austauschen.
+	if OS.has_feature("template"):
+		var beside_exe := OS.get_executable_path().get_base_dir().path_join(WIKI_FILE_NAME)
+		if FileAccess.file_exists(beside_exe):
+			OS.shell_open(beside_exe)
+			return
+	# 2. Eingebaute Kopie aus dem PCK. Der Browser kann res:// nicht lesen, darum
+	# wird sie bei jedem Klick frisch nach user:// geschrieben (nie eine alte Kopie öffnen).
+	var html := FileAccess.get_file_as_string(WIKI_SOURCE)
+	if html.is_empty():
+		_show_wiki_error("Das Wiki ist in diesem Build nicht enthalten.\nLege %s in den Ordner der Exe." % WIKI_FILE_NAME)
+		return
+	var file := FileAccess.open(WIKI_COPY, FileAccess.WRITE)
+	if file == null:
+		_show_wiki_error("Das Wiki konnte nicht nach %s geschrieben werden (%s)." % [ProjectSettings.globalize_path(WIKI_COPY), error_string(FileAccess.get_open_error())])
+		return
+	file.store_string(html)
+	file.close()
+	OS.shell_open(ProjectSettings.globalize_path(WIKI_COPY))
+
+func _show_wiki_error(text: String) -> void:
+	push_warning(text)
+	var dialog := AcceptDialog.new()
+	dialog.title = "Wiki"
+	dialog.dialog_text = text
+	dialog.confirmed.connect(dialog.queue_free)
+	dialog.canceled.connect(dialog.queue_free)
+	add_child(dialog)
+	dialog.popup_centered()
+
+# Platinen-Look für alle Knöpfe der Menüspalte, auch für später ergänzte.
+func _style_menu_buttons() -> void:
+	for child in main_box.get_children():
+		var button := child as Button
+		if button != null:
+			WorkshopStyle.style_button(button, button == start_btn, 22 if button == start_btn else 20)
+
+func _on_menu_child_added(node: Node) -> void:
+	var button := node as Button
+	if button != null:
+		WorkshopStyle.style_button(button, false, 20)
+		button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 56.0)
+
+func _build_version_label() -> void:
+	var version_label := Label.new()
+	version_label.name = "VersionLabel"
+	version_label.text = BuildInfo.get_display_text()
+	version_label.add_theme_font_size_override("font_size", 14)
+	version_label.add_theme_color_override("font_color", Color(0.6, 0.66, 0.78, 0.9))
+	version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	version_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	version_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 12)
+	version_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	version_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	$Panel.add_child(version_label)
 
 func open_menu(message: String = "") -> void:
+	SoundManager.stop_music()
 	visible = true
 	get_tree().paused = true
 	main_box.visible = true
@@ -58,10 +166,8 @@ func close_menu() -> void:
 
 func _build_hero_stats_ui() -> void:
 	hero_stats_btn = Button.new()
-	hero_stats_btn.text = "HELDEN-STATS"
-	hero_stats_btn.custom_minimum_size = Vector2(300, 44)
-	hero_stats_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	hero_stats_btn.add_theme_font_size_override("font_size", 18)
+	hero_stats_btn.text = "HELDEN"
+	hero_stats_btn.custom_minimum_size = Vector2(360, 56)
 	hero_stats_btn.pressed.connect(_on_hero_stats_pressed)
 	main_box.add_child(hero_stats_btn)
 	main_box.move_child(hero_stats_btn, quit_btn.get_index())
@@ -194,7 +300,7 @@ func _build_hero_stats_card(hero: HeroData) -> Control:
 	box.add_child(stats)
 
 	var ability := Label.new()
-	ability.text = "Aktiv: %s (%.1fs Cooldown) — %s" % [hero.ability_name, hero.ability_cooldown, hero.ability_desc]
+	ability.text = "Aktiv: %s (%.1fs Cooldown) — %s\n%s" % [hero.ability_name, hero.ability_cooldown, hero.ability_desc, Global.get_hero_ability_details(hero)]
 	ability.add_theme_font_size_override("font_size", 12)
 	ability.add_theme_color_override("font_color", Color(0.52, 0.8, 1.0, 1.0))
 	ability.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -248,6 +354,7 @@ func set_network_status(text: String, enable_buttons: bool = false) -> void:
 func _set_network_buttons_enabled(enabled: bool) -> void:
 	host_btn.disabled = not enabled
 	join_btn.disabled = not enabled
+	_refresh_epic_section(enabled)
 	join_spectator_check.disabled = not enabled
 	net_back_btn.disabled = false
 
@@ -273,3 +380,85 @@ func _on_net_back_pressed() -> void:
 	network_cancel_requested.emit()
 	hide_network_panel()
 	_set_network_buttons_enabled(true)
+
+# --- Epic-Online (Lobby-Code) ---
+
+# Wird per Code oben ins Online-Panel eingefügt, damit die Szene unverändert bleibt.
+func _build_epic_section() -> void:
+	var vbox := $Panel/NetworkPanel/Margin/VBox as VBoxContainer
+	var header := Label.new()
+	header.text = "Übers Internet (Epic, mit Code)"
+	header.add_theme_color_override("font_color", Color(0.55, 0.95, 0.55, 1))
+	header.add_theme_font_size_override("font_size", 17)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	epic_host_btn = Button.new()
+	epic_host_btn.text = "Online hosten"
+	epic_host_btn.custom_minimum_size = Vector2(0, 42)
+	epic_host_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	epic_host_btn.pressed.connect(_on_epic_host_pressed)
+	epic_code_edit = LineEdit.new()
+	epic_code_edit.placeholder_text = "Code, z. B. K7QX2M"
+	epic_code_edit.max_length = 8
+	epic_code_edit.custom_minimum_size = Vector2(170, 40)
+	epic_code_edit.text_submitted.connect(func(_t: String): _on_epic_join_pressed())
+	epic_join_btn = Button.new()
+	epic_join_btn.text = "Mit Code beitreten"
+	epic_join_btn.custom_minimum_size = Vector2(0, 42)
+	epic_join_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	epic_join_btn.pressed.connect(_on_epic_join_pressed)
+	row.add_child(epic_host_btn)
+	row.add_child(epic_code_edit)
+	row.add_child(epic_join_btn)
+	epic_hint = Label.new()
+	epic_hint.add_theme_color_override("font_color", Color(0.5, 0.55, 0.65, 1))
+	epic_hint.add_theme_font_size_override("font_size", 12)
+	epic_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var sep := HSeparator.new()
+	# Direkt unter Titel und Info einfügen, vor dem LAN-Teil.
+	var insert_at := 0
+	var host_header := vbox.get_node_or_null("HostHeader")
+	if host_header != null:
+		insert_at = host_header.get_index()
+	for node in [header, row, epic_hint, sep]:
+		vbox.add_child(node)
+		vbox.move_child(node, insert_at)
+		insert_at += 1
+	_refresh_epic_section(true)
+
+func _refresh_epic_section(enabled: bool) -> void:
+	if epic_host_btn == null:
+		return
+	var problem := NetworkManager.get_online_setup_problem()
+	var online_ready := problem.is_empty()
+	# Fortschritt der Epic-Verbindung live in der Statuszeile zeigen.
+	var epic := NetworkManager.get_node_or_null("EpicOnline")
+	if epic != null and not epic.status_changed.is_connected(_on_epic_status):
+		epic.status_changed.connect(_on_epic_status)
+	epic_host_btn.disabled = not (enabled and online_ready)
+	epic_join_btn.disabled = not (enabled and online_ready)
+	epic_code_edit.editable = enabled and online_ready
+	if online_ready:
+		epic_hint.text = "Host klickt \"Online hosten\" und schickt den Code (steht oben in der Lobby). Kein Portfreigeben nötig."
+	else:
+		epic_hint.text = "Nicht verfügbar: " + problem
+
+func _on_epic_host_pressed() -> void:
+	SoundManager.play_sound("confirm")
+	net_status.text = "Erstelle Online-Spiel über Epic ..."
+	_set_network_buttons_enabled(false)
+	host_online_requested.emit()
+
+func _on_epic_join_pressed() -> void:
+	var code := epic_code_edit.text.strip_edges().to_upper()
+	if code.is_empty():
+		net_status.text = "Bitte den Code vom Host eingeben."
+		return
+	SoundManager.play_sound("confirm")
+	net_status.text = "Suche Spiel %s über Epic ..." % code
+	_set_network_buttons_enabled(false)
+	join_online_requested.emit(code, join_spectator_check.button_pressed)
+
+func _on_epic_status(text: String) -> void:
+	if network_panel.visible:
+		net_status.text = text

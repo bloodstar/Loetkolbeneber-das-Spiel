@@ -8,4 +8,4 @@ func _ready() -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if body is CharacterBody2D and body.has_method("take_damage"):
 		body.take_damage(25.0, Vector2(0, -350.0))
-		SoundManager.play_sound("hit", 0.2, 0.0)
+		NetFx.emit(get_parent(), "sound", {"snd": ["hit", 0.2, 0.0]})

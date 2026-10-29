@@ -14,6 +14,8 @@ var last_attacker: Node = null
 var fuse_active: bool = false
 var fuse_time_left: float = 0.0
 var _fuse_blink_time: float = 0.0
+var _previous_velocity: Vector2 = Vector2.ZERO
+var _hit_cooldowns: Dictionary = {}
 
 func _ready() -> void:
 	add_to_group("barrel")
@@ -33,6 +35,18 @@ func _ready() -> void:
 	set_process(false)
 	if is_replica:
 		set_replica(true)
+	else:
+		contact_monitor = true
+		max_contacts_reported = 8
+
+# Fallende oder weggeschossene Fässer verletzen Spieler (siehe PhysicsImpact).
+func _physics_process(delta: float) -> void:
+	if is_replica or has_exploded:
+		return
+	PhysicsImpact.tick_cooldowns(_hit_cooldowns, delta)
+	var source = last_attacker if is_instance_valid(last_attacker) else null
+	PhysicsImpact.check_players(self, _previous_velocity, _hit_cooldowns, 1.1, 34.0, 1.0, source)
+	_previous_velocity = linear_velocity
 
 func _process(delta: float) -> void:
 	if not fuse_active or has_exploded:
@@ -142,7 +156,7 @@ func hit_barrel(projectile: Node2D) -> void:
 	if explosive:
 		start_fuse()
 	else:
-		SoundManager.play_sound("bounce", 0.22, -6.0)
+		NetFx.emit(get_parent(), "sound", {"snd": ["bounce", 0.22, -6.0]})
 
 func start_fuse(duration: float = FUSE_DURATION) -> void:
 	if is_replica or has_exploded or fuse_active:
@@ -151,7 +165,7 @@ func start_fuse(duration: float = FUSE_DURATION) -> void:
 	fuse_time_left = duration
 	_fuse_blink_time = 0.0
 	set_process(true)
-	SoundManager.play_sound("click", 0.25, 1.0)
+	SoundManager.play_sound("fuse", 0.1, 0.0)
 
 func explode() -> void:
 	if is_replica or has_exploded:
@@ -165,10 +179,11 @@ func explode() -> void:
 	var source: Node = last_attacker if is_instance_valid(last_attacker) else null
 	var blast_pos := global_position
 	_spawn_explosion_effect(blast_pos, explosion_radius)
-	SoundManager.play_sound("explosion", 0.65, 0.0)
+	SoundManager.play_sound("explosion_big", 0.15, 0.0)
 	Global.shake_camera(0.55)
 	_apply_explosion_damage(blast_pos, source)
 	_damage_nearby_crates(blast_pos, source)
+	Seesaw.blast_all(get_tree(), blast_pos, explosion_radius * 1.3, 1.6)
 	_chain_to_other_barrels(blast_pos, source)
 	queue_free()
 
@@ -201,7 +216,10 @@ func _apply_explosion_damage(blast_pos: Vector2, source: Node = null) -> void:
 		player.call("take_damage", explosion_damage * falloff, direction * (480.0 + 320.0 * falloff), source)
 
 func _damage_nearby_crates(blast_pos: Vector2, source: Node = null) -> void:
-	for crate in get_tree().get_nodes_in_group("crate"):
+	# Kettenglieder (Gruppe "chain_link") werden nur weggeschubst, Kisten und
+	# Kugeln beschädigt.
+	for crate in get_tree().get_nodes_in_group("crate") + get_tree().get_nodes_in_group("chain_link") \
+			+ get_tree().get_nodes_in_group("rolling_ball") + get_tree().get_nodes_in_group("ball_gate"):
 		if not is_instance_valid(crate) or not crate.has_method("apply_blast"):
 			continue
 		if blast_pos.distance_to(crate.global_position) <= explosion_radius * 1.2:
@@ -260,6 +278,8 @@ func _spawn_explosion_effect(effect_pos: Vector2, radius: float) -> void:
 func spawn_remote_explosion() -> void:
 	if explosive:
 		_spawn_explosion_effect(global_position, explosion_radius)
+		SoundManager.play_sound("explosion_big", 0.15, 0.0)
+		Global.shake_camera(0.55)
 	queue_free()
 
 func _circle_points(radius: float, segments: int) -> PackedVector2Array:
@@ -276,6 +296,7 @@ func set_replica(replica: bool) -> void:
 	freeze = replica
 	can_sleep = false
 	if replica:
+		contact_monitor = false
 		collision_layer = 0
 		collision_mask = 0
 		linear_velocity = Vector2.ZERO
@@ -305,6 +326,8 @@ func apply_network_state(data: Dictionary) -> void:
 	angular_velocity = 0.0
 	var remote_fuse := bool(data.get("fuse", false))
 	if remote_fuse and not has_exploded:
+		if not fuse_active:
+			SoundManager.play_sound("fuse", 0.1, 0.0)
 		fuse_active = true
 		fuse_time_left = float(data.get("fuse_time", fuse_time_left))
 		set_process(true)
