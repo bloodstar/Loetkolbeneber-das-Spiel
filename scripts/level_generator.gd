@@ -1032,8 +1032,13 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 		_rng.seed = level_seed
 
 	var resolved_map := map_id
-	if not MAP_PROFILES.has(resolved_map):
+	if not MAP_PROFILES.has(resolved_map) and not ArenaMaps.is_arena_map(resolved_map):
 		resolved_map = Global.resolve_map_id(level_seed)
+	# Arena-Modus (Draufsicht): eigener Aufbau aus ArenaMaps, ohne 2D-Grafik.
+	if ArenaMaps.is_arena_map(resolved_map):
+		ArenaBuilder.build(self, resolved_map, level_seed)
+		return
+	ArenaBuilder.deactivate(self)
 	_apply_tileset(resolved_map)
 	var profile: Dictionary = MAP_PROFILES[current_map_id]
 	map_w = int(profile.get("width", MAP_WIDTH))
@@ -1129,6 +1134,9 @@ func get_map_pixel_size() -> Vector2:
 # Clients dieselben Spawns, jede Runde aber andere. Gespawnt wird nie in
 # Stacheln, Portalen, Kisten, Federn oder anderen Objekten.
 func get_spawn_position(index: int, total: int) -> Vector2:
+	if ArenaMode.active:
+		var arena_spawns := ArenaBuilder.spawn_positions(maxi(1, total), _spawn_seed)
+		return arena_spawns[clampi(index - 1, 0, arena_spawns.size() - 1)]
 	var positions := _build_round_spawn_positions(maxi(1, total))
 	var spawn_index := clampi(index - 1, 0, positions.size() - 1)
 	return positions[spawn_index]

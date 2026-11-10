@@ -94,6 +94,8 @@ func _handle_aim(delta: float) -> void:
 # geschätzt und einmal nachgerechnet, weil der höhere Zielpunkt weiter weg liegt.
 func _drop_compensated_aim_point(goal: Vector2) -> Vector2:
 	var aim_point: Vector2 = goal
+	if ArenaMode.active:
+		return aim_point # Kugeln fliegen in der Arena flach
 	var speed: float = maxf(player.bullet_speed, 1.0)
 	var gravity: float = Bullet.BULLET_GRAVITY * maxf(0.0, player.projectile_gravity_mult)
 	if gravity <= 0.0:
@@ -142,6 +144,11 @@ func _handle_navigation(_delta: float) -> void:
 	# Während des kurzen Rückstoßfensters nicht sofort gegensteuern, damit
 	# Treffer auch bei Bots sichtbar und spürbar bleiben.
 	if player.knockback_timer > 0.0:
+		return
+
+	# Arena (Draufsicht): eigene Wegsuche im Höhenraster.
+	if ArenaMode.active:
+		ArenaBot.navigate(self, _delta)
 		return
 
 	if _handle_lava_escape(_delta):
@@ -340,7 +347,8 @@ func _handle_combat(_delta: float) -> void:
 		var shot_dist: float = dist
 		if _devil_aim != Vector2.INF:
 			shot_dist = player.global_position.distance_to(_devil_aim)
-		if shot_dist < 650.0 and not _devil_in_line_of_fire():
+		var line_clear := not ArenaMode.active or _devil_aim != Vector2.INF or ArenaBot.has_line_of_sight(player, target)
+		if shot_dist < 650.0 and line_clear and not _devil_in_line_of_fire():
 			player.shoot()
 	
 	# Defensive Dash

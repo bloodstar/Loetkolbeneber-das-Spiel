@@ -29,6 +29,7 @@ signal map_pool_changed()
 # Powerups wurden im Lobby-Reiter "Powerups" an- oder abgeschaltet.
 signal powerup_pool_changed()
 signal match_mode_changed(mode: String)
+signal game_mode_changed(mode: String)
 signal player_count_changed(count: int)
 signal lobby_state_changed()
 signal lobby_loadouts_changed()
@@ -98,6 +99,16 @@ const TEAM_COLORS: Array[Color] = [
 
 var current_state: GameState = GameState.PLAYING
 var match_mode: String = MATCH_MODE_FFA
+# Spielmodus: Seitenansicht (klassisch) oder Arena (Draufsicht, Voxel-3D).
+# Karten, Helden und Regeln sind in beiden Modi gleich, nur Levels und Physik
+# unterscheiden sich (siehe scripts/arena/).
+const GAME_MODE_SIDE: String = "side"
+const GAME_MODE_ARENA: String = "arena"
+const GAME_MODES: Dictionary = {
+	"side": {"name": "Seitenansicht", "description": "Klassisch: Plattformen, Schwerkraft, Sprünge."},
+	"arena": {"name": "Arena (Draufsicht)", "description": "Top-down-Arena in Voxel-3D: Laufen in alle Richtungen, Springen über Deckung."},
+}
+var game_mode: String = GAME_MODE_SIDE
 
 # Match-Punkte: Kills und das Überleben einer Runde geben Punkte. Wer zuerst
 # die konfigurierte Punktzahl erreicht, gewinnt das Match.
@@ -1254,6 +1265,21 @@ func get_active_hero_ids() -> Array[String]:
 		ids.append(get_player_hero_id(i))
 	return ids
 
+func set_game_mode(mode: String) -> void:
+	var resolved := mode if GAME_MODES.has(mode) else GAME_MODE_SIDE
+	if game_mode == resolved:
+		return
+	game_mode = resolved
+	game_mode_changed.emit(game_mode)
+	lobby_state_changed.emit()
+
+func is_arena_mode() -> bool:
+	return game_mode == GAME_MODE_ARENA
+
+func get_game_mode_name(mode: String = "") -> String:
+	var resolved := mode if not mode.is_empty() else game_mode
+	return str(GAME_MODES.get(resolved, GAME_MODES[GAME_MODE_SIDE]).get("name", resolved))
+
 func set_match_mode(mode: String) -> void:
 	var resolved := mode if MATCH_MODES.has(mode) else MATCH_MODE_FFA
 	if match_mode == resolved:
@@ -1891,6 +1917,8 @@ func set_disabled_powerups(kinds: Array) -> void:
 # Löst "zufall" deterministisch anhand des Runden-Seeds auf. Host und Client
 # erhalten so dieselbe Map, auch wenn der Host "Zufällig" ausgewählt hat.
 func resolve_map_id(level_seed: int) -> String:
+	if is_arena_mode():
+		return ArenaMaps.pick_random(level_seed)
 	if selected_map_id != MAP_RANDOM and MAP_PLAYABLE.has(selected_map_id):
 		return selected_map_id
 	var pool := get_enabled_map_ids()
@@ -2115,6 +2143,7 @@ func get_available_card_count_for_match(extra_ban_id: String = "") -> int:
 func get_current_lobby_settings() -> Dictionary:
 	return {
 		"match_mode": match_mode,
+		"game_mode": game_mode,
 		"player_count": player_count,
 		"points_to_win": points_to_win,
 		"survival_points": survival_points,
@@ -2145,6 +2174,7 @@ func get_current_lobby_settings() -> Dictionary:
 func _default_lobby_settings() -> Dictionary:
 	return {
 		"match_mode": MATCH_MODE_FFA,
+		"game_mode": GAME_MODE_SIDE,
 		"player_count": 2,
 		"points_to_win": 500,
 		"survival_points": 50,
@@ -2399,6 +2429,7 @@ func delete_lobby_loadout(name: String) -> bool:
 
 func apply_lobby_settings(settings: Dictionary) -> void:
 	set_match_mode(str(settings.get("match_mode", match_mode)))
+	set_game_mode(str(settings.get("game_mode", game_mode)))
 	var required := get_mode_required_players()
 	var count := required if required > 0 else int(settings.get("player_count", player_count))
 	set_player_count(count)

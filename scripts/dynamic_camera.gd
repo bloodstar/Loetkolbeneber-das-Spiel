@@ -204,6 +204,7 @@ func _process(delta: float) -> void:
 	if _kill_cam_active:
 		_process_kill_cam(real_delta)
 		_apply_shake(real_delta)
+		_apply_arena_squash()
 		return
 
 	if targets.is_empty():
@@ -241,6 +242,16 @@ func _process(delta: float) -> void:
 		zoom = zoom.lerp(Vector2(target_zoom, target_zoom), follow_speed * delta)
 	
 	_apply_shake(real_delta)
+	_apply_arena_squash()
+
+## Arena (Draufsicht): Die 2D-Ebene ist der Boden und wird wie von der
+## geneigten 3D-Kamera gesehen in y gestaucht. So liegen 2D-Effekte genau auf
+## dem 3D-Boden, und die Mausposition trifft den Boden unter dem Zeiger.
+func _apply_arena_squash() -> void:
+	if ArenaMode.active:
+		zoom.y = zoom.x * ArenaMode.y_squash()
+	elif zoom.y != zoom.x:
+		zoom.y = zoom.x
 
 func _apply_shake(delta: float) -> void:
 	if trauma > 0.0:

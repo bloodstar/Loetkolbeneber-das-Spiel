@@ -145,8 +145,18 @@ func roll_modifiers(seed_val: int, rate_percent: int = LevelModifierDefsClass.RA
 	return _roll_with_config(seed_val, rate_percent, ids)
 
 # Verwendet die aktuell in der Lobby konfigurierte Rate und Auswahl.
+# Modifier, die im Arena-Modus (Draufsicht) sinnvoll funktionieren. Alles, was
+# "von oben fällt", Lava/Boden-Effekte oder Plattform-Objekte braucht, bleibt
+# dort vorerst aus.
+const ARENA_MODIFIERS: Array[String] = [
+	"wind", "low_gravity", "high_gravity", "mini_pigs", "double_damage",
+	"speed_demon", "air_jumps", "regeneration", "starting_shield", "zone",
+]
+
 func roll_configured_modifiers(seed_val: int) -> Array[String]:
 	var ids := Global.get_enabled_level_modifiers()
+	if Global.is_arena_mode():
+		ids = ids.filter(func(m): return ARENA_MODIFIERS.has(m))
 	if ids.is_empty():
 		return []
 	return _roll_with_config(seed_val, Global.level_modifier_rate_percent, ids)

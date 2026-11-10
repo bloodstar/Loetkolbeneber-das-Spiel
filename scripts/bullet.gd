@@ -105,6 +105,10 @@ var net_target_pos: Vector2 = Vector2.ZERO
 var net_target_rotation: float = 0.0
 var blocked_by_drone: bool = false
 
+# Arena-Modus: Flughöhe über dem Boden (px). Bestimmt die Höhen-Schicht der
+# Kollision und den Zeichen-Versatz. -1 = beim Start aus dem Schützen setzen.
+var arena_z: float = -1.0
+
 var trail: Line2D = null
 const TRAIL_RESET_DISTANCE: float = 200.0
 var _trail_points: PackedVector2Array = PackedVector2Array()
@@ -137,6 +141,11 @@ func _ready() -> void:
 
 	if sprite:
 		sprite.visible = false
+	if ArenaMode.active and arena_z < 0.0:
+		if is_instance_valid(shooter) and shooter is Player:
+			arena_z = ArenaMotion.muzzle_height(shooter)
+		else:
+			arena_z = ArenaMode.MUZZLE_H
 	_build_trail()
 	if not is_replica and (stun_duration > 0.0 or chain_lightning or lightning_zone):
 		_enable_lightning_trail()
@@ -149,6 +158,8 @@ func _ready() -> void:
 		return
 	
 	add_to_group("bullet")
+	if ArenaMode.active:
+		collision_mask = ArenaMode.with_bands(collision_mask, ArenaMode.point_band_mask(arena_z))
 	# Ignore shooter collision initially
 	if is_instance_valid(shooter):
 		add_collision_exception_with(shooter)
@@ -220,6 +231,10 @@ func _update_trail_color() -> void:
 	trail.gradient = gradient
 
 func _draw() -> void:
+	if ArenaMode.active:
+		# Über der Bodenstelle in Flughöhe zeichnen (2D-Ebene ist gestaucht).
+		var off := ArenaMode.height_offset(maxf(arena_z, 0.0)).rotated(-rotation)
+		draw_set_transform(off / Vector2(maxf(absf(scale.x), 0.01), maxf(absf(scale.y), 0.01)))
 	if _glow_texture == null:
 		_glow_texture = _make_glow_texture()
 	var r := ORB_GLOW_RADIUS
@@ -267,6 +282,11 @@ func _advance_trail() -> void:
 	else:
 		trail.width = TRAIL_WIDTH * maxf(scale.x, 0.1)
 		trail.points = _trail_points
+	if ArenaMode.active:
+		var off := ArenaMode.height_offset(maxf(arena_z, 0.0))
+		trail.position = off
+		if _trail_glow:
+			_trail_glow.position = off
 
 func _process(delta: float) -> void:
 	if not is_replica:
@@ -283,6 +303,8 @@ func apply_network_state(data: Dictionary) -> void:
 	net_target_pos = data.get("pos", net_target_pos)
 	net_target_rotation = float(data.get("rot", net_target_rotation))
 	velocity = data.get("vel", Vector2.ZERO)
+	if data.has("z"):
+		arena_z = float(data["z"])
 	var s := float(data.get("scale", 1.0))
 	scale = Vector2(s, s)
 	if bool(data.get("lt", false)):
@@ -309,10 +331,12 @@ func _physics_process(delta: float) -> void:
 	
 	# Schwerkraft: Die Flugbahn wird zum Bogen. Mörser-Karten
 	# verstärken den Fall, Präzisionskarten flachen ihn ab.
-	var gravity := BULLET_GRAVITY * maxf(0.0, projectile_gravity_mult)
-	if velocity.y < 0.0:
-		gravity *= BULLET_RISE_GRAVITY_MULT
-	velocity.y += gravity * delta
+	# In der Arena (Draufsicht) fliegen Kugeln flach, y ist dort horizontal.
+	if not ArenaMode.active:
+		var gravity := BULLET_GRAVITY * maxf(0.0, projectile_gravity_mult)
+		if velocity.y < 0.0:
+			gravity *= BULLET_RISE_GRAVITY_MULT
+		velocity.y += gravity * delta
 
 	# Zielsuche: weit weg nur leichtes Nachführen, nah am Gegner starkes Einlenken.
 	# Unsichtbare Spieler (Powerup) entziehen sich der Zielsuche.
@@ -549,6 +573,7 @@ func _split_on_bounce() -> void:
 	twin.wall_pierce_left = wall_pierce_left
 	twin.ricochet_bonus = ricochet_bonus
 	twin.border_bounce = border_bounce
+	twin.arena_z = arena_z
 	twin.split_on_bounce = split_on_bounce
 	twin.split_depth = split_depth
 	twin.can_hit_shooter = can_hit_shooter

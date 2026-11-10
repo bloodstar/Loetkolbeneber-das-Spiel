@@ -70,6 +70,9 @@ var map_option: OptionButton
 var map_info_label: Label
 var mode_option: OptionButton
 var mode_info_label: Label
+# Spielart: Seitenansicht oder Arena (Draufsicht).
+var game_mode_option: OptionButton
+var game_mode_info_label: Label
 var loadout_option: OptionButton
 var loadout_name_edit: LineEdit
 var loadout_load_btn: Button
@@ -197,6 +200,7 @@ func _ready() -> void:
 	Global.map_pool_changed.connect(_on_map_pool_changed)
 	Global.powerup_pool_changed.connect(_on_powerup_pool_changed)
 	Global.match_mode_changed.connect(_on_match_mode_changed)
+	Global.game_mode_changed.connect(_on_game_mode_changed)
 	Global.lobby_state_changed.connect(_on_lobby_state_changed)
 	Global.bot_test_changed.connect(_on_lobby_state_changed)
 	Global.level_modifiers_changed.connect(_on_level_modifiers_changed)
@@ -1467,6 +1471,29 @@ func _refresh_map_controls() -> void:
 			Global.get_map_description(Global.selected_map_id),
 		]
 
+func _on_game_mode_selected(index: int) -> void:
+	if not Global.is_local_host():
+		_refresh_game_mode_controls()
+		return
+	Global.set_game_mode(Global.GAME_MODE_ARENA if index == 1 else Global.GAME_MODE_SIDE)
+	SoundManager.play_sound("click")
+
+func _on_game_mode_changed(_mode: String) -> void:
+	_refresh_game_mode_controls()
+	_update_status()
+
+func _refresh_game_mode_controls() -> void:
+	if game_mode_option == null:
+		return
+	var idx := 1 if Global.is_arena_mode() else 0
+	game_mode_option.selected = idx
+	game_mode_option.disabled = not Global.is_local_host()
+	if game_mode_info_label != null:
+		var info := str(Global.GAME_MODES[Global.game_mode].get("description", ""))
+		if Global.is_arena_mode():
+			info += " Spielfeld: zufällige Arena-Karte (%s)." % ", ".join(ArenaMaps.MAP_IDS.map(func(m): return ArenaMaps.display_name(m)))
+		game_mode_info_label.text = info
+
 func _on_match_mode_changed() -> void:
 	_refresh_mode_controls()
 	_update_titles()
@@ -1490,6 +1517,7 @@ func _on_mode_selected(index: int) -> void:
 	_update_status()
 
 func _refresh_mode_controls() -> void:
+	_refresh_game_mode_controls()
 	if mode_option == null:
 		return
 	var selected := maxi(0, Global.MATCH_MODE_ORDER.find(Global.match_mode))
@@ -1611,6 +1639,26 @@ func _build_rules_tab() -> void:
 
 	body.add_child(HSeparator.new())
 	_add_section_title(body, "SPIELMODUS & SPIELFELD", Color(1.0, 0.55, 0.55, 1.0))
+	# Spielart (Ansicht): Seitenansicht oder Arena. Gleiche Karten und Helden.
+	var view_row := HBoxContainer.new()
+	view_row.add_theme_constant_override("separation", 12)
+	body.add_child(view_row)
+	var view_label := Label.new()
+	view_label.text = "Spielart:"
+	view_label.add_theme_font_size_override("font_size", 15)
+	view_row.add_child(view_label)
+	game_mode_option = OptionButton.new()
+	game_mode_option.custom_minimum_size = Vector2(200, 0)
+	for gm_id in [Global.GAME_MODE_SIDE, Global.GAME_MODE_ARENA]:
+		game_mode_option.add_item(Global.get_game_mode_name(gm_id))
+	game_mode_option.item_selected.connect(_on_game_mode_selected)
+	view_row.add_child(game_mode_option)
+	game_mode_info_label = Label.new()
+	game_mode_info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	game_mode_info_label.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
+	game_mode_info_label.add_theme_font_size_override("font_size", 12)
+	game_mode_info_label.autowrap_mode = 2
+	view_row.add_child(game_mode_info_label)
 	# Modus und Map stehen nebeneinander, darunter jeweils ihre Erklärung.
 	var choice_row := HBoxContainer.new()
 	choice_row.add_theme_constant_override("separation", 24)
