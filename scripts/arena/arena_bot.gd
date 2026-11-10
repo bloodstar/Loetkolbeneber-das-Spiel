@@ -73,12 +73,6 @@ static func _bullet_incoming(p: Player) -> bool:
 			return randf() < 0.25
 	return false
 
-static func _walkable(cell: Vector2i, z: float) -> bool:
-	var grid := ArenaMode.grid
-	if grid == null or not grid.in_bounds(cell):
-		return false
-	return grid.top_at(cell) <= z + JUMPABLE_TOP
-
 static func _path_direction(p: Player, goal: Vector2, st: Dictionary) -> Vector2:
 	var grid := ArenaMode.grid
 	if grid == null:
@@ -103,7 +97,10 @@ static func _bfs(start: Vector2i, end: Vector2i, z: float) -> Array:
 	var grid := ArenaMode.grid
 	if not grid.in_bounds(start) or not grid.in_bounds(end):
 		return []
+	# Pro Zelle die Standhöhe, mit der sie erreicht wurde (Rampen, Stufen,
+	# Stege: unter einem Steg durch oder oben drüber).
 	var came := {start: start}
+	var height := {start: z}
 	var queue: Array[Vector2i] = [start]
 	var dirs := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1),
 		Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]
@@ -115,14 +112,20 @@ static func _bfs(start: Vector2i, end: Vector2i, z: float) -> Array:
 		if c == end:
 			found = true
 			break
+		var hz: float = height[c]
 		for d in dirs:
 			var n: Vector2i = c + d
-			if came.has(n) or not _walkable(n, z):
+			if came.has(n):
+				continue
+			var nz := grid.reach_height(n, hz, JUMPABLE_TOP)
+			if nz < 0.0:
 				continue
 			# Diagonal nur, wenn beide Nachbarn frei sind (keine Ecken schneiden).
-			if d.x != 0 and d.y != 0 and (not _walkable(c + Vector2i(d.x, 0), z) or not _walkable(c + Vector2i(0, d.y), z)):
+			if d.x != 0 and d.y != 0 and (grid.reach_height(c + Vector2i(d.x, 0), hz, JUMPABLE_TOP) < 0.0 \
+					or grid.reach_height(c + Vector2i(0, d.y), hz, JUMPABLE_TOP) < 0.0):
 				continue
 			came[n] = c
+			height[n] = nz
 			queue.append(n)
 	if not found:
 		return []

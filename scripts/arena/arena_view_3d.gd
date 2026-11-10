@@ -12,6 +12,8 @@ extends Node3D
 const CAMERA_DISTANCE: float = 3000.0
 # Voxel-Schwein etwas größer als die Kollisionsbox, damit es gut lesbar ist.
 const PIG_SCALE: float = 1.3
+# Sichtbare Dicke der Stege.
+const STEG_VIS: float = 14.0
 
 var camera_2d: Camera2D = null
 var cam: Camera3D
@@ -124,7 +126,7 @@ func _build_blocks(map_data: Dictionary, grid: ArenaGrid) -> void:
 	var walls: Array = []
 	var covers: Array = []
 	for cell in grid.blocks.keys():
-		if grid.destructible.has(cell):
+		if grid.destructible.has(cell) or grid.terrain.has(cell) or grid.stege.has(cell):
 			continue
 		for b in grid.blocks[cell]:
 			var span: Vector2 = b
@@ -146,6 +148,9 @@ func _build_blocks(map_data: Dictionary, grid: ArenaGrid) -> void:
 			mmi.multimesh.set_instance_color(i, _tint(list[i][1], 0.04))
 		add_child(mmi)
 	_build_segments(grid, wall_mat)
+	_build_terrain(map_data, grid)
+	_build_stege(grid)
+	_build_ramps(map_data, grid)
 	# Zerstörbare Kisten einzeln, damit sie beim Bruch verschwinden können.
 	var crate_mat := ArenaTextures.make_material("wood", Color(0.7, 0.47, 0.25), t)
 	for cell in grid.destructible.keys():
@@ -157,6 +162,139 @@ func _build_blocks(map_data: Dictionary, grid: ArenaGrid) -> void:
 		crate.position = Vector3((cell.x + 0.5) * t, ArenaMode.BAND_H * 0.5, (cell.y + 0.5) * t)
 		add_child(crate)
 		_crates[cell] = crate
+
+func _floor_material(map_data: Dictionary, grid: ArenaGrid) -> Material:
+	var floor_col: Color = map_data.get("floor", Color(0.4, 0.6, 0.3))
+	return ArenaTextures.make_material(_tex_kind(map_data, "floor_tex", "grass"), floor_col, grid.tile)
+
+func _cliff_material(map_data: Dictionary, grid: ArenaGrid) -> Material:
+	var wall_col: Color = map_data.get("wall", Color(0.6, 0.6, 0.6))
+	var cliff_col: Color = map_data.get("cliff", wall_col.lerp(Color(0.45, 0.36, 0.28), 0.4))
+	return ArenaTextures.make_material("rock", cliff_col, grid.tile)
+
+## Erhöhungen: Felswand je Höhenschicht, oben eine dünne Platte mit
+## Bodentextur (Grasnarbe), damit man die Fläche als begehbar erkennt.
+func _build_terrain(map_data: Dictionary, grid: ArenaGrid) -> void:
+	if grid.terrain.is_empty():
+		return
+	var t := grid.tile
+	var sides: Array = []
+	var tops: Array = []
+	for cell in grid.terrain.keys():
+		var top := grid.top_at(cell)
+		var levels := int(round(top / ArenaMode.BAND_H))
+		for k in range(levels):
+			var f := 0.82 + 0.12 * float(k) / maxf(1.0, float(levels - 1))
+			sides.append([Vector3((cell.x + 0.5) * t, (k + 0.5) * ArenaMode.BAND_H, (cell.y + 0.5) * t), f])
+		# Randkacheln etwas dunkler: Die Kante der Erhöhung bleibt lesbar.
+		var rim := false
+		for dn in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var nb: Vector2i = cell + dn
+			if grid.in_bounds(nb) and not (grid.terrain.has(nb) and grid.top_at(nb) >= top):
+				rim = true
+		tops.append([Vector3((cell.x + 0.5) * t, top - 2.5, (cell.y + 0.5) * t), 0.8 if rim else 1.0])
+	var side_mmi := _voxel_multimesh(sides.size(), Vector3(t, ArenaMode.BAND_H, t), _cliff_material(map_data, grid))
+	for i in range(sides.size()):
+		side_mmi.multimesh.set_instance_transform(i, Transform3D(Basis(), sides[i][0]))
+		side_mmi.multimesh.set_instance_color(i, _tint(sides[i][1], 0.04))
+	add_child(side_mmi)
+	# Oberseite etwas heller und wärmer als der Boden, damit die Erhöhung
+	# auch von oben klar vom Boden absticht.
+	var floor_col: Color = map_data.get("floor", Color(0.4, 0.6, 0.3))
+	var top_col: Color = map_data.get("top", floor_col.lerp(Color(0.9, 0.85, 0.5), 0.15))
+	var top_mat := ArenaTextures.make_material(_tex_kind(map_data, "top_tex", _tex_kind(map_data, "floor_tex", "grass")), top_col, t)
+	var top_mmi := _voxel_multimesh(tops.size(), Vector3(t, 6.0, t), top_mat)
+	for i in range(tops.size()):
+		top_mmi.multimesh.set_instance_transform(i, Transform3D(Basis(), tops[i][0]))
+		top_mmi.multimesh.set_instance_color(i, _tint(tops[i][1], 0.04))
+	add_child(top_mmi)
+
+## Stege: Holzplanken in Steghöhe, darunter Luft (Pfosten an den Ecken
+## wären Hindernisse, daher schweben die Stege zwischen ihren Auflagern).
+func _build_stege(grid: ArenaGrid) -> void:
+	if grid.stege.is_empty():
+		return
+	var t := grid.tile
+	var mat := ArenaTextures.make_material("planks", Color(0.62, 0.43, 0.26), t)
+	var list: Array = []
+	# Sichtbar nur die oberen STEG_VIS px (Bohlen), die Kollision belegt das
+	# ganze Band darunter, damit man darunter nicht hochspringen kann.
+	for cell in grid.stege.keys():
+		for b in grid.blocks.get(cell, []):
+			var span: Vector2 = b
+			list.append(Vector3((cell.x + 0.5) * t, span.y - STEG_VIS * 0.5, (cell.y + 0.5) * t))
+	var mmi := _voxel_multimesh(list.size(), Vector3(t, STEG_VIS, t), mat)
+	for i in range(list.size()):
+		mmi.multimesh.set_instance_transform(i, Transform3D(Basis(), list[i]))
+		mmi.multimesh.set_instance_color(i, _tint(0.95, 0.05))
+	add_child(mmi)
+
+## Rampen: je Zelle ein Keil. Die schräge Oberseite trägt die Bodentextur,
+## die Seiten die Felswand.
+func _build_ramps(map_data: Dictionary, grid: ArenaGrid) -> void:
+	if grid.ramps.is_empty():
+		return
+	var t := grid.tile
+	var top_st := SurfaceTool.new()
+	top_st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var side_st := SurfaceTool.new()
+	side_st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for cell in grid.ramps.keys():
+		var r: Dictionary = grid.ramps[cell]
+		var d: Vector2i = r["dir"]
+		var s0 := float(r["s0"])
+		# Höhen an drei Stellen der Zelle (Anfang, Mitte, Ende in Steigrichtung),
+		# weil die Rampe eine halbe Kachel vor dem Ende flach wird.
+		var hs: Array[float] = [ArenaGrid.ramp_height(r, s0), ArenaGrid.ramp_height(r, s0 + 0.5), ArenaGrid.ramp_height(r, s0 + 1.0)]
+		var o := Vector3(cell.x * t, 0.0, cell.y * t)
+		for k in range(2):
+			var a := float(k) * 0.5
+			var b := a + 0.5
+			var ha: float = hs[k]
+			var hb: float = hs[k + 1]
+			# Vier Ecken des Streifens [a, b] in Steigrichtung, über die volle Breite.
+			var p := _ramp_quad(o, t, d, a, b)
+			var q0: Vector3 = p[0] + Vector3(0, ha, 0)
+			var q1: Vector3 = p[1] + Vector3(0, ha, 0)
+			var q2: Vector3 = p[2] + Vector3(0, hb, 0)
+			var q3: Vector3 = p[3] + Vector3(0, hb, 0)
+			_tri2(top_st, q0, q1, q2, q3)
+			# Seiten links und rechts (Trapez bis zum Boden).
+			_tri2(side_st, p[0], q0, q3, p[3])
+			_tri2(side_st, p[1], p[2], q2, q1)
+		# Stirnseite am unteren Ende (falls die Rampe nicht am Boden beginnt).
+		if s0 == 0.0 and hs[0] > 0.5:
+			var p0 := _ramp_quad(o, t, d, 0.0, 0.0)
+			_tri2(side_st, p0[0], p0[1], p0[1] + Vector3(0, hs[0], 0), p0[0] + Vector3(0, hs[0], 0))
+	for pair in [[top_st, _floor_material(map_data, grid)], [side_st, _cliff_material(map_data, grid)]]:
+		var st: SurfaceTool = pair[0]
+		st.generate_normals()
+		var mi := MeshInstance3D.new()
+		mi.mesh = st.commit()
+		mi.material_override = pair[1]
+		var mat: StandardMaterial3D = (pair[1] as StandardMaterial3D)
+		mat.vertex_color_use_as_albedo = false
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		add_child(mi)
+
+## Ecken eines Streifens einer Rampenzelle: von a bis b (0..1) in
+## Steigrichtung d. Reihenfolge: links-a, rechts-a, rechts-b, links-b.
+func _ramp_quad(o: Vector3, t: float, d: Vector2i, a: float, b: float) -> Array:
+	var fwd := Vector3(d.x, 0, d.y)
+	var side := Vector3(-d.y, 0, d.x)
+	var center := o + Vector3(t * 0.5, 0, t * 0.5)
+	var base := center - fwd * t * 0.5
+	var l := -side * t * 0.5
+	var rr := side * t * 0.5
+	return [base + l + fwd * t * a, base + rr + fwd * t * a, base + rr + fwd * t * b, base + l + fwd * t * b]
+
+func _tri2(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3) -> void:
+	st.add_vertex(a)
+	st.add_vertex(b)
+	st.add_vertex(c)
+	st.add_vertex(a)
+	st.add_vertex(c)
+	st.add_vertex(d)
 
 ## Schräge Wände: je Höhenschicht ein gedrehter Quader.
 func _build_segments(grid: ArenaGrid, wall_mat: Material) -> void:

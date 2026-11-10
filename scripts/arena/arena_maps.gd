@@ -8,17 +8,27 @@ extends RefCounted
 #   c  niedrige Deckung (1 Band, 36 px) – überspringbar, man kann draufstehen
 #   x  zerstörbare Kiste (1 Band)
 #   S  Spawnpunkt (Boden)
-# Rampen und Stege folgen (siehe ArenaGrid.ramps / Blöcke mit Luft darunter).
+#   p  Erhöhung, 1 Band (36 px) – Gelände mit Bodentextur oben, Felswand
+#   P  Erhöhung, 2 Bänder (72 px)
+#   T  Erhöhung, 3 Bänder (108 px)
+#   =  Steg: Holzsteg von 72 bis 108 px, darunter kann man durchlaufen
+#   > < ^ v  Rampe, steigt nach Osten / Westen / Norden / Süden. Eine Reihe
+#      gleicher Rampenzeichen bildet eine Rampe: Sie beginnt auf der Höhe der
+#      Zelle vor dem unteren Ende und endet auf der Höhe der Zelle hinter dem
+#      oberen Ende (z. B. Boden -> P).
 #
 # Optional pro Karte:
 #   "walls": schräge Wände [x1, y1, x2, y2, Höhenzeichen] in Kachel-Koordinaten
 #            (Eckpunkte, 0..Breite / 0..Höhe), Höhe wie oben (#, H, c).
 #   "floor_tex": grass | sand | cobble   "wall_tex": brick | rock
+#   "cliff": Farbe der Felswände von Erhöhungen und Rampen
+#   "top", "top_tex": Farbe/Textur der Oberseite von Erhöhungen
 #            (32x32-Pixeltexturen aus ArenaTextures, gefärbt mit floor/wall)
 
 const MAP_IDS: Array[String] = [
 	"arena_hof", "arena_kistenlager", "arena_ruinen",
 	"arena_steppe", "arena_marktplatz", "arena_canyon",
+	"arena_plateau", "arena_stegwerk",
 ]
 
 const BLOCK_HEIGHTS: Dictionary = {
@@ -26,9 +36,142 @@ const BLOCK_HEIGHTS: Dictionary = {
 	"H": 72.0,
 	"c": 36.0,
 	"x": 36.0,
+	"p": 36.0,
+	"P": 72.0,
+	"T": 108.0,
+	"=": 108.0,
+}
+
+# Unterkante von Blöcken mit Luft darunter (Stege). Sonst 0.
+const BLOCK_BOTTOMS: Dictionary = {
+	"=": 72.0,
+}
+
+# Geländeblöcke (Bodentextur oben, Felswand seitlich).
+const TERRAIN_CHARS: String = "pPT"
+
+const RAMP_DIRS: Dictionary = {
+	">": Vector2i(1, 0),
+	"<": Vector2i(-1, 0),
+	"v": Vector2i(0, 1),
+	"^": Vector2i(0, -1),
 }
 
 const MAPS: Dictionary = {
+	"arena_stegwerk": {
+		"name": "Stegwerk",
+		"description": "Fünf Türme, verbunden durch Holzstege. Rampen führen hinauf, unten läuft man unter den Stegen durch.",
+		"floor": Color(0.66, 0.58, 0.44),
+		"wall": Color(0.62, 0.56, 0.5),
+		"cliff": Color(0.55, 0.5, 0.46),
+		"top": Color(0.62, 0.6, 0.58),
+		"top_tex": "cobble",
+		"accent": Color(1.0, 0.6, 0.25, 0.95),
+		"floor_tex": "sand",
+		"wall_tex": "brick",
+		"rows": [
+			"....................................................................",
+			"....................................................................",
+			"....................................................................",
+			"....................................................................",
+			"....S............................xx............................S....",
+			"....................................................................",
+			"............................S.......................................",
+			"....................................................................",
+			"..........TTTTTT....................................TTTTTT..........",
+			"..........TTTTTT....................................TTTTTT..........",
+			"..........TTTTTT====================================TTTTTT..........",
+			"..........TTTTTT====================================TTTTTT..........",
+			"....>>>>>>TTTTTT.................==.................TTTTTT<<<<<<....",
+			"....>>>>>>TTTTTT.................==.................TTTTTT<<<<<<....",
+			"............==...................==...................==............",
+			"............==...................==...................==............",
+			"............==........cc.........==.........cc........==............",
+			"............==...................==...................==............",
+			"............==...................==...................==............",
+			"............==.................TTTTTT.................==............",
+			"............==.................TTTTTT.................==............",
+			"......x.....==...S..x.....c....TTTTTT....c.....x......==............",
+			"............==......x.....c....TTTTTT....c.....x..S...==.....x......",
+			"............==.................TTTTTT.................==............",
+			"............==.................TTTTTT.................==............",
+			"............==...................==...................==............",
+			"............==...................==...................==............",
+			"............==........cc.........==.........cc........==............",
+			"............==...................==...................==............",
+			"............==...................==...................==............",
+			"....>>>>>>TTTTTT.................==.................TTTTTT<<<<<<....",
+			"....>>>>>>TTTTTT.................==.................TTTTTT<<<<<<....",
+			"..........TTTTTT====================================TTTTTT..........",
+			"..........TTTTTT====================================TTTTTT..........",
+			"..........TTTTTT....................................TTTTTT..........",
+			"..........TTTTTT....................................TTTTTT..........",
+			"....................................................................",
+			".......................................S............................",
+			"....................................................................",
+			"....S............................xx............................S....",
+			"....................................................................",
+			"....................................................................",
+			"....................................................................",
+			"....................................................................",
+		],
+	},
+	"arena_plateau": {
+		"name": "Hochplateau",
+		"description": "Offene Wiese mit einem großen Plateau in der Mitte, vier Rampen hinauf und einer erhöhten Randplattform rundherum.",
+		"floor": Color(0.44, 0.6, 0.32),
+		"wall": Color(0.56, 0.52, 0.47),
+		"cliff": Color(0.5, 0.42, 0.34),
+		"accent": Color(0.6, 1.0, 0.45, 0.95),
+		"floor_tex": "grass",
+		"wall_tex": "rock",
+		"rows": [
+			"pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp",
+			"pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp",
+			"pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp",
+			"ppp..............................................................ppp",
+			"ppp..............................................................ppp",
+			"ppp..............................................................ppp",
+			"ppp...S..........................S...........................S...ppp",
+			"ppp..............................................................ppp",
+			"ppp..............................................................ppp",
+			"ppp..............................................................ppp",
+			"ppp.............................vvvv.............................ppp",
+			"ppp.............................vvvv.............................ppp",
+			"ppp.............................vvvv.............................ppp",
+			"ppp.............................vvvv.............................ppp",
+			"ppp.....................PPPPPPPPPPPPPPPPPPPP.....................ppp",
+			"ppp.....................PPPPPPPPPPPPPPPPPPPP.....................ppp",
+			"ppp.....................PPPPPPPPPPPPPPPPPPPP.....................ppp",
+			"ppp.....................PPPPPPPPPPPPPPPPPPPP.....................ppp",
+			"ppp.....................PPPPPPPPPPPPPPPPPPPP.....................ppp",
+			"ppp.....................PPPPPPPPPPPPPPPPPPPP.....................ppp",
+			"ppp.................>>>>PPPPPPPPPPPPPPPPPPPP<<<<.................ppp",
+			"ppp.................>>>>PPPPPPPPPPPPPPPPPPPP<<<<.................ppp",
+			"ppp.......S.........>>>>PPPPPPPPPPPPPPPPPPPP<<<<.........S.......ppp",
+			"ppp.................>>>>PPPPPPPPPPPPPPPPPPPP<<<<.................ppp",
+			"ppp.....................PPPPPPPPPPPPPPPPPPPP.....................ppp",
+			"ppp.....................PPPPPPPPPPPPPPPPPPPP.....................ppp",
+			"ppp.....................PPPPPPPPPPPPPPPPPPPP.....................ppp",
+			"ppp.....................PPPPPPPPPPPPPPPPPPPP.....................ppp",
+			"ppp.....................PPPPPPPPPPPPPPPPPPPP.....................ppp",
+			"ppp.....................PPPPPPPPPPPPPPPPPPPP.....................ppp",
+			"ppp.............................^^^^.............................ppp",
+			"ppp.............................^^^^.............................ppp",
+			"ppp.............................^^^^.............................ppp",
+			"ppp.............................^^^^.............................ppp",
+			"ppp..............................................................ppp",
+			"ppp..............................................................ppp",
+			"ppp..............................................................ppp",
+			"ppp...S...........................S..........................S...ppp",
+			"ppp..............................................................ppp",
+			"ppp..............................................................ppp",
+			"ppp..............................................................ppp",
+			"pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp",
+			"pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp",
+			"pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp",
+		],
+	},
 	"arena_steppe": {
 		"name": "Weite Steppe",
 		"description": "Große offene Wiese mit Felsgruppen, schrägen Mauerresten und viel Platz zum Ausweichen.",

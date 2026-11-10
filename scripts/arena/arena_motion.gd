@@ -23,9 +23,10 @@ static func vertical_step(p: Player, delta: float) -> void:
 	var half := foot_half(p)
 	var support := 0.0
 	if grid:
-		support = grid.support_height(pos, p.arena_z, half, ArenaMode.STEP_UP)
+		support = grid.support_height(pos, p.arena_z, half, ArenaMode.STEP_UP, ArenaMode.RAMP_SIDE_STEP)
 	if p.arena_grounded:
-		if support < p.arena_z - 0.5:
+		# Kleine Absätze (Rampe abwärts) bleiben am Boden, höhere Kanten: fallen.
+		if support < p.arena_z - ArenaMode.STEP_UP:
 			# Über die Kante gelaufen: fallen.
 			p.arena_grounded = false
 			p.arena_vz = 0.0
@@ -40,6 +41,12 @@ static func vertical_step(p: Player, delta: float) -> void:
 			support = grid.support_height(pos, maxf(p.arena_z, 0.0), half, 2.0)
 		p.arena_vz -= grav * delta
 		p.arena_z += p.arena_vz * delta
+		# Decke (Steg darüber): Kopf stößt an.
+		if grid and p.arena_vz > 0.0:
+			var ceil_z := grid.ceiling_height(pos, p.arena_z - p.arena_vz * delta, half)
+			if p.arena_z + ArenaMode.BODY_H > ceil_z:
+				p.arena_z = maxf(support, ceil_z - ArenaMode.BODY_H)
+				p.arena_vz = 0.0
 		if p.arena_z <= support and p.arena_vz <= 0.0:
 			p.arena_z = support
 			p.arena_vz = 0.0

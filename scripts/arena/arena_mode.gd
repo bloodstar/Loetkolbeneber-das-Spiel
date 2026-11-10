@@ -27,6 +27,9 @@ const MUZZLE_H: float = 24.0
 const Z_GRAVITY_MULT: float = 2.2
 # Kleine Stufen (Rampen) läuft man ohne Sprung hoch.
 const STEP_UP: float = 10.0
+# Von der Seite auf eine Rampe: bis zu dieser Höhe tritt man direkt hinauf.
+# Höhere Rampenteile haben seitlich eine Wand (siehe ArenaBuilder).
+const RAMP_SIDE_STEP: float = 46.0
 # Kamera-Neigung über dem Boden. 90° wäre senkrecht von oben.
 const TILT_DEG: float = 55.0
 

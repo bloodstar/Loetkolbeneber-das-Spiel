@@ -397,7 +397,8 @@ func _spawn_players() -> void:
 	hud.update_all()
 
 func _configure_camera_world() -> void:
-	var scrolling := level_generator.is_scrolling_map()
+	# Arena: Kamera folgt wie in Scroll-Levels den lokalen Spielern (fester Zoom).
+	var scrolling := level_generator.is_scrolling_map() or ArenaMode.active
 	var local_targets: Array[Node2D] = []
 	if scrolling and not Global.is_spectator:
 		for p in players:

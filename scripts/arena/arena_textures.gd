@@ -29,6 +29,8 @@ static func get_texture(kind: String, base: Color) -> Texture2D:
 			_rock(img, base, rng)
 		"wood":
 			_wood(img, base, rng)
+		"planks":
+			_planks(img, base, rng)
 		_:
 			img.fill(base)
 	var tex := ImageTexture.create_from_image(img)
@@ -161,6 +163,26 @@ static func _wood(img: Image, base: Color, rng: RandomNumberGenerator) -> void:
 	# Nägel
 	for p in [Vector2i(4, 4), Vector2i(27, 4), Vector2i(4, 27), Vector2i(27, 27)]:
 		img.set_pixelv(p, Color(0.8, 0.8, 0.75))
+
+static func _planks(img: Image, base: Color, rng: RandomNumberGenerator) -> void:
+	# Stegbohlen: vier Bretter quer, versetzte Stöße, Maserung, zwei Nägel je Brett
+	for row in 4:
+		var y0 := row * 8
+		var pf := 1.0 + rng.randf_range(-0.1, 0.1)
+		var joint := rng.randi_range(6, 26)
+		for y in range(y0, y0 + 8):
+			for x in SIZE:
+				var grain := sin(x * 0.45 + row * 1.7 + (y - y0) * 0.3) * 0.05
+				var c := _shade(base, pf + grain + rng.randf_range(-0.04, 0.04))
+				if y == y0 + 7:
+					c = _shade(base, 0.45)
+				elif y == y0:
+					c = _shade(c, 1.12)
+				if x == joint:
+					c = _shade(base, 0.55)
+				img.set_pixel(x, y, c)
+		img.set_pixel(posmod(joint - 3, SIZE), y0 + 3, Color(0.78, 0.78, 0.72))
+		img.set_pixel(posmod(joint + 3, SIZE), y0 + 3, Color(0.78, 0.78, 0.72))
 
 static func _tile_edge(img: Image, f: float) -> void:
 	# dezente Kachelkante, damit das Raster lesbar bleibt

@@ -63,6 +63,9 @@ static func build(lg: LevelGenerator, map_id: String, level_seed: int) -> void:
 				grid.destructible[Vector2i(x, y)] = tile_id
 				x += 1
 				continue
+			if ArenaMaps.RAMP_DIRS.has(ch):
+				x += 1
+				continue
 			if not ArenaMaps.BLOCK_HEIGHTS.has(ch):
 				x += 1
 				continue
@@ -71,10 +74,17 @@ static func build(lg: LevelGenerator, map_id: String, level_seed: int) -> void:
 			while x_end + 1 < w and x_end + 1 < row.length() and row[x_end + 1] == ch:
 				x_end += 1
 			var top: float = ArenaMaps.BLOCK_HEIGHTS[ch]
-			_add_block_body(lg, x, x_end, y, 0.0, top)
+			var bottom: float = ArenaMaps.BLOCK_BOTTOMS.get(ch, 0.0)
+			_add_block_body(lg, x, x_end, y, bottom, top)
 			for cx in range(x, x_end + 1):
-				grid.add_block(Vector2i(cx, y), 0.0, top)
+				grid.add_block(Vector2i(cx, y), bottom, top)
+				if ArenaMaps.TERRAIN_CHARS.contains(ch):
+					grid.terrain[Vector2i(cx, y)] = true
+				elif ch == "=":
+					grid.stege[Vector2i(cx, y)] = true
 			x = x_end + 1
+
+	_build_ramps(lg, grid, rows, w, h)
 
 	# Schräge Wände: [x1, y1, x2, y2, Höhenzeichen] in Kachel-Koordinaten.
 	var tile_px := LevelGenerator.TILE_SIZE
@@ -108,6 +118,90 @@ static func set_world_gravity(lg: Node, enabled: bool) -> void:
 	var space := lg.get_viewport().world_2d.space
 	var g: float = ProjectSettings.get_setting("physics/2d/default_gravity", 980.0) if enabled else 0.0
 	PhysicsServer2D.area_set_param(space, PhysicsServer2D.AREA_PARAM_GRAVITY, g)
+
+static func _char_at(rows: Array, cell: Vector2i) -> String:
+	if cell.y < 0 or cell.y >= rows.size():
+		return ""
+	var row := str(rows[cell.y])
+	if cell.x < 0 or cell.x >= row.length():
+		return ""
+	return row[cell.x]
+
+## Höhe, auf die eine Rampe an dieser Zelle anschließt (Block-Oberkante, sonst Boden).
+static func _surface_of(rows: Array, cell: Vector2i) -> float:
+	var ch := _char_at(rows, cell)
+	if ArenaMaps.BLOCK_BOTTOMS.has(ch) or ch == "x":
+		return 0.0
+	return float(ArenaMaps.BLOCK_HEIGHTS.get(ch, 0.0))
+
+## Rampen: Reihen gleicher Rampenzeichen in Steigrichtung zusammenfassen,
+## Höhen von der Zelle davor bis zur Zelle dahinter. Seitlich bekommen die
+## höheren Teile eine Wand, damit man nicht in die Rampe hineinläuft.
+static func _build_ramps(lg: Node, grid: ArenaGrid, rows: Array, w: int, h: int) -> void:
+	for y in range(h):
+		for x in range(w):
+			var cell := Vector2i(x, y)
+			var ch := _char_at(rows, cell)
+			if not ArenaMaps.RAMP_DIRS.has(ch) or grid.ramps.has(cell):
+				continue
+			var d: Vector2i = ArenaMaps.RAMP_DIRS[ch]
+			var start := cell
+			while _char_at(rows, start - d) == ch:
+				start -= d
+			var cells: Array[Vector2i] = []
+			var c := start
+			while _char_at(rows, c) == ch:
+				cells.append(c)
+				c += d
+			var lo := _surface_of(rows, start - d)
+			var hi := _surface_of(rows, c)
+			if hi <= lo:
+				hi = lo + ArenaMode.BAND_H
+			for i in range(cells.size()):
+				var r := {"lo": lo, "hi": hi, "dir": d, "s0": i, "len": cells.size()}
+				grid.ramps[cells[i]] = r
+				_add_ramp_rails(lg, grid, rows, cells[i], ch, d, r)
+
+## Seitenwände einer Rampenzelle als dünne Leisten an den Rändern, an denen
+## keine Rampe gleicher Richtung anschließt. Sie halten Spieler vom Boden aus
+## davon ab, in die höheren Teile der Rampe hineinzulaufen. Wer auf der Rampe
+## geht, ist bereits über diesen Bändern.
+static func _add_ramp_rails(lg: Node, grid: ArenaGrid, rows: Array, cell: Vector2i, ch: String, d: Vector2i, r: Dictionary) -> void:
+	var low := ArenaGrid.ramp_height(r, float(r["s0"]))
+	var high := ArenaGrid.ramp_height(r, float(r["s0"]) + 1.0)
+	if high <= ArenaMode.RAMP_SIDE_STEP:
+		return
+	var bands := maxi(1, int(floor((low - 3.0) / ArenaMode.BAND_H)))
+	var top := float(bands) * ArenaMode.BAND_H
+	var tile := LevelGenerator.TILE_SIZE
+	var thick := 3.0
+	var side := Vector2i(-d.y, d.x)
+	for sgn in [-1, 1]:
+		var n: Vector2i = cell + side * sgn
+		if _char_at(rows, n) == ch:
+			continue
+		# Leiste knapp außerhalb der Rampe, damit sie Spieler auf der Rampe
+		# (auch auf schmalen Rampen) nicht streift.
+		var rect := Rect2(Vector2(cell) * tile, Vector2(tile, tile))
+		if side.x != 0:
+			rect = Rect2(Vector2(cell.x * tile - thick if sgn * side.x < 0 else (cell.x + 1) * tile, cell.y * tile), Vector2(thick, tile))
+		else:
+			rect = Rect2(Vector2(cell.x * tile, cell.y * tile - thick if sgn * side.y < 0 else (cell.y + 1) * tile), Vector2(tile, thick))
+		_add_rect_body(lg, rect, 0.0, top)
+
+static func _add_rect_body(lg: Node, rect: Rect2, bottom: float, top: float) -> void:
+	var body := StaticBody2D.new()
+	body.add_to_group("solid")
+	body.add_to_group("arena_block")
+	body.collision_layer = ArenaMode.band_mask_range(bottom, top)
+	body.collision_mask = 7
+	var col := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = rect.size
+	col.shape = shape
+	col.position = rect.get_center()
+	body.add_child(col)
+	lg.add_child(body)
 
 static func _add_block_body(lg: Node, x0: int, x1: int, y: int, bottom: float, top: float) -> void:
 	var tile := LevelGenerator.TILE_SIZE
