@@ -832,6 +832,20 @@ func send_round_start(level_seed: int, map_id: String, points_to_win: int = 0, t
 	for peer_id in _broadcast_targets():
 		receive_round_start.rpc_id(int(peer_id), level_seed, map_id, points_to_win, tiebreak_slots)
 
+## Eigene Arena-Karte (Karteneditor) an alle Clients schicken. Läuft vor
+## send_round_start über denselben zuverlässigen Kanal, kommt also zuerst an.
+func send_arena_map(map_id: String, json_text: String) -> void:
+	if not is_host:
+		return
+	for peer_id in _broadcast_targets():
+		receive_arena_map.rpc_id(int(peer_id), map_id, json_text)
+
+@rpc("authority", "call_remote", "reliable")
+func receive_arena_map(map_id: String, json_text: String) -> void:
+	if json_text.length() > 200000 or not map_id.begins_with(ArenaMaps.CUSTOM_PREFIX):
+		return
+	ArenaMaps.register_remote(map_id, json_text)
+
 # tiebreak_slots: im Stechen die Finalisten (nur sie spawnen), sonst leer.
 @rpc("authority", "call_remote", "reliable")
 func receive_round_start(level_seed: int, map_id: String, points_to_win: int = 0, tiebreak_slots: Array = []) -> void:

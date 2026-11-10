@@ -480,17 +480,126 @@ const MAPS: Dictionary = {
 	},
 }
 
+# Eigene Karten aus dem Karteneditor (user://arena_maps/*.json) und Karten,
+# die der Host online geschickt hat. id -> Kartendaten wie in MAPS.
+const CUSTOM_DIR: String = "user://arena_maps"
+const CUSTOM_PREFIX: String = "arena_custom_"
+const COLOR_KEYS: Array[String] = ["floor", "wall", "cliff", "top", "accent"]
+static var custom: Dictionary = {}
+static var _custom_loaded: bool = false
+## Editor-Test: Solange gesetzt, spielt jede Runde auf dieser Karte.
+static var test_map_id: String = ""
+
 static func is_arena_map(map_id: String) -> bool:
-	return MAPS.has(map_id)
+	_ensure_custom()
+	return MAPS.has(map_id) or custom.has(map_id)
+
+static func is_custom(map_id: String) -> bool:
+	_ensure_custom()
+	return custom.has(map_id)
 
 static func get_map(map_id: String) -> Dictionary:
-	return MAPS.get(map_id, {})
+	_ensure_custom()
+	if MAPS.has(map_id):
+		return MAPS[map_id]
+	return custom.get(map_id, {})
 
 static func display_name(map_id: String) -> String:
-	return str(MAPS.get(map_id, {}).get("name", map_id))
+	return str(get_map(map_id).get("name", map_id))
 
-## Zufällige Arena-Karte, deterministisch aus dem Runden-Seed.
+## Zufällige Arena-Karte, deterministisch aus dem Runden-Seed. Eigene Karten
+## mit "in_pool" kommen dazu (nur der Host würfelt, Clients bekommen die id).
 static func pick_random(level_seed: int) -> String:
+	if not test_map_id.is_empty() and is_arena_map(test_map_id):
+		return test_map_id
+	var pool: Array[String] = MAP_IDS.duplicate()
+	for id in custom_ids():
+		if bool(custom[id].get("in_pool", false)):
+			pool.append(id)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = maxi(1, level_seed)
-	return MAP_IDS[rng.randi() % MAP_IDS.size()]
+	return pool[rng.randi() % pool.size()]
+
+static func custom_ids() -> Array[String]:
+	_ensure_custom()
+	var ids: Array[String] = []
+	for id in custom.keys():
+		ids.append(str(id))
+	ids.sort()
+	return ids
+
+static func _ensure_custom() -> void:
+	if _custom_loaded:
+		return
+	_custom_loaded = true
+	var dir := DirAccess.open(CUSTOM_DIR)
+	if dir == null:
+		return
+	for f in dir.get_files():
+		if not f.ends_with(".json"):
+			continue
+		var text := FileAccess.get_file_as_string(CUSTOM_DIR + "/" + f)
+		var data := from_json(text)
+		if data.is_empty():
+			continue
+		custom[CUSTOM_PREFIX + f.get_basename()] = data
+
+## Neue id aus einem Namen (Kleinbuchstaben, Ziffern, _).
+static func make_custom_id(map_name: String) -> String:
+	var slug := ""
+	for ch in map_name.to_lower().replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss"):
+		if (ch >= "a" and ch <= "z") or (ch >= "0" and ch <= "9"):
+			slug += ch
+		elif not slug.ends_with("_"):
+			slug += "_"
+	slug = slug.strip_edges().trim_prefix("_").trim_suffix("_")
+	if slug.is_empty():
+		slug = "karte"
+	return CUSTOM_PREFIX + slug.left(40)
+
+static func save_custom(map_id: String, data: Dictionary) -> Error:
+	_ensure_custom()
+	DirAccess.make_dir_recursive_absolute(CUSTOM_DIR)
+	var f := FileAccess.open(CUSTOM_DIR + "/" + map_id.trim_prefix(CUSTOM_PREFIX) + ".json", FileAccess.WRITE)
+	if f == null:
+		return FileAccess.get_open_error()
+	f.store_string(to_json(data))
+	f.close()
+	custom[map_id] = data.duplicate(true)
+	return OK
+
+static func delete_custom(map_id: String) -> void:
+	_ensure_custom()
+	custom.erase(map_id)
+	DirAccess.remove_absolute(CUSTOM_DIR + "/" + map_id.trim_prefix(CUSTOM_PREFIX) + ".json")
+
+## Online: Karte des Hosts für diese Sitzung übernehmen (nicht gespeichert).
+static func register_remote(map_id: String, json_text: String) -> void:
+	_ensure_custom()
+	var data := from_json(json_text)
+	if not data.is_empty():
+		custom[map_id] = data
+
+static func to_json(data: Dictionary) -> String:
+	var out := {}
+	for k in data.keys():
+		var v = data[k]
+		out[k] = ("#" + (v as Color).to_html(true)) if v is Color else v
+	return JSON.stringify(out, "\t")
+
+static func from_json(text: String) -> Dictionary:
+	var parsed = JSON.parse_string(text)
+	if not (parsed is Dictionary):
+		return {}
+	var data: Dictionary = parsed
+	for k in COLOR_KEYS:
+		if data.get(k) is String:
+			data[k] = Color.html(str(data[k]))
+	# Wände: Zahlen aus JSON sind float, Zeichen bleiben String.
+	var rows: Array = []
+	for r in data.get("rows", []):
+		rows.append(str(r))
+	data["rows"] = rows
+	if rows.is_empty():
+		return {}
+	return data

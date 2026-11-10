@@ -21,6 +21,7 @@ const FloorLavaOverlayClass = preload("res://scripts/level/floor_lava_overlay.gd
 var lava_anim: FloorLavaOverlayClass = null
 # Optionen (Grafik, Audio, Tasten); im Hauptmenü per Knopf, in der Runde per ESC.
 var options_menu: OptionsMenu = null
+var map_editor: ArenaMapEditor = null
 
 # Alle aktiven Spieler (Index 1..player_count). Slot = player_index.
 var players: Array[Player] = []
@@ -134,6 +135,18 @@ func _ready() -> void:
 	options_menu.closed.connect(func(): card_draft_ui.set_timers_paused(false))
 	card_draft_ui.options_requested.connect(_open_ingame_options)
 	main_menu.options_requested.connect(func(): options_menu.open_options(false))
+	map_editor = ArenaMapEditor.new()
+	map_editor.name = "ArenaMapEditor"
+	add_child(map_editor)
+	options_menu.map_editor_requested.connect(func():
+		options_menu.close_options()
+		map_editor.open_editor()
+	)
+	map_editor.closed.connect(func():
+		if Global.current_state == Global.GameState.MENU:
+			options_menu.open_options(false)
+	)
+	map_editor.test_requested.connect(_on_map_editor_test)
 	NetworkManager.join_succeeded.connect(_on_network_join_succeeded)
 	NetworkManager.join_failed.connect(_on_network_join_failed)
 	NetworkManager.host_failed.connect(_on_network_host_failed)
@@ -282,6 +295,8 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 		map_id = Global.resolve_map_id(level_seed)
 	match_map_id = map_id
 	if is_network_host and NetworkManager.has_clients():
+		if ArenaMaps.is_custom(map_id):
+			NetworkManager.send_arena_map(map_id, ArenaMaps.to_json(ArenaMaps.get_map(map_id)))
 		NetworkManager.send_round_start(level_seed, map_id, Global.points_to_win, Global.tiebreak_slots)
 
 	_clear_remote_bullets()
@@ -341,9 +356,30 @@ func _update_arena_view() -> void:
 	arena_view.setup(ArenaBuilder.current_map, ArenaMode.grid, camera)
 
 ## Match verlassen (Menü/Lobby): 3D-Ansicht weg, normale Schwerkraft zurück.
+## Eine Editor-Testrunde endet damit ebenfalls.
 func _leave_arena() -> void:
 	ArenaBuilder.deactivate(level_generator)
 	_update_arena_view()
+	ArenaMaps.test_map_id = ""
+
+## Karteneditor → TESTEN: lokales Match in der Arena, jede Runde auf dieser
+## Karte, mit den Spielern und Bots aus der letzten Lobby. ESC → Hauptmenü
+## beendet den Test, Optionen → KARTENEDITOR öffnet die Karte wieder.
+func _on_map_editor_test(map_id: String) -> void:
+	if NetworkManager.is_network_active():
+		NetworkManager.disconnect_peer()
+	is_network_host = false
+	is_network_client = false
+	Global.network_mode = false
+	Global.remote_connected = false
+	Global.is_spectator = false
+	Global.set_local_player(1)
+	Global.reset_match()
+	Global.set_game_mode(Global.GAME_MODE_ARENA)
+	_leave_arena()
+	ArenaMaps.test_map_id = map_id
+	main_menu.close_menu()
+	_start_fresh_round(0, map_id)
 
 # Liefert den Spieler mit dem gegebenen Slot-Index (1..6) oder null.
 func get_player(index: int) -> Player:

@@ -101,6 +101,39 @@ static func build(lg: LevelGenerator, map_id: String, level_seed: int) -> void:
 	lg.p1_spawn_pos = spawns[0]
 	lg.p2_spawn_pos = spawns[1] if spawns.size() > 1 else spawns[0]
 
+## Nur das Höhenraster einer Karte, ohne Physik-Körper (Karteneditor:
+## Erreichbarkeit prüfen). Gleiche Regeln wie build().
+static func build_grid(data: Dictionary) -> ArenaGrid:
+	var rows: Array = data.get("rows", [])
+	var h := rows.size()
+	var w := 0
+	for r in rows:
+		w = maxi(w, str(r).length())
+	var grid := ArenaGrid.new()
+	grid.setup(w, h, LevelGenerator.TILE_SIZE)
+	for y in range(h):
+		var row := str(rows[y])
+		for x in range(row.length()):
+			var ch := row[x]
+			if not ArenaMaps.BLOCK_HEIGHTS.has(ch):
+				continue
+			var cell := Vector2i(x, y)
+			grid.add_block(cell, float(ArenaMaps.BLOCK_BOTTOMS.get(ch, 0.0)), float(ArenaMaps.BLOCK_HEIGHTS[ch]))
+			if ch == "x":
+				grid.destructible[cell] = -1
+			elif ArenaMaps.TERRAIN_CHARS.contains(ch):
+				grid.terrain[cell] = true
+			elif ch == "=":
+				grid.stege[cell] = true
+	_build_ramps(null, grid, rows, w, h)
+	var tile_px := LevelGenerator.TILE_SIZE
+	for wall in data.get("walls", []):
+		var a := Vector2(float(wall[0]), float(wall[1])) * tile_px
+		var b := Vector2(float(wall[2]), float(wall[3])) * tile_px
+		var ch := str(wall[4]) if wall.size() > 4 else "#"
+		grid.add_segment(a, b, WALL_THICKNESS, 0.0, float(ArenaMaps.BLOCK_HEIGHTS.get(ch, 108.0)))
+	return grid
+
 ## Verlässt den Arena-Modus (Seitenansicht-Karte wird gebaut).
 static func deactivate(lg: LevelGenerator) -> void:
 	if not ArenaMode.active:
@@ -160,7 +193,8 @@ static func _build_ramps(lg: Node, grid: ArenaGrid, rows: Array, w: int, h: int)
 			for i in range(cells.size()):
 				var r := {"lo": lo, "hi": hi, "dir": d, "s0": i, "len": cells.size()}
 				grid.ramps[cells[i]] = r
-				_add_ramp_rails(lg, grid, rows, cells[i], ch, d, r)
+				if lg != null:
+					_add_ramp_rails(lg, grid, rows, cells[i], ch, d, r)
 
 ## Seitenwände einer Rampenzelle als dünne Leisten an den Rändern, an denen
 ## keine Rampe gleicher Richtung anschließt. Sie halten Spieler vom Boden aus
