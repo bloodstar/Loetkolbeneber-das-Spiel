@@ -99,6 +99,10 @@ func _process(delta: float) -> void:
 # --- Fallen & Liegen (nur Host) ---
 
 func _update_fall(delta: float) -> void:
+	# Arena (Draufsicht): Minen liegen dort, wo sie gelegt wurden.
+	if ArenaMode.active:
+		_landed = true
+		return
 	if _landed:
 		if _carrier != null:
 			if not is_instance_valid(_carrier) or _carrier.is_queued_for_deletion():
