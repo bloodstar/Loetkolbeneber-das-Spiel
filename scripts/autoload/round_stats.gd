@@ -17,6 +17,8 @@ extends Node
 # tragen wie Karten eine Version und einen Fingerabdruck (Schema 2).
 # Ab Schema 3 enthalten die Spielerwerte "ability_damage" und "ability_share"
 # (direkte Treffer der Heldenfähigkeit; Brand/Gift danach zählen nicht).
+# Runden- und Draftzeilen aus dem Bot-Test (Lobby → Regeln) tragen
+# "bot_test": true; ältere Zeilen ohne das Feld sind normale Runden.
 #
 # Nur der Host bzw. ein Offline-Spiel schreibt, weil nur dort Schaden, Kills
 # und Rundensieger autoritativ feststehen. Clients schreiben nichts.
@@ -157,6 +159,7 @@ func end_round(winner_index: int, death_order: Array, match_winner: int = 0) -> 
 		"match_id": match_id,
 		"round": round_number,
 		"network": "host" if NetworkManager.is_host else "offline",
+		"bot_test": Global.is_bot_test_active(),
 		"match_mode": Global.match_mode,
 		"player_count": active.size(),
 		"duration_s": _round_seconds(),
@@ -202,6 +205,7 @@ func record_draft(drafter: int, offered: Array, picked: Array) -> void:
 		"timestamp": Time.get_datetime_string_from_system(true),
 		"match_id": match_id,
 		"after_round": round_number,
+		"bot_test": Global.is_bot_test_active(),
 		"drafter": drafter,
 		"kind": "bot" if Global.is_bot_slot(drafter) else "human",
 		"hero_id": Global.get_player_hero_id(drafter),
@@ -217,7 +221,9 @@ func get_log_path() -> String:
 # --- intern ---
 
 func _round_seconds() -> float:
-	return snappedf(float(Time.get_ticks_msec() - round_started_msec) / 1000.0, 0.01)
+	# Spielzeit statt Echtzeit: Im Bot-Test läuft das Spiel schneller.
+	var speed := maxf(1.0, Global.bot_test_speed) if Global.is_bot_test_active() else 1.0
+	return snappedf(float(Time.get_ticks_msec() - round_started_msec) / 1000.0 * speed, 0.01)
 
 func _stats_delta(slot: int, current_stats: Array) -> Dictionary:
 	var result := {}

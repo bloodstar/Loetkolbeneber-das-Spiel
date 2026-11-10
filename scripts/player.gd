@@ -63,19 +63,23 @@ const ROCKET_LEAP_DURATION: float = 0.32
 const ROCKET_IMPACT_RADIUS: float = 140.0
 const ROCKET_IMPACT_DAMAGE: float = 35.0
 const ROCKET_IMPACT_KNOCKBACK: float = 550.0
+
 const FLASH_BLINK_DISTANCE: float = 260.0
 const FLASH_BLINK_RADIUS: float = 120.0
 const FLASH_BLINK_DAMAGE: float = 20.0
 const FLASH_BLINK_KNOCKBACK: float = 300.0
 const FLASH_BLINK_FREEZE: float = 1.2
+
 const FREEZE_SPEED_MULT: float = 0.6
 const SPORE_CLOUD_RADIUS: float = 45.0
 const SPORE_CLOUD_DURATION: float = 3.5
 const SPORE_CLOUD_DPS: float = 9.0
+
 const SINGULARITY_DISTANCE: float = 220.0
 const SINGULARITY_DURATION: float = 2.08
 const SINGULARITY_PULL_RADIUS: float = 250.0
-const SINGULARITY_PULL_FORCE: float = 2600.0
+const SINGULARITY_PULL_FORCE: float = 2000.0
+
 # Bremst Bewegung weg vom Kern, damit Gegner nicht einfach hindurchfliegen.
 const SINGULARITY_OUTWARD_DAMPING: float = 10.0
 # Innerhalb dieses Radius werden Gegner im Kern festgehalten.
@@ -123,9 +127,12 @@ const PHANTOM_MARK_STUN: float = 0.7
 const POISON_TICK_INTERVAL: float = 0.8
 const SHIELD_REGEN_PER_SEC: float = 15.0
 # Lebensregeneration startet sofort, auch direkt nach einem Treffer. Der Schild
-# lädt erst nach SHIELD_REGEN_DELAY ohne Schaden; Karten können die Pause bis
-# auf SHIELD_REGEN_DELAY_MIN verkürzen.
-const SHIELD_REGEN_DELAY: float = 3.0
+# lädt erst nach SHIELD_REGEN_DELAY ohne Schaden (jeder Schaden aus jeder
+# Quelle startet die Wartezeit neu, Bastion: SHIELD_REGEN_DELAY_BASTION).
+# Karten ("Schild-Cooldown") können die Pause bis auf SHIELD_REGEN_DELAY_MIN
+# verkürzen.
+const SHIELD_REGEN_DELAY: float = 5.0
+const SHIELD_REGEN_DELAY_BASTION: float = 4.0
 const SHIELD_REGEN_DELAY_MIN: float = 0.5
 const HP_REGEN_DELAY: float = 0.0
 
@@ -821,7 +828,7 @@ func apply_stats() -> void:
 	blade_echo_timer = 0.0
 	reload_time = hero.base_reload_time / maxf(0.1, reload_mult)
 	shield_regen_mult = shield_regen_stack
-	shield_regen_delay = maxf(SHIELD_REGEN_DELAY_MIN, SHIELD_REGEN_DELAY + shield_delay_add)
+	shield_regen_delay = maxf(SHIELD_REGEN_DELAY_MIN, base_shield_regen_delay(hero.id) + shield_delay_add)
 	shield_regen_timer = 0.0
 	# Bastion-Passive "Aurora": doppelte Schild-Regeneration.
 	if hero.id == "bastion":
@@ -2433,6 +2440,10 @@ func _flash_effect() -> void:
 	var tw = create_tween()
 	tw.tween_property(sprite, "modulate", Color(3.0, 3.0, 1.0), 0.08)
 	tw.tween_property(sprite, "modulate", Color.WHITE, 0.12)
+
+# Grund-Wartezeit, bis der Schild nach Schaden wieder lädt (ohne Karten).
+static func base_shield_regen_delay(hero_id: String) -> float:
+	return SHIELD_REGEN_DELAY_BASTION if hero_id == "bastion" else SHIELD_REGEN_DELAY
 
 func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null, is_reflected: bool = false) -> void:
 	# In Team-Modi gibt es kein Freundschaftsfeuer. Das gilt auch für

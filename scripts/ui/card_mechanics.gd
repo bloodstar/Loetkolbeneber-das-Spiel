@@ -126,7 +126,7 @@ static func mechanic_notes(card: CardData) -> Array[String]:
 	if card.lifesteal_percent_add > 0.0:
 		notes.append("LEBENSRAUB: Ein Anteil des verursachten Schadens wird als Leben zurückgewonnen.")
 	if card.shield_max_add > 0 or card.shield_regen_mult > 1.0 or card.shield_regen_delay_add < 0.0:
-		notes.append("SCHILD: Schild absorbiert Schaden, bevor Leben verloren geht. Schild-Regeneration baut ihn nach 3 s ohne Schaden wieder auf (Karten können die Pause verkürzen). Schild-Verbesserungen erscheinen erst ab 25 Schild. Auf der Lebensleiste über dem Spieler wird aktiver Schild als blaues Overlay angezeigt.")
+		notes.append("SCHILD: Schild absorbiert Schaden, bevor Leben verloren geht. Nach jedem Schaden, egal aus welcher Quelle, wartet der Schild 5 s (Bastion 4 s), erst dann lädt er wieder auf (Schild-Cooldown, Karten können ihn verkürzen). Schild ist nicht die Barriere (Q): Karten verbessern immer nur eines von beiden. Schild-Verbesserungen erscheinen erst ab 25 Schild. Auf der Lebensleiste über dem Spieler wird aktiver Schild als blaues Overlay angezeigt.")
 	if card.armor_percent_add > 0.0:
 		notes.append("RÜSTUNG: Reduziert eingehenden Schaden prozentual, bevor Schild und Leben getroffen werden. Mehrere Rüstungskarten addieren sich, maximal 75 %.")
 	if card.damage_reflect_percent_add > 0.0:
@@ -148,11 +148,11 @@ static func mechanic_notes(card: CardData) -> Array[String]:
 	if card.melee_wall_stun_add > 0.0:
 		notes.append("WANDKLATSCHER: Fliegt ein getroffener Gegner innerhalb von 0,45 s gegen Wand oder Decke, ist er betäubt. Stapelt mit der Betäubung des Hammers.")
 	if card.melee_parry:
-		notes.append("PARADE: Ist der Nahkampfschlag bereit, löst er automatisch aus, sobald ein gegnerisches Projektil in Reichweite auf dich zufliegt. Projektile im Schlagbereich werden wie beim Block zurückgeworfen.")
+		notes.append("PARADE: Ist der Nahkampfschlag bereit, löst er automatisch aus, sobald ein gegnerisches Projektil in Reichweite auf dich zufliegt. Projektile im Schlagbereich werden wie bei der Barriere zurückgeworfen.")
 	if _has_block_effect(card):
-		notes.append("BLOCK (Q): Blockt kurzzeitig Schaden, reflektiert Projektile und hat einen eigenen Cooldown.")
+		notes.append("BARRIERE (Q): Schirmt dich kurz gegen jeden Schaden ab, reflektiert Projektile und hat einen eigenen Cooldown. Hat nichts mit dem Schild zu tun: Barriere-Karten verbessern nur die Barriere.")
 	if card.block_mine or card.mine_damage_add > 0.0 or card.mine_radius_add > 0.0 or card.mine_instant:
-		notes.append("MINEN: Jeder Block lässt eine Mine fallen, die auf dem Boden darunter liegen bleibt (auf Plattformen und Wippen fährt sie mit). Gegner sehen sie nicht, am selben Bildschirm ist sie nur schwach zu erkennen. Nach 2 s ist sie scharf; läuft ein Gegner darüber, blinkt sie und explodiert 1,5 s später (Sofortzünder: sofort). Höchstens 8 Minen pro Spieler, die älteste verschwindet. Minen treffen nur Gegner.")
+		notes.append("MINEN: Jede Barriere lässt eine Mine fallen, die auf dem Boden darunter liegen bleibt (auf Plattformen und Wippen fährt sie mit). Gegner sehen sie nicht, am selben Bildschirm ist sie nur schwach zu erkennen. Nach 2 s ist sie scharf; läuft ein Gegner darüber, blinkt sie und explodiert 1,5 s später (Sofortzünder: sofort). Höchstens 8 Minen pro Spieler, die älteste verschwindet. Minen treffen nur Gegner.")
 	if card.dash_cooldown_mult < 1.0:
 		notes.append("DASH (Shift): Kurzer Ausweichsprung mit Unverwundbarkeit. Der Cooldown beginnt sofort.")
 	if card.ability_cooldown_mult < 1.0:

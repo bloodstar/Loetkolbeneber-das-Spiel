@@ -18,6 +18,9 @@ extends RefCounted
 const RARITY_ORDER: Array[String] = ["Common", "Uncommon", "Rare", "Epic", "Legendary"]
 const PROMOTION_GAP: float = 0.10
 const DEFAULT_MIN_ROUNDS: int = 20
+# Herkunft der Zeilen: alle, nur normale Matches oder nur Bot-Test
+# (Zeilen mit "bot_test": true, siehe RoundStats).
+enum Source { ALL, NORMAL, BOT_TEST }
 
 var round_count: int = 0
 var draft_count: int = 0
@@ -55,9 +58,9 @@ static func read_lines(file_path: String) -> Dictionary:
 	file.close()
 	return result
 
-static func build(lines: Array, humans_only: bool, min_rounds: int) -> BalanceReport:
+static func build(lines: Array, humans_only: bool, min_rounds: int, source: int = Source.ALL) -> BalanceReport:
 	var report := BalanceReport.new()
-	report._collect(lines, humans_only)
+	report._collect(lines, humans_only, source)
 	report._analyze_cards(min_rounds)
 	report._analyze_weapons()
 	report._analyze_heroes()
@@ -77,9 +80,20 @@ func get_suggestions() -> Array:
 
 # --- Sammeln ---
 
-func _collect(lines: Array, humans_only: bool) -> void:
+static func matches_source(data: Dictionary, source: int) -> bool:
+	var bot_test := bool(data.get("bot_test", false))
+	match source:
+		Source.NORMAL:
+			return not bot_test
+		Source.BOT_TEST:
+			return bot_test
+	return true
+
+func _collect(lines: Array, humans_only: bool, source: int = Source.ALL) -> void:
 	for raw in lines:
 		var data: Dictionary = raw
+		if not matches_source(data, source):
+			continue
 		var kind := str(data.get("type", ""))
 		if kind == "round":
 			round_count += 1

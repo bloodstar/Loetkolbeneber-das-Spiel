@@ -59,7 +59,7 @@ Alle Tasten lassen sich unter **Optionen → Steuerung** neu belegen. Hier steht
 | Zielen | Mauszeiger |
 | Schießen | `Linksklick` |
 | Dash / Ausweichen | `Shift` (kurz unverwundbar) |
-| Block | `Q` |
+| Barriere | `Q` |
 | Nachladen | `R` |
 | Nahkampf | `E` |
 | Heldenfähigkeit | `Rechtsklick` |
@@ -74,7 +74,7 @@ Alle Tasten lassen sich unter **Optionen → Steuerung** neu belegen. Hier steht
 | Zielen | Pfeiltasten |
 | Schießen | `.` (Punkt) |
 | Dash | `/` |
-| Block | `M` |
+| Barriere | `M` |
 | Nachladen | `L` |
 | Nahkampf | `K` |
 | Heldenfähigkeit | `,` (Komma) |
@@ -100,7 +100,7 @@ Es gibt **7 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit
 | **Spore** | Toxic Alchemist | 105 | 295 | 10 | **Spore Coat**: Treffer vergiften (2 Stapel) | **Spore Burst**: Giftwolke, 9 Schaden/s für 3,5 s | Pilzhut |
 | **Nova** | Gravity Mage | 95 | 290 | 10 | **Schwerelos**: Höchste Sprungkraft | **Singularität**: Kern zieht Gegner 2 s lang zur Mitte (kein Schaden) | Zauberhut mit Mini-Planet |
 | **Klinge** | Blade Dancer | 110 | 315 | 15 | **Klingentanz**: Start-Schild und hohes Tempo | **Klingensturm**: Rundumschlag mit Rückstoß, 0,5 s unverwundbar | Roter Schal |
-| **Bastion** | Field Engineer | 125 | 270 | 20 | **Aurora**: Doppelte Schild-Regeneration | **Heilfeld**: 4 s lang 8 HP und 10 Schild alle 0,5 s | Bauhelm mit Lampe |
+| **Bastion** | Field Engineer | 125 | 270 | 20 | **Aurora**: Doppelte Schild-Regeneration, Schild-Cooldown nur 4 s | **Heilfeld**: 4 s lang 8 HP und 10 Schild alle 0,5 s | Bauhelm mit Lampe |
 | **Phantom** | Shadow Assassin | 90 | 325 | 5 | **Nachtwind**: Sehr schnell, kürzestes Feuerintervall | **Schattensprung**: Teleport 260 px mit Treffer, 0,9 s unverwundbar | Ninja-Stirnband |
 
 Die genauen Zahlen der Fähigkeiten stehen im Spiel unter **HELDEN** im Hauptmenü und im Tooltip der Heldenwahl. Sie kommen direkt aus den Konstanten in `player.gd`, stimmen also immer.
@@ -139,9 +139,9 @@ Die HP-Werte gelten bei **Basis-HP-Faktor 100 %**. In der Lobby lässt sich der 
 - **Projektil-Kollision**: Schüsse von Gegnern stoßen in der Luft zusammen. Stärke = Schaden × Größe. Sind beide ähnlich stark (Verhältnis ab 0,7), löschen sie sich aus. Sonst fliegt der stärkere geschrumpft weiter.
 - **Rückstoß**: Treffer schubsen spürbar. Kurz danach ist die Steuerung des Ziels gedämpft, damit der Stoß wirkt.
 
-### Block (`Q`)
+### Barriere (`Q`)
 
-Jeder Held kann blocken: **0,5 s kein Schaden**, gegnerische Projektile werden **zurückgeworfen**, **4 s Abklingzeit**. Ein aktiver Block fängt auch Nahkampfschläge ab. Block-Karten verlängern ihn oder lösen Bomben, Heilzonen, Minen und Rückstoß aus.
+Jeder Held hat die Barriere (früher „Block“): **0,5 s kein Schaden**, gegnerische Projektile werden **zurückgeworfen**, **4 s Abklingzeit**. Eine aktive Barriere fängt auch Nahkampfschläge ab. Barriere-Karten verlängern sie oder lösen Bomben, Heilzonen, Minen und Rückstoß aus. Die Barriere ist **nicht** der Schild: Barriere-Karten verbessern nie den Schild und Schild-Karten nie die Barriere.
 
 ### Dash (`Shift`)
 
@@ -150,7 +150,7 @@ Kurzer Sprint mit kurzer Unverwundbarkeit. Ignis hinterlässt dabei Feuer.
 ### Leben, Schild & Regeneration
 
 - **HP-Regeneration** (durch Karten) läuft sofort, auch direkt nach einem Treffer.
-- **Schild** lädt sich erst **3 s nach dem letzten Treffer** wieder auf. Karten verkürzen die Pause (nie unter 0,5 s). Schild-Upgrade-Karten erscheinen erst, wenn man mindestens **25 Schild** hat.
+- **Schild** lädt sich erst **5 s nach dem letzten Schaden** wieder auf (**Schild-Cooldown**, Bastion **4 s**). Jeder Schaden aus jeder Quelle (Schüsse, Explosionen, Flächen, Gift, Eigenschaden) startet die Wartezeit neu. Karten (Schildkondensator −0,75 s, Schnellstart-Generator −1,25 s, Bollwerk −0,5 s) verkürzen sie, nie unter 0,5 s. Nur Bastions Heilfeld baut Schild auch während des Cooldowns auf. Schild-Upgrade-Karten erscheinen erst, wenn man mindestens **25 Schild** hat.
 - Über der HP-Leiste zeigt ein **blauer Balken** den aktuellen Schild.
 - **Rüstung** senkt jeden eingehenden Schaden prozentual, höchstens **75 %**.
 - **Schadensreflexion** wirft einen Teil des erlittenen Schadens auf den Angreifer zurück, höchstens **60 %**. Reflektierter Schaden wird nicht noch einmal reflektiert.
@@ -328,7 +328,7 @@ Insgesamt gibt es über **230 Karten**: rund 210 in den Pools Offensive, Defensi
 | Pool | Inhalt | Beispiele |
 | :--- | :--- | :--- |
 | **Offensive** | Schaden, Munition, Projektile, Elemente | Splittergeschoss, Panzerbrecher, Brandkapsel, Kettenreaktion, Leichtes/Schweres Geschoss, Mörser, Notvorrat, Fokuskristall, Weitstrahler, Kraftladung |
-| **Defensive** | Leben, Schild, Rüstung, Reflexion, Block, Größe | Sanitäter, Bollwerk, Zweites Herz, Tank-Panzerung, Stachelweste, Dornenthron, Riese, Wandelnder Koloss |
+| **Defensive** | Leben, Schild, Rüstung, Reflexion, Barriere, Größe | Sanitäter, Bollwerk, Zweites Herz, Tank-Panzerung, Stachelweste, Dornenthron, Riese, Wandelnder Koloss |
 | **Bewegung** | Tempo, Sprünge, Dash, Größe | Federstiefel, Windschatten |
 | **Nahkampf** | Nur für den `E`-Schlag | Schleifstein, Frostklinge, Parade, Meister der Werkbank |
 
@@ -348,7 +348,7 @@ Weitere bekannte Karten: **Lebensquell** (Max-HP), **Scharfe Munition** (+20 % S
 | Blutdurst (Uncommon, +12 % Lebensraub) | Vampiric Leech (Rare, +15 %) | Vampirklinge (Rare, +20 %, −10 % Max HP) |
 | Kompaktkern (Common, −10 % Größe) | Kompakte Statur (Uncommon, −5 %, +8 % Tempo) | Schlanker Körper (Uncommon, −10 %, +10 % Sprungkraft) |
 | Feather Shoes (Uncommon, +1 Luft-Sprung) | Federstiefel (Rare, +1 Luft-Sprung, +10 % Sprungkraft) | – |
-| Verstärkte Deckung (Uncommon, +0,3 s Block) | Ausdauerblock (Rare, +0,3 s, −10 % Abklingzeit) | – |
+| Verstärkte Deckung (Uncommon, +0,3 s Barriere) | Ausdauerbarriere (Rare, +0,3 s, −10 % Abklingzeit) | – |
 | Weitstrahler (Common, +25 % Fähigkeitsgröße) | Flächenbrecher (Common, +50 % Fähigkeitsgröße) | – |
 | Kraftladung (Common, +25 % Fähigkeitsschaden) | Überladung (Common, +50 % Fähigkeitsschaden) | – |
 | Powerup-Verstärker (Common, +25 % Powerup-Wirkung) | Powerup-Magnet (Common, +25 % Powerup-Wirkung, +2 Felder Sammelreichweite) | – |
@@ -362,14 +362,14 @@ Jede Karte hat neben ihrem Pool (Haupt-Tag) beliebig viele **Sub-Tags**. Sie wer
 | Haupt-Tag | Sub-Tags |
 | :--- | :--- |
 | **Offensive** | Schaden, Feuerrate (inkl. Munition/Nachladen), Projektil, Bounce, Durchschlag, Zielsuche, Mehrfachschuss, Explosion, Element, Begleiter |
-| **Defensive** | Leben, Heilung, Schild, Block, Rüstung, Reflexion |
+| **Defensive** | Leben, Heilung, Schild, Barriere, Rüstung, Reflexion |
 | **Bewegung** | Tempo, Sprung, Dash, Schwerkraft, Größe (kleiner oder größer) |
 | **Nahkampf** | Klinge, Reichweite, Schlagtempo, Rückstoß, Kontrolle, Elementarhieb |
 | **Allgemein** | Fähigkeit (Heldenfähigkeit), Powerup (verstärkt eingesammelte Powerups), Unique (eigene Spezialmechanik) |
 
 Sub-Tags gelten poolübergreifend: Eine Defensive-Karte kann z. B. auch „Tempo“ haben.
 
-Kartentexte nutzen für gleiche Effekte immer dieselben Begriffe: **Tempo** (Laufgeschwindigkeit), **Max HP**, **Schild**, **Schaden**, **Feuerrate**, **Munition**, **Projektilgeschwindigkeit**, **Projektilgröße**, **Abpraller**, **Durchschlag**, **Explosionsradius**, **Sprungkraft**, **Luft-Sprung**, **Größe**, **Giftstapel**, **Giftschaden**, **HP/s Regeneration** sowie **Dash-**, **Block-**, **Fähigkeits-** und **Nahkampf-Abklingzeit**.
+Kartentexte nutzen für gleiche Effekte immer dieselben Begriffe: **Tempo** (Laufgeschwindigkeit), **Max HP**, **Schild**, **Schaden**, **Feuerrate**, **Munition**, **Projektilgeschwindigkeit**, **Projektilgröße**, **Abpraller**, **Durchschlag**, **Explosionsradius**, **Sprungkraft**, **Luft-Sprung**, **Größe**, **Giftstapel**, **Giftschaden**, **HP/s Regeneration** sowie **Dash-**, **Barriere-**, **Fähigkeits-** und **Nahkampf-Abklingzeit**.
 
 ### Klassenkarten (je 3 pro Held)
 
@@ -416,7 +416,7 @@ Eine Ausbaukarte erscheint erst, wenn die Grundkarte im Deck liegt. Wer einen Zw
 | **Mörser** | Steiler Bogen, mehr Schaden | Präzisionsmörser | Belagerungsmörser |
 | **Rückstoßfeder** | +25 % Rückstoß | Druckkammer | Schockgeschoss |
 | **Leichte Schuhe** | Tempo | Windschuhe | |
-| **Minenleger** | Blocken legt eine unsichtbare Mine | Sofortzünder: explodiert ohne Verzögerung | |
+| **Minenleger** | Jede Barriere legt eine unsichtbare Mine | Sofortzünder: explodiert ohne Verzögerung | |
 | **Tank-Panzerung** | siehe unten | | |
 
 **Türme** haben 100 Leben und verlieren 5 % davon pro Sekunde, halten also höchstens 20 s. Gegner und Explosionen beschädigen sie. Turm-Panzerung und Schnellfeuer-Geschütz gibt es nur mit Turm.
@@ -433,16 +433,16 @@ Eine Ausbaukarte erscheint erst, wenn die Grundkarte im Deck liegt. Wer einen Zw
 
 Dazu kommen einzelne Reflexions-Karten im Pool Defensive: **Stachelweste**, **Rachepanzer**, **Blutspiegel**, **Vergeltungsschild** und **Dornenthron**. Manche reflektieren mehr unter 35 % Leben oder heilen dich mit.
 
-### Block-Karten
+### Barriere-Karten
 
 | Seltenheit | Karten |
 | :--- | :--- |
-| Common | Blockübung (+0,15 s), Schnelle Deckung (−15 % Abklingzeit) |
-| Uncommon | Verstärkte Deckung (+0,3 s, Evolution: Ausdauerblock), Schildstoß (stößt weg) |
-| Rare | Blockbombe, Heilzone, Druckwelle |
-| Epic | Konterblitz (+50 % auf reflektierte Schüsse), Block-Experte, Unzerbrechlich |
+| Common | Barriereübung (+0,15 s), Schnelle Deckung (−15 % Abklingzeit) |
+| Uncommon | Verstärkte Deckung (+0,3 s, Evolution: Ausdauerbarriere), Barrierestoß (stößt weg) |
+| Rare | Barrierebombe, Heilzone, Druckwelle |
+| Epic | Konterblitz (+50 % auf reflektierte Schüsse), Barriere-Experte, Unzerbrechlich |
 
-**Minen:** Mit **Minenleger** (Rare) lässt jeder Block eine Mine fallen, die auf dem Boden darunter liegen bleibt und auf Plattformen und Wippen mitfährt. Gegner sehen sie nicht (online gar nicht, am selben Bildschirm nur schwach). Nach 2 s ist sie scharf. Läuft ein Gegner darüber, blinkt sie und explodiert 1,5 s später: 50 Schaden, 2 Felder Explosionsradius, nur gegen Gegner. Höchstens 8 Minen pro Spieler, bei der neunten verschwindet die älteste. Nur mit Minenleger im Deck gibt es **Minenschaden** (Rare, +50 Schaden) und **Minenreichweite** (Uncommon, +1 Feld Explosionsradius). Evolution A **Sofortzünder** (Epic) lässt Minen ohne Verzögerung explodieren.
+**Minen:** Mit **Minenleger** (Rare) lässt jede Barriere eine Mine fallen, die auf dem Boden darunter liegen bleibt und auf Plattformen und Wippen mitfährt. Gegner sehen sie nicht (online gar nicht, am selben Bildschirm nur schwach). Nach 2 s ist sie scharf. Läuft ein Gegner darüber, blinkt sie und explodiert 1,5 s später: 50 Schaden, 2 Felder Explosionsradius, nur gegen Gegner. Höchstens 8 Minen pro Spieler, bei der neunten verschwindet die älteste. Nur mit Minenleger im Deck gibt es **Minenschaden** (Rare, +50 Schaden) und **Minenreichweite** (Uncommon, +1 Feld Explosionsradius). Evolution A **Sofortzünder** (Epic) lässt Minen ohne Verzögerung explodieren.
 
 ### Nahkampf-Karten
 
@@ -639,12 +639,12 @@ Jede Map-Stilrichtung hat eine eigene, ruhige **Hintergrundmusik**.
 ## 📊 Statistiken, HUD & Feedback
 
 - **HUD**: Oben rechts das Match-Ziel, pro Spieler ein Punktebalken (im Team-Modus in Teamfarbe), Nahkampf-Status `[E]: BEREIT`.
-- **Am Charakter**: Munitionsstriche bzw. Nachlade-Ring, Lebensbalken mit Schild-Overlay, Symbole für Block (mit Abklingzeit-Anzeige), Schild, Dash und Fähigkeit.
+- **Am Charakter**: Munitionsstriche bzw. Nachlade-Ring, Lebensbalken mit Schild-Overlay, Symbole für Barriere (mit Abklingzeit-Anzeige), Schild, Dash und Fähigkeit.
 - **Tab-Charakterblatt**: Alle Werte, die Nahkampfwaffe und **KARTEN-BONI (SUMMEN)**. Geht auch während der Kartenwahl und wenn du tot bist. Ohne Blind Pick zeigt oben eine Leiste alle Spieler: bei gehaltenem Tab mit den Tasten 1–9 oder per Klick umschalten. Mit Blind Pick (online) bleibt es beim eigenen Blatt.
 - **Kill-Cam**: Beim rundenentscheidenden Tod läuft das Spiel 1,6 s lang in Zeitlupe (20 %), die Kamera zoomt auf den Treffer.
 - **Screenshake** bei Treffern, Kills und Explosionen.
 - **Trefferanimation**: Stauchen, Zittern, rotes Aufblitzen, Blutspritzer. Dazu ein Todes-Sound.
-- **Match-Ende**: Tabelle mit Punkten, Kills, Toden, Schaden, Block, Heilung, Trefferquote, Runden und Nahkampf. Dazu **MVP**, **Meister Schaden**, **meiste Blocks**, **meiste Heilung** und **Meister Nahkampf**.
+- **Match-Ende**: Tabelle mit Punkten, Kills, Toden, Schaden, Barriere, Heilung, Trefferquote, Runden und Nahkampf. Dazu **MVP**, **Meister Schaden**, **meiste Barriere-Treffer**, **meiste Heilung** und **Meister Nahkampf**.
 - **ALLE SPIELER, KARTEN & STATS**: Nach dem Match für jeden Spieler das komplette Blatt mit Karten.
 - **Rundenstatistik**: Jede Runde wird als Zeile in `round_stats.jsonl` gespeichert (für Balancing).
 - **Balance-Statistik im Spiel**: Optionen → **STATISTIK**. Sortierbare Tabellen (Spaltenkopf anklicken) für **Karten**, **Waffen** und **Helden**, getrennt nach Version: Runden, geglättete Siegquote, Vergleich mit derselben Seltenheit, Kills/Tode pro Runde, Schadens- und Heilanteil, Nahkampfschaden, Pickquote und Aufstiegsvorschläge. Filter: nur menschliche Spieler, nur aktuelle Versionen, Mindestrunden für Vorschläge. Bei Helden zusätzlich **Fähigk./R** und **Fähigk.-Anteil**: Schaden aus direkten Treffern der Heldenfähigkeit samt Evolutionen (Brand/Gift danach zählt nicht), erfasst seit 28.10.2026. Die Seite **Hinweise** listet Vorschläge, Werte ohne neue Version und die automatischen Aufstiege. Hältst du die Maus 0,5 s über eine Kartenzeile oder einen Kartennamen unter Hinweise, erscheint die Karte unten links. Rechnet genauso wie `tools/analyze_round_stats.py`.

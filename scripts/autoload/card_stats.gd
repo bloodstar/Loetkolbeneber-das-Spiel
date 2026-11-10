@@ -74,6 +74,11 @@ func _ready() -> void:
 	if persistence_enabled and (not FileAccess.file_exists(storage_path) or version_history.size() > _history_size_at_load):
 		_save_document()
 
+# Bot-Test-Matches landen nur im Runden-Protokoll (markiert mit "bot_test"),
+# nicht hier: Sonst würden reine Bot-Matches die Seltenheiten automatisch ändern.
+func _ignored_run() -> bool:
+	return Global.is_bot_test_active()
+
 func _is_automated_test_run() -> bool:
 	if OS.has_feature("headless"):
 		return true
@@ -107,6 +112,8 @@ func _entry(card_id: String) -> Dictionary:
 	return statistics[card_id]
 
 func record_offer(cards: Array) -> void:
+	if _ignored_run():
+		return
 	var changed := false
 	var seen: Dictionary = {}
 	for value in cards:
@@ -124,6 +131,8 @@ func record_offer(cards: Array) -> void:
 		statistics_changed.emit()
 
 func record_pick(card_id: String) -> void:
+	if _ignored_run():
+		return
 	var entry := _entry(card_id)
 	if entry.is_empty():
 		return
@@ -134,6 +143,8 @@ func record_pick(card_id: String) -> void:
 # Ein Kill wird allen Karten im Deck des Schützen gutgeschrieben. Damit misst
 # die Killrate die Leistung von Decks, in denen die Karte tatsächlich lag.
 func record_kill(killer_index: int) -> void:
+	if _ignored_run():
+		return
 	var cards := Global.get_player_cards(killer_index)
 	if cards.is_empty():
 		return
@@ -154,6 +165,8 @@ func record_kill(killer_index: int) -> void:
 # Netzwerk-Clients erhalten keine lokalen Todesereignisse. Beim Match-Ende
 # werden die autoritativen Kill-Zähler des Hosts auf die eigenen Decks verteilt.
 func record_kill_totals(match_stats: Array) -> void:
+	if _ignored_run():
+		return
 	var changed := false
 	for slot in Global.get_active_player_indices():
 		var stat_index := slot - 1
@@ -184,6 +197,8 @@ func record_kill_totals(match_stats: Array) -> void:
 # mitzählen. Am Match-Ende kommen die Wins für den Gewinner (bzw. das
 # Gewinnerteam) dazu; Karten, die bereits gezählt wurden, zählen nicht doppelt.
 func record_match(winner_index: int) -> void:
+	if _ignored_run():
+		return
 	_count_match_participation()
 	var winner_team := -1
 	if winner_index >= 1 and winner_index <= Global.MAX_PLAYERS:
@@ -250,6 +265,8 @@ func _record_hero_match(slot: int, won: bool) -> void:
 # neu hinzugekommene Karten sofort und speichert, damit ein Absturz mitten im
 # Match keine Daten verliert.
 func record_round_start() -> void:
+	if _ignored_run():
+		return
 	if _count_match_participation():
 		statistics_changed.emit()
 	_save_document()

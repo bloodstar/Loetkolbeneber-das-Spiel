@@ -14,7 +14,11 @@ Dieselbe Rechnung zeigt das Spiel unter Optionen -> STATISTIK
 
 Aufruf:
     python tools/analyze_round_stats.py [pfad/zu/round_stats.jsonl]
-        [--min-rounds 20] [--humans-only] [--csv balance.csv]
+        [--min-rounds 20] [--humans-only] [--source all|normal|bot-test]
+        [--csv balance.csv]
+
+--source bot-test wertet nur Zeilen aus dem Bot-Test der Lobby aus
+("bot_test": true), --source normal nur die übrigen.
 """
 
 import argparse
@@ -92,13 +96,24 @@ def new_hero_entry():
     }
 
 
-def collect(path, humans_only):
+def matches_source(data, source):
+    bot_test = bool(data.get("bot_test", False))
+    if source == "normal":
+        return not bot_test
+    if source == "bot-test":
+        return bot_test
+    return True
+
+
+def collect(path, humans_only, source="all"):
     cards = defaultdict(new_card_entry)
     weapons = defaultdict(new_weapon_entry)
     heroes = defaultdict(new_hero_entry)
     round_count = 0
     draft_count = 0
     for data in read_lines(path):
+        if not matches_source(data, source):
+            continue
         kind = data.get("type")
         if kind == "round":
             round_count += 1
@@ -314,6 +329,8 @@ def main():
     parser.add_argument("path", nargs="?", default=default_log_path(), help="Pfad zur round_stats.jsonl")
     parser.add_argument("--min-rounds", type=int, default=20, help="Mindestanzahl Runden für einen Aufstiegsvorschlag (Standard: 20)")
     parser.add_argument("--humans-only", action="store_true", help="Bots ignorieren")
+    parser.add_argument("--source", choices=["all", "normal", "bot-test"], default="all",
+                        help="Nur normale Matches oder nur Bot-Test-Matches auswerten (Standard: all)")
     parser.add_argument("--csv", help="Ergebnis zusätzlich als CSV (Trennzeichen ';') speichern")
     args = parser.parse_args()
 
@@ -321,11 +338,13 @@ def main():
         print(f"Datei nicht gefunden: {args.path}", file=sys.stderr)
         return 1
 
-    cards, weapons, heroes, round_count, draft_count = collect(args.path, args.humans_only)
+    cards, weapons, heroes, round_count, draft_count = collect(args.path, args.humans_only, args.source)
     print(f"Datei: {args.path}")
     print(f"Runden: {round_count}, Drafts: {draft_count}, Karten(-Versionen): {len(cards)}")
     if args.humans_only:
         print("Nur menschliche Spieler werden ausgewertet.")
+    if args.source != "all":
+        print("Nur Bot-Test-Matches." if args.source == "bot-test" else "Ohne Bot-Test-Matches.")
     print()
 
     rows = analyze(cards, args.min_rounds)

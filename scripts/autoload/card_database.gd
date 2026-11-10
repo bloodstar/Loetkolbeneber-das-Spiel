@@ -21,7 +21,7 @@ func get_rarity_color(rarity: String) -> Color:
 # zeigen pro Haupt-Tag die Karten dieses Pools verteilt auf seine Sub-Tags.
 const SUB_TAG_GROUPS: Dictionary = {
 	"Offensive": ["Schaden", "Feuerrate", "Projektil", "Bounce", "Durchschlag", "Zielsuche", "Mehrfachschuss", "Explosion", "Element", "Begleiter"],
-	"Defensive": ["Leben", "Heilung", "Schild", "Block", "Rüstung", "Reflexion"],
+	"Defensive": ["Leben", "Heilung", "Schild", "Barriere", "Rüstung", "Reflexion"],
 	"Bewegung": ["Tempo", "Sprung", "Dash", "Schwerkraft", "Größe"],
 	"Nahkampf": ["Klinge", "Reichweite", "Schlagtempo", "Rückstoß", "Kontrolle", "Elementarhieb"],
 }
@@ -40,8 +40,8 @@ const SUB_TAG_DESCRIPTIONS: Dictionary = {
 	"Begleiter": "Türme und Drohnen.",
 	"Leben": "Mehr Maximalleben.",
 	"Heilung": "Regeneration, Lebensraub und Heilzonen.",
-	"Schild": "Schildgröße und Schildaufbau.",
-	"Block": "Blockdauer, Abklingzeit und Block-Effekte.",
+	"Schild": "Schildgröße, Schildaufbau und Schild-Cooldown.",
+	"Barriere": "Barrieredauer, Abklingzeit und Barriere-Effekte (Q). Unabhängig vom Schild.",
 	"Rüstung": "Weniger erlittener Schaden.",
 	"Reflexion": "Wirft Schaden oder Projektile zurück.",
 	"Tempo": "Höheres Lauftempo.",
@@ -1357,11 +1357,11 @@ func _init_database() -> void:
 	bu4.required_mechanic = "shield"
 	_register(bu4)
 
-	# Schild-Pause verkürzen. Erscheinen erst ab 25 Schild (required_mechanic).
+	# Schild-Cooldown (Pause nach Schaden) verkürzen. Erscheinen erst ab 25 Schild (required_mechanic).
 	var sp1 = CardData.new()
 	sp1.id = "schildkondensator"
 	sp1.title = "Schildkondensator"
-	sp1.description = "Schild lädt früher nach.\n-0,75s Schild-Pause nach Schaden."
+	sp1.description = "Schild lädt früher nach.\n-0,75s Schild-Cooldown nach Schaden."
 	sp1.rarity = "Common"
 	sp1.color = Color(0.45, 0.80, 1.00)
 	sp1.shield_regen_delay_add = -0.75
@@ -1371,7 +1371,7 @@ func _init_database() -> void:
 	var sp2 = CardData.new()
 	sp2.id = "schnellstart_generator"
 	sp2.title = "Schnellstart-Generator"
-	sp2.description = "Schild springt sofort wieder an.\n-1,25s Schild-Pause, +20% Schild-Regeneration."
+	sp2.description = "Schild springt früher wieder an.\n-1,25s Schild-Cooldown, +20% Schild-Regeneration."
 	sp2.rarity = "Rare"
 	sp2.color = Color(0.35, 0.70, 1.00)
 	sp2.shield_regen_delay_add = -1.25
@@ -2004,8 +2004,8 @@ func _init_database() -> void:
 	# --- Common ---
 	var bl1 = CardData.new()
 	bl1.id = "block_uebung"
-	bl1.title = "Blockübung"
-	bl1.description = "Längere Deckung.\n+0,15s Blockdauer."
+	bl1.title = "Barriereübung"
+	bl1.description = "Längere Deckung.\n+0,15s Barrieredauer."
 	bl1.rarity = "Common"
 	bl1.color = Color(0.45, 0.80, 1.00)
 	bl1.block_duration_add = 0.15
@@ -2014,7 +2014,7 @@ func _init_database() -> void:
 	var bl2 = CardData.new()
 	bl2.id = "schnelle_deckung"
 	bl2.title = "Schnelle Deckung"
-	bl2.description = "Schneller wieder bereit.\n-15% Block-Abklingzeit."
+	bl2.description = "Schneller wieder bereit.\n-15% Barriere-Abklingzeit."
 	bl2.rarity = "Common"
 	bl2.color = Color(0.35, 0.75, 0.95)
 	bl2.block_cooldown_mult = 0.85
@@ -2025,7 +2025,7 @@ func _init_database() -> void:
 	bl3.id = "verstaerkte_deckung"
 	bl3.version = 2 # Blockdauer +0,30 s statt +0,20 s
 	bl3.title = "Verstärkte Deckung"
-	bl3.description = "Längere Schadensimmunität.\n+0,3s Blockdauer."
+	bl3.description = "Längere Schadensimmunität.\n+0,3s Barrieredauer."
 	bl3.rarity = "Uncommon"
 	bl3.color = Color(0.40, 0.70, 1.00)
 	bl3.block_duration_add = 0.30
@@ -2033,8 +2033,8 @@ func _init_database() -> void:
 
 	var bl4 = CardData.new()
 	bl4.id = "schildstoss"
-	bl4.title = "Schildstoß"
-	bl4.description = "Block stößt Gegner in der Nähe weg.\n+130px Radius, +350 Rückstoß."
+	bl4.title = "Barrierestoß"
+	bl4.description = "Barriere stößt Gegner in der Nähe weg.\n+130px Radius, +350 Rückstoß."
 	bl4.rarity = "Uncommon"
 	bl4.color = Color(0.55, 0.90, 1.00)
 	bl4.block_knockback_radius_add = 130.0
@@ -2044,8 +2044,8 @@ func _init_database() -> void:
 	# --- Rare ---
 	var bl5 = CardData.new()
 	bl5.id = "blockbombe"
-	bl5.title = "Blockbombe"
-	bl5.description = "Beim Blocken explodiert eine Bombe.\n35 Schaden + Rückstoß im Umkreis."
+	bl5.title = "Barrierebombe"
+	bl5.description = "Beim Aktivieren der Barriere explodiert eine Bombe.\n35 Schaden + Rückstoß im Umkreis."
 	bl5.rarity = "Rare"
 	bl5.color = Color(1.00, 0.55, 0.15)
 	bl5.block_bomb = true
@@ -2055,7 +2055,7 @@ func _init_database() -> void:
 	var bl6 = CardData.new()
 	bl6.id = "heilzone"
 	bl6.title = "Heilzone"
-	bl6.description = "Block erzeugt ein Heilfeld.\nHeilt 6 HP alle 0,5s für 2,5s."
+	bl6.description = "Barriere erzeugt ein Heilfeld.\nHeilt 6 HP alle 0,5s für 2,5s."
 	bl6.rarity = "Rare"
 	bl6.color = Color(0.35, 1.00, 0.55)
 	bl6.block_heal_zone = true
@@ -2064,7 +2064,7 @@ func _init_database() -> void:
 	var bl7 = CardData.new()
 	bl7.id = "druckwelle"
 	bl7.title = "Druckwelle"
-	bl7.description = "Starker Rückstoß beim Blocken.\n+170px Radius, +600 Rückstoß."
+	bl7.description = "Starker Rückstoß beim Aktivieren der Barriere.\n+170px Radius, +600 Rückstoß."
 	bl7.rarity = "Rare"
 	bl7.color = Color(0.40, 0.90, 1.00)
 	bl7.block_knockback_radius_add = 170.0
@@ -2074,8 +2074,8 @@ func _init_database() -> void:
 	var bl8 = CardData.new()
 	bl8.id = "ausdauerblock"
 	bl8.version = 3 # +0,3s Blockdauer statt +0,15s (Jochen)
-	bl8.title = "Ausdauerblock"
-	bl8.description = "Block-Ausbau: Länger und öfter blocken.\n+0,3s Blockdauer, -10% Block-Abklingzeit."
+	bl8.title = "Ausdauerbarriere"
+	bl8.description = "Barriere-Ausbau: Länger und öfter abschirmen.\n+0,3s Barrieredauer, -10% Barriere-Abklingzeit."
 	bl8.rarity = "Rare"
 	bl8.color = Color(0.50, 0.85, 0.95)
 	bl8.family_id = "verstaerkte_deckung"
@@ -2097,8 +2097,8 @@ func _init_database() -> void:
 
 	var bl10 = CardData.new()
 	bl10.id = "block_experte"
-	bl10.title = "Block-Experte"
-	bl10.description = "Meisterhafte Deckung.\n-30% Block-Abklingzeit, +0,2s Blockdauer."
+	bl10.title = "Barriere-Experte"
+	bl10.description = "Meisterhafte Deckung.\n-30% Barriere-Abklingzeit, +0,2s Barrieredauer."
 	bl10.rarity = "Epic"
 	bl10.color = Color(0.45, 0.75, 1.00)
 	bl10.block_cooldown_mult = 0.70
@@ -2108,7 +2108,7 @@ func _init_database() -> void:
 	var bl11 = CardData.new()
 	bl11.id = "unzerbrechlich"
 	bl11.title = "Unzerbrechlich"
-	bl11.description = "Deutlich längere Deckung.\n+0,4s Blockdauer, -10% Block-Abklingzeit."
+	bl11.description = "Deutlich längere Deckung.\n+0,4s Barrieredauer, -10% Barriere-Abklingzeit."
 	bl11.rarity = "Epic"
 	bl11.color = Color(0.55, 0.65, 0.90)
 	bl11.block_duration_add = 0.40
@@ -2119,7 +2119,7 @@ func _init_database() -> void:
 	var mn1 = CardData.new()
 	mn1.id = "minenleger"
 	mn1.title = "Minenleger"
-	mn1.description = "Blocken legt eine Mine, die zu Boden fällt. Gegner sehen sie nicht.\nNach 2s scharf, explodiert 1,5s nachdem ein Gegner darüberläuft.\n50 Schaden, 2 Felder Explosionsradius."
+	mn1.description = "Jede Barriere legt eine Mine, die zu Boden fällt. Gegner sehen sie nicht.\nNach 2s scharf, explodiert 1,5s nachdem ein Gegner darüberläuft.\n50 Schaden, 2 Felder Explosionsradius."
 	mn1.rarity = "Rare"
 	mn1.pool = "Defensive"
 	mn1.color = Color(0.95, 0.35, 0.25)
@@ -2231,14 +2231,14 @@ func _init_database() -> void:
 
 	var df2 = CardData.new()
 	df2.id = "bollwerk"
-	df2.version = 2 # Max-HP/Schild-Bonus verdoppelt
+	df2.version = 3 # Barriere-Bonus durch Schild-Cooldown ersetzt (Schild und Barriere getrennt)
 	df2.title = "Bollwerk"
-	df2.description = "Mehr Schild und längere Deckung.\n+60 Schild, +0,15s Blockdauer."
+	df2.description = "Mehr Schild, der früher wieder lädt.\n+60 Schild, -0,5s Schild-Cooldown."
 	df2.rarity = "Rare"
 	df2.pool = "Defensive"
 	df2.color = Color(0.40, 0.75, 1.00)
 	df2.shield_max_add = 60
-	df2.block_duration_add = 0.15
+	df2.shield_regen_delay_add = -0.5
 	_register(df2)
 
 	var df3 = CardData.new()
@@ -3051,7 +3051,7 @@ func _infer_sub_tags(card: CardData) -> Array[String]:
 		or card.lifesteal_percent_add > 0.0 or card.block_heal_zone or card.blocker_drone_heal \
 		or card.reflect_heal_percent_add > 0.0 or card.melee_lifesteal_add > 0.0)
 	add.call("Schild", card.shield_max_add > 0 or card.shield_regen_mult > 1.0 or card.shield_regen_delay_add < 0.0)
-	add.call("Block", card.block_duration_add > 0.0 or card.block_cooldown_mult < 1.0 \
+	add.call("Barriere", card.block_duration_add > 0.0 or card.block_cooldown_mult < 1.0 \
 		or card.block_knockback_radius_add > 0.0 or card.block_knockback_force_add > 0.0 \
 		or card.block_bomb or card.block_heal_zone or card.block_reflect_damage_add > 0.0 \
 		or card.block_mine or card.mine_damage_add > 0.0 or card.mine_radius_add > 0.0 or card.mine_instant)

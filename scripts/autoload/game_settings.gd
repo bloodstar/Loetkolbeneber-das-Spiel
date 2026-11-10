@@ -38,7 +38,7 @@ const REBINDABLE_ACTIONS: Array[Dictionary] = [
 	{"action": "p1_jump", "label": "Springen"},
 	{"action": "p1_shoot", "label": "Schießen"},
 	{"action": "p1_dash", "label": "Dash"},
-	{"action": "p1_block", "label": "Block"},
+	{"action": "p1_block", "label": "Barriere"},
 	{"action": "p1_reload", "label": "Nachladen"},
 	{"action": "p1_melee", "label": "Nahkampf"},
 	{"action": "p1_ability", "label": "Fähigkeit"},

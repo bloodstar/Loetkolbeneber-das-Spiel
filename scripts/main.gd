@@ -97,8 +97,15 @@ var countdown_active: bool = false
 var countdown_remaining: float = 0.0
 var countdown_last_number: int = 3
 
+# Bot-Test: Pause zwischen zwei Matches (Echtzeit, Siegerbildschirm bleibt so
+# lange stehen) und Token, damit ein Abbruch den geplanten Neustart verwirft.
+const BOT_TEST_NEXT_MATCH_DELAY: float = 4.0
+var bot_test_token: int = 0
+var default_physics_ticks: int = 60
+
 func _ready() -> void:
 	print("--- MAIN.GD: _ready() – Spiel bereit, zeige Hauptmenü. ---")
+	default_physics_ticks = Engine.physics_ticks_per_second
 	# Wire signals
 	Global.round_ended.connect(_on_round_ended)
 	Global.card_selected.connect(_on_card_selected)
@@ -222,10 +229,13 @@ func _start_setup_phase() -> void:
 	# Neues Match: Punktestand und Karten zurücksetzen, dann Lobby öffnen.
 	Global.reset_match()
 	Global.current_state = Global.GameState.LOBBY
+	_apply_game_speed()
 	get_tree().paused = false
 	lobby.open_lobby()
 
 func _on_lobby_confirmed() -> void:
+	if Global.is_bot_test_active():
+		Global.roll_bot_test_loadouts()
 	if is_network_host:
 		NetworkManager.send_start_match(_build_network_config())
 	if Global.pre_draft_picks > 0:
@@ -252,6 +262,7 @@ func _on_lobby_cancelled() -> void:
 func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> void:
 	_cancel_kill_cam()
 	Global.current_state = Global.GameState.PLAYING
+	_apply_game_speed()
 	get_tree().paused = false
 	lobby.close_lobby()
 	card_draft_ui.close_draft()
@@ -646,7 +657,8 @@ func _on_player_died(dead_player_index: int) -> void:
 
 	if winner <= 0:
 		return
-	if not kill_cam_enabled:
+	# Im Bot-Test ohne Zeitlupe: schaut eh niemand gezielt hin, und so läuft es schneller.
+	if not kill_cam_enabled or Global.is_bot_test_active():
 		_finish_round(winner, award_survival)
 		return
 	var death_point: Vector2 = camera.global_position
@@ -693,7 +705,7 @@ func _on_kill_cam_finished(token: int, winner: int, award_survival: bool) -> voi
 func _cancel_kill_cam() -> void:
 	kill_cam_token += 1
 	kill_cam_active = false
-	Engine.time_scale = 1.0
+	_apply_game_speed()
 	if camera != null:
 		camera.stop_kill_cam()
 
@@ -711,6 +723,43 @@ func _on_network_kill_cam(point: Vector2, killer_slot: int, duration: float) -> 
 	# Fallback: Der Draft vom Host beendet die Kill-Cam normalerweise vorher.
 	var timer := get_tree().create_timer(maxf(0.1, duration), true, false, true)
 	timer.timeout.connect(_on_client_kill_cam_timeout.bind(token))
+
+# --- Bot-Test ---
+
+## Normales Tempo, außer im Bot-Test während Match, Draft und Siegerbildschirm.
+## Der Physik-Schritt bleibt 1/60 s: Bei doppeltem Tempo laufen doppelt so viele
+## Physik-Schritte pro Sekunde, damit Sprünge und Treffer gleich bleiben.
+func _apply_game_speed() -> void:
+	var speed := 1.0
+	if Global.is_bot_test_active() and Global.current_state in [
+			Global.GameState.PLAYING, Global.GameState.CARD_DRAFT, Global.GameState.GAME_OVER]:
+		speed = maxf(1.0, Global.bot_test_speed)
+	Engine.time_scale = speed
+	Engine.physics_ticks_per_second = int(round(default_physics_ticks * speed))
+	Engine.max_physics_steps_per_frame = maxi(8, int(ceil(8.0 * speed)))
+
+func _schedule_bot_test_next_match() -> void:
+	bot_test_token += 1
+	var token := bot_test_token
+	# Echtzeit, pausiert aber mit dem ESC-Menü.
+	var timer := get_tree().create_timer(BOT_TEST_NEXT_MATCH_DELAY, false, false, true)
+	timer.timeout.connect(_on_bot_test_next_match.bind(token))
+
+func _on_bot_test_next_match(token: int) -> void:
+	if token != bot_test_token or not Global.is_bot_test_active():
+		return
+	if Global.current_state != Global.GameState.GAME_OVER or main_menu.visible:
+		return
+	_clear_running_round()
+	Global.reset_match()
+	if Global.bot_test_random_loadouts:
+		Global.roll_bot_test_loadouts()
+	else:
+		Global.randomize_bot_melee_weapons()
+	if Global.pre_draft_picks > 0:
+		_start_pre_draft()
+		return
+	_start_fresh_round()
 
 func _on_client_kill_cam_timeout(token: int) -> void:
 	if token == kill_cam_token:
@@ -773,6 +822,9 @@ func _on_match_over(winner_index: int) -> void:
 	# Abgebrochene Matches verfälschen die Karten-Siegquoten nicht.
 	if Global.match_end_reason != "early":
 		_record_card_statistics(winner_index)
+		if Global.is_bot_test_active():
+			Global.bot_test_matches_played += 1
+			_schedule_bot_test_next_match()
 
 # Gleichstand am Ziel: Nach kurzer Ansage starten nur die Finalisten eine
 # neue Runde, ohne Draft. Clients bekommen die Finalisten mit dem Rundenstart.
@@ -1608,9 +1660,11 @@ func _on_hud_restart_requested() -> void:
 		_abort_network_match("")
 		return
 	# In-Place-Neustart: kein reload_current_scene(), sondern sauberes Aufräumen.
+	bot_test_token += 1
 	Global.reset_match()
 	Global.current_state = Global.GameState.MENU
 	_clear_running_round()
+	_apply_game_speed()
 	main_menu.open_menu()
 
 # Räumt eine laufende Runde vollständig ab (Zeitlupe, Overlays, Countdown,

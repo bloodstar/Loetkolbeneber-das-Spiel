@@ -61,6 +61,11 @@ var random_pick_check: CheckButton
 var gamble_check: CheckButton
 var pre_draft_spin: SpinBox
 var pre_draft_random_check: CheckButton
+var bot_test_section: VBoxContainer = null
+var bot_test_check: CheckButton = null
+var bot_test_random_check: CheckButton = null
+var bot_test_speed_option: OptionButton = null
+var bot_test_info_label: Label = null
 var map_option: OptionButton
 var map_info_label: Label
 var mode_option: OptionButton
@@ -193,6 +198,7 @@ func _ready() -> void:
 	Global.powerup_pool_changed.connect(_on_powerup_pool_changed)
 	Global.match_mode_changed.connect(_on_match_mode_changed)
 	Global.lobby_state_changed.connect(_on_lobby_state_changed)
+	Global.bot_test_changed.connect(_on_lobby_state_changed)
 	Global.level_modifiers_changed.connect(_on_level_modifiers_changed)
 	Global.lobby_loadouts_changed.connect(_on_lobby_loadouts_changed)
 	Global.lobby_last_loadout_saved.connect(_on_last_loadout_saved)
@@ -426,7 +432,7 @@ func _create_hero_button(hero: HeroData) -> Button:
 	return btn
 
 func _select_hero(slot: int, hero_id: String) -> void:
-	if not Global.can_control_slot(slot):
+	if not Global.can_choose_hero(slot):
 		return
 	SoundManager.play_sound("click")
 	Global.set_player_hero(slot, hero_id)
@@ -614,13 +620,13 @@ func _refresh_kind_options() -> void:
 		var opt: OptionButton = slot_nodes[i]["kind"]
 		opt.visible = i >= 2 and i <= Global.player_count
 		opt.selected = 0 if Global.is_bot_slot(i) else 1
-		opt.disabled = not Global.is_local_host()
+		opt.disabled = not Global.is_local_host() or Global.is_bot_test_active()
 
 func _refresh_hero_controls() -> void:
 	for i in range(1, Global.MAX_PLAYERS + 1):
 		if not slot_nodes.has(i):
 			continue
-		var can := Global.can_control_slot(i) and not Global.is_bot_slot(i)
+		var can := Global.can_choose_hero(i)
 		var grid: HBoxContainer = slot_nodes[i]["grid"]
 		for child in grid.get_children():
 			child.disabled = not can
@@ -1520,11 +1526,15 @@ func _update_titles() -> void:
 		var team_prefix := ""
 		if Global.is_team_mode():
 			team_prefix = "[%s] " % Global.get_team_name(Global.get_team_for_slot(i))
-		if i == 1:
+		if i == 1 and Global.is_bot_test_active():
+			title.text = team_prefix + "SPIELER 1 / BOT (BOT-TEST)%s" % (" — HELD WÄHLEN" if not Global.bot_test_random_loadouts else " — HELD ZUFÄLLIG")
+			title.add_theme_color_override("font_color", Color(0.55, 1.0, 0.6, 1.0))
+		elif i == 1:
 			title.text = team_prefix + ("SPIELER 1 (HOST)%s — HELD WÄHLEN" if Global.network_mode else "SPIELER 1%s — HELD WÄHLEN") % _slot_name_suffix(1)
 			title.add_theme_color_override("font_color", Color(1.0, 0.6, 0.2, 1.0))
 		elif Global.is_bot_slot(i):
-			title.text = team_prefix + "SLOT %d / BOT — HELD WÄHLEN" % i
+			var bot_suffix := " — HELD WÄHLEN" if Global.can_choose_hero(i) else ""
+			title.text = team_prefix + "SLOT %d / BOT%s" % [i, bot_suffix]
 			title.add_theme_color_override("font_color", Color(0.65, 0.7, 0.8, 1.0))
 		elif Global.network_mode:
 			var you := " (DU)" if i == Global.local_player_index else ""
@@ -1552,6 +1562,8 @@ func _build_rules_tab() -> void:
 
 	_build_loadout_section(body)
 	body.add_child(HSeparator.new())
+
+	_build_bot_test_section(body)
 
 	_add_section_title(body, "MATCH-REGELN", Color(1.0, 0.72, 0.3, 1.0))
 	# Nahkampf-Schalter weit oben: schaltet Taste E und den Kartenpool "Nahkampf" gemeinsam.
@@ -3615,6 +3627,7 @@ func _sync_from_global() -> void:
 	_refresh_hero_stats_text()
 	_refresh_character_tab()
 	_refresh_network_status()
+	_refresh_bot_test_controls()
 	_update_titles()
 	_update_status()
 
@@ -3787,6 +3800,80 @@ func _clear_children(container: Node) -> void:
 	for child in container.get_children():
 		container.remove_child(child)
 		child.queue_free()
+
+# --- Bot-Test (nur lokal) ---
+
+func _build_bot_test_section(body: VBoxContainer) -> void:
+	bot_test_section = VBoxContainer.new()
+	bot_test_section.add_theme_constant_override("separation", 6)
+	body.add_child(bot_test_section)
+	_add_section_title(bot_test_section, "BOT-TEST (BALANCE)", Color(0.55, 1.0, 0.6, 1.0))
+
+	bot_test_check = CheckButton.new()
+	bot_test_check.text = "Nur Bots spielen lassen (auch Spieler 1)"
+	bot_test_check.tooltip_text = "Alle aktiven Slots werden von Bots gesteuert. Nach jedem Match startet automatisch das nächste, bis du über ESC ins Hauptmenü gehst.\nDie Runden landen markiert im Runden-Protokoll (STATISTIK → „Nur Bot-Test“) und ändern die Karten-Seltenheiten nicht.\nWird nicht im Loadout gespeichert."
+	bot_test_check.add_theme_font_size_override("font_size", 15)
+	bot_test_check.toggled.connect(func(pressed: bool):
+		SoundManager.play_sound("click")
+		Global.set_bot_test_mode(pressed)
+	)
+	bot_test_section.add_child(bot_test_check)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 18)
+	bot_test_section.add_child(row)
+
+	bot_test_random_check = CheckButton.new()
+	bot_test_random_check.text = "Klassen und Nahkampfwaffen pro Match zufällig"
+	bot_test_random_check.tooltip_text = "An: Jedes Match bekommt jeder Slot zufällig Held und Waffe, gleichmäßig verteilt (alle kommen gleich oft dran, kein Held doppelt im selben Match).\nAus: Die Helden aus dem Reiter Spieler bleiben, Waffen sind wie bei Bots üblich zufällig."
+	bot_test_random_check.add_theme_font_size_override("font_size", 15)
+	bot_test_random_check.toggled.connect(func(pressed: bool):
+		SoundManager.play_sound("click")
+		Global.set_bot_test_random_loadouts(pressed)
+	)
+	row.add_child(bot_test_random_check)
+
+	var speed_label := Label.new()
+	speed_label.text = "Tempo:"
+	speed_label.add_theme_font_size_override("font_size", 15)
+	speed_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(speed_label)
+	bot_test_speed_option = OptionButton.new()
+	for speed in Global.BOT_TEST_SPEEDS:
+		bot_test_speed_option.add_item("%dx" % int(speed))
+	bot_test_speed_option.tooltip_text = "Spielgeschwindigkeit im Bot-Test. Die Physik rechnet weiter in 1/60-s-Schritten, nur mehr davon pro Sekunde. Ruckelt es, eine Stufe runter."
+	bot_test_speed_option.item_selected.connect(func(index: int):
+		SoundManager.play_sound("click")
+		Global.set_bot_test_speed(Global.BOT_TEST_SPEEDS[index])
+	)
+	row.add_child(bot_test_speed_option)
+
+	bot_test_info_label = Label.new()
+	bot_test_info_label.add_theme_font_size_override("font_size", 13)
+	bot_test_info_label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.75, 1.0))
+	bot_test_info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	bot_test_section.add_child(bot_test_info_label)
+	bot_test_section.add_child(HSeparator.new())
+	_refresh_bot_test_controls()
+
+func _refresh_bot_test_controls() -> void:
+	if bot_test_section == null:
+		return
+	# Online gibt es keinen Bot-Test: Menschen sollen mitspielen können.
+	bot_test_section.visible = not Global.network_mode
+	bot_test_check.set_pressed_no_signal(Global.bot_test_mode)
+	bot_test_random_check.set_pressed_no_signal(Global.bot_test_random_loadouts)
+	bot_test_random_check.disabled = not Global.bot_test_mode
+	var speed_index := Global.BOT_TEST_SPEEDS.find(Global.bot_test_speed)
+	bot_test_speed_option.select(maxi(0, speed_index))
+	bot_test_speed_option.disabled = not Global.bot_test_mode
+	if Global.bot_test_mode:
+		var played := ""
+		if Global.bot_test_matches_played > 0:
+			played = " Bisher %d Bot-Test-Matches." % Global.bot_test_matches_played
+		bot_test_info_label.text = "Aktiv: Alle %d Slots spielen als Bot. Abbrechen mit ESC → Hauptmenü. Auswertung: Optionen → STATISTIK → „Nur Bot-Test“.%s" % [Global.get_active_player_indices().size(), played]
+	else:
+		bot_test_info_label.text = "Aus. Für 1-gegen-1-Balance Spieleranzahl 2 wählen, für Gedränge mehr."
 
 func _add_section_title(parent: VBoxContainer, text: String, color: Color) -> void:
 	var label := Label.new()

@@ -229,7 +229,7 @@ func _build_box(index: int) -> Dictionary:
 	var block_label := Label.new()
 	block_label.add_theme_font_size_override("font_size", 11)
 	block_label.add_theme_color_override("font_color", Color(0.55, 0.85, 1.0, 1.0))
-	block_label.text = "Block [Q]: BEREIT"
+	block_label.text = "Barriere [Q]: BEREIT"
 	block_label.visible = false
 	box.add_child(block_label)
 
@@ -356,10 +356,10 @@ func _draw_hud_reload_ring(ring: Control, p: Player) -> void:
 
 func _block_text(active: bool, cooldown: float) -> String:
 	if active:
-		return "Block [Q]: AKTIV"
+		return "Barriere [Q]: AKTIV"
 	if cooldown <= 0.0:
-		return "Block [Q]: BEREIT"
-	return "Block [Q]: %.1fs" % cooldown
+		return "Barriere [Q]: BEREIT"
+	return "Barriere [Q]: %.1fs" % cooldown
 
 func _melee_text(p: Player) -> String:
 	var label := Global.get_melee_weapon_label(Global.get_melee_weapon(p.player_index))
@@ -1023,7 +1023,7 @@ func _fill_tab_overlay(p: Player, is_preview: bool, for_overview: bool = false) 
 	_add_stat_cell(stats_grid, "MUNITION", "%d / %d" % [p.current_ammo, p.max_ammo], Color(0.85, 0.85, 0.90))
 	_add_stat_cell(stats_grid, "NACHLADEN", "%.2f s" % p.reload_time, Color(0.85, 0.85, 0.90))
 	_add_stat_cell(stats_grid, "SPRÜNGE", "%d" % p.max_jumps, Color(0.70, 0.85, 1.0))
-	_add_stat_cell(stats_grid, "BLOCK", "%s · %.1f s / %.1f s" % ["AKTIV" if p.is_blocking else "BEREIT", p.block_cooldown, p.block_duration], Color(0.55, 0.85, 1.0))
+	_add_stat_cell(stats_grid, "BARRIERE", "%s · %.1f s / %.1f s" % ["AKTIV" if p.is_blocking else "BEREIT", p.block_cooldown, p.block_duration], Color(0.55, 0.85, 1.0))
 	var melee_id := Global.get_melee_weapon(p.player_index)
 	var melee_data := Global.get_melee_weapon_data(melee_id)
 	if Global.melee_enabled:
@@ -1129,8 +1129,9 @@ func _add_modifier_totals(p: Player) -> void:
 		rows.append(["GIFT", "%d Stapel · %.1f / Tick" % [p.poison_stacks, p.poison_damage_per_tick], effect])
 	if p.freeze_duration > 0.0:
 		rows.append(["EINFRIEREN", "%.1f s" % p.freeze_duration, effect])
-	if p.max_shield > 0.0 and not is_equal_approx(p.shield_regen_delay, Player.SHIELD_REGEN_DELAY):
-		rows.append(["SCHILD-PAUSE", "%.1f s" % p.shield_regen_delay, defense])
+	if p.max_shield > 0.0 and not is_equal_approx(p.shield_regen_delay, \
+			Player.base_shield_regen_delay(Global.get_player_hero_id(p.player_index))):
+		rows.append(["SCHILD-COOLDOWN", "%.1f s" % p.shield_regen_delay, defense])
 	if p.max_shield > 0.0 and not is_equal_approx(p.shield_regen_mult, 1.0):
 		rows.append(["SCHILD-AUFLADUNG", "%.0f / s" % (Player.SHIELD_REGEN_PER_SEC * p.shield_regen_mult), defense])
 	if p.hp_regen > 0.0:
@@ -1142,9 +1143,9 @@ func _add_modifier_totals(p: Player) -> void:
 	if p.reflect_heal_percent > 0.0:
 		rows.append(["HEILUNG DURCH REFLEXION", "%.0f %%" % (p.reflect_heal_percent * 100.0), defense])
 	if p.block_reflect_damage_add > 0.0:
-		rows.append(["BLOCK-REFLEXSCHADEN", "+%.0f" % p.block_reflect_damage_add, defense])
+		rows.append(["BARRIERE-REFLEXSCHADEN", "+%.0f" % p.block_reflect_damage_add, defense])
 	if p.block_knockback_radius > 0.0:
-		rows.append(["BLOCK-STOSSRADIUS", "%d px" % int(round(p.block_knockback_radius)), defense])
+		rows.append(["BARRIERE-STOSSRADIUS", "%d px" % int(round(p.block_knockback_radius)), defense])
 	if p.block_mine:
 		rows.append(["MINEN", "%.0f Schaden · %.0f Felder%s" % [p.block_mine_damage,
 			p.block_mine_radius / Player.BLOCK_MINE_TILE, " · sofort" if p.block_mine_instant else ""], defense])
@@ -1563,7 +1564,7 @@ func _build_match_stats() -> void:
 	grid.add_theme_constant_override("v_separation", 4)
 	block.add_child(grid)
 
-	var headers := ["Spieler", "Punkte", "Kills", "Tode", "Schaden", "Nahkampf", "Block", "Heilung", "Treffer", "Runden"]
+	var headers := ["Spieler", "Punkte", "Kills", "Tode", "Schaden", "Nahkampf", "Barriere", "Heilung", "Treffer", "Runden"]
 	for text in headers:
 		var header := Label.new()
 		header.text = text
@@ -1645,7 +1646,7 @@ func _match_summary_text(mvp_index: int) -> String:
 	var lines: Array[String] = []
 	lines.append("★ Bester Spieler: %s" % _leader_text(mvp_index, "gesamtwert"))
 	lines.append("Meister Schaden: %s" % _leader_text(damage_leader, "damage_dealt"))
-	lines.append("Meiste blockierte Treffer: %s (%d Treffer · %d Schaden)" % [
+	lines.append("Meiste Barriere-Treffer: %s (%d Treffer · %d Schaden)" % [
 		_leader_text(block_leader, "blocked_hits"),
 		int(Global.get_match_stat(block_leader, "blocked_hits")),
 		int(Global.get_match_stat(block_leader, "damage_blocked")),

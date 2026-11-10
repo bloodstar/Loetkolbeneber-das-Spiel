@@ -297,6 +297,23 @@ func _ready() -> void:
 	assert(header_icon != null and header_icon.texture != null, "Slot header should show the selected class icon")
 	assert(main.lobby.character_hero_icon != null and main.lobby.character_hero_icon.texture != null, "Character tab should show the selected class icon")
 	assert(main.lobby.ready_btn != null, "Lobby should build the footer ready button")
+	# Bot-Klassen: Der Host darf sie in der Lobby wählen (offline und online),
+	# ein normaler Client nicht.
+	assert(Global.is_bot_slot(2), "Slot 2 should be a bot for the class-selection check")
+	assert(Global.can_choose_hero(2), "Host should be able to choose the class of bot slot 2")
+	var bot_grid := main.lobby.slot_nodes[2]["grid"] as HBoxContainer
+	assert(bot_grid != null, "Bot slot should build a hero grid")
+	for child in bot_grid.get_children():
+		assert(not (child as Button).disabled, "Bot class buttons should be enabled for the host")
+	var online_backup := Global.network_mode
+	var local_slot_backup := Global.local_player_index
+	Global.network_mode = true
+	Global.set_local_player(1)
+	assert(Global.can_choose_hero(2), "Online host should be able to choose bot classes")
+	Global.set_local_player(3)
+	assert(not Global.can_choose_hero(2), "Online client should not choose bot classes")
+	Global.network_mode = online_backup
+	Global.set_local_player(local_slot_backup)
 	# Charakteranpassung lebt in der Lobby und ist pro Spieler-Slot verfügbar.
 	assert(main.lobby.tabs.get_tab_count() == 7, "Lobby should have seven tabs")
 	assert(main.lobby.tabs.get_tab_title(5) == "Levels", "Lobby should provide a levels tab")
@@ -1192,6 +1209,15 @@ func _ready() -> void:
 	p1.current_shield = shield_before_self
 	p1.hp_regen_timer = hp_regen_before_self
 	p1.shield_regen_timer = shield_regen_before_self
+	# Schild-Cooldown: 5 s nach Schaden (Bastion 4 s), Karten verkürzen ihn.
+	assert(is_equal_approx(Player.base_shield_regen_delay("ignis"), 5.0), "Shield cooldown should be 5 s")
+	assert(is_equal_approx(Player.base_shield_regen_delay("bastion"), 4.0), "Bastion shield cooldown should be 4 s")
+	var bollwerk := CardDatabase.get_card("bollwerk")
+	assert(bollwerk.block_duration_add == 0.0 and bollwerk.shield_regen_delay_add < 0.0, "Bollwerk must only upgrade the shield, not the Barriere")
+	for c in CardDatabase.all_cards:
+		var has_shield: bool = c.shield_max_add > 0 or c.shield_regen_mult > 1.0 or c.shield_regen_delay_add < 0.0
+		var has_barrier: bool = c.block_duration_add > 0.0 or c.block_cooldown_mult < 1.0
+		assert(not (has_shield and has_barrier), "Card %s must not upgrade Schild and Barriere at once" % c.id)
 	# Powerups wirken sofort und laufen anschließend über kurze Timer aus.
 	p1.current_health = 40.0
 	p1.apply_powerup("heal")

@@ -38,6 +38,7 @@ signal network_status_changed()
 signal pig_appearance_changed(player_index: int)
 # Baukasten-Teile eines Slots haben sich geändert (Host verteilt per Lobby-Sync).
 signal pig_parts_changed()
+signal bot_test_changed()
 
 enum GameState {
 	MENU,
@@ -127,6 +128,20 @@ var gamble_enabled: bool = false
 const PRE_DRAFT_MAX_PICKS: int = 10
 var pre_draft_picks: int = 0
 var pre_draft_random: bool = false
+# Bot-Test (Balance): Alle aktiven Slots spielen als Bot, auch Spieler 1. Nur
+# lokal (nicht online) und bewusst NICHT in Loadouts/"Last" gespeichert, damit
+# niemand versehentlich ein normales Match nur mit Bots startet. Optional
+# bekommt jeder Slot pro Match zufällig Held und Nahkampfwaffe (gleichmäßig
+# verteilt), das Match startet nach dem Siegerbildschirm automatisch neu und
+# das Spieltempo lässt sich erhöhen. Rundenzeilen tragen "bot_test": true.
+const BOT_TEST_SPEEDS: Array[float] = [1.0, 2.0, 3.0, 4.0]
+var bot_test_mode: bool = false
+var bot_test_random_loadouts: bool = true
+var bot_test_speed: float = 1.0
+var bot_test_matches_played: int = 0
+var _bot_test_backup: Dictionary = {}
+var _bot_test_hero_deck: Array = []
+var _bot_test_weapon_deck: Array = []
 # Runden-Modifier: Rate in Prozent (0 = aus, 100 = Standard, 200 = mehr)
 # und die Menge der freigeschalteten Modifier-IDs aus LevelModifierDefs.
 var level_modifier_rate_percent: int = LevelModifierDefsClass.RATE_DEFAULT_PERCENT
@@ -153,7 +168,7 @@ const LEGACY_CARD_POOLS: Array[String] = ["Kern", "Offensive", "Defensive", "Bew
 const LATER_LEVEL_MODIFIERS: Array[String] = ["brawl"]
 const CARD_POOL_DESCRIPTIONS: Dictionary = {
 	"Offensive": "Schaden, Munition, Projektile und Elementareffekte.",
-	"Defensive": "Leben, Schild, Block und Regeneration.",
+	"Defensive": "Leben, Schild, Barriere und Regeneration.",
 	"Bewegung": "Tempo, Sprünge, Dash und Trefferfläche.",
 	"Nahkampf": "Schaden, Reichweite und Effekte der Nahkampfwaffe (E).",
 }
@@ -613,7 +628,7 @@ func _setup_heroes() -> void:
 	spore.base_reload_time = 1.05
 	spore.color_tint = Color(0.4, 0.9, 0.3)
 	spore.sprite_tile_name = "tile_0002.png"
-	spore.version = 2
+	spore.version = 3 # Schild-Cooldown 5 s statt 3 s (Bastion 4 s)
 	spore.ability_version = 1
 	heroes["spore"] = spore
 
@@ -636,8 +651,8 @@ func _setup_heroes() -> void:
 	nova.base_reload_time = 1.35
 	nova.color_tint = Color(0.6, 0.4, 1.0)
 	nova.sprite_tile_name = "tile_0003.png"
-	nova.version = 2
-	nova.ability_version = 1
+	nova.version = 3 # Schild-Cooldown 5 s statt 3 s (Bastion 4 s)
+	nova.ability_version = 2
 	heroes["nova"] = nova
 
 	# 5. Klinge – Klingentänzer
@@ -659,7 +674,7 @@ func _setup_heroes() -> void:
 	klinge.base_reload_time = 1.25
 	klinge.color_tint = Color(1.0, 0.3, 0.5)
 	klinge.sprite_tile_name = "tile_0005.png"
-	klinge.version = 2
+	klinge.version = 3 # Schild-Cooldown 5 s statt 3 s (Bastion 4 s)
 	klinge.ability_version = 1
 	heroes["klinge"] = klinge
 
@@ -669,7 +684,7 @@ func _setup_heroes() -> void:
 	bastion.name = "Bastion"
 	bastion.role = "Field Engineer"
 	bastion.description = "Robuster Unterstützer mit Schildtechnik."
-	bastion.passive_desc = "Aurora: Doppelte Schild-Regeneration (30 statt 15 Schild/s, startet 3 s nach dem letzten Treffer)"
+	bastion.passive_desc = "Aurora: Doppelte Schild-Regeneration (30 statt 15 Schild/s) und kürzerer Schild-Cooldown (startet 4 statt 5 s nach dem letzten Schaden)"
 	bastion.ability_name = "Heilfeld"
 	bastion.ability_desc = "Errichtet ein Feld, das dich über Zeit heilt und Schild aufbaut!"
 	bastion.ability_cooldown = 8.0
@@ -682,7 +697,7 @@ func _setup_heroes() -> void:
 	bastion.base_reload_time = 1.45
 	bastion.color_tint = Color(0.3, 0.9, 0.7)
 	bastion.sprite_tile_name = "tile_0001.png"
-	bastion.version = 2
+	bastion.version = 3 # Schild-Cooldown 5 s statt 3 s (Bastion 4 s)
 	bastion.ability_version = 1
 	heroes["bastion"] = bastion
 
@@ -705,7 +720,7 @@ func _setup_heroes() -> void:
 	phantom.base_reload_time = 1.05
 	phantom.color_tint = Color(0.45, 0.45, 0.6)
 	phantom.sprite_tile_name = "tile_0007.png"
-	phantom.version = 2
+	phantom.version = 3 # Schild-Cooldown 5 s statt 3 s (Bastion 4 s)
 	phantom.ability_version = 1
 	heroes["phantom"] = phantom
 
@@ -1150,10 +1165,81 @@ func is_active_slot(index: int) -> bool:
 	return index >= 1 and index <= player_count and player_kind[index - 1] != PlayerKind.OFF
 
 func is_bot_slot(index: int) -> bool:
+	if is_bot_test_active() and is_active_slot(index):
+		return true
 	return get_player_kind(index) == PlayerKind.BOT
 
 func is_human_slot(index: int) -> bool:
+	if is_bot_test_active() and is_active_slot(index):
+		return false
 	return get_player_kind(index) == PlayerKind.HUMAN
+
+# --- Bot-Test ---
+
+func is_bot_test_active() -> bool:
+	return bot_test_mode and not network_mode
+
+func set_bot_test_mode(enabled: bool) -> void:
+	if bot_test_mode == enabled:
+		return
+	bot_test_mode = enabled
+	if enabled:
+		# Eigene Lobby-Auswahl merken; Bot-Test würfelt Helden und Waffen neu.
+		_bot_test_backup = {
+			"heroes": player_hero_ids.duplicate(),
+			"weapons": player_melee_weapons.duplicate(),
+		}
+		bot_test_matches_played = 0
+		_bot_test_hero_deck.clear()
+		_bot_test_weapon_deck.clear()
+	elif not _bot_test_backup.is_empty():
+		player_hero_ids.assign(_bot_test_backup["heroes"])
+		player_melee_weapons.assign(_bot_test_backup["weapons"])
+		_bot_test_backup.clear()
+	bot_test_changed.emit()
+	lobby_state_changed.emit()
+
+func set_bot_test_random_loadouts(enabled: bool) -> void:
+	if bot_test_random_loadouts == enabled:
+		return
+	bot_test_random_loadouts = enabled
+	bot_test_changed.emit()
+
+func set_bot_test_speed(value: float) -> void:
+	bot_test_speed = clampf(value, 1.0, 8.0)
+	bot_test_changed.emit()
+
+# Vor jedem Bot-Test-Match: Jeder aktive Slot zieht Held und Waffe aus
+# gemischten Stapeln, die sich erst neu füllen, wenn alle einmal dran waren.
+# So kommen alle Klassen und Waffen gleich oft vor. Ein Held erscheint pro
+# Match nur einmal, solange es genug Helden für alle Slots gibt.
+func roll_bot_test_loadouts() -> void:
+	if not is_bot_test_active() or not bot_test_random_loadouts:
+		return
+	var hero_pool: Array = heroes.keys()
+	var used: Array = []
+	for slot in get_active_player_indices():
+		var avoid: Array = used if used.size() < hero_pool.size() else []
+		var hero := _draw_bot_test(_bot_test_hero_deck, hero_pool, avoid)
+		used.append(hero)
+		player_hero_ids[slot - 1] = hero
+		player_melee_weapons[slot - 1] = _draw_bot_test(_bot_test_weapon_deck, Array(MELEE_WEAPONS), [])
+	lobby_state_changed.emit()
+
+func _draw_bot_test(deck: Array, pool: Array, avoid: Array) -> String:
+	if deck.is_empty():
+		deck.append_array(pool)
+		deck.shuffle()
+	for i in range(deck.size()):
+		if not avoid.has(deck[i]):
+			return str(deck.pop_at(i))
+	# Alles Übrige ist schon vergeben: neuen Stapel anbrechen.
+	var fresh := pool.duplicate()
+	fresh.shuffle()
+	for value in fresh:
+		if not avoid.has(value):
+			return str(value)
+	return str(deck.pop_front())
 
 func get_active_player_indices() -> Array[int]:
 	var result: Array[int] = []
@@ -2464,6 +2550,8 @@ func set_player_ready(index: int, ready: bool) -> void:
 	lobby_state_changed.emit()
 
 func is_player_ready(index: int) -> bool:
+	if is_bot_test_active() and is_active_slot(index):
+		return true
 	return bool(player_ready.get(index, false))
 
 func all_players_ready() -> bool:
@@ -2485,6 +2573,13 @@ func can_control_slot(index: int) -> bool:
 	if not network_mode:
 		return true
 	return index == local_player_index
+
+# Darf der lokale Spieler die Klasse (Held) dieses Slots wählen? Der Host
+# legt in der Lobby zusätzlich die Klassen seiner Bots fest.
+func can_choose_hero(index: int) -> bool:
+	if can_control_slot(index):
+		return true
+	return network_mode and is_local_host() and is_bot_slot(index)
 
 # --- Netzwerk-Spielstand (vom Host gespiegelt) ---
 
