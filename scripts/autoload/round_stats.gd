@@ -158,6 +158,7 @@ func end_round(winner_index: int, death_order: Array, match_winner: int = 0) -> 
 		"round": round_number,
 		"network": "host" if NetworkManager.is_host else "offline",
 		"match_mode": Global.match_mode,
+		"game_mode": Global.game_mode,
 		"player_count": active.size(),
 		"duration_s": _round_seconds(),
 		"map_id": round_info.get("map_id", ""),

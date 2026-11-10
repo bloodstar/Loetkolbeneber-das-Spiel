@@ -24,6 +24,8 @@ var options_menu: OptionsMenu = null
 
 # Alle aktiven Spieler (Index 1..player_count). Slot = player_index.
 var players: Array[Player] = []
+# Arena-Modus: 3D-Voxel-Ansicht der aktuellen Runde (sonst null).
+var arena_view: ArenaView3D = null
 var modifier_manager: Node = null
 var is_sudden_death: bool = false
 ## Sekunden vom Rundenstart (bzw. vom letzten Tod) bis Sudden Death.
@@ -171,6 +173,7 @@ func _ready() -> void:
 		_start_fresh_round()
 	else:
 		Global.current_state = Global.GameState.MENU
+		_leave_arena()
 		main_menu.open_menu()
 
 func _on_menu_start_requested() -> void:
@@ -223,6 +226,7 @@ func _start_setup_phase() -> void:
 	Global.reset_match()
 	Global.current_state = Global.GameState.LOBBY
 	get_tree().paused = false
+	_leave_arena()
 	lobby.open_lobby()
 
 func _on_lobby_confirmed() -> void:
@@ -247,6 +251,7 @@ func _on_lobby_cancelled() -> void:
 		return
 	# Zurück ins Hauptmenü, ohne eine Runde zu starten.
 	Global.current_state = Global.GameState.MENU
+	_leave_arena()
 	main_menu.open_menu()
 
 func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> void:
@@ -283,6 +288,7 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	# 2. Level regenerieren. Erst danach die Modifier-Hazards spawnen, damit
 	#    Münzen, Meteore und Heilzonen die neue Karte als Grundlage nutzen.
 	level_generator.generate_level(level_seed, map_id, active_mods)
+	_update_arena_view()
 	# Hintergrundmusik passend zum Tileset; gleiches Thema läuft einfach weiter.
 	SoundManager.play_music(level_generator.current_theme_id)
 	if modifier_manager != null:
@@ -310,6 +316,23 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	if is_network_host and NetworkManager.has_clients():
 		net_snapshot_count = 0
 		_send_snapshot()
+
+## Baut die 3D-Ansicht für Arena-Karten auf bzw. entfernt sie wieder.
+func _update_arena_view() -> void:
+	if arena_view != null and is_instance_valid(arena_view):
+		arena_view.queue_free()
+	arena_view = null
+	if not ArenaMode.active:
+		return
+	arena_view = ArenaView3D.new()
+	arena_view.name = "ArenaView3D"
+	add_child(arena_view)
+	arena_view.setup(ArenaBuilder.current_map, ArenaMode.grid, camera)
+
+## Match verlassen (Menü/Lobby): 3D-Ansicht weg, normale Schwerkraft zurück.
+func _leave_arena() -> void:
+	ArenaBuilder.deactivate(level_generator)
+	_update_arena_view()
 
 # Liefert den Spieler mit dem gegebenen Slot-Index (1..6) oder null.
 func get_player(index: int) -> Player:
@@ -904,11 +927,13 @@ func _build_network_config() -> Dictionary:
 		"disabled_powerups": Global.disabled_powerup_kinds.duplicate(),
 		"map_id": Global.selected_map_id,
 		"match_mode": Global.match_mode,
+		"game_mode": Global.game_mode,
 	}
 
 func _apply_network_config(config: Dictionary) -> void:
 	Global.set_player_count(int(config.get("player_count", Global.player_count)))
 	Global.set_match_mode(str(config.get("match_mode", Global.MATCH_MODE_FFA)))
+	Global.set_game_mode(str(config.get("game_mode", Global.GAME_MODE_SIDE)))
 	var heroes: Array = config.get("heroes", [])
 	for i in range(mini(heroes.size(), Global.MAX_PLAYERS)):
 		Global.player_hero_ids[i] = str(heroes[i])
@@ -1126,7 +1151,7 @@ func _process_network_client(delta: float) -> void:
 		if net_input_timer >= INPUT_INTERVAL:
 			net_input_timer = 0.0
 			NetworkManager.send_input({
-				"move_x": 0.0, "aim": Vector2.ZERO, "shoot": false, "jump": false,
+				"move_x": 0.0, "move_y": 0.0, "aim": Vector2.ZERO, "shoot": false, "jump": false,
 				"jump_release": false, "dash": false, "ability": false, "block": false, "reload": false,
 				"melee": false, "drop": false,
 			})
@@ -1173,6 +1198,7 @@ func _process_network_client(delta: float) -> void:
 
 	NetworkManager.send_input({
 		"move_x": Input.get_axis("p1_left", "p1_right"),
+		"move_y": Input.get_axis("p1_up", "p1_down") if ArenaMode.active else 0.0,
 		"aim": aim,
 		"shoot": Input.is_action_pressed("p1_shoot"),
 		"jump": pending_jump,
@@ -1283,6 +1309,9 @@ func _player_snapshot(player: Player, with_appearance: bool = true) -> Dictionar
 		"dash": player.is_dashing,
 		"melee_aim": player.melee_swing_dir,
 	}
+	if ArenaMode.active:
+		data["az"] = player.arena_z
+		data["ag"] = player.arena_grounded
 	if with_appearance:
 		var pig_colors := player.get_pig_colors()
 		if pig_colors.is_empty():
@@ -1308,6 +1337,7 @@ func _bullet_snapshots() -> Array:
 			"rot": b.rotation,
 			"scale": b.scale.x,
 			"color": b.modulate,
+			"z": b.arena_z,
 		})
 	return result
 
@@ -1611,6 +1641,7 @@ func _on_hud_restart_requested() -> void:
 	Global.reset_match()
 	Global.current_state = Global.GameState.MENU
 	_clear_running_round()
+	_leave_arena()
 	main_menu.open_menu()
 
 # Räumt eine laufende Runde vollständig ab (Zeitlupe, Overlays, Countdown,

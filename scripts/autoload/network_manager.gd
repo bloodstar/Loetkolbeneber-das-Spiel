@@ -655,6 +655,7 @@ func build_lobby_sync() -> Dictionary:
 		"disabled_powerups": Global.disabled_powerup_kinds.duplicate(),
 		"map_id": Global.selected_map_id,
 		"match_mode": Global.match_mode,
+		"game_mode": Global.game_mode,
 		"build_id": BuildInfo.get_build_id(),
 	}
 
@@ -718,6 +719,7 @@ func _apply_lobby_sync(data: Dictionary) -> void:
 	host_build_id = str(data.get("build_id", "?"))
 	Global.set_player_count(int(data.get("player_count", Global.player_count)))
 	Global.set_match_mode(str(data.get("match_mode", Global.MATCH_MODE_FFA)))
+	Global.set_game_mode(str(data.get("game_mode", Global.GAME_MODE_SIDE)))
 	var heroes: Array = data.get("heroes", [])
 	for i in range(mini(heroes.size(), Global.MAX_PLAYERS)):
 		Global.player_hero_ids[i] = str(heroes[i])
