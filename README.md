@@ -288,7 +288,7 @@ Im Tab **Regeln** unter *Spielmodus & Spielfeld* wählt der Host die **Spielart*
 - **Steuerung:** `W` `A` `S` `D` laufen in alle Richtungen, die Maus zielt, `Leertaste` springt. Alle anderen Tasten bleiben gleich.
 - **Höhe:** Springen ist ein echter Sprung in die Höhe. Niedrige Deckung (eine Schicht) kann man überspringen und darauf stehen, halbhohe und hohe Mauern nur mit viel Sprungkraft. Kugeln fliegen in Schusshöhe und fliegen über Deckung, wenn der Schütze höher steht. Hinter Mauern sieht man die Schweine als Umriss in Teamfarbe.
 - **Karten:** Alle Karten bleiben gleich. Sprungkraft, Luftsprünge und Schwerkraft wirken auf die Sprunghöhe. *Projektil-Schwerkraft* (Leichtes/Schweres Geschoss, Mörser) hat in der Arena noch keine Wirkung, Kugeln fliegen flach.
-- **Maps:** zufällig eine von *Burghof*, *Kistenlager* und *Ruinen*. Die Levelauswahl der Seitenansicht gilt hier nicht.
+- **Maps:** zufällig eine von sechs Arenen. Kompakt: *Burghof*, *Kistenlager*, *Ruinen*. Groß und offen (etwa die vierfache Fläche): *Weite Steppe*, *Marktplatz*, *Canyon*. Wände gibt es gerade und schräg, Boden und Mauern haben 32×32-Pixeltexturen. Die Levelauswahl der Seitenansicht gilt hier nicht.
 - **Runden-Modifier:** nur Sturmwind, Mondgravitation, Schwerewelt, Mini-Chaos, Schadensrausch, Turboschweine, Luftakrobatik, Regeneration, Startschild und Zone. Die übrigen sind in der Arena vorerst aus.
 
 ---

@@ -51,25 +51,29 @@ func _build_environment(map_data: Dictionary) -> void:
 	env.background_color = Color(0.03, 0.035, 0.045)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color(0.72, 0.76, 0.9)
-	env.ambient_light_energy = 0.45
+	env.ambient_light_energy = 0.38
 	# Leichtes Glühen nur für helle, leuchtende Teile (Zauberstab, Randlinie).
 	env.glow_enabled = true
 	env.glow_intensity = 0.6
 	env.glow_bloom = 0.0
 	env.glow_hdr_threshold = 1.2
 	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
+	# Mehr Kontrast und Sättigung, damit Boden, Mauern und Figuren klar trennen.
+	env.adjustment_enabled = true
+	env.adjustment_contrast = 1.18
+	env.adjustment_saturation = 1.15
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
 	var sun := DirectionalLight3D.new()
-	sun.light_energy = 0.85
+	sun.light_energy = 1.0
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = CAMERA_DISTANCE * 2.0
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	sun.rotation_degrees = Vector3(-58.0, -35.0, 0.0)
 	add_child(sun)
 
-func _voxel_multimesh(count: int, size: Vector3) -> MultiMeshInstance3D:
+func _voxel_multimesh(count: int, size: Vector3, mat: Material) -> MultiMeshInstance3D:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_colors = true
@@ -79,29 +83,35 @@ func _voxel_multimesh(count: int, size: Vector3) -> MultiMeshInstance3D:
 	mm.instance_count = count
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
-	var mat := StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.roughness = 0.9
 	mmi.material_override = mat
 	return mmi
 
-func _jitter(c: Color, amount: float) -> Color:
-	var f := _rng.randf_range(-amount, amount)
-	return Color(clampf(c.r + f, 0, 1), clampf(c.g + f, 0, 1), clampf(c.b + f, 0, 1))
+## Helligkeits-Tönung um Weiß (die Farbe steckt in der Textur).
+func _tint(f: float, amount: float) -> Color:
+	var v := clampf(f + _rng.randf_range(-amount, amount), 0.0, 1.0)
+	return Color(v, v, v)
+
+func _tex_kind(map_data: Dictionary, key: String, fallback: String) -> String:
+	return str(map_data.get(key, fallback))
 
 func _build_floor(map_data: Dictionary, grid: ArenaGrid) -> void:
 	var t := grid.tile
 	var floor_col: Color = map_data.get("floor", Color(0.4, 0.6, 0.3))
-	var mmi := _voxel_multimesh(grid.width * grid.height, Vector3(t, 10.0, t))
+	var mat := ArenaTextures.make_material(_tex_kind(map_data, "floor_tex", "grass"), floor_col, t)
+	var mmi := _voxel_multimesh(grid.width * grid.height, Vector3(t, 10.0, t), mat)
+	# Größere Flecken (4x4 Kacheln) etwas heller/dunkler für mehr Kontrast.
+	var patch := FastNoiseLite.new()
+	patch.seed = 77
+	patch.frequency = 0.09
 	var i := 0
 	for y in range(grid.height):
 		for x in range(grid.width):
 			var xf := Transform3D(Basis(), Vector3((x + 0.5) * t, -5.0, (y + 0.5) * t))
 			mmi.multimesh.set_instance_transform(i, xf)
-			var c := floor_col
+			var f := 0.94 + patch.get_noise_2d(x, y) * 0.16
 			if (x + y) % 2 == 0:
-				c = c.darkened(0.06)
-			mmi.multimesh.set_instance_color(i, _jitter(c, 0.025))
+				f -= 0.05
+			mmi.multimesh.set_instance_color(i, _tint(f, 0.03))
 			i += 1
 	add_child(mmi)
 
@@ -109,7 +119,10 @@ func _build_blocks(map_data: Dictionary, grid: ArenaGrid) -> void:
 	var t := grid.tile
 	var wall_col: Color = map_data.get("wall", Color(0.6, 0.6, 0.6))
 	var cover_col: Color = wall_col.lerp(Color(0.55, 0.45, 0.32), 0.35)
-	var cubes: Array = []
+	var wall_mat := ArenaTextures.make_material(_tex_kind(map_data, "wall_tex", "brick"), wall_col, t)
+	var cover_mat := ArenaTextures.make_material("rock", cover_col, t)
+	var walls: Array = []
+	var covers: Array = []
 	for cell in grid.blocks.keys():
 		if grid.destructible.has(cell):
 			continue
@@ -117,42 +130,86 @@ func _build_blocks(map_data: Dictionary, grid: ArenaGrid) -> void:
 			var span: Vector2 = b
 			var levels := int(round((span.y - span.x) / ArenaMode.BAND_H))
 			for k in range(levels):
-				var col := cover_col if span.y <= ArenaMode.BAND_H else wall_col
-				if k == levels - 1:
-					col = col.lightened(0.12) # hellere Deckschicht
-				cubes.append([Vector3((cell.x + 0.5) * t, span.x + (k + 0.5) * ArenaMode.BAND_H, (cell.y + 0.5) * t), col])
-	var mmi := _voxel_multimesh(cubes.size(), Vector3(t, ArenaMode.BAND_H, t))
-	for i in range(cubes.size()):
-		mmi.multimesh.set_instance_transform(i, Transform3D(Basis(), cubes[i][0]))
-		mmi.multimesh.set_instance_color(i, _jitter(cubes[i][1], 0.03))
-	add_child(mmi)
+				var f := 1.1 if k == levels - 1 else 0.92 - 0.05 * float(levels - 1 - k)
+				var entry := [Vector3((cell.x + 0.5) * t, span.x + (k + 0.5) * ArenaMode.BAND_H, (cell.y + 0.5) * t), f]
+				if span.y <= ArenaMode.BAND_H:
+					covers.append(entry)
+				else:
+					walls.append(entry)
+	for pair in [[walls, wall_mat], [covers, cover_mat]]:
+		var list: Array = pair[0]
+		if list.is_empty():
+			continue
+		var mmi := _voxel_multimesh(list.size(), Vector3(t, ArenaMode.BAND_H, t), pair[1])
+		for i in range(list.size()):
+			mmi.multimesh.set_instance_transform(i, Transform3D(Basis(), list[i][0]))
+			mmi.multimesh.set_instance_color(i, _tint(list[i][1], 0.04))
+		add_child(mmi)
+	_build_segments(grid, wall_mat)
 	# Zerstörbare Kisten einzeln, damit sie beim Bruch verschwinden können.
+	var crate_mat := ArenaTextures.make_material("wood", Color(0.7, 0.47, 0.25), t)
 	for cell in grid.destructible.keys():
-		var crate := Node3D.new()
-		crate.position = Vector3((cell.x + 0.5) * t, 0.0, (cell.y + 0.5) * t)
-		var wood := Color(0.62, 0.42, 0.22)
-		_add_box(crate, Vector3(t - 2.0, ArenaMode.BAND_H - 2.0, t - 2.0), Vector3(0, ArenaMode.BAND_H * 0.5, 0), _jitter(wood, 0.04))
-		_add_box(crate, Vector3(t * 0.5, 3.0, t + 0.5), Vector3(0, ArenaMode.BAND_H - 1.0, 0), wood.darkened(0.3))
-		_add_box(crate, Vector3(t + 0.5, 3.0, t * 0.5), Vector3(0, ArenaMode.BAND_H - 1.0, 0), wood.darkened(0.3))
+		var crate := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(t - 2.0, ArenaMode.BAND_H - 2.0, t - 2.0)
+		crate.mesh = bm
+		crate.material_override = crate_mat
+		crate.position = Vector3((cell.x + 0.5) * t, ArenaMode.BAND_H * 0.5, (cell.y + 0.5) * t)
 		add_child(crate)
 		_crates[cell] = crate
+
+## Schräge Wände: je Höhenschicht ein gedrehter Quader.
+func _build_segments(grid: ArenaGrid, wall_mat: Material) -> void:
+	for seg in grid.segments:
+		var a: Vector2 = seg["a"]
+		var b: Vector2 = seg["b"]
+		var thick: float = seg["thick"]
+		var bottom: float = seg["bottom"]
+		var top: float = seg["top"]
+		var levels := maxi(1, int(round((top - bottom) / ArenaMode.BAND_H)))
+		var length := a.distance_to(b) + thick
+		var mid := (a + b) * 0.5
+		var angle := (b - a).angle()
+		for k in range(levels):
+			var mi := MeshInstance3D.new()
+			var bm := BoxMesh.new()
+			bm.size = Vector3(length, ArenaMode.BAND_H, thick)
+			mi.mesh = bm
+			var mat := wall_mat.duplicate() as StandardMaterial3D
+			var f := 1.1 if k == levels - 1 else 0.92 - 0.05 * float(levels - 1 - k)
+			mat.vertex_color_use_as_albedo = false
+			mat.albedo_color = Color(f, f, f)
+			mi.material_override = mat
+			mi.position = Vector3(mid.x, bottom + (k + 0.5) * ArenaMode.BAND_H, mid.y)
+			mi.rotation.y = -angle
+			add_child(mi)
 
 func _build_border(map_data: Dictionary, grid: ArenaGrid) -> void:
 	# Randmauer als Rahmen. Im Süden (zur Kamera hin) flach, damit sie
 	# niemanden verdeckt.
 	var t := grid.tile
-	var wall_col: Color = (map_data.get("wall", Color(0.6, 0.6, 0.6)) as Color).darkened(0.25)
+	var wall_col: Color = (map_data.get("wall", Color(0.6, 0.6, 0.6)) as Color).darkened(0.3)
 	var accent: Color = map_data.get("accent", Color(1, 0.5, 0.2))
+	var mat := ArenaTextures.make_material(_tex_kind(map_data, "wall_tex", "brick"), wall_col, t)
 	var cubes: Array = []
 	for x in range(-1, grid.width + 1):
-		for y in [-1, grid.height]:
-			var h := ArenaMode.BAND_H * 2.0 if y < 0 else 10.0
-			cubes.append([Vector3((x + 0.5) * t, h * 0.5, (y + 0.5) * t), Vector3(t, h, t)])
+		cubes.append([Vector3((x + 0.5) * t, ArenaMode.BAND_H * 0.5, -0.5 * t), 1.0])
+		cubes.append([Vector3((x + 0.5) * t, ArenaMode.BAND_H * 1.5, -0.5 * t), 1.1])
 	for y in range(0, grid.height):
 		for x in [-1, grid.width]:
-			cubes.append([Vector3((x + 0.5) * t, ArenaMode.BAND_H, (y + 0.5) * t), Vector3(t, ArenaMode.BAND_H * 2.0, t)])
-	for c in cubes:
-		_add_box(self, c[1], c[0], _jitter(wall_col, 0.03))
+			cubes.append([Vector3((x + 0.5) * t, ArenaMode.BAND_H * 0.5, (y + 0.5) * t), 1.0])
+			cubes.append([Vector3((x + 0.5) * t, ArenaMode.BAND_H * 1.5, (y + 0.5) * t), 1.1])
+	var mmi := _voxel_multimesh(cubes.size(), Vector3(t, ArenaMode.BAND_H, t), mat)
+	for i in range(cubes.size()):
+		mmi.multimesh.set_instance_transform(i, Transform3D(Basis(), cubes[i][0]))
+		mmi.multimesh.set_instance_color(i, _tint(cubes[i][1], 0.04))
+	add_child(mmi)
+	# Südkante flach (verdeckt nichts)
+	var south := _voxel_multimesh(grid.width + 2, Vector3(t, 10.0, t), mat)
+	for x in range(-1, grid.width + 1):
+		south.multimesh.set_instance_transform(x + 1, Transform3D(Basis(), Vector3((x + 0.5) * t, 5.0, (grid.height + 0.5) * t)))
+		south.multimesh.set_instance_color(x + 1, _tint(1.0, 0.04))
+	add_child(south)
 	# Leuchtende Kante innen als Markierung der Kartengrenze.
 	var mw := grid.width * t
 	var mh := grid.height * t

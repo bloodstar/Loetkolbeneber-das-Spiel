@@ -7,6 +7,8 @@ extends RefCounted
 # Netzwerk-Tile-IDs) bleibt dadurch für main.gd und alle Systeme gleich.
 
 const BORDER_THICKNESS: float = 72.0
+# Dicke schräger Wände in Pixeln (knapp eine Kachel).
+const WALL_THICKNESS: float = 30.0
 
 static var spawn_cells: Array[Vector2i] = []
 static var current_map: Dictionary = {}
@@ -74,6 +76,16 @@ static func build(lg: LevelGenerator, map_id: String, level_seed: int) -> void:
 				grid.add_block(Vector2i(cx, y), 0.0, top)
 			x = x_end + 1
 
+	# Schräge Wände: [x1, y1, x2, y2, Höhenzeichen] in Kachel-Koordinaten.
+	var tile_px := LevelGenerator.TILE_SIZE
+	for wall in data.get("walls", []):
+		var a := Vector2(float(wall[0]), float(wall[1])) * tile_px
+		var b := Vector2(float(wall[2]), float(wall[3])) * tile_px
+		var ch := str(wall[4]) if wall.size() > 4 else "#"
+		var top_w: float = ArenaMaps.BLOCK_HEIGHTS.get(ch, 108.0)
+		_add_segment_body(lg, a, b, WALL_THICKNESS, 0.0, top_w)
+		grid.add_segment(a, b, WALL_THICKNESS, 0.0, top_w)
+
 	_build_border(lg, w, h)
 	var spawns := spawn_positions(2, level_seed)
 	lg.p1_spawn_pos = spawns[0]
@@ -109,6 +121,22 @@ static func _add_block_body(lg: Node, x0: int, x1: int, y: int, bottom: float, t
 	rect.size = Vector2(float(x1 - x0 + 1) * tile, tile)
 	col.shape = rect
 	col.position = Vector2((float(x0) + float(x1 - x0 + 1) * 0.5) * tile, (float(y) + 0.5) * tile)
+	body.add_child(col)
+	lg.add_child(body)
+
+static func _add_segment_body(lg: Node, a: Vector2, b: Vector2, thick: float, bottom: float, top: float) -> void:
+	var body := StaticBody2D.new()
+	body.add_to_group("solid")
+	body.add_to_group("arena_block")
+	body.collision_layer = ArenaMode.band_mask_range(bottom, top)
+	body.collision_mask = 7
+	var col := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	# Etwas länger als die Strecke, damit Ecken zweier Wände dicht schließen.
+	rect.size = Vector2(a.distance_to(b) + thick, thick)
+	col.shape = rect
+	body.position = (a + b) * 0.5
+	body.rotation = (b - a).angle()
 	body.add_child(col)
 	lg.add_child(body)
 
