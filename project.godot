@@ -11,9 +11,11 @@ config_version=5
 [application]
 
 config/name="Lötkolbeneber"
+config/version="0.1.0"
 run/main_scene="uid://cax1207aidl7f"
 config/features=PackedStringArray("4.6", "Mobile")
 config/icon="res://icon.svg"
+config/windows_native_icon="res://icon.ico"
 
 [autoload]
 
