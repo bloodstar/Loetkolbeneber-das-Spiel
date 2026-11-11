@@ -10,6 +10,8 @@ signal match_over(winner_index: int)
 signal tiebreak_started(slots: Array)
 # Ein neues Match beginnt (Punkte, Karten und Match-Statistik wurden geleert).
 signal match_reset()
+# Spielphase gewechselt (Menü, Lobby, Draft, Runde, Spielende).
+signal state_changed(old_state: int, new_state: int)
 signal bot_mode_toggled(enabled: bool)
 signal cards_per_draft_changed(count: int)
 signal draft_config_changed(picks: int, offered: int)
@@ -97,7 +99,13 @@ const TEAM_COLORS: Array[Color] = [
 	Color(0.38, 0.95, 0.55, 1.0),
 ]
 
-var current_state: GameState = GameState.PLAYING
+var current_state: GameState = GameState.PLAYING:
+	set(value):
+		if value == current_state:
+			return
+		var old := current_state
+		current_state = value
+		state_changed.emit(old, value)
 var match_mode: String = MATCH_MODE_FFA
 # Spielmodus: Seitenansicht (klassisch) oder Arena (Draufsicht, Voxel-3D).
 # Karten, Helden und Regeln sind in beiden Modi gleich, nur Levels und Physik
