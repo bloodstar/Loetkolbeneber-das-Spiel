@@ -175,7 +175,7 @@ func _build_box(index: int) -> Dictionary:
 	player_boxes.add_child(box)
 
 	var name_label := Label.new()
-	name_label.add_theme_font_size_override("font_size", 14)
+	name_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	box.add_child(name_label)
 
@@ -211,7 +211,7 @@ func _build_box(index: int) -> Dictionary:
 	box.add_child(ammo_row)
 
 	var ammo_label := Label.new()
-	ammo_label.add_theme_font_size_override("font_size", 11)
+	ammo_label.add_theme_font_size_override("font_size", UiTheme.FS_XS)
 	ammo_row.add_child(ammo_label)
 
 	var ammo_ring := Control.new()
@@ -222,26 +222,26 @@ func _build_box(index: int) -> Dictionary:
 	ammo_row.add_child(ammo_ring)
 
 	var ability_label := Label.new()
-	ability_label.add_theme_font_size_override("font_size", 11)
+	ability_label.add_theme_font_size_override("font_size", UiTheme.FS_XS)
 	ability_label.visible = false
 	box.add_child(ability_label)
 
 	var block_label := Label.new()
-	block_label.add_theme_font_size_override("font_size", 11)
+	block_label.add_theme_font_size_override("font_size", UiTheme.FS_XS)
 	block_label.add_theme_color_override("font_color", Color(0.55, 0.85, 1.0, 1.0))
 	block_label.text = "Barriere [Q]: BEREIT"
 	block_label.visible = false
 	box.add_child(block_label)
 
 	var melee_label := Label.new()
-	melee_label.add_theme_font_size_override("font_size", 11)
+	melee_label.add_theme_font_size_override("font_size", UiTheme.FS_XS)
 	melee_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.42, 1.0))
 	melee_label.visible = false
 	box.add_child(melee_label)
 
 	var cards_label := Label.new()
-	cards_label.add_theme_font_size_override("font_size", 10)
-	cards_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8, 1.0))
+	cards_label.add_theme_font_size_override("font_size", UiTheme.FS_XXS)
+	cards_label.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
 	box.add_child(cards_label)
 
 	var ui := {
@@ -400,7 +400,7 @@ func _build_score_bars() -> void:
 
 		var name_label := Label.new()
 		name_label.custom_minimum_size = Vector2(34, 0)
-		name_label.add_theme_font_size_override("font_size", 9)
+		name_label.add_theme_font_size_override("font_size", UiTheme.FS_XXS)
 		name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(name_label)
@@ -430,7 +430,7 @@ func _build_score_bars() -> void:
 		var points_label := Label.new()
 		points_label.name = "Points"
 		points_label.custom_minimum_size = Vector2(30, 0)
-		points_label.add_theme_font_size_override("font_size", 10)
+		points_label.add_theme_font_size_override("font_size", UiTheme.FS_XXS)
 		points_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		points_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		points_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -593,8 +593,8 @@ func _build_upgrade_bar() -> void:
 	margin.add_child(vbox)
 
 	_upgrade_title = Label.new()
-	_upgrade_title.add_theme_font_size_override("font_size", 11)
-	_upgrade_title.add_theme_color_override("font_color", Color(0.72, 0.82, 0.92, 1.0))
+	_upgrade_title.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	_upgrade_title.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
 	_upgrade_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(_upgrade_title)
 
@@ -643,8 +643,8 @@ func _refresh_upgrade_bar() -> void:
 	if cards.size() > shown:
 		var more := Label.new()
 		more.text = "+%d" % (cards.size() - shown)
-		more.add_theme_font_size_override("font_size", 12)
-		more.add_theme_color_override("font_color", Color(0.72, 0.82, 0.92, 1.0))
+		more.add_theme_font_size_override("font_size", UiTheme.FS_S)
+		more.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
 		more.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		more.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_upgrade_flow.add_child(more)
@@ -805,7 +805,7 @@ func _create_stat_preview(slot: int) -> Player:
 func _add_tab_heading(text: String, color: Color) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", 15)
+	label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	label.add_theme_color_override("font_color", color)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tab_content.add_child(label)
@@ -814,14 +814,14 @@ func _add_tab_heading(text: String, color: Color) -> Label:
 func _add_stat_cell(grid: GridContainer, caption: String, value: String, value_color: Color = Color.WHITE) -> void:
 	var caption_label := Label.new()
 	caption_label.text = caption
-	caption_label.add_theme_font_size_override("font_size", 11)
-	caption_label.add_theme_color_override("font_color", Color(0.55, 0.62, 0.72, 1.0))
+	caption_label.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	caption_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 	caption_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	grid.add_child(caption_label)
 
 	var value_label := Label.new()
 	value_label.text = value
-	value_label.add_theme_font_size_override("font_size", 13)
+	value_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	value_label.add_theme_color_override("font_color", value_color)
 	value_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	grid.add_child(value_label)
@@ -866,14 +866,14 @@ func _create_tab_card(card: CardData) -> PanelContainer:
 
 	var title := Label.new()
 	title.text = card.title
-	title.add_theme_font_size_override("font_size", 13)
+	title.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	title.add_theme_color_override("font_color", card.color)
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	text_box.add_child(title)
 
 	var meta := Label.new()
 	meta.text = "%s · %s" % [card.rarity, card.pool]
-	meta.add_theme_font_size_override("font_size", 10)
+	meta.add_theme_font_size_override("font_size", UiTheme.FS_XXS)
 	meta.add_theme_color_override("font_color", CardDatabase.get_rarity_color(card.rarity))
 	meta.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	text_box.add_child(meta)
@@ -889,8 +889,8 @@ func _create_tab_card(card: CardData) -> PanelContainer:
 	var description := Label.new()
 	description.text = CardMechanics.format_description(card.description)
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	description.add_theme_font_size_override("font_size", 11)
-	description.add_theme_color_override("font_color", Color(0.70, 0.74, 0.82, 1.0))
+	description.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	description.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
 	description.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	text_box.add_child(description)
 	CardMechanics.apply_tooltip(panel, card, true)
@@ -966,15 +966,15 @@ func _rebuild_tab_player_tabs(selected: int) -> void:
 		btn.toggle_mode = true
 		btn.button_pressed = (s_idx == selected)
 		btn.focus_mode = Control.FOCUS_NONE
-		btn.add_theme_font_size_override("font_size", 13)
+		btn.add_theme_font_size_override("font_size", UiTheme.FS_S)
 		if hero != null:
 			btn.add_theme_color_override("font_color", hero.color_tint)
 		btn.pressed.connect(_select_tab_player.bind(s_idx), CONNECT_DEFERRED)
 		_tab_player_tabs.add_child(btn)
 	var hint := Label.new()
 	hint.text = "Taste 1-%d oder Klick: Spieler wechseln" % slots.size()
-	hint.add_theme_font_size_override("font_size", 11)
-	hint.add_theme_color_override("font_color", Color(0.55, 0.62, 0.72, 1.0))
+	hint.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tab_player_tabs.add_child(hint)
 
@@ -985,7 +985,7 @@ func _fill_tab_overlay(p: Player, is_preview: bool, for_overview: bool = false) 
 
 	var title := Label.new()
 	title.text = "CHARAKTERBOGEN · %s" % hero_name.to_upper()
-	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_font_size_override("font_size", UiTheme.FS_XL)
 	title.add_theme_color_override("font_color", hero_color)
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tab_content.add_child(title)
@@ -1000,8 +1000,8 @@ func _fill_tab_overlay(p: Player, is_preview: bool, for_overview: bool = false) 
 		subtitle.text = "%s  ·  Endstand mit allen Karten" % role_text
 	elif is_preview:
 		subtitle.text = "%s  ·  Werte für die nächste Runde  ·  TAB loslassen zum Schließen" % role_text
-	subtitle.add_theme_font_size_override("font_size", 11)
-	subtitle.add_theme_color_override("font_color", Color(0.55, 0.62, 0.72, 1.0))
+	subtitle.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	subtitle.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 	subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tab_content.add_child(subtitle)
 
@@ -1044,8 +1044,8 @@ func _fill_tab_overlay(p: Player, is_preview: bool, for_overview: bool = false) 
 	if cards.is_empty():
 		var empty := Label.new()
 		empty.text = "Noch keine Upgrade-Karten gesammelt."
-		empty.add_theme_font_size_override("font_size", 12)
-		empty.add_theme_color_override("font_color", Color(0.55, 0.62, 0.72, 1.0))
+		empty.add_theme_font_size_override("font_size", UiTheme.FS_S)
+		empty.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 		empty.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_tab_content.add_child(empty)
 		return
@@ -1174,8 +1174,8 @@ func _add_modifier_totals(p: Player) -> void:
 	if rows.is_empty():
 		var none := Label.new()
 		none.text = "Noch keine Boni über die Grundwerte hinaus."
-		none.add_theme_font_size_override("font_size", 12)
-		none.add_theme_color_override("font_color", Color(0.55, 0.62, 0.72, 1.0))
+		none.add_theme_font_size_override("font_size", UiTheme.FS_S)
+		none.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 		none.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_tab_content.add_child(none)
 		return
@@ -1237,8 +1237,8 @@ func _build_modifier_ui() -> void:
 		_event_label = Label.new()
 		_event_label.name = "ModifierEventLabel"
 		_event_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_event_label.add_theme_font_size_override("font_size", 20)
-		_event_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+		_event_label.add_theme_font_size_override("font_size", UiTheme.FS_XL)
+		_event_label.add_theme_color_override("font_color", UiTheme.GOLD)
 		_event_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.9))
 		_event_label.add_theme_constant_override("outline_size", 4)
 		_event_label.visible = false
@@ -1264,7 +1264,7 @@ func show_level_modifiers(mod_details: Array[Dictionary]) -> void:
 		icon_label.custom_minimum_size = Vector2(24.0, 24.0)
 		icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		icon_label.add_theme_font_size_override("font_size", 20)
+		icon_label.add_theme_font_size_override("font_size", UiTheme.FS_XL)
 		icon_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.8))
 		icon_label.add_theme_constant_override("outline_size", 3)
 		icon_label.tooltip_text = str(mod.get("description", ""))
@@ -1311,8 +1311,9 @@ func show_modifier_stamp_reveal(mod_details: Array[Dictionary]) -> void:
 	# ── Titel ─────────────────────────────────────────────────────────────
 	var title := Label.new()
 	title.text = "── RUNDEN-MODIFIER ──"
+	title.theme_type_variation = &"TitleLabel"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 34)
+	title.add_theme_font_size_override("font_size", UiTheme.FS_H1)
 	title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25, 0.0))
 	title.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.85))
 	title.add_theme_constant_override("outline_size", 5)
@@ -1371,13 +1372,13 @@ func show_modifier_stamp_reveal(mod_details: Array[Dictionary]) -> void:
 		var icon_l := Label.new()
 		icon_l.text = mod.get("icon", "⚡")
 		icon_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		icon_l.add_theme_font_size_override("font_size", 60)
+		icon_l.add_theme_font_size_override("font_size", UiTheme.FS_DISPLAY)
 		vbox.add_child(icon_l)
 
 		var name_l := Label.new()
 		name_l.text = mod.get("title", "?").to_upper()
 		name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		name_l.add_theme_font_size_override("font_size", 26)
+		name_l.add_theme_font_size_override("font_size", UiTheme.FS_H2)
 		name_l.add_theme_color_override("font_color", col.lightened(0.15))
 		vbox.add_child(name_l)
 
@@ -1389,7 +1390,7 @@ func show_modifier_stamp_reveal(mod_details: Array[Dictionary]) -> void:
 		var desc_l := Label.new()
 		desc_l.text = mod.get("description", "")
 		desc_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		desc_l.add_theme_font_size_override("font_size", 16)
+		desc_l.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 		desc_l.add_theme_color_override("font_color", Color(0.82, 0.82, 0.82, 0.92))
 		desc_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		desc_l.custom_minimum_size = Vector2(BADGE_W - 40.0, 0.0)
@@ -1553,7 +1554,7 @@ func _build_match_stats() -> void:
 	var heading := Label.new()
 	heading.text = "MATCH-STATISTIK"
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	heading.add_theme_font_size_override("font_size", 16)
+	heading.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	heading.add_theme_color_override("font_color", Color(0.55, 0.85, 1.0, 1.0))
 	block.add_child(heading)
 
@@ -1568,8 +1569,8 @@ func _build_match_stats() -> void:
 	for text in headers:
 		var header := Label.new()
 		header.text = text
-		header.add_theme_font_size_override("font_size", 12)
-		header.add_theme_color_override("font_color", Color(0.62, 0.68, 0.78, 1.0))
+		header.add_theme_font_size_override("font_size", UiTheme.FS_S)
+		header.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 		header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if text != "Spieler" else HORIZONTAL_ALIGNMENT_LEFT
 		grid.add_child(header)
 
@@ -1583,7 +1584,7 @@ func _build_match_stats() -> void:
 			display = "★ " + display
 		var name_label := Label.new()
 		name_label.text = display
-		name_label.add_theme_font_size_override("font_size", 12)
+		name_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
 		name_label.add_theme_color_override("font_color", hero.color_tint)
 		grid.add_child(name_label)
 
@@ -1602,15 +1603,15 @@ func _build_match_stats() -> void:
 		for text in values:
 			var value_label := Label.new()
 			value_label.text = text
-			value_label.add_theme_font_size_override("font_size", 12)
+			value_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
 			value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			if slot == mvp_index:
-				value_label.add_theme_color_override("font_color", Color(1.0, 0.82, 0.35, 1.0))
+				value_label.add_theme_color_override("font_color", UiTheme.GOLD)
 			grid.add_child(value_label)
 
 	var summary := Label.new()
 	summary.text = _match_summary_text(mvp_index)
-	summary.add_theme_font_size_override("font_size", 13)
+	summary.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	summary.add_theme_color_override("font_color", Color(0.86, 0.78, 0.52, 1.0))
 	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1694,7 +1695,7 @@ func _ensure_overview_button() -> void:
 		_overview_button.text = "ALLE SPIELER, KARTEN & STATS"
 		_overview_button.custom_minimum_size = Vector2(320, 44)
 		_overview_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		_overview_button.add_theme_font_size_override("font_size", 18)
+		_overview_button.add_theme_font_size_override("font_size", UiTheme.FS_L)
 		_overview_button.pressed.connect(func():
 			SoundManager.play_sound("click")
 			_show_match_overview(Global.local_player_index)
@@ -1750,7 +1751,7 @@ func _build_overview() -> void:
 	var title := Label.new()
 	title.text = "MATCH-ÜBERSICHT · ALLE SPIELER"
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_font_size_override("font_size", UiTheme.FS_XL)
 	title.add_theme_color_override("font_color", Color(1.0, 0.72, 0.30))
 	header.add_child(title)
 	var close := Button.new()
@@ -1793,7 +1794,7 @@ func _show_match_overview(slot: int) -> void:
 		btn.text = _player_display_name(s_idx)
 		btn.toggle_mode = true
 		btn.button_pressed = (s_idx == slot)
-		btn.add_theme_font_size_override("font_size", 13)
+		btn.add_theme_font_size_override("font_size", UiTheme.FS_S)
 		if hero != null:
 			btn.add_theme_color_override("font_color", hero.color_tint)
 		var target: int = s_idx

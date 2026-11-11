@@ -54,6 +54,7 @@ theme_override_constants/separation = 15
 alignment = 1
 
 [node name="TurnLabel" type="Label" parent="MainControl/DraftView"]
+theme_type_variation = &"TitleLabel"
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "UPGRADE-PHASE: SPIELER 1 WÄHLT (1 VON 5)"

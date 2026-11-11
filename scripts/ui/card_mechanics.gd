@@ -267,7 +267,7 @@ static func unlock_short_text(card: CardData) -> String:
 	return "BENÖTIGT: %s" % str(MECHANIC_NAMES.get(mechanic, mechanic)).to_upper()
 
 ## Label mit unlock_short_text, oder null wenn die Karte keine Mechanik-Bedingung hat.
-static func make_unlock_label(card: CardData, font_size: int = 11, centered: bool = true) -> Label:
+static func make_unlock_label(card: CardData, font_size: int = UiTheme.FS_XS, centered: bool = true) -> Label:
 	var text := unlock_short_text(card)
 	if text.is_empty():
 		return null
@@ -295,7 +295,7 @@ static func get_hero_icon(hero_id: String) -> Texture2D:
 	return texture
 
 ## Zentrierte Zeile "[Icon] KLASSE: NAME" in der Klassenfarbe, oder null ohne Klasse.
-static func make_class_badge(card: CardData, font_size: int = 12) -> Control:
+static func make_class_badge(card: CardData, font_size: int = UiTheme.FS_S) -> Control:
 	if card == null or card.hero_id.is_empty():
 		return null
 	var hero: HeroData = Global.get_hero(card.hero_id)
@@ -362,7 +362,7 @@ static func get_evolutions(card: CardData) -> Array[CardData]:
 ## Kompakte Liste der Evolutionen auf einer Karte. Jede Zeile hat beim Hovern
 ## einen eigenen Tooltip mit allen Details dieser Evolution.
 ## Gibt null zurück, wenn die Karte keine Evolutionen hat.
-static func make_evolutions_preview(card: CardData, font_size: int = 11) -> Control:
+static func make_evolutions_preview(card: CardData, font_size: int = UiTheme.FS_XS) -> Control:
 	var evolutions := get_evolutions(card)
 	if evolutions.is_empty():
 		return null
@@ -409,7 +409,7 @@ static func make_evolutions_preview(card: CardData, font_size: int = 11) -> Cont
 
 ## Baut das deutlich sichtbare EVOLUTION-Band, das auf Ausbaukarten liegt.
 ## Gibt null zurück, wenn die Karte keine Evolution ist.
-static func make_evolution_banner(card: CardData, font_size: int = 11) -> Control:
+static func make_evolution_banner(card: CardData, font_size: int = UiTheme.FS_XS) -> Control:
 	if not is_evolution(card):
 		return null
 	var banner := PanelContainer.new()

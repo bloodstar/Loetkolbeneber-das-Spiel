@@ -48,14 +48,7 @@ anchor_right = 1.0
 offset_top = 90.0
 offset_bottom = 230.0
 grow_horizontal = 2
-theme_override_colors/font_color = Color(0.75, 1, 0.97, 1)
-theme_override_colors/font_shadow_color = Color(0.1, 0.85, 0.8, 0.45)
-theme_override_colors/font_outline_color = Color(0.02, 0.2, 0.2, 1)
-theme_override_constants/outline_size = 8
-theme_override_constants/shadow_offset_x = 0
-theme_override_constants/shadow_offset_y = 0
-theme_override_constants/shadow_outline_size = 28
-theme_override_font_sizes/font_size = 96
+theme_type_variation = &"HeroTitleLabel"
 text = "LÖTKOLBENEBER"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -83,13 +76,13 @@ text = "SPIEL STARTEN"
 [node name="OnlineBtn" type="Button" parent="Panel/VBox"]
 custom_minimum_size = Vector2(360, 56)
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 22
 text = "ONLINE SPIELEN"
 
 [node name="QuitBtn" type="Button" parent="Panel/VBox"]
 custom_minimum_size = Vector2(360, 56)
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 22
 text = "BEENDEN"
 
 [node name="NetworkPanel" type="PanelContainer" parent="Panel"]
@@ -118,9 +111,10 @@ layout_mode = 2
 theme_override_constants/separation = 10
 
 [node name="NetTitle" type="Label" parent="Panel/NetworkPanel/Margin/VBox"]
+theme_type_variation = &"TitleLabel"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.35, 0.75, 1, 1)
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 28
 text = "ONLINE SPIELEN"
 horizontal_alignment = 1
 
@@ -135,7 +129,7 @@ autowrap_mode = 2
 [node name="HostHeader" type="Label" parent="Panel/NetworkPanel/Margin/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.6, 0.25, 1)
-theme_override_font_sizes/font_size = 17
+theme_override_font_sizes/font_size = 16
 text = "HOSTEN (SPIELER 1)"
 
 [node name="HostRow" type="HBoxContainer" parent="Panel/NetworkPanel/Margin/VBox"]
@@ -168,7 +162,7 @@ layout_mode = 2
 [node name="JoinHeader" type="Label" parent="Panel/NetworkPanel/Margin/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.4, 0.75, 1, 1)
-theme_override_font_sizes/font_size = 17
+theme_override_font_sizes/font_size = 16
 text = "BEITRETEN (SPIELER 2)"
 
 [node name="JoinIPEdit" type="LineEdit" parent="Panel/NetworkPanel/Margin/VBox"]
@@ -215,7 +209,7 @@ autowrap_mode = 2
 [node name="NetHelp" type="Label" parent="Panel/NetworkPanel/Margin/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.5, 0.55, 0.65, 1)
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 13
 text = "Internet: Der Host gibt den UDP-Port im Router frei (viele Router können das automatisch per UPnP).\nWenn das nicht klappt: ZeroTier oder Tailscale installieren, beide im selben Netzwerk verbinden und die dortige IP des Hosts eingeben."
 autowrap_mode = 2
 

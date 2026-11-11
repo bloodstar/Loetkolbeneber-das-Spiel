@@ -503,7 +503,7 @@ func _build_ui() -> void:
 
 	var title := Label.new()
 	title.text = "KARTENEDITOR (SEITENANSICHT)"
-	title.add_theme_font_size_override("font_size", 20)
+	title.add_theme_font_size_override("font_size", UiTheme.FS_XL)
 	title.add_theme_color_override("font_color", Color(0.5, 0.95, 1.0))
 	side.add_child(title)
 	var top_row := HBoxContainer.new()
@@ -610,8 +610,8 @@ func _build_ui() -> void:
 	side.add_child(_status)
 	var help := Label.new()
 	help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	help.add_theme_font_size_override("font_size", 12)
-	help.add_theme_color_override("font_color", Color(0.6, 0.65, 0.72))
+	help.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	help.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 	help.text = "Plattformen, Stege, Kisten und Gruben waagrecht ziehen, Wände als Rechteck. Röhren: erst Eingang, dann Ausgang anklicken. Objekt setzen: Art wählen, dann klicken; die Werte stehen danach unter Eigenschaften. Rechtsklick löscht das Objekt unter der Maus. Auswählen: Objekt ziehen verschiebt es, Entf löscht. Blasse Objekte sind die automatische Spiegelung. Mausrad zoomt, Leertaste oder mittlere Taste + Ziehen verschiebt."
 	side.add_child(help)
 
@@ -628,8 +628,8 @@ func _build_ui() -> void:
 func _section(parent: Control, text: String) -> void:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", 15)
-	l.add_theme_color_override("font_color", Color(1.0, 0.82, 0.4))
+	l.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	l.add_theme_color_override("font_color", UiTheme.GOLD)
 	parent.add_child(l)
 
 func _button(text: String, cb: Callable, primary: bool = false) -> Button:
@@ -649,7 +649,7 @@ func _toggle(text: String, group: ButtonGroup, cb: Callable) -> Button:
 	b.toggle_mode = true
 	b.button_group = group
 	b.focus_mode = Control.FOCUS_NONE
-	WorkshopStyle.style_button(b, false, 13)
+	WorkshopStyle.style_button(b, false, UiTheme.FS_S)
 	b.pressed.connect(cb)
 	return b
 
@@ -1007,16 +1007,16 @@ func _rebuild_props() -> void:
 	for c in _props.get_children():
 		c.queue_free()
 	var head := Label.new()
-	head.add_theme_font_size_override("font_size", 15)
-	head.add_theme_color_override("font_color", Color(1.0, 0.82, 0.4))
+	head.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	head.add_theme_color_override("font_color", UiTheme.GOLD)
 	_props.add_child(head)
 	if _selected.is_empty():
 		head.text = "Eigenschaften"
 		var hint := Label.new()
 		hint.text = "Mit „Auswählen“ ein Objekt anklicken, um seine Werte einzustellen."
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		hint.add_theme_font_size_override("font_size", 12)
-		hint.add_theme_color_override("font_color", Color(0.6, 0.65, 0.72))
+		hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
+		hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 		_props.add_child(hint)
 		return
 	var kind: String = _selected[0]
@@ -1032,7 +1032,7 @@ func _field_row(kind: String, e: Array, f: Array) -> Control:
 	var row := HBoxContainer.new()
 	var l := Label.new()
 	l.text = str(f[1])
-	l.add_theme_font_size_override("font_size", 13)
+	l.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	l.custom_minimum_size = Vector2(150, 0)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	row.add_child(l)

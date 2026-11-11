@@ -121,7 +121,7 @@ func _build_visual() -> void:
 	label.size = Vector2(72.0, 16.0)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 10)
+	label.add_theme_font_size_override("font_size", UiTheme.FS_XXS)
 	label.add_theme_color_override("font_color", Color(1.0, 0.98, 0.88, 1.0))
 	label.add_theme_color_override("font_outline_color", Color(0.08, 0.08, 0.1, 0.95))
 	label.add_theme_constant_override("outline_size", 3)
