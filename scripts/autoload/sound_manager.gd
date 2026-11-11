@@ -64,26 +64,28 @@ const MUSIC_TABLE: Dictionary = {
 
 # files: Varianten | vol: Grundlautstärke in dB | bus | max: gleichzeitige Stimmen
 # gap: Mindestabstand in Sekunden zwischen zwei Starts desselben Schlüssels
+# pitch: Mindest-Tonhöhenstreuung (±) für häufige Sounds mit wenig Varianten;
+# gilt, wenn der Aufrufer weniger übergibt (z. B. Sprung mit 0.08).
 const SOUND_TABLE: Dictionary = {
 	# Kampf
 	"shoot": {"files": ["shoot_1", "shoot_2", "shoot_3"], "vol": -7.0, "max": 4, "gap": 0.03},
-	"hit": {"files": ["hit_1", "hit_2", "hit_3", "hit_4"], "vol": -6.0, "max": 4, "gap": 0.03},
-	"bounce": {"files": ["bounce_1", "bounce_2"], "vol": -8.0, "max": 3, "gap": 0.04},
-	"explosion": {"files": ["explosion"], "vol": -4.0, "max": 3, "gap": 0.05},
+	"hit": {"files": ["hit_1", "hit_2", "hit_3", "hit_4"], "vol": -8.0, "max": 4, "gap": 0.03},
+	"bounce": {"files": ["bounce_1", "bounce_2"], "vol": -8.0, "max": 3, "gap": 0.06},
+	"explosion": {"files": ["explosion"], "vol": -2.0, "max": 3, "gap": 0.05},
 	"explosion_big": {"files": ["explosion_big"], "vol": -2.0, "max": 2, "gap": 0.1},
 	"shield": {"files": ["shield"], "vol": -6.0, "max": 2, "gap": 0.05},
 	"poison": {"files": ["poison"], "vol": -6.0, "max": 2, "gap": 0.08},
 	"death": {"files": ["death"], "vol": -3.0, "max": 2, "gap": 0.05},
 	# Bewegung & Fähigkeiten
-	"jump": {"files": ["jump_1", "jump_2"], "vol": -10.0, "max": 3, "gap": 0.04},
-	"jump_air": {"files": ["jump_air"], "vol": -10.0, "max": 3, "gap": 0.04},
+	"jump": {"files": ["jump_1", "jump_2"], "vol": -8.0, "max": 3, "gap": 0.04, "pitch": 0.12},
+	"jump_air": {"files": ["jump_air"], "vol": -8.0, "max": 3, "gap": 0.04, "pitch": 0.12},
 	"spring": {"files": ["spring"], "vol": -6.0, "max": 2, "gap": 0.05},
 	"dash": {"files": ["dash"], "vol": -8.0, "max": 3, "gap": 0.05},
 	"slash": {"files": ["slash"], "vol": -6.0, "max": 2, "gap": 0.05},
 	"teleport": {"files": ["teleport"], "vol": -6.0, "max": 2, "gap": 0.05},
 	"heal": {"files": ["heal"], "vol": -7.0, "max": 2, "gap": 0.1},
-	"reload": {"files": ["reload"], "vol": -12.0, "max": 2, "gap": 0.05, "bus": BUS_UI},
-	"reload_done": {"files": ["reload_done"], "vol": -10.0, "max": 2, "gap": 0.05, "bus": BUS_UI},
+	"reload": {"files": ["reload"], "vol": -9.0, "max": 2, "gap": 0.05, "pitch": 0.08, "bus": BUS_UI},
+	"reload_done": {"files": ["reload_done"], "vol": -7.0, "max": 2, "gap": 0.05, "bus": BUS_UI},
 	# Level-Objekte & Ereignisse
 	"coin": {"files": ["coin_1", "coin_2"], "vol": -6.0, "max": 3, "gap": 0.04},
 	"mystery": {"files": ["mystery"], "vol": -5.0, "max": 1, "gap": 0.2},
@@ -96,7 +98,7 @@ const SOUND_TABLE: Dictionary = {
 	"countdown": {"files": ["countdown"], "vol": -4.0, "max": 1, "gap": 0.2, "bus": BUS_UI},
 	"countdown_go": {"files": ["countdown_go"], "vol": -3.0, "max": 1, "gap": 0.2, "bus": BUS_UI},
 	"round_end": {"files": ["round_end"], "vol": -4.0, "max": 1, "gap": 0.5, "bus": BUS_UI},
-	"draft_start": {"files": ["draft_start"], "vol": -5.0, "max": 1, "gap": 0.3, "bus": BUS_UI},
+	"draft_start": {"files": ["draft_start"], "vol": -2.0, "max": 1, "gap": 0.3, "bus": BUS_UI},
 	"card_pick": {"files": ["card_pick"], "vol": -5.0, "max": 1, "gap": 0.1, "bus": BUS_UI},
 	"match_win": {"files": ["match_win"], "vol": -3.0, "max": 1, "gap": 1.0, "bus": BUS_UI},
 	"click": {"files": ["ui_click"], "vol": -6.0, "max": 3, "gap": 0.02, "bus": BUS_UI},
@@ -308,7 +310,8 @@ func play_sound(key: String, pitch_range: float = 0.1, volume_db: float = 0.0) -
 	_last_start[key] = now
 	player.stream = _pick_variant(key)
 	player.bus = cfg.get("bus", BUS_SFX)
-	player.pitch_scale = randf_range(1.0 - pitch_range, 1.0 + pitch_range)
+	var spread: float = maxf(pitch_range, float(cfg.get("pitch", 0.0)))
+	player.pitch_scale = randf_range(1.0 - spread, 1.0 + spread)
 	player.volume_db = float(cfg.get("vol", 0.0)) + volume_db
 	_player_key[player] = key
 	_player_started[player] = now
