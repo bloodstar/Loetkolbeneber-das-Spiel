@@ -78,7 +78,7 @@ static func cut_jump(p: Player) -> void:
 static func apply_planar(p: Player, input: Vector2) -> void:
 	if input.length() > 1.0:
 		input = input.normalized()
-	var spd := p._current_ground_speed()
+	var spd := p._current_ground_speed() * ArenaMode.MOVE_SPEED_MULT
 	var accel := 0.25
 	var decel := 0.2
 	if not p.arena_grounded:

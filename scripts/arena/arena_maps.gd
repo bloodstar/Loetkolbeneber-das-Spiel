@@ -504,6 +504,82 @@ static func get_map(map_id: String) -> Dictionary:
 		return MAPS[map_id]
 	return custom.get(map_id, {})
 
+## Karte so, wie sie gespielt wird: Das Zeichenraster wird beim Laden
+## vergrößert (Faktor "scale", sonst nach Kartengröße), damit die Arenen zur
+## Laufgeschwindigkeit passen. Der Editor arbeitet weiter auf dem Rohraster.
+static func get_play_map(map_id: String) -> Dictionary:
+	return scaled(get_map(map_id))
+
+## Vergrößerungsfaktor einer Karte: kleine Karten (bis 40 Kacheln breit) x3,
+## mittlere (bis 70) x2, größere bleiben wie gezeichnet.
+static func play_scale(data: Dictionary) -> int:
+	if data.has("scale"):
+		return clampi(int(data["scale"]), 1, 4)
+	var w := 0
+	for r in data.get("rows", []):
+		w = maxi(w, str(r).length())
+	if w <= 40:
+		return 3
+	if w <= 70:
+		return 2
+	return 1
+
+# Zeichen, die als dünne Linien/Einzelstücke bleiben (Mauern, Deckung, Kisten,
+# Spawns): Sie wachsen nur zu ihren gleichen Nachbarn hin. Flächen (Boden,
+# Erhöhungen, Stege, Rampen) werden voll vergrößert.
+const THIN_CHARS: String = "#Hcx"
+
+static func scaled(data: Dictionary) -> Dictionary:
+	var n := play_scale(data)
+	if n <= 1 or data.is_empty():
+		return data
+	var rows: Array = data.get("rows", [])
+	var h := rows.size()
+	var w := 0
+	for r in rows:
+		w = maxi(w, str(r).length())
+	var at := func(x: int, y: int) -> String:
+		if y < 0 or y >= h:
+			return ""
+		var row := str(rows[y])
+		return row[x] if x >= 0 and x < row.length() else ""
+	var c := n / 2
+	var out_rows: Array = []
+	for y in range(h):
+		var lines: Array[String] = []
+		for j in range(n):
+			lines.append("")
+		for x in range(w):
+			var ch: String = at.call(x, y)
+			if ch == "":
+				ch = "."
+			for j in range(n):
+				var dj := signi(j - c)
+				for i in range(n):
+					var di := signi(i - c)
+					var out := ch
+					if ch == "S":
+						out = "S" if (i == c and j == c) else "."
+					elif THIN_CHARS.contains(ch):
+						var keep: bool = (di == 0 or at.call(x + di, y) == ch) \
+							and (dj == 0 or at.call(x, y + dj) == ch) \
+							and (di == 0 or dj == 0 or at.call(x + di, y + dj) == ch)
+						out = ch if keep else "."
+					lines[j] += out
+		out_rows.append_array(lines)
+	var result := data.duplicate(true)
+	result["rows"] = out_rows
+	var walls: Array = []
+	for wall in data.get("walls", []):
+		var nw: Array = (wall as Array).duplicate()
+		for k in range(mini(4, nw.size())):
+			nw[k] = float(nw[k]) * float(n)
+		walls.append(nw)
+	result["walls"] = walls
+	result.erase("scale")
+	result["scale_applied"] = n
+	return result
+
 static func display_name(map_id: String) -> String:
 	return str(get_map(map_id).get("name", map_id))
 

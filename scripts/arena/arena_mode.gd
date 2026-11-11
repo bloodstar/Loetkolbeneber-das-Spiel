@@ -31,7 +31,9 @@ const STEP_UP: float = 10.0
 # Höhere Rampenteile haben seitlich eine Wand (siehe ArenaBuilder).
 const RAMP_SIDE_STEP: float = 46.0
 # Kamera-Neigung über dem Boden. 90° wäre senkrecht von oben.
-const TILT_DEG: float = 55.0
+const TILT_DEG: float = 45.0
+# Laufgeschwindigkeit in der Draufsicht relativ zur Seitenansicht.
+const MOVE_SPEED_MULT: float = 0.5
 
 ## true, solange eine Arena-Runde läuft (wird beim Levelaufbau gesetzt).
 static var active: bool = false

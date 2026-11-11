@@ -285,6 +285,10 @@ func _advance_trail() -> void:
 	if ArenaMode.active:
 		var off := ArenaMode.height_offset(maxf(arena_z, 0.0))
 		trail.position = off
+		# Der Höhenversatz der Kugel hängt von ihrer Drehung ab, die sich nach
+		# dem ersten Zeichnen noch ändert: neu zeichnen, sonst sitzt die Kugel
+		# neben ihrem Schweif (sah aus wie ein Schatten).
+		queue_redraw()
 		if _trail_glow:
 			_trail_glow.position = off
 

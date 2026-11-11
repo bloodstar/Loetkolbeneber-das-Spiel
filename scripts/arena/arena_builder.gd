@@ -17,7 +17,7 @@ static var _spawn_cache_total: int = -1
 static var _spawn_cache: Array[Vector2] = []
 
 static func build(lg: LevelGenerator, map_id: String, level_seed: int) -> void:
-	var data := ArenaMaps.get_map(map_id)
+	var data := ArenaMaps.get_play_map(map_id)
 	var rows: Array = data.get("rows", [])
 	var h := rows.size()
 	var w := 0
