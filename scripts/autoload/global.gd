@@ -1794,23 +1794,34 @@ func set_enabled_card_pools(pools: Array) -> void:
 	enabled_card_pools = target
 	card_pools_changed.emit()
 
+## Alle spielbaren Seitenansicht-Level: eingebaute und eigene aus dem
+## Karteneditor (SideLevels).
+func get_playable_maps() -> Array[String]:
+	var ids: Array[String] = MAP_PLAYABLE.duplicate()
+	ids.append_array(SideLevels.custom_ids())
+	return ids
+
 func get_map_name(map_id: String) -> String:
+	if SideLevels.is_custom(map_id):
+		return SideLevels.custom_name(map_id)
 	var info: Dictionary = MAPS.get(map_id, {})
 	return str(info.get("name", "Unbekannt"))
 
 func get_map_description(map_id: String) -> String:
 	if map_id == MAP_RANDOM:
 		var enabled_count := get_enabled_map_ids().size()
-		if enabled_count == MAP_PLAYABLE.size():
+		if enabled_count == get_playable_maps().size():
 			return "Wählt pro Runde eine der %d Maps." % enabled_count
 		if enabled_count == 0:
 			return "Alle Levels sind abgeschaltet – im Reiter „Levels“ mindestens eins aktivieren."
-		return "Wählt pro Runde eine der %d aktiven Maps (von %d)." % [enabled_count, MAP_PLAYABLE.size()]
+		return "Wählt pro Runde eine der %d aktiven Maps (von %d)." % [enabled_count, get_playable_maps().size()]
+	if SideLevels.is_custom(map_id):
+		return str(SideLevels.custom.get(map_id, {}).get("description", "Eigenes Level aus dem Karteneditor."))
 	var info: Dictionary = MAPS.get(map_id, {})
 	return str(info.get("description", ""))
 
 func set_selected_map(map_id: String) -> void:
-	if map_id != MAP_RANDOM and not MAP_PLAYABLE.has(map_id):
+	if map_id != MAP_RANDOM and not get_playable_maps().has(map_id):
 		return
 	# Wer eine feste Map wählt, will sie spielen: ein abgeschaltetes Level
 	# wird dabei wieder aktiv.
@@ -1823,7 +1834,7 @@ func set_selected_map(map_id: String) -> void:
 	map_changed.emit()
 
 func is_map_enabled(map_id: String) -> bool:
-	return MAP_PLAYABLE.has(map_id) and not disabled_map_ids.has(map_id)
+	return get_playable_maps().has(map_id) and not disabled_map_ids.has(map_id)
 
 # Aktive Levels in der Reihenfolge von MAP_PLAYABLE.
 func has_enabled_maps() -> bool:
@@ -1831,13 +1842,13 @@ func has_enabled_maps() -> bool:
 
 func get_enabled_map_ids() -> Array[String]:
 	var result: Array[String] = []
-	for map_id in MAP_PLAYABLE:
+	for map_id in get_playable_maps():
 		if not disabled_map_ids.has(map_id):
 			result.append(map_id)
 	return result
 
 func set_map_enabled(map_id: String, enabled: bool) -> void:
-	if not MAP_PLAYABLE.has(map_id):
+	if not get_playable_maps().has(map_id):
 		return
 	if enabled == is_map_enabled(map_id):
 		return
@@ -1856,7 +1867,7 @@ func set_map_enabled(map_id: String, enabled: bool) -> void:
 # werden verworfen.
 func set_disabled_maps(map_ids: Array) -> void:
 	var target: Array[String] = []
-	for map_id in MAP_PLAYABLE:
+	for map_id in get_playable_maps():
 		if map_ids.has(map_id):
 			target.append(map_id)
 	if target == disabled_map_ids:
@@ -1919,11 +1930,13 @@ func set_disabled_powerups(kinds: Array) -> void:
 func resolve_map_id(level_seed: int) -> String:
 	if is_arena_mode():
 		return ArenaMaps.pick_random(level_seed)
-	if selected_map_id != MAP_RANDOM and MAP_PLAYABLE.has(selected_map_id):
+	if not SideLevels.test_map_id.is_empty() and SideLevels.has(SideLevels.test_map_id):
+		return SideLevels.test_map_id
+	if selected_map_id != MAP_RANDOM and get_playable_maps().has(selected_map_id):
 		return selected_map_id
 	var pool := get_enabled_map_ids()
 	if pool.is_empty():
-		pool = MAP_PLAYABLE.duplicate()
+		pool = get_playable_maps()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = maxi(1, level_seed)
 	return pool[rng.randi() % pool.size()]
@@ -2536,11 +2549,11 @@ func get_lobby_loadout_summary(name: String) -> String:
 	var disabled_maps: Variant = data.get("disabled_map_ids", [])
 	var disabled_map_count := 0
 	if disabled_maps is Array:
-		for map_id in MAP_PLAYABLE:
+		for map_id in get_playable_maps():
 			if disabled_maps.has(map_id):
 				disabled_map_count += 1
-	if disabled_map_count > 0 and disabled_map_count < MAP_PLAYABLE.size():
-		modifier_text += " · Levels %d/%d" % [MAP_PLAYABLE.size() - disabled_map_count, MAP_PLAYABLE.size()]
+	if disabled_map_count > 0 and disabled_map_count < get_playable_maps().size():
+		modifier_text += " · Levels %d/%d" % [get_playable_maps().size() - disabled_map_count, get_playable_maps().size()]
 	var disabled_powerups: Variant = data.get("disabled_powerup_kinds", [])
 	var disabled_powerup_count := 0
 	if disabled_powerups is Array:

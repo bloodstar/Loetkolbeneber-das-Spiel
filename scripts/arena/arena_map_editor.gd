@@ -12,6 +12,7 @@ extends CanvasLayer
 
 signal closed
 signal test_requested(map_id: String)
+signal side_editor_requested
 
 const MIN_W := 12
 const MAX_W := 120
@@ -536,6 +537,11 @@ func _build_ui() -> void:
 	var close_btn := _button("SCHLIESSEN", func(): close_editor())
 	close_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_row.add_child(close_btn)
+	side.add_child(_button("Zum Seitenansicht-Editor", func():
+		_store_state()
+		visible = false
+		side_editor_requested.emit()
+	))
 
 	# Datei
 	_section(side, "Karte")

@@ -227,6 +227,7 @@ func _ready() -> void:
 func open_lobby() -> void:
 	visible = true
 	tabs.current_tab = 0
+	_sync_level_cards()
 	# Offline und als Host gelten immer die zuletzt eingestellten Regeln ("Last").
 	if not Global.network_mode or NetworkManager.is_host:
 		Global.restore_last_lobby_settings()
@@ -1435,7 +1436,7 @@ func _refresh_host_controls() -> void:
 
 func _map_ids() -> Array[String]:
 	var ids: Array[String] = [Global.MAP_RANDOM]
-	ids.append_array(Global.MAP_PLAYABLE)
+	ids.append_array(Global.get_playable_maps())
 	return ids
 
 func _on_map_selected(index: int) -> void:
@@ -2372,10 +2373,29 @@ func _build_levels_tab() -> void:
 
 	# Die Liste kommt direkt aus MAP_PLAYABLE: Neue Maps erscheinen hier ohne
 	# weitere Pflege, das Bild rendert der LevelGenerator.
-	for map_id in Global.MAP_PLAYABLE:
+	for map_id in Global.get_playable_maps():
 		level_grid.add_child(_create_level_card(map_id))
 
 	_build_level_viewer()
+	_refresh_level_controls()
+
+## Eigene Level aus dem Karteneditor kommen und gehen: Karten neu aufbauen,
+## wenn sich die Liste geändert hat. Geänderte Level bekommen ein neues Bild.
+func _sync_level_cards() -> void:
+	if level_grid == null:
+		return
+	var ids := Global.get_playable_maps()
+	var same := ids.size() == level_cards.size()
+	for id in ids:
+		if not level_cards.has(id):
+			same = false
+	if same:
+		return
+	for child in level_grid.get_children():
+		child.queue_free()
+	level_cards.clear()
+	for map_id in ids:
+		level_grid.add_child(_create_level_card(map_id))
 	_refresh_level_controls()
 
 func _create_level_card(map_id: String) -> PanelContainer:
@@ -2487,7 +2507,7 @@ func _refresh_level_controls() -> void:
 		level_all_btn.disabled = not is_host or Global.disabled_map_ids.is_empty()
 	if level_none_btn != null:
 		level_none_btn.disabled = not is_host or not Global.has_enabled_maps()
-	var total := Global.MAP_PLAYABLE.size()
+	var total := Global.get_playable_maps().size()
 	var active := Global.get_enabled_map_ids().size()
 	var text := "%d von %d Levels aktiv" % [active, total]
 	if active == 0:
@@ -2503,7 +2523,7 @@ func _request_level_previews() -> void:
 	if level_preview_renderer == null:
 		return
 	var missing: Array[String] = []
-	for map_id in Global.MAP_PLAYABLE:
+	for map_id in Global.get_playable_maps():
 		if not LevelPreviewRendererScript.has_cached(map_id):
 			missing.append(map_id)
 	if not missing.is_empty():
@@ -2539,7 +2559,7 @@ func _on_all_levels_pressed() -> void:
 func _on_no_levels_pressed() -> void:
 	if not Global.is_local_host():
 		return
-	Global.set_disabled_maps(Global.MAP_PLAYABLE)
+	Global.set_disabled_maps(Global.get_playable_maps())
 	SoundManager.play_sound("click")
 	_refresh_level_controls()
 	_update_status()
@@ -2867,7 +2887,7 @@ func _build_level_viewer() -> void:
 	footer.add_child(level_viewer_status)
 
 func _open_level_viewer(map_id: String) -> void:
-	if level_viewer == null or not Global.MAP_PLAYABLE.has(map_id):
+	if level_viewer == null or not Global.get_playable_maps().has(map_id):
 		return
 	_level_viewer_map = map_id
 	# Bildgröße an das Fenster anpassen (16:9, Platz für Kopf- und Fußzeile).
@@ -2891,7 +2911,7 @@ func _close_level_viewer() -> void:
 	_level_viewer_map = ""
 
 func _step_level_viewer(direction: int) -> void:
-	var ids := Global.MAP_PLAYABLE
+	var ids := Global.get_playable_maps()
 	if _level_viewer_map.is_empty() or ids.is_empty():
 		return
 	var index := ids.find(_level_viewer_map)
@@ -2901,8 +2921,8 @@ func _refresh_level_viewer() -> void:
 	if level_viewer == null or not level_viewer.visible or _level_viewer_map.is_empty():
 		return
 	var map_id := _level_viewer_map
-	var index := Global.MAP_PLAYABLE.find(map_id)
-	level_viewer_title.text = "%s  (%d/%d)" % [Global.get_map_name(map_id), index + 1, Global.MAP_PLAYABLE.size()]
+	var index := Global.get_playable_maps().find(map_id)
+	level_viewer_title.text = "%s  (%d/%d)" % [Global.get_map_name(map_id), index + 1, Global.get_playable_maps().size()]
 	level_viewer_desc.text = Global.get_map_description(map_id)
 	var texture := LevelPreviewRendererScript.get_cached(map_id)
 	level_viewer_texture.texture = texture
@@ -3725,7 +3745,7 @@ func _refresh_network_status() -> void:
 func _map_summary_text() -> String:
 	var text := Global.get_map_name(Global.selected_map_id)
 	if Global.selected_map_id == Global.MAP_RANDOM and not Global.disabled_map_ids.is_empty():
-		text += " (%d/%d)" % [Global.get_enabled_map_ids().size(), Global.MAP_PLAYABLE.size()]
+		text += " (%d/%d)" % [Global.get_enabled_map_ids().size(), Global.get_playable_maps().size()]
 	return text
 
 func _update_status() -> void:

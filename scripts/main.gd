@@ -22,6 +22,8 @@ var lava_anim: FloorLavaOverlayClass = null
 # Optionen (Grafik, Audio, Tasten); im Hauptmenü per Knopf, in der Runde per ESC.
 var options_menu: OptionsMenu = null
 var map_editor: ArenaMapEditor = null
+var side_editor: SideLevelEditor = null
+var _last_editor: String = "arena"
 
 # Alle aktiven Spieler (Index 1..player_count). Slot = player_index.
 var players: Array[Player] = []
@@ -138,15 +140,31 @@ func _ready() -> void:
 	map_editor = ArenaMapEditor.new()
 	map_editor.name = "ArenaMapEditor"
 	add_child(map_editor)
+	side_editor = SideLevelEditor.new()
+	side_editor.name = "SideLevelEditor"
+	add_child(side_editor)
 	options_menu.map_editor_requested.connect(func():
 		options_menu.close_options()
+		if _last_editor == "side":
+			side_editor.open_editor()
+		else:
+			map_editor.open_editor()
+	)
+	for ed in [map_editor, side_editor]:
+		ed.closed.connect(func():
+			if Global.current_state == Global.GameState.MENU:
+				options_menu.open_options(false)
+		)
+	map_editor.test_requested.connect(_on_map_editor_test)
+	side_editor.test_requested.connect(_on_side_editor_test)
+	map_editor.side_editor_requested.connect(func():
+		_last_editor = "side"
+		side_editor.open_editor()
+	)
+	side_editor.arena_editor_requested.connect(func():
+		_last_editor = "arena"
 		map_editor.open_editor()
 	)
-	map_editor.closed.connect(func():
-		if Global.current_state == Global.GameState.MENU:
-			options_menu.open_options(false)
-	)
-	map_editor.test_requested.connect(_on_map_editor_test)
 	NetworkManager.join_succeeded.connect(_on_network_join_succeeded)
 	NetworkManager.join_failed.connect(_on_network_join_failed)
 	NetworkManager.host_failed.connect(_on_network_host_failed)
@@ -297,6 +315,8 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	if is_network_host and NetworkManager.has_clients():
 		if ArenaMaps.is_custom(map_id):
 			NetworkManager.send_arena_map(map_id, ArenaMaps.to_json(ArenaMaps.get_map(map_id)))
+		elif SideLevels.has(map_id):
+			NetworkManager.send_side_level(map_id, SideLevels.entry_json(map_id))
 		NetworkManager.send_round_start(level_seed, map_id, Global.points_to_win, Global.tiebreak_slots)
 
 	_clear_remote_bullets()
@@ -361,10 +381,32 @@ func _leave_arena() -> void:
 	ArenaBuilder.deactivate(level_generator)
 	_update_arena_view()
 	ArenaMaps.test_map_id = ""
+	SideLevels.test_map_id = ""
 
 ## Karteneditor → TESTEN: lokales Match in der Arena, jede Runde auf dieser
 ## Karte, mit den Spielern und Bots aus der letzten Lobby. ESC → Hauptmenü
 ## beendet den Test, Optionen → KARTENEDITOR öffnet die Karte wieder.
+## Karteneditor (Seitenansicht) → TESTEN: wie beim Arena-Test, nur in der
+## Seitenansicht auf dem bearbeiteten Level.
+func _on_side_editor_test(map_id: String) -> void:
+	_prepare_editor_test()
+	Global.set_game_mode(Global.GAME_MODE_SIDE)
+	_leave_arena()
+	SideLevels.test_map_id = map_id
+	main_menu.close_menu()
+	_start_fresh_round(0, map_id)
+
+func _prepare_editor_test() -> void:
+	if NetworkManager.is_network_active():
+		NetworkManager.disconnect_peer()
+	is_network_host = false
+	is_network_client = false
+	Global.network_mode = false
+	Global.remote_connected = false
+	Global.is_spectator = false
+	Global.set_local_player(1)
+	Global.reset_match()
+
 func _on_map_editor_test(map_id: String) -> void:
 	if NetworkManager.is_network_active():
 		NetworkManager.disconnect_peer()

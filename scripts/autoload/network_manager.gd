@@ -846,6 +846,20 @@ func receive_arena_map(map_id: String, json_text: String) -> void:
 		return
 	ArenaMaps.register_remote(map_id, json_text)
 
+## Seitenansicht: Bauplan des Hosts (Karteneditor) für diese Runde. "" heißt
+## eingebauter Bauplan, damit Client-Änderungen nicht abweichen.
+func send_side_level(map_id: String, json_text: String) -> void:
+	if not is_host:
+		return
+	for peer_id in _broadcast_targets():
+		receive_side_level.rpc_id(int(peer_id), map_id, json_text)
+
+@rpc("authority", "call_remote", "reliable")
+func receive_side_level(map_id: String, json_text: String) -> void:
+	if json_text.length() > 400000:
+		return
+	SideLevels.register_remote(map_id, json_text)
+
 # tiebreak_slots: im Stechen die Finalisten (nur sie spawnen), sonst leer.
 @rpc("authority", "call_remote", "reliable")
 func receive_round_start(level_seed: int, map_id: String, points_to_win: int = 0, tiebreak_slots: Array = []) -> void:
