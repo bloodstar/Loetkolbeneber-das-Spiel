@@ -32,8 +32,10 @@ const SOUND_PACKS: Array[Dictionary] = [
 	# Standard-Set, im Soundboard von Jochen zusammengestellt: Basis "Arena mit
 	# Ansager", einzelne Tasten mit Sounds aus anderen Paketen ("swap").
 	{"id": "arena", "label": "Arena", "dir": PACK_DIR + "arena/", "swap": {
-		"bounce": {"pack": "arena", "src": "hit"},
-		"explosion_big": {"pack": "arena", "src": "hit"},
+		# Abprall: kurze Metallplatten-Klicks, deutlich anders als die Treffer.
+		"bounce": {"pack": "foley", "src": "bounce"},
+		# Große Explosion (Fass, Meteor): lang ausklingend, viel Tiefbass.
+		"explosion_big": {"pack": "scifi", "src": "explosion_big"},
 		"slash": {"pack": "werkstatt", "src": "slash"},
 		"fuse": {"pack": "scifi", "src": "fuse"},
 		"heal": {"pack": "magie", "src": "heal"},
@@ -72,7 +74,7 @@ const SOUND_TABLE: Dictionary = {
 	"hit": {"files": ["hit_1", "hit_2", "hit_3", "hit_4"], "vol": -8.0, "max": 4, "gap": 0.03},
 	"bounce": {"files": ["bounce_1", "bounce_2"], "vol": -8.0, "max": 3, "gap": 0.06},
 	"explosion": {"files": ["explosion"], "vol": -2.0, "max": 3, "gap": 0.05},
-	"explosion_big": {"files": ["explosion_big"], "vol": -2.0, "max": 2, "gap": 0.1},
+	"explosion_big": {"files": ["explosion_big"], "vol": -3.0, "max": 2, "gap": 0.1},
 	"shield": {"files": ["shield"], "vol": -6.0, "max": 2, "gap": 0.05},
 	"poison": {"files": ["poison"], "vol": -6.0, "max": 2, "gap": 0.08},
 	"death": {"files": ["death"], "vol": -3.0, "max": 2, "gap": 0.05},
