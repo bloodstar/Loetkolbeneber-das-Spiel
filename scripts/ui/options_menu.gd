@@ -8,6 +8,7 @@ extends CanvasLayer
 
 signal closed
 signal main_menu_requested
+signal map_editor_requested
 
 var _in_game: bool = false
 var _was_paused: bool = false
@@ -24,6 +25,7 @@ var _back_btn: Button = null
 var _menu_btn: Button = null
 var _tabs: TabContainer = null
 var _stats_screen: StatsScreen = null
+var _editor_btn: Button = null
 
 func _ready() -> void:
 	layer = 40
@@ -47,6 +49,7 @@ func open_options(in_game: bool = false) -> void:
 		get_tree().paused = true
 	GameSettings.gameplay_input_blocked = in_game
 	_menu_btn.visible = in_game
+	_editor_btn.visible = not in_game
 	if in_game and Global.network_mode:
 		_menu_btn.text = "SPIEL VERLASSEN"
 	else:
@@ -153,6 +156,18 @@ func _build_ui() -> void:
 		_stats_screen.open_screen()
 	)
 	buttons.add_child(stats_btn)
+
+	_editor_btn = Button.new()
+	_editor_btn.text = "KARTENEDITOR"
+	_editor_btn.tooltip_text = "Eigene Arena-Karten bauen, speichern und mit Bots testen."
+	_editor_btn.custom_minimum_size = Vector2(220, 50)
+	WorkshopStyle.style_button(_editor_btn, false, 18)
+	_editor_btn.pressed.connect(func():
+		SoundManager.play_sound("click")
+		_cancel_rebind()
+		map_editor_requested.emit()
+	)
+	buttons.add_child(_editor_btn)
 
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL

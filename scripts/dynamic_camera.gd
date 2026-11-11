@@ -6,6 +6,11 @@ extends Camera2D
 # draußen), damit zwei nah kämpfende Spieler nicht zu groß im Bild sind.
 @export var max_zoom: float = 0.96
 @export var zoom_margin: float = 240.0
+# Arena (Draufsicht): fester Zoom, die Kamera zoomt nie heraus, sondern folgt
+# den lokalen Spielern und bleibt innerhalb der Karte.
+@export var arena_zoom: float = 0.96
+# Rand um die Karte (Randmauer), Norden etwas mehr wegen der Mauerhöhe.
+const ARENA_VIEW_PAD := Vector4(80.0, 160.0, 80.0, 80.0) # links, oben, rechts, unten
 @export var follow_speed: float = 6.0
 @export var intro_start_zoom: float = 1.65
 @export var intro_duration: float = 2.2
@@ -66,7 +71,7 @@ func configure_world(rect: Rect2, scrolling: bool, local_targets: Array[Node2D])
 	world_rect = rect
 	scroll_mode = scrolling
 	focus_targets = local_targets.duplicate()
-	if scrolling:
+	if scrolling and not ArenaMode.active:
 		# Etwas Rand, damit die Gummiwand am Kartenrand sichtbar bleibt.
 		limit_left = int(rect.position.x - 140.0)
 		limit_right = int(rect.end.x + 140.0)
@@ -204,6 +209,7 @@ func _process(delta: float) -> void:
 	if _kill_cam_active:
 		_process_kill_cam(real_delta)
 		_apply_shake(real_delta)
+		_apply_arena_squash()
 		return
 
 	if targets.is_empty():
@@ -222,6 +228,9 @@ func _process(delta: float) -> void:
 	var width_zoom = screen_size.x / maxf(bounds.size.x + zoom_margin * 2.0, 1.0)
 	var height_zoom = screen_size.y / maxf(bounds.size.y + zoom_margin * 2.0, 1.0)
 	var target_zoom = clampf(minf(width_zoom, height_zoom), min_zoom, scroll_max_zoom if scroll_mode else max_zoom)
+	if ArenaMode.active:
+		target_zoom = arena_zoom
+		target_center = _arena_clamp_center(target_center, target_zoom)
 
 	var intro_running := _intro_active and is_instance_valid(_intro_focus)
 	if _intro_active and not intro_running:
@@ -241,6 +250,29 @@ func _process(delta: float) -> void:
 		zoom = zoom.lerp(Vector2(target_zoom, target_zoom), follow_speed * delta)
 	
 	_apply_shake(real_delta)
+	_apply_arena_squash()
+
+## Hält die Bildmitte so, dass nicht über den Kartenrand hinaus geschaut
+## wird. Ist die Karte kleiner als das Bild, bleibt sie mittig.
+func _arena_clamp_center(c: Vector2, z: float) -> Vector2:
+	if world_rect.size == Vector2.ZERO:
+		return c
+	var screen := get_viewport_rect().size
+	var half := Vector2(screen.x / z, screen.y / (z * ArenaMode.y_squash())) * 0.5
+	var r := world_rect.grow_individual(ARENA_VIEW_PAD.x, ARENA_VIEW_PAD.y, ARENA_VIEW_PAD.z, ARENA_VIEW_PAD.w)
+	var out := c
+	out.x = r.get_center().x if r.size.x <= half.x * 2.0 else clampf(c.x, r.position.x + half.x, r.end.x - half.x)
+	out.y = r.get_center().y if r.size.y <= half.y * 2.0 else clampf(c.y, r.position.y + half.y, r.end.y - half.y)
+	return out
+
+## Arena (Draufsicht): Die 2D-Ebene ist der Boden und wird wie von der
+## geneigten 3D-Kamera gesehen in y gestaucht. So liegen 2D-Effekte genau auf
+## dem 3D-Boden, und die Mausposition trifft den Boden unter dem Zeiger.
+func _apply_arena_squash() -> void:
+	if ArenaMode.active:
+		zoom.y = zoom.x * ArenaMode.y_squash()
+	elif zoom.y != zoom.x:
+		zoom.y = zoom.x
 
 func _apply_shake(delta: float) -> void:
 	if trauma > 0.0:

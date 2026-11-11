@@ -70,6 +70,9 @@ var map_option: OptionButton
 var map_info_label: Label
 var mode_option: OptionButton
 var mode_info_label: Label
+# Spielart: Seitenansicht oder Arena (Draufsicht).
+var game_mode_option: OptionButton
+var game_mode_info_label: Label
 var loadout_option: OptionButton
 var loadout_name_edit: LineEdit
 var loadout_load_btn: Button
@@ -197,6 +200,7 @@ func _ready() -> void:
 	Global.map_pool_changed.connect(_on_map_pool_changed)
 	Global.powerup_pool_changed.connect(_on_powerup_pool_changed)
 	Global.match_mode_changed.connect(_on_match_mode_changed)
+	Global.game_mode_changed.connect(_on_game_mode_changed)
 	Global.lobby_state_changed.connect(_on_lobby_state_changed)
 	Global.bot_test_changed.connect(_on_lobby_state_changed)
 	Global.level_modifiers_changed.connect(_on_level_modifiers_changed)
@@ -223,6 +227,7 @@ func _ready() -> void:
 func open_lobby() -> void:
 	visible = true
 	tabs.current_tab = 0
+	_sync_level_cards()
 	# Offline und als Host gelten immer die zuletzt eingestellten Regeln ("Last").
 	if not Global.network_mode or NetworkManager.is_host:
 		Global.restore_last_lobby_settings()
@@ -1431,7 +1436,7 @@ func _refresh_host_controls() -> void:
 
 func _map_ids() -> Array[String]:
 	var ids: Array[String] = [Global.MAP_RANDOM]
-	ids.append_array(Global.MAP_PLAYABLE)
+	ids.append_array(Global.get_playable_maps())
 	return ids
 
 func _on_map_selected(index: int) -> void:
@@ -1467,6 +1472,29 @@ func _refresh_map_controls() -> void:
 			Global.get_map_description(Global.selected_map_id),
 		]
 
+func _on_game_mode_selected(index: int) -> void:
+	if not Global.is_local_host():
+		_refresh_game_mode_controls()
+		return
+	Global.set_game_mode(Global.GAME_MODE_ARENA if index == 1 else Global.GAME_MODE_SIDE)
+	SoundManager.play_sound("click")
+
+func _on_game_mode_changed(_mode: String) -> void:
+	_refresh_game_mode_controls()
+	_update_status()
+
+func _refresh_game_mode_controls() -> void:
+	if game_mode_option == null:
+		return
+	var idx := 1 if Global.is_arena_mode() else 0
+	game_mode_option.selected = idx
+	game_mode_option.disabled = not Global.is_local_host()
+	if game_mode_info_label != null:
+		var info := str(Global.GAME_MODES[Global.game_mode].get("description", ""))
+		if Global.is_arena_mode():
+			info += " Spielfeld: zufällige Arena-Karte (%s)." % ", ".join(ArenaMaps.MAP_IDS.map(func(m): return ArenaMaps.display_name(m)))
+		game_mode_info_label.text = info
+
 func _on_match_mode_changed() -> void:
 	_refresh_mode_controls()
 	_update_titles()
@@ -1490,6 +1518,7 @@ func _on_mode_selected(index: int) -> void:
 	_update_status()
 
 func _refresh_mode_controls() -> void:
+	_refresh_game_mode_controls()
 	if mode_option == null:
 		return
 	var selected := maxi(0, Global.MATCH_MODE_ORDER.find(Global.match_mode))
@@ -1611,6 +1640,26 @@ func _build_rules_tab() -> void:
 
 	body.add_child(HSeparator.new())
 	_add_section_title(body, "SPIELMODUS & SPIELFELD", Color(1.0, 0.55, 0.55, 1.0))
+	# Spielart (Ansicht): Seitenansicht oder Arena. Gleiche Karten und Helden.
+	var view_row := HBoxContainer.new()
+	view_row.add_theme_constant_override("separation", 12)
+	body.add_child(view_row)
+	var view_label := Label.new()
+	view_label.text = "Spielart:"
+	view_label.add_theme_font_size_override("font_size", 15)
+	view_row.add_child(view_label)
+	game_mode_option = OptionButton.new()
+	game_mode_option.custom_minimum_size = Vector2(200, 0)
+	for gm_id in [Global.GAME_MODE_SIDE, Global.GAME_MODE_ARENA]:
+		game_mode_option.add_item(Global.get_game_mode_name(gm_id))
+	game_mode_option.item_selected.connect(_on_game_mode_selected)
+	view_row.add_child(game_mode_option)
+	game_mode_info_label = Label.new()
+	game_mode_info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	game_mode_info_label.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
+	game_mode_info_label.add_theme_font_size_override("font_size", 12)
+	game_mode_info_label.autowrap_mode = 2
+	view_row.add_child(game_mode_info_label)
 	# Modus und Map stehen nebeneinander, darunter jeweils ihre Erklärung.
 	var choice_row := HBoxContainer.new()
 	choice_row.add_theme_constant_override("separation", 24)
@@ -2324,10 +2373,29 @@ func _build_levels_tab() -> void:
 
 	# Die Liste kommt direkt aus MAP_PLAYABLE: Neue Maps erscheinen hier ohne
 	# weitere Pflege, das Bild rendert der LevelGenerator.
-	for map_id in Global.MAP_PLAYABLE:
+	for map_id in Global.get_playable_maps():
 		level_grid.add_child(_create_level_card(map_id))
 
 	_build_level_viewer()
+	_refresh_level_controls()
+
+## Eigene Level aus dem Karteneditor kommen und gehen: Karten neu aufbauen,
+## wenn sich die Liste geändert hat. Geänderte Level bekommen ein neues Bild.
+func _sync_level_cards() -> void:
+	if level_grid == null:
+		return
+	var ids := Global.get_playable_maps()
+	var same := ids.size() == level_cards.size()
+	for id in ids:
+		if not level_cards.has(id):
+			same = false
+	if same:
+		return
+	for child in level_grid.get_children():
+		child.queue_free()
+	level_cards.clear()
+	for map_id in ids:
+		level_grid.add_child(_create_level_card(map_id))
 	_refresh_level_controls()
 
 func _create_level_card(map_id: String) -> PanelContainer:
@@ -2439,7 +2507,7 @@ func _refresh_level_controls() -> void:
 		level_all_btn.disabled = not is_host or Global.disabled_map_ids.is_empty()
 	if level_none_btn != null:
 		level_none_btn.disabled = not is_host or not Global.has_enabled_maps()
-	var total := Global.MAP_PLAYABLE.size()
+	var total := Global.get_playable_maps().size()
 	var active := Global.get_enabled_map_ids().size()
 	var text := "%d von %d Levels aktiv" % [active, total]
 	if active == 0:
@@ -2455,7 +2523,7 @@ func _request_level_previews() -> void:
 	if level_preview_renderer == null:
 		return
 	var missing: Array[String] = []
-	for map_id in Global.MAP_PLAYABLE:
+	for map_id in Global.get_playable_maps():
 		if not LevelPreviewRendererScript.has_cached(map_id):
 			missing.append(map_id)
 	if not missing.is_empty():
@@ -2491,7 +2559,7 @@ func _on_all_levels_pressed() -> void:
 func _on_no_levels_pressed() -> void:
 	if not Global.is_local_host():
 		return
-	Global.set_disabled_maps(Global.MAP_PLAYABLE)
+	Global.set_disabled_maps(Global.get_playable_maps())
 	SoundManager.play_sound("click")
 	_refresh_level_controls()
 	_update_status()
@@ -2819,7 +2887,7 @@ func _build_level_viewer() -> void:
 	footer.add_child(level_viewer_status)
 
 func _open_level_viewer(map_id: String) -> void:
-	if level_viewer == null or not Global.MAP_PLAYABLE.has(map_id):
+	if level_viewer == null or not Global.get_playable_maps().has(map_id):
 		return
 	_level_viewer_map = map_id
 	# Bildgröße an das Fenster anpassen (16:9, Platz für Kopf- und Fußzeile).
@@ -2843,7 +2911,7 @@ func _close_level_viewer() -> void:
 	_level_viewer_map = ""
 
 func _step_level_viewer(direction: int) -> void:
-	var ids := Global.MAP_PLAYABLE
+	var ids := Global.get_playable_maps()
 	if _level_viewer_map.is_empty() or ids.is_empty():
 		return
 	var index := ids.find(_level_viewer_map)
@@ -2853,8 +2921,8 @@ func _refresh_level_viewer() -> void:
 	if level_viewer == null or not level_viewer.visible or _level_viewer_map.is_empty():
 		return
 	var map_id := _level_viewer_map
-	var index := Global.MAP_PLAYABLE.find(map_id)
-	level_viewer_title.text = "%s  (%d/%d)" % [Global.get_map_name(map_id), index + 1, Global.MAP_PLAYABLE.size()]
+	var index := Global.get_playable_maps().find(map_id)
+	level_viewer_title.text = "%s  (%d/%d)" % [Global.get_map_name(map_id), index + 1, Global.get_playable_maps().size()]
 	level_viewer_desc.text = Global.get_map_description(map_id)
 	var texture := LevelPreviewRendererScript.get_cached(map_id)
 	level_viewer_texture.texture = texture
@@ -3677,7 +3745,7 @@ func _refresh_network_status() -> void:
 func _map_summary_text() -> String:
 	var text := Global.get_map_name(Global.selected_map_id)
 	if Global.selected_map_id == Global.MAP_RANDOM and not Global.disabled_map_ids.is_empty():
-		text += " (%d/%d)" % [Global.get_enabled_map_ids().size(), Global.MAP_PLAYABLE.size()]
+		text += " (%d/%d)" % [Global.get_enabled_map_ids().size(), Global.get_playable_maps().size()]
 	return text
 
 func _update_status() -> void:

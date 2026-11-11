@@ -942,8 +942,8 @@ func _textures_for(indices: Array) -> Array[Texture2D]:
 	return result
 
 func _apply_tileset(map_id: String) -> void:
-	current_map_id = map_id if MAP_PROFILES.has(map_id) else "grasarena"
-	var profile: Dictionary = MAP_PROFILES[current_map_id]
+	current_map_id = map_id if SideLevels.has(map_id) else "grasarena"
+	var profile: Dictionary = SideLevels.profile(current_map_id)
 	current_theme_id = str(profile.get("theme", ""))
 	current_backdrop_variant = str(profile.get("backdrop_variant", ""))
 	current_theme = TILESET_THEMES.get(current_theme_id, {})
@@ -1032,10 +1032,16 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 		_rng.seed = level_seed
 
 	var resolved_map := map_id
-	if not MAP_PROFILES.has(resolved_map):
+	SideLevels.clear_cache()
+	if not SideLevels.has(resolved_map) and not ArenaMaps.is_arena_map(resolved_map):
 		resolved_map = Global.resolve_map_id(level_seed)
+	# Arena-Modus (Draufsicht): eigener Aufbau aus ArenaMaps, ohne 2D-Grafik.
+	if ArenaMaps.is_arena_map(resolved_map):
+		ArenaBuilder.build(self, resolved_map, level_seed)
+		return
+	ArenaBuilder.deactivate(self)
 	_apply_tileset(resolved_map)
-	var profile: Dictionary = MAP_PROFILES[current_map_id]
+	var profile: Dictionary = SideLevels.profile(current_map_id)
 	map_w = int(profile.get("width", MAP_WIDTH))
 	map_h = int(profile.get("height", MAP_HEIGHT))
 	_build_theme_backdrop(level_seed)
@@ -1043,7 +1049,8 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 	# 1. Boden: obere Grasschicht + Erde. Keine Seiten- oder Deckenwände –
 	#    außerhalb der Karte übernimmt die Gummiwand. Scroll-Levels schneiden
 	#    Gruben in den Boden; wer hineinfällt, landet in der Gummiwand.
-	var layout: Dictionary = LAYOUTS.get(str(profile.get("layout", current_map_id)), {})
+	# Bauplan: eingebaut (LAYOUTS) oder aus dem Karteneditor (SideLevels).
+	var layout: Dictionary = SideLevels.layout(current_map_id)
 	for gap in layout.get("ground_gaps", []):
 		_cut_ground(int(gap[0]), int(gap[1]))
 	var segment_start := -1
@@ -1102,14 +1109,14 @@ func get_map_height() -> int:
 	return map_h
 
 func is_scrolling_map() -> bool:
-	return bool(MAP_PROFILES.get(current_map_id, {}).get("scrolling", false))
+	return bool(SideLevels.profile(current_map_id).get("scrolling", false))
 
 ## Steigende Lava vom Rundenbeginn an (vertikale Level). Leer, wenn die
 ## Karte nur die normale Sudden-Death-Lava hat. Schlüssel: delay (s nach
 ## dem Countdown), speed (px/s), stop_y (Pixel-Höhe, an der sie vor dem
 ## Sudden Death anhält).
 func get_rising_lava() -> Dictionary:
-	var cfg: Dictionary = MAP_PROFILES.get(current_map_id, {}).get("rising_lava", {})
+	var cfg: Dictionary = SideLevels.profile(current_map_id).get("rising_lava", {})
 	if cfg.is_empty():
 		return {}
 	return {
@@ -1129,6 +1136,9 @@ func get_map_pixel_size() -> Vector2:
 # Clients dieselben Spawns, jede Runde aber andere. Gespawnt wird nie in
 # Stacheln, Portalen, Kisten, Federn oder anderen Objekten.
 func get_spawn_position(index: int, total: int) -> Vector2:
+	if ArenaMode.active:
+		var arena_spawns := ArenaBuilder.spawn_positions(maxi(1, total), _spawn_seed)
+		return arena_spawns[clampi(index - 1, 0, arena_spawns.size() - 1)]
 	var positions := _build_round_spawn_positions(maxi(1, total))
 	var spawn_index := clampi(index - 1, 0, positions.size() - 1)
 	return positions[spawn_index]
@@ -1221,7 +1231,7 @@ func _collect_spawn_candidates() -> void:
 		})
 	# Die Kistenfestung hat keine festen Plattformen. Dort kommen die
 	# exponierten Oberseiten der Kistentürme als erhöhte Spawns hinzu.
-	if bool(MAP_PROFILES.get(current_map_id, {}).get("crate_fortress", false)):
+	if bool(SideLevels.profile(current_map_id).get("crate_fortress", false)):
 		_add_crate_spawn_candidates()
 	_spawn_candidates.sort_custom(_sort_spawn_candidates)
 
@@ -1230,7 +1240,7 @@ func _is_spawn_surface_clear(cell: Vector2i) -> bool:
 		return false
 	if cell.y < 2 or cell.y >= map_h - 1:
 		return false
-	if cell.y < int(MAP_PROFILES.get(current_map_id, {}).get("spawn_min_row", 0)):
+	if cell.y < int(SideLevels.profile(current_map_id).get("spawn_min_row", 0)):
 		return false
 	if not _solid_cells.has(cell):
 		return false

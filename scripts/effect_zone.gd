@@ -146,7 +146,8 @@ static func snap_to_floor(space: PhysicsDirectSpaceState2D, pos: Vector2) -> Vec
 
 # Strahl nach unten; liefert das Ergebnis von intersect_ray (leer = kein Boden).
 static func floor_hit(space: PhysicsDirectSpaceState2D, pos: Vector2) -> Dictionary:
-	if space == null:
+	# Arena (Draufsicht): Der Boden ist überall, Feuer brennt an Ort und Stelle.
+	if space == null or ArenaMode.active:
 		return {}
 	var query := PhysicsRayQueryParameters2D.create(pos + Vector2(0.0, -12.0), pos + Vector2(0.0, FIRE_FLOOR_SNAP), FIRE_FLOOR_MASK)
 	return space.intersect_ray(query)
@@ -230,6 +231,8 @@ func _scan_fire_floor() -> void:
 	var cols := maxi(5, int(radius / 7.0))
 	_fire_columns.resize(cols)
 	var space := get_world_2d().direct_space_state
+	if ArenaMode.active:
+		space = null
 	var any_hit := false
 	for i in cols:
 		_fire_columns[i] = NAN

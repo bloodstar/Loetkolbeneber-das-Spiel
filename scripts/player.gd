@@ -475,8 +475,15 @@ var net_target_pos: Vector2 = Vector2.ZERO
 # Letzter bekannter Snapshot-Lebenswert, um auf Clients ebenfalls eine
 # Trefferanimation auszulösen, wenn die HP sinken.
 var _last_network_health: float = -1.0
+# Arena-Modus (Draufsicht): Höhe über dem Boden in Pixeln, Steig-/Fall-
+# geschwindigkeit und ob die Figur steht. Siehe scripts/arena/arena_motion.gd.
+var arena_z: float = 0.0
+var arena_vz: float = 0.0
+var arena_grounded: bool = true
+
 var remote_input: Dictionary = {
 	"move_x": 0.0,
+	"move_y": 0.0,
 	"jump": false,
 	"jump_release": false,
 	"shoot": false,
@@ -526,11 +533,27 @@ func _ready() -> void:
 
 	apply_stats()
 	
+	if ArenaMode.active:
+		_setup_arena_body()
+
 	if is_replica:
 		collision_layer = 0
 		collision_mask = 0
 		set_physics_process(false)
 		sprite.use_parent_floor_state = false
+
+## Arena: schwebende Bewegung (kein Boden in 2D), 2D-Schwein und -Stab
+## ausblenden. Das Voxel-Schwein zeichnet ArenaView3D.
+func _setup_arena_body() -> void:
+	motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
+	wall_min_slide_angle = 0.0
+	sprite.visible = false
+	wand.visible = false
+	arena_z = 0.0
+	arena_vz = 0.0
+	arena_grounded = true
+	if not is_replica:
+		ArenaMotion.update_masks(self)
 
 func _process(delta: float) -> void:
 	_update_powerup_glow(delta)
@@ -950,7 +973,9 @@ func _physics_process(delta: float) -> void:
 		shield_dome_node.visible = false
 	
 	# Gravity & Movement
-	if not is_on_floor():
+	if ArenaMode.active:
+		ArenaMotion.vertical_step(self, delta)
+	elif not is_on_floor():
 		var grav := GRAVITY * gravity_mult
 		# Wall sliding
 		if is_on_wall() and velocity.y > 0 and (Input.is_action_pressed(_act("left")) or Input.is_action_pressed(_act("right"))):
@@ -1036,25 +1061,34 @@ func _apply_horizontal_movement(input_x: float) -> void:
 		velocity.x = move_toward(velocity.x, 0.0, current_spd * decel_factor * kb_control)
 
 func _apply_disabled_input() -> void:
+	if ArenaMode.active:
+		ArenaMotion.apply_planar(self, Vector2.ZERO)
+		return
 	_apply_horizontal_movement(0.0)
 
 func _handle_player_input(_delta: float) -> void:
 	# Move X – auf Eis wird deutlich langsamer beschleunigt und gebremst,
 	# Tiefschnee senkt zusätzlich die maximale Geschwindigkeit.
 	var input_x = Input.get_axis(_act("left"), _act("right"))
-	_apply_horizontal_movement(input_x)
+	if ArenaMode.active:
+		ArenaMotion.apply_planar(self, ArenaMotion.input_vector(self))
+	else:
+		_apply_horizontal_movement(input_x)
 	
 	# Jump
 	if Input.is_action_just_pressed(_act("jump")):
 		jump()
 
-	# Runter: durch einen Einweg-Steg fallen.
-	if Input.is_action_just_pressed(_act("down")):
+	# Runter: durch einen Einweg-Steg fallen (in der Arena ist "runter" Laufen).
+	if Input.is_action_just_pressed(_act("down")) and not ArenaMode.active:
 		drop_through()
 	
 	# Cut jump short on release
-	if Input.is_action_just_released(_act("jump")) and velocity.y < 0:
-		velocity.y *= 0.5
+	if Input.is_action_just_released(_act("jump")):
+		if ArenaMode.active:
+			ArenaMotion.cut_jump(self)
+		elif velocity.y < 0:
+			velocity.y *= 0.5
 	
 	# Aim
 	if player_index == 1:
@@ -1095,6 +1129,7 @@ func _handle_player_input(_delta: float) -> void:
 
 func set_remote_input(data: Dictionary) -> void:
 	remote_input.move_x = clampf(float(data.get("move_x", 0.0)), -1.0, 1.0)
+	remote_input.move_y = clampf(float(data.get("move_y", 0.0)), -1.0, 1.0)
 	remote_input.shoot = bool(data.get("shoot", false))
 	var aim_value = data.get("aim", Vector2.RIGHT)
 	if aim_value is Vector2 and aim_value.length_squared() > 0.001:
@@ -1159,7 +1194,10 @@ func apply_trampoline_bounce(force: float) -> void:
 	_fx("sound", {"snd": ["spring", 0.18, -1.0]})
 
 func _handle_remote_input(_delta: float) -> void:
-	_apply_horizontal_movement(remote_input.move_x)
+	if ArenaMode.active:
+		ArenaMotion.apply_planar(self, Vector2(remote_input.move_x, remote_input.move_y))
+	else:
+		_apply_horizontal_movement(remote_input.move_x)
 	
 	if remote_input.jump:
 		remote_input.jump = false
@@ -1167,7 +1205,9 @@ func _handle_remote_input(_delta: float) -> void:
 	
 	if remote_input.jump_release:
 		remote_input.jump_release = false
-		if velocity.y < 0.0:
+		if ArenaMode.active:
+			ArenaMotion.cut_jump(self)
+		elif velocity.y < 0.0:
 			velocity.y *= 0.5
 
 	if remote_input.drop:
@@ -1212,6 +1252,9 @@ func apply_network_state(data: Dictionary) -> void:
 		global_position = net_target_pos
 	
 	velocity = data.get("vel", Vector2.ZERO)
+	if data.has("az"):
+		arena_z = float(data["az"])
+		arena_grounded = bool(data.get("ag", true))
 	if data.get("fur") is Color and data.get("eyes") is Color and data.get("pants") is Color:
 		sprite.setup(data["fur"], data["eyes"], data["pants"])
 	if data.has("tusks"):
@@ -1309,6 +1352,9 @@ func apply_network_state(data: Dictionary) -> void:
 func jump() -> void:
 	if not control_enabled or stun_timer > 0.0:
 		return
+	if ArenaMode.active:
+		ArenaMotion.jump(self)
+		return
 	if is_on_floor():
 		velocity.y = jump_force
 		_fx("sound", {"snd": ["jump", 0.08, 0.0], "x": player_index})
@@ -1326,7 +1372,7 @@ func jump() -> void:
 ## Lässt die Figur durch den Einweg-Steg fallen, auf dem sie steht. Liefert
 ## false, wenn sie nicht auf einem solchen Steg steht.
 func drop_through() -> bool:
-	if not control_enabled or stun_timer > 0.0 or not is_on_floor():
+	if ArenaMode.active or not control_enabled or stun_timer > 0.0 or not is_on_floor():
 		return false
 	var found := false
 	for i in range(get_slide_collision_count()):
@@ -3338,6 +3384,8 @@ func _handle_timers(delta: float) -> void:
 
 	# Spuren nur beim Bewegen auf dem Boden erzeugen.
 	var moving_on_ground := is_on_floor() and absf(velocity.x) > 35.0
+	if ArenaMode.active:
+		moving_on_ground = arena_grounded and velocity.length() > 35.0
 	if poison_trail:
 		if moving_on_ground:
 			poison_trail_timer -= delta

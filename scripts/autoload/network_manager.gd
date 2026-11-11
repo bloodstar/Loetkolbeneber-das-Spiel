@@ -655,6 +655,7 @@ func build_lobby_sync() -> Dictionary:
 		"disabled_powerups": Global.disabled_powerup_kinds.duplicate(),
 		"map_id": Global.selected_map_id,
 		"match_mode": Global.match_mode,
+		"game_mode": Global.game_mode,
 		"build_id": BuildInfo.get_build_id(),
 	}
 
@@ -718,6 +719,7 @@ func _apply_lobby_sync(data: Dictionary) -> void:
 	host_build_id = str(data.get("build_id", "?"))
 	Global.set_player_count(int(data.get("player_count", Global.player_count)))
 	Global.set_match_mode(str(data.get("match_mode", Global.MATCH_MODE_FFA)))
+	Global.set_game_mode(str(data.get("game_mode", Global.GAME_MODE_SIDE)))
 	var heroes: Array = data.get("heroes", [])
 	for i in range(mini(heroes.size(), Global.MAX_PLAYERS)):
 		Global.player_hero_ids[i] = str(heroes[i])
@@ -829,6 +831,34 @@ func send_round_start(level_seed: int, map_id: String, points_to_win: int = 0, t
 		return
 	for peer_id in _broadcast_targets():
 		receive_round_start.rpc_id(int(peer_id), level_seed, map_id, points_to_win, tiebreak_slots)
+
+## Eigene Arena-Karte (Karteneditor) an alle Clients schicken. Läuft vor
+## send_round_start über denselben zuverlässigen Kanal, kommt also zuerst an.
+func send_arena_map(map_id: String, json_text: String) -> void:
+	if not is_host:
+		return
+	for peer_id in _broadcast_targets():
+		receive_arena_map.rpc_id(int(peer_id), map_id, json_text)
+
+@rpc("authority", "call_remote", "reliable")
+func receive_arena_map(map_id: String, json_text: String) -> void:
+	if json_text.length() > 200000 or not map_id.begins_with(ArenaMaps.CUSTOM_PREFIX):
+		return
+	ArenaMaps.register_remote(map_id, json_text)
+
+## Seitenansicht: Bauplan des Hosts (Karteneditor) für diese Runde. "" heißt
+## eingebauter Bauplan, damit Client-Änderungen nicht abweichen.
+func send_side_level(map_id: String, json_text: String) -> void:
+	if not is_host:
+		return
+	for peer_id in _broadcast_targets():
+		receive_side_level.rpc_id(int(peer_id), map_id, json_text)
+
+@rpc("authority", "call_remote", "reliable")
+func receive_side_level(map_id: String, json_text: String) -> void:
+	if json_text.length() > 400000:
+		return
+	SideLevels.register_remote(map_id, json_text)
 
 # tiebreak_slots: im Stechen die Finalisten (nur sie spawnen), sonst leer.
 @rpc("authority", "call_remote", "reliable")
