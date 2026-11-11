@@ -63,6 +63,44 @@ const COORDS := {
 # Felder, die Mittelpunkte sind (Spiegelung an w statt w - 1).
 const CENTER_KINDS := ["pyramids", "seesaws", "chains", "rotators", "crate_chains", "ramps", "ball_gates", "ball_rows", "ball_chains", "ball_spawners"]
 
+# Felder je Objektart für die Eigenschaften-Leiste:
+# [Index, Bezeichnung, Typ (i = ganze Zahl, f = Kommazahl, b = an/aus,
+#  s = Stil, a = Zahlenliste), min, max, Schritt]
+const FIELDS := {
+	"platforms": [[0, "x Anfang", "i", -2, 200, 1], [1, "x Ende", "i", -2, 200, 1], [2, "Reihe", "i", -2, 200, 1]],
+	"oneway": [[0, "x Anfang", "i", -2, 200, 1], [1, "x Ende", "i", -2, 200, 1], [2, "Reihe", "i", -2, 200, 1]],
+	"blocks": [[0, "x Anfang", "i", -2, 200, 1], [1, "x Ende", "i", -2, 200, 1], [2, "Reihe", "i", -2, 200, 1]],
+	"walls": [[0, "x Anfang", "i", -2, 200, 1], [1, "x Ende", "i", -2, 200, 1], [2, "Reihe oben", "i", -2, 200, 1], [3, "Reihe unten", "i", -2, 200, 1]],
+	"reserve": [[0, "x Anfang", "i", -2, 200, 1], [1, "x Ende", "i", -2, 200, 1], [2, "Reihe oben", "i", -2, 200, 1], [3, "Reihe unten", "i", -2, 200, 1]],
+	"spikes": [[0, "x", "i", -2, 200, 1], [1, "Reihe", "i", -2, 200, 1]],
+	"pads": [[0, "x", "i", -2, 200, 1], [1, "Reihe", "i", -2, 200, 1]],
+	"mystery": [[0, "x", "i", -2, 200, 1], [1, "Reihe", "i", -2, 200, 1]],
+	"pipes": [[0, "Eingang x", "i", -2, 200, 1], [1, "Eingang Reihe", "i", -2, 200, 1], [2, "Ausgang x", "i", -2, 200, 1], [3, "Ausgang Reihe", "i", -2, 200, 1]],
+	"ground_gaps": [[0, "x Anfang", "i", -2, 200, 1], [1, "x Ende", "i", -2, 200, 1]],
+	"houses": [[0, "Wand links x", "i", -2, 200, 1], [1, "Wand rechts x", "i", -2, 200, 1], [2, "Bodenreihe", "i", -2, 200, 1]],
+	"pyramids": [[0, "Mitte x", "f", -2, 200, 0.5], [1, "Unterkante", "f", -2, 200, 0.5], [2, "Spitze", "f", -2, 200, 0.5], [3, "halbe Breite", "f", 2, 40, 0.5]],
+	"stairs": [[0, "x Anfang", "i", -2, 200, 1], [1, "x Ende", "i", -2, 200, 1], [2, "Höhe links", "i", 0, 20, 1], [3, "Höhe rechts", "i", 0, 20, 1]],
+	"seesaws": [[0, "Mitte x", "f", -2, 200, 0.5], [1, "Reihe", "i", -2, 200, 1], [2, "Breite", "i", 2, 30, 1]],
+	"chains": [[0, "Mitte x", "f", -2, 200, 0.5], [1, "Ankerreihe", "i", -2, 200, 1], [2, "Kettenlänge", "i", 1, 20, 1], [3, "Breite", "i", 1, 20, 1]],
+	"movers": [[0, "x Anfang", "i", -2, 200, 1], [1, "Reihe", "i", -2, 200, 1], [2, "Breite", "i", 1, 20, 1], [3, "Weg x", "f", -40, 40, 0.5],
+		[4, "Weg y", "f", -20, 20, 0.5], [5, "Periode (s)", "f", 0.5, 60, 0.5], [6, "Phase", "f", 0, 1, 0.05], [7, "nicht spiegeln", "b", 0, 1, 1]],
+	"rotators": [[0, "Mitte x", "f", -2, 200, 0.5], [1, "Mitte y", "f", -2, 200, 0.5], [2, "Arm", "f", 0.5, 20, 0.5], [3, "Gegenarm", "f", 0, 20, 0.5],
+		[4, "Periode (s, < 0 links)", "f", -60, 60, 0.5], [5, "Phase", "f", 0, 1, 0.05], [6, "Balken (2 = Kreuz)", "i", 1, 4, 1], [7, "Stil", "s", 0, 0, 0]],
+	"crate_chains": [[0, "Anker A x", "f", -2, 200, 0.5], [1, "Anker A y", "f", -2, 200, 0.5], [2, "Anker B x (-1 = hängt)", "f", -1, 200, 0.5],
+		[3, "Anker B y / Länge", "f", -2, 200, 0.5], [4, "Kistengrößen", "a", 0, 0, 0], [5, "Durchhang", "f", 1.0, 2.0, 0.01]],
+	"chain_grids": [[0, "Spalten x", "a", 0, 0, 0], [1, "Reihen y", "a", 0, 0, 0], [2, "Kistengröße", "f", 0.5, 3, 0.1]],
+	"ramps": [[0, "Start x", "f", -2, 200, 0.5], [1, "Start y", "f", -2, 200, 0.5], [2, "Ende x", "f", -2, 200, 0.5], [3, "Ende y", "f", -2, 200, 0.5], [4, "Dicke", "f", 0.25, 5, 0.25], [5, "Einweg", "b", 0, 1, 1]],
+	"ball_gates": [[0, "x", "f", -2, 200, 0.5], [1, "Oberkante y", "f", -2, 200, 0.5], [2, "Höhe", "f", 0.5, 20, 0.5], [3, "Öffnet nach (s)", "f", 0.5, 60, 0.5]],
+	"ball_rows": [[0, "Start x", "f", -2, 200, 0.5], [1, "Start y", "f", -2, 200, 0.5], [2, "Ende x", "f", -2, 200, 0.5], [3, "Ende y", "f", -2, 200, 0.5]],
+	"ball_chains": [[0, "Start x", "f", -2, 200, 0.5], [1, "Start y", "f", -2, 200, 0.5], [2, "Ende x", "f", -2, 200, 0.5], [3, "Ende y", "f", -2, 200, 0.5],
+		[4, "Durchhang", "f", 1.0, 2.0, 0.01], [5, "Gliedmasse", "f", 0.1, 5, 0.1], [6, "Anteil große Kugeln", "f", 0, 1, 0.05], [7, "Anteil kleine Kugeln", "f", 0, 1, 0.05]],
+	"ball_spawners": [[0, "x", "f", -2, 200, 0.5], [1, "y", "f", -2, 200, 0.5], [2, "Richtung", "f", -1, 1, 0.1], [3, "Abstand (s)", "f", 0.5, 60, 0.5]],
+}
+const ROTATOR_STYLES := ["bar", "clock"]
+# Neue Spezialobjekte: Vorlage relativ zur angeklickten Kachel c (x, y).
+const PLACE_KINDS := ["seesaws", "chains", "movers", "rotators", "houses", "pyramids", "stairs",
+	"crate_chains", "chain_grids", "ramps", "ball_spawners", "ball_gates", "ball_rows", "ball_chains", "reserve"]
+
 static var _last_state: Dictionary = {}
 
 var map_id: String = "grasarena"
@@ -100,6 +138,9 @@ var _status: Label
 var _info: Label
 var _tool_btns: Dictionary = {}
 var _reset_armed: bool = false
+var _props: VBoxContainer
+var _place_opt: OptionButton
+var place_kind: String = "seesaws"
 
 func _ready() -> void:
 	layer = 45
@@ -141,6 +182,7 @@ func _load_level(id: String) -> void:
 	_selected = []
 	_dirty = false
 	_sync_controls()
+	_rebuild_props()
 	_fit_view()
 	_validate()
 
@@ -193,6 +235,7 @@ func undo() -> void:
 	_selected = []
 	_sync_controls()
 	_changed()
+	_rebuild_props()
 
 func redo() -> void:
 	if _redo.is_empty():
@@ -204,8 +247,13 @@ func redo() -> void:
 	_selected = []
 	_sync_controls()
 	_changed()
+	_rebuild_props()
 
 func _changed() -> void:
+	if not _selected.is_empty() and (not lay.has(_selected[0]) or int(_selected[1]) >= (lay[_selected[0]] as Array).size()):
+		_selected = []
+	if _selected.is_empty() and _props != null and _props.get_child_count() > 1:
+		_rebuild_props()
 	_dirty = true
 	_validate()
 	_canvas.queue_redraw()
@@ -263,7 +311,7 @@ func _rects(kind: String, e: Array) -> Array:
 			return [Rect2(float(e[0]) - 0.5, float(e[1]) - 0.5, 1.0, 1.0)]
 		"crate_chains", "ramps", "ball_rows", "ball_chains":
 			var a := Vector2(float(e[0]), float(e[1]))
-			var b := Vector2(float(e[2]), float(e[3])) if float(e[2]) >= 0.0 else a + Vector2(0, 4)
+			var b := Vector2(float(e[2]), float(e[3])) if float(e[2]) >= 0.0 else a + Vector2(0, float(e[3]))
 			return [Rect2(a, Vector2.ZERO).expand(b).grow(0.4)]
 	return []
 
@@ -527,12 +575,32 @@ func _build_ui() -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(b)
 		_tool_btns[key] = b
+	var place_row := HBoxContainer.new()
+	side.add_child(place_row)
+	var place_btn := _toggle("Objekt setzen", group, func(): _set_tool("place"))
+	place_btn.icon = _swatch(Color(0.95, 0.55, 0.85))
+	place_row.add_child(place_btn)
+	_tool_btns["place"] = place_btn
+	_place_opt = OptionButton.new()
+	_place_opt.focus_mode = Control.FOCUS_NONE
+	_place_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for k in PLACE_KINDS:
+		_place_opt.add_item(OTHER_KINDS[k][0])
+	_place_opt.item_selected.connect(func(i):
+		place_kind = PLACE_KINDS[i]
+		_set_tool("place")
+	)
+	place_row.add_child(_place_opt)
 	var undo_row := HBoxContainer.new()
 	side.add_child(undo_row)
 	undo_row.add_child(_button("Rückgängig", func(): undo()))
 	undo_row.add_child(_button("Wiederholen", func(): redo()))
 	undo_row.add_child(_button("Entfernen", func(): _delete_selected()))
 
+	_props = VBoxContainer.new()
+	_props.add_theme_constant_override("separation", 4)
+	side.add_child(_props)
+	_rebuild_props()
 	_section(side, "Info")
 	_info = Label.new()
 	_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -544,7 +612,7 @@ func _build_ui() -> void:
 	help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	help.add_theme_font_size_override("font_size", 12)
 	help.add_theme_color_override("font_color", Color(0.6, 0.65, 0.72))
-	help.text = "Plattformen, Stege, Kisten und Gruben waagrecht ziehen, Wände als Rechteck. Röhren: erst Eingang, dann Ausgang anklicken. Rechtsklick löscht das Objekt unter der Maus. Auswählen: Objekt ziehen verschiebt es, Entf löscht. Blasse Objekte sind die automatische Spiegelung. Mausrad zoomt, Leertaste oder mittlere Taste + Ziehen verschiebt."
+	help.text = "Plattformen, Stege, Kisten und Gruben waagrecht ziehen, Wände als Rechteck. Röhren: erst Eingang, dann Ausgang anklicken. Objekt setzen: Art wählen, dann klicken; die Werte stehen danach unter Eigenschaften. Rechtsklick löscht das Objekt unter der Maus. Auswählen: Objekt ziehen verschiebt es, Entf löscht. Blasse Objekte sind die automatische Spiegelung. Mausrad zoomt, Leertaste oder mittlere Taste + Ziehen verschiebt."
 	side.add_child(help)
 
 	_canvas = Control.new()
@@ -623,6 +691,7 @@ func _delete_selected() -> void:
 	(lay[_selected[0]] as Array).remove_at(int(_selected[1]))
 	_selected = []
 	_changed()
+	_rebuild_props()
 
 # --- Eingabe ----------------------------------------------------------------
 
@@ -690,11 +759,22 @@ func _press(pos: Vector2) -> void:
 	var c := _cell(pos)
 	if tool == "select":
 		_selected = _hit(_tiles(pos))
+		_rebuild_props()
 		if not _selected.is_empty():
 			_push_undo()
 			_moving = true
 			_move_last = Vector2i(int(floor(_tiles(pos).x)), int(floor(_tiles(pos).y)))
 		_canvas.queue_redraw()
+		return
+	if tool == "place":
+		var tpl := _template(place_kind, c)
+		if tpl.is_empty():
+			return
+		_push_undo()
+		_entries(place_kind).append(tpl)
+		_selected = [place_kind, _entries(place_kind).size() - 1]
+		_changed()
+		_rebuild_props()
 		return
 	var kind := _tool_kind()
 	if kind == "cell":
@@ -716,6 +796,7 @@ func _press(pos: Vector2) -> void:
 func _release(pos: Vector2) -> void:
 	if _moving:
 		_moving = false
+		_rebuild_props()
 		_canvas.queue_redraw()
 		return
 	if _drag_start.x < 0:
@@ -733,6 +814,27 @@ func _release(pos: Vector2) -> void:
 			_entries(tool).append([x0, x1])
 	_drag_start = Vector2i(-1, -1)
 	_changed()
+
+func _template(kind: String, c: Vector2i) -> Array:
+	var x := float(c.x)
+	var y := float(c.y)
+	match kind:
+		"seesaws": return [x + 0.5, c.y, 6]
+		"chains": return [x + 0.5, c.y, 5, 4]
+		"movers": return [c.x, c.y, 4, 6.0, 0.0, 6.0, 0.0]
+		"rotators": return [x + 0.5, y + 0.5, 4.0, 4.0, 8.0, 0.0, 1, "bar"]
+		"houses": return [c.x, c.x + 11, c.y]
+		"pyramids": return [x + 0.5, y + 1.0, y - 7.0, 8.0]
+		"stairs": return [c.x, c.x + 3, 1, 4]
+		"crate_chains": return [x, y, x + 8.0, y, [1.0, 1.0, 1.0], 1.06]
+		"chain_grids": return [[x, x + 4.0, x + 8.0], [y, y + 3.5], 1.3]
+		"ramps": return [x, y, x + 5.0, y - 3.0, 0.75, 0]
+		"ball_spawners": return [x + 0.5, y + 0.5, 0.0, 8.0]
+		"ball_gates": return [x + 0.5, y, 3.0, 7.0]
+		"ball_rows": return [x, y, x + 5.0, y]
+		"ball_chains": return [x, y, x + 8.0, y, 1.02, 0.9, 0.15, 0.4]
+		"reserve": return [c.x, c.x + 3, c.y, c.y + 3]
+	return []
 
 func _tool_kind() -> String:
 	for t in DRAW_TOOLS:
@@ -868,7 +970,7 @@ func _draw_entry(kind: String, e: Array, alpha: float, selected: bool) -> void:
 			_canvas.draw_line(c - Vector2(float(e[2]), 0) * z, c + Vector2(float(e[3]), 0) * z, col, maxf(2.0, z * 0.3))
 		"crate_chains", "ramps", "ball_rows", "ball_chains":
 			var a := Vector2(float(e[0]), float(e[1]))
-			var b := Vector2(float(e[2]), float(e[3])) if float(e[2]) >= 0.0 else a + Vector2(0, 4)
+			var b := Vector2(float(e[2]), float(e[3])) if float(e[2]) >= 0.0 else a + Vector2(0, float(e[3]))
 			_canvas.draw_line(_pan + a * z, _pan + b * z, col, maxf(2.0, z * 0.3))
 		"movers":
 			var r := _r(Rect2(float(e[0]), float(e[1]), float(e[2]), 1.0))
@@ -895,3 +997,115 @@ func _draw_entry(kind: String, e: Array, alpha: float, selected: bool) -> void:
 	if selected:
 		for r in _rects(kind, e):
 			_canvas.draw_rect(_r(r).grow(3.0), Color(1, 1, 1), false, 2.0)
+
+# --- Eigenschaften ----------------------------------------------------------
+
+## Eigenschaften-Leiste für das ausgewählte Objekt neu aufbauen.
+func _rebuild_props() -> void:
+	if _props == null:
+		return
+	for c in _props.get_children():
+		c.queue_free()
+	var head := Label.new()
+	head.add_theme_font_size_override("font_size", 15)
+	head.add_theme_color_override("font_color", Color(1.0, 0.82, 0.4))
+	_props.add_child(head)
+	if _selected.is_empty():
+		head.text = "Eigenschaften"
+		var hint := Label.new()
+		hint.text = "Mit „Auswählen“ ein Objekt anklicken, um seine Werte einzustellen."
+		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		hint.add_theme_font_size_override("font_size", 12)
+		hint.add_theme_color_override("font_color", Color(0.6, 0.65, 0.72))
+		_props.add_child(hint)
+		return
+	var kind: String = _selected[0]
+	var e: Array = lay[kind][int(_selected[1])]
+	head.text = "Eigenschaften: %s" % _kind_name(kind)
+	for f in FIELDS.get(kind, []):
+		_props.add_child(_field_row(kind, e, f))
+	var del := _button("Objekt entfernen", func(): _delete_selected())
+	_props.add_child(del)
+
+func _field_row(kind: String, e: Array, f: Array) -> Control:
+	var idx: int = f[0]
+	var row := HBoxContainer.new()
+	var l := Label.new()
+	l.text = str(f[1])
+	l.add_theme_font_size_override("font_size", 13)
+	l.custom_minimum_size = Vector2(150, 0)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	row.add_child(l)
+	var type: String = f[2]
+	var cur = e[idx] if idx < e.size() else null
+	match type:
+		"i", "f":
+			var sb := SpinBox.new()
+			sb.min_value = float(f[3])
+			sb.max_value = float(f[4])
+			sb.step = float(f[5])
+			sb.allow_lesser = true
+			sb.allow_greater = true
+			sb.custom_minimum_size = Vector2(110, 0)
+			sb.value = float(cur) if cur != null else _field_default(kind, idx)
+			sb.value_changed.connect(func(v): _set_field(idx, int(v) if type == "i" else v))
+			row.add_child(sb)
+		"b":
+			var cb := CheckBox.new()
+			cb.button_pressed = cur != null and int(cur) == 1
+			cb.toggled.connect(func(on): _set_field(idx, 1 if on else 0))
+			row.add_child(cb)
+		"s":
+			var ob := OptionButton.new()
+			for st in ROTATOR_STYLES:
+				ob.add_item(st)
+			ob.select(maxi(0, ROTATOR_STYLES.find(str(cur if cur != null else "bar"))))
+			ob.item_selected.connect(func(i): _set_field(idx, ROTATOR_STYLES[i]))
+			row.add_child(ob)
+		"a":
+			var le := LineEdit.new()
+			le.custom_minimum_size = Vector2(110, 0)
+			le.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var parts: Array[String] = []
+			for v in (cur if cur is Array else []):
+				parts.append(str(v))
+			le.text = ", ".join(parts)
+			le.tooltip_text = "Kommagetrennte Zahlen"
+			le.text_submitted.connect(func(t): _set_field(idx, _parse_list(t)))
+			le.focus_exited.connect(func(): _set_field(idx, _parse_list(le.text)))
+			row.add_child(le)
+	return row
+
+func _field_default(kind: String, idx: int) -> float:
+	var tpl := _template(kind, Vector2i(0, 0))
+	if idx < tpl.size() and (tpl[idx] is float or tpl[idx] is int):
+		return float(tpl[idx])
+	return 0.0
+
+func _parse_list(t: String) -> Array:
+	var out: Array = []
+	for part in t.split(",", false):
+		var p := part.strip_edges()
+		if p.is_valid_float():
+			out.append(float(p))
+	return out
+
+## Einen Wert des ausgewählten Objekts setzen (fehlende Felder werden mit
+## den Standardwerten der Vorlage aufgefüllt).
+func _set_field(idx: int, value) -> void:
+	if _selected.is_empty():
+		return
+	var kind: String = _selected[0]
+	var e: Array = lay[kind][int(_selected[1])]
+	if idx < e.size() and e[idx] == value:
+		return
+	if value is Array and (value as Array).is_empty():
+		return
+	_push_undo()
+	var tpl := _template(kind, Vector2i(0, 0))
+	while e.size() <= idx:
+		e.append(tpl[e.size()] if e.size() < tpl.size() else 0)
+	e[idx] = value
+	_dirty = true
+	_validate()
+	_canvas.queue_redraw()
