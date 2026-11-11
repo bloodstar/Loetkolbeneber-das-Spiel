@@ -11,7 +11,7 @@ extends Node3D
 
 const CAMERA_DISTANCE: float = 3000.0
 # Voxel-Schwein etwas größer als die Kollisionsbox, damit es gut lesbar ist.
-const PIG_SCALE: float = 1.3
+const PIG_SCALE: float = 1.45
 # Sichtbare Dicke der Stege.
 const STEG_VIS: float = 14.0
 
@@ -20,7 +20,8 @@ var cam: Camera3D
 var _pigs: Dictionary = {}        # Player-Instanz-ID -> VoxelPig
 var _crates: Dictionary = {}      # Vector2i -> Node3D
 var _shadow_mat: StandardMaterial3D
-var _shadow_mesh: CylinderMesh
+var _shadow_mesh: PlaneMesh
+var _contact_mat: StandardMaterial3D
 var _rng := RandomNumberGenerator.new()
 
 func setup(map_data: Dictionary, grid: ArenaGrid, cam2d: Camera2D) -> void:
@@ -37,42 +38,44 @@ func setup(map_data: Dictionary, grid: ArenaGrid, cam2d: Camera2D) -> void:
 	cam.far = CAMERA_DISTANCE * 2.0
 	add_child(cam)
 	cam.current = true
-	_shadow_mesh = CylinderMesh.new()
-	_shadow_mesh.top_radius = 12.0
-	_shadow_mesh.bottom_radius = 12.0
-	_shadow_mesh.height = 0.5
+	_shadow_mesh = PlaneMesh.new()
+	_shadow_mesh.size = Vector2(46.0, 46.0)
 	_shadow_mat = StandardMaterial3D.new()
 	_shadow_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_shadow_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_shadow_mat.albedo_color = Color(0, 0, 0, 0.3)
+	_shadow_mat.albedo_texture = ArenaTextures.get_soft_blob()
+	_shadow_mat.albedo_color = Color(0.02, 0.04, 0.1, 0.55)
 
-func _build_environment(map_data: Dictionary) -> void:
+func _build_environment(_map_data: Dictionary) -> void:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	var floor_col: Color = map_data.get("floor", Color(0.4, 0.6, 0.3))
-	env.background_color = Color(0.03, 0.035, 0.045)
+	env.background_color = Color(0.035, 0.045, 0.07)
+	# Kühles Himmelslicht von überall, warme Sonne von schräg oben: Schatten
+	# werden bläulich statt schwarz, beleuchtete Flächen warm.
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.72, 0.76, 0.9)
-	env.ambient_light_energy = 0.38
+	env.ambient_light_color = Color(0.68, 0.75, 0.96)
+	env.ambient_light_energy = 0.7
 	# Leichtes Glühen nur für helle, leuchtende Teile (Zauberstab, Randlinie).
 	env.glow_enabled = true
-	env.glow_intensity = 0.6
+	env.glow_intensity = 0.7
 	env.glow_bloom = 0.0
-	env.glow_hdr_threshold = 1.2
+	env.glow_hdr_threshold = 1.1
 	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
-	# Mehr Kontrast und Sättigung, damit Boden, Mauern und Figuren klar trennen.
 	env.adjustment_enabled = true
-	env.adjustment_contrast = 1.18
-	env.adjustment_saturation = 1.15
+	env.adjustment_contrast = 1.1
+	env.adjustment_saturation = 1.12
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
 	var sun := DirectionalLight3D.new()
-	sun.light_energy = 1.0
+	sun.light_color = Color(1.0, 0.94, 0.82)
+	sun.light_energy = 1.35
 	sun.shadow_enabled = true
+	sun.shadow_opacity = 0.8
+	sun.shadow_blur = 1.2
 	sun.directional_shadow_max_distance = CAMERA_DISTANCE * 2.0
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
-	sun.rotation_degrees = Vector3(-58.0, -35.0, 0.0)
+	sun.rotation_degrees = Vector3(-52.0, -38.0, 0.0)
 	add_child(sun)
 
 func _voxel_multimesh(count: int, size: Vector3, mat: Material) -> MultiMeshInstance3D:
@@ -99,21 +102,15 @@ func _tex_kind(map_data: Dictionary, key: String, fallback: String) -> String:
 func _build_floor(map_data: Dictionary, grid: ArenaGrid) -> void:
 	var t := grid.tile
 	var floor_col: Color = map_data.get("floor", Color(0.4, 0.6, 0.3))
-	var mat := ArenaTextures.make_material(_tex_kind(map_data, "floor_tex", "grass"), floor_col, t)
+	var mat := ArenaTextures.make_floor_material(_tex_kind(map_data, "floor_tex", "grass"), floor_col, t)
 	var mmi := _voxel_multimesh(grid.width * grid.height, Vector3(t, 10.0, t), mat)
-	# Größere Flecken (4x4 Kacheln) etwas heller/dunkler für mehr Kontrast.
-	var patch := FastNoiseLite.new()
-	patch.seed = 77
-	patch.frequency = 0.09
 	var i := 0
 	for y in range(grid.height):
 		for x in range(grid.width):
 			var xf := Transform3D(Basis(), Vector3((x + 0.5) * t, -5.0, (y + 0.5) * t))
 			mmi.multimesh.set_instance_transform(i, xf)
-			var f := 0.94 + patch.get_noise_2d(x, y) * 0.16
-			if (x + y) % 2 == 0:
-				f -= 0.05
-			mmi.multimesh.set_instance_color(i, _tint(f, 0.03))
+			# Die Farbvariation macht das Bodenmaterial (weich, ohne Raster).
+			mmi.multimesh.set_instance_color(i, Color.WHITE)
 			i += 1
 	add_child(mmi)
 
@@ -132,7 +129,7 @@ func _build_blocks(map_data: Dictionary, grid: ArenaGrid) -> void:
 			var span: Vector2 = b
 			var levels := int(round((span.y - span.x) / ArenaMode.BAND_H))
 			for k in range(levels):
-				var f := 1.1 if k == levels - 1 else 0.92 - 0.05 * float(levels - 1 - k)
+				var f := 1.0 if k == levels - 1 else 0.9 - 0.05 * float(levels - 1 - k)
 				var entry := [Vector3((cell.x + 0.5) * t, span.x + (k + 0.5) * ArenaMode.BAND_H, (cell.y + 0.5) * t), f]
 				if span.y <= ArenaMode.BAND_H:
 					covers.append(entry)
@@ -147,6 +144,7 @@ func _build_blocks(map_data: Dictionary, grid: ArenaGrid) -> void:
 			mmi.multimesh.set_instance_transform(i, Transform3D(Basis(), list[i][0]))
 			mmi.multimesh.set_instance_color(i, _tint(list[i][1], 0.04))
 		add_child(mmi)
+	_build_contact_shadows(grid, walls + covers)
 	_build_segments(grid, wall_mat)
 	_build_terrain(map_data, grid)
 	_build_stege(grid)
@@ -162,6 +160,53 @@ func _build_blocks(map_data: Dictionary, grid: ArenaGrid) -> void:
 		crate.position = Vector3((cell.x + 0.5) * t, ArenaMode.BAND_H * 0.5, (cell.y + 0.5) * t)
 		add_child(crate)
 		_crates[cell] = crate
+		var skirt := MeshInstance3D.new()
+		var pm := PlaneMesh.new()
+		pm.size = Vector2(t * 2.0, t * 2.0)
+		skirt.mesh = pm
+		skirt.material_override = _contact_material()
+		skirt.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		skirt.position = Vector3(0.0, -ArenaMode.BAND_H * 0.5 + 0.5, 0.0)
+		crate.add_child(skirt)
+
+## Kontaktschatten: weicher dunkler Saum am Fuß jedes Blocks. Erdet die
+## Würfel auf dem Boden (ersetzt Ambient Occlusion, die der mobile Renderer
+## nicht hat).
+func _contact_material() -> StandardMaterial3D:
+	if _contact_mat == null:
+		_contact_mat = StandardMaterial3D.new()
+		_contact_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_contact_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_contact_mat.albedo_texture = ArenaTextures.get_soft_square()
+		_contact_mat.albedo_color = Color(0.02, 0.04, 0.1, 0.3)
+	return _contact_mat
+
+func _build_contact_shadows(grid: ArenaGrid, entries: Array) -> void:
+	var t := grid.tile
+	var cells := {}
+	for e in entries:
+		var pos: Vector3 = e[0]
+		if pos.y < ArenaMode.BAND_H:
+			cells[Vector2(pos.x, pos.z)] = true
+	for cell in grid.terrain.keys():
+		cells[Vector2((cell.x + 0.5) * t, (cell.y + 0.5) * t)] = true
+	if cells.is_empty():
+		return
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(t * 2.0, t * 2.0)
+	mm.mesh = pm
+	mm.instance_count = cells.size()
+	var i := 0
+	for c in cells.keys():
+		mm.set_instance_transform(i, Transform3D(Basis(), Vector3(c.x, 0.5, c.y)))
+		i += 1
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.material_override = _contact_material()
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mmi)
 
 func _floor_material(map_data: Dictionary, grid: ArenaGrid) -> Material:
 	var floor_col: Color = map_data.get("floor", Color(0.4, 0.6, 0.3))
@@ -308,13 +353,22 @@ func _build_segments(grid: ArenaGrid, wall_mat: Material) -> void:
 		var length := a.distance_to(b) + thick
 		var mid := (a + b) * 0.5
 		var angle := (b - a).angle()
+		if bottom < 1.0:
+			var skirt := MeshInstance3D.new()
+			var pm := PlaneMesh.new()
+			pm.size = Vector2(length + thick * 2.0, thick * 3.0)
+			skirt.mesh = pm
+			skirt.material_override = _contact_material()
+			skirt.position = Vector3(mid.x, 0.5, mid.y)
+			skirt.rotation.y = -angle
+			add_child(skirt)
 		for k in range(levels):
 			var mi := MeshInstance3D.new()
 			var bm := BoxMesh.new()
 			bm.size = Vector3(length, ArenaMode.BAND_H, thick)
 			mi.mesh = bm
 			var mat := wall_mat.duplicate() as StandardMaterial3D
-			var f := 1.1 if k == levels - 1 else 0.92 - 0.05 * float(levels - 1 - k)
+			var f := 1.0 if k == levels - 1 else 0.9 - 0.05 * float(levels - 1 - k)
 			mat.vertex_color_use_as_albedo = false
 			mat.albedo_color = Color(f, f, f)
 			mi.material_override = mat
@@ -423,7 +477,7 @@ func _sync_players(delta: float) -> void:
 				var pc = p.sprite.get("pants_color")
 				if pc is Color:
 					pants = pc
-			pig.build(fur, pants, Global.get_team_color(p.team_id), 1.0)
+			pig.build(fur, pants, Global.get_team_color(p.team_id), 1.0, Global.get_player_hero_id(p.player_index), p.wand_tip_color)
 			var shadow := MeshInstance3D.new()
 			shadow.name = "Shadow"
 			shadow.mesh = _shadow_mesh
@@ -440,14 +494,27 @@ func _sync_players(delta: float) -> void:
 		var aim := p.aim_direction
 		if aim.length_squared() > 0.001:
 			pig.rotation.y = -atan2(aim.y, aim.x)
-		pig.animate(delta, p.velocity.length() > 30.0, not p.arena_grounded, p.modulate.a)
+		pig.animate(delta, p.velocity.length() > 30.0, not p.arena_grounded, p.modulate.a, p.velocity, pig.rotation.y, p.arena_vz)
+		# Schuss und Treffer aus dem Spielerzustand ablesen (läuft so auch auf
+		# Clients, die nur Snapshots bekommen).
+		var pool: float = p.current_health + p.current_shield
+		var last: Dictionary = pig.get_meta("last", {})
+		if not last.is_empty():
+			if pool < float(last["pool"]) - 0.5:
+				pig.flash()
+			if p.current_ammo < int(last["ammo"]) or p.fire_timer > float(last["fire"]) + 0.01:
+				pig.recoil(1.0)
+		pig.set_meta("last", {"pool": pool, "ammo": p.current_ammo, "fire": p.fire_timer})
 		var shadow_node := pig.get_meta("shadow") as MeshInstance3D
 		if shadow_node:
 			shadow_node.visible = pig.visible
 			var ground := 0.0
 			if ArenaMode.grid:
 				ground = ArenaMode.grid.support_height(pos, z, Vector2(8, 8), 0.5)
-			shadow_node.global_position = Vector3(pos.x, ground + 0.6, pos.y)
+			shadow_node.global_position = Vector3(pos.x, ground + 0.8, pos.y)
+			# Je höher die Figur über dem Boden, desto kleiner und blasser.
+			var lift := clampf((z - ground) / 120.0, 0.0, 1.0)
+			shadow_node.scale = Vector3.ONE * pig.scale.x / PIG_SCALE * lerpf(1.0, 0.6, lift)
 	for pid in _pigs.keys():
 		if not seen.has(pid):
 			var pig: VoxelPig = _pigs[pid]
