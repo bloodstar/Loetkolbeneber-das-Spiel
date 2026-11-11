@@ -252,7 +252,8 @@ static func _sand(img: Image, base: Color, rng: RandomNumberGenerator) -> void:
 			_put(img, x + 1, y, _tone(base, 0.76))
 			_put(img, x + 1, y - 1, _tone(base, 1.12))
 
-static func _stones(img: Image, base: Color, rng: RandomNumberGenerator, cells: int, gap: float, spread: float) -> void:
+## `relief`: 1 = kräftige Fugen und Kanten (Felswand), kleiner = flacher (Pflaster).
+static func _stones(img: Image, base: Color, rng: RandomNumberGenerator, cells: int, gap: float, spread: float, relief: float = 1.0) -> void:
 	var s := img.get_width()
 	var pts := _jitter_points(s, cells, rng)
 	var shades: Array[float] = []
@@ -265,19 +266,19 @@ static func _stones(img: Image, base: Color, rng: RandomNumberGenerator, cells: 
 			var edge: float = cell[1]
 			var f: float = shades[cell[0]]
 			if edge < gap:
-				img.set_pixel(x, y, _tone(base, 0.6))
+				img.set_pixel(x, y, _tone(base, 1.0 - 0.4 * relief))
 				continue
 			# Licht von oben links: Kante dort hell, gegenüber dunkel
 			var up: Array = vor[posmod(y - 1, s) * s + posmod(x - 1, s)]
 			var down: Array = vor[posmod(y + 1, s) * s + posmod(x + 1, s)]
 			if up[0] != cell[0] or up[1] < gap:
-				f *= 1.13
+				f *= 1.0 + 0.13 * relief
 			elif down[0] != cell[0] or down[1] < gap:
-				f *= 0.86
+				f *= 1.0 - 0.14 * relief
 			img.set_pixel(x, y, _tone(base, f))
 
 static func _cobble(img: Image, base: Color, rng: RandomNumberGenerator) -> void:
-	_stones(img, base, rng, 10, 1.3, 0.1)
+	_stones(img, base, rng, 10, 1.0, 0.045, 0.45)
 
 static func _rock(img: Image, base: Color, rng: RandomNumberGenerator) -> void:
 	_stones(img, base, rng, 3, 0.9, 0.13)

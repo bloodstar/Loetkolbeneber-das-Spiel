@@ -11,6 +11,10 @@ var theme_id: String = "storybook"
 var variant: String = "forest"
 var accent: Color = Color.WHITE
 
+# Farbe des Himmels auf Höhe des Horizonts. LevelDepth blendet die nach
+# hinten laufenden Seitenflächen dorthin aus (Luftperspektive).
+var horizon_color: Color = Color(0.1, 0.14, 0.2)
+
 var _canvas_size: Vector2 = Vector2.ZERO
 var _map_size: Vector2 = Vector2.ZERO
 var _map_rect: Rect2 = Rect2()
@@ -97,6 +101,7 @@ func _build_gradient() -> void:
 					Color(0.19, 0.38, 0.31, 1.0),
 					Color(0.55, 0.64, 0.45, 1.0),
 				])
+	horizon_color = gradient.colors[1].lerp(gradient.colors[2], 0.5)
 	var texture := GradientTexture2D.new()
 	texture.gradient = gradient
 	texture.width = 32
