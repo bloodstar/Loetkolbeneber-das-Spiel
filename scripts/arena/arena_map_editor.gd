@@ -15,9 +15,9 @@ signal test_requested(map_id: String)
 signal side_editor_requested
 
 const MIN_W := 12
-const MAX_W := 120
+const MAX_W := 160
 const MIN_H := 10
-const MAX_H := 80
+const MAX_H := 100
 const UNDO_LIMIT := 80
 const RAMP_CHARS := {"E": ">", "W": "<", "N": "^", "S": "v"}
 

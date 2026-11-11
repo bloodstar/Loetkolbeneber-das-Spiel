@@ -147,6 +147,12 @@ func _ready() -> void:
 		else:
 			arena_z = ArenaMode.MUZZLE_H
 	_build_trail()
+	if ArenaMode.active:
+		# Draufsicht: heller Boden statt dunklem Himmel. Mit normaler Mischung
+		# färbt der halbtransparente Schein den Rasen dunkel (sieht aus wie ein
+		# Schatten). Additiv leuchtet er wie in der Seitenansicht.
+		material = _arena_add_material()
+		trail.material = material
 	if not is_replica and (stun_duration > 0.0 or chain_lightning or lightning_zone):
 		_enable_lightning_trail()
 	
@@ -207,6 +213,7 @@ func _enable_lightning_trail() -> void:
 	_trail_glow.width = 8.0
 	_trail_glow.antialiased = true
 	_trail_glow.z_index = -3
+	_trail_glow.material = material
 	_trail_glow.joint_mode = Line2D.LINE_JOINT_ROUND
 	add_child(_trail_glow)
 	_update_trail_color()
@@ -241,6 +248,14 @@ func _draw() -> void:
 	draw_texture_rect(_glow_texture, Rect2(Vector2(-r, -r), Vector2(r, r) * 2.0), false, Color(1, 1, 1, ORB_GLOW_ALPHA))
 	draw_circle(Vector2.ZERO, ORB_RADIUS, Color(ORB_BODY_BOOST, ORB_BODY_BOOST, ORB_BODY_BOOST, 1.0))
 	draw_circle(Vector2.ZERO, ORB_CORE_RADIUS, Color(ORB_CORE_BOOST, ORB_CORE_BOOST, ORB_CORE_BOOST, 1.0))
+
+static var _add_material: CanvasItemMaterial
+
+static func _arena_add_material() -> CanvasItemMaterial:
+	if _add_material == null:
+		_add_material = CanvasItemMaterial.new()
+		_add_material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	return _add_material
 
 static func _make_glow_texture() -> GradientTexture2D:
 	var gradient := Gradient.new()
