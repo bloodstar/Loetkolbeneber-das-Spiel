@@ -28,7 +28,18 @@ uniform float far_scale = 0.94;
 void vertex() {
 	vec2 world = (MODEL_MATRIX * vec4(VERTEX, 0.0, 1.0)).xy;
 	vec2 back = center + (world - center) * far_scale;
-	world = mix(world, back, UV.x);
+	float depth = UV.x;
+	// UV.y = Winkel der Außennormale der Fläche. Zeigt sie von der Bildmitte
+	// weg, liegt die Fläche auf der abgewandten Seite: nicht zeichnen (auf die
+	// Vorderkante zusammenfalten). Sonst stünden rechts und links Wände über
+	// der Oberseite und die Plattform sähe aus wie eine Wanne.
+	if (UV.y < 50.0) {
+		vec2 n = mat2(MODEL_MATRIX[0].xy, MODEL_MATRIX[1].xy) * vec2(cos(UV.y), sin(UV.y));
+		if (dot(n, center - world) <= 0.0) {
+			depth = 0.0;
+		}
+	}
+	world = mix(world, back, depth);
 	VERTEX = (inverse(MODEL_MATRIX) * vec4(world, 0.0, 1.0)).xy;
 }
 void fragment() {
@@ -125,7 +136,7 @@ static func _append_faces(verts: PackedVector2Array, colors: PackedColorArray, u
 		for p in [points[0], points[i], points[i + 1]]:
 			verts.append(p)
 			colors.append(back_col)
-			uvs.append(Vector2(1.0, 0.0))
+			uvs.append(Vector2(1.0, 100.0))
 	for i in range(n):
 		var a := points[i]
 		var b := points[(i + 1) % n]
@@ -142,11 +153,11 @@ static func _append_faces(verts: PackedVector2Array, colors: PackedColorArray, u
 			shade = top_col.darkened(0.08).lerp(base.darkened(0.3), 1.0 + normal.y)
 		elif normal.y > 0.35:
 			shade = base.darkened(0.3).lerp(base.darkened(0.58), normal.y)
-		var far := shade.darkened(0.12).lerp(fog_color, 0.3) if is_top else shade.darkened(0.15).lerp(fog_color, 0.4)
+		var far := shade.lerp(fog_color, 0.12) if is_top else shade.darkened(0.12).lerp(fog_color, 0.3)
 		for item in [[a, 0.0], [b, 0.0], [b, 1.0], [a, 0.0], [b, 1.0], [a, 1.0]]:
 			verts.append(item[0])
 			colors.append(shade if item[1] == 0.0 else far)
-			uvs.append(Vector2(item[1], 0.0))
+			uvs.append(Vector2(item[1], normal.angle()))
 
 static func _make_mesh(verts: PackedVector2Array, colors: PackedColorArray, uvs: PackedVector2Array) -> ArrayMesh:
 	var arrays: Array = []
