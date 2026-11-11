@@ -118,7 +118,7 @@ func _resolve_kind(c: CardData) -> String:
 		return "dash"
 	if c.ability_cooldown_mult < 1.0 or c.ability_damage_mult != 1.0 \
 			or c.ability_radius_mult != 1.0 or c.ability_duration_mult != 1.0 \
-			or c.ability_range_mult != 1.0 or not c.ability_evolution.is_empty():
+			or c.ability_range_mult != 1.0 or c.wall_count_add > 0 or not c.ability_evolution.is_empty():
 		return "ability"
 	return "spark"
 

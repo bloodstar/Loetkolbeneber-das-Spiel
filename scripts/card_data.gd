@@ -27,7 +27,7 @@ extends Resource
 # Spieler die Grundkarte bereits besitzt. family_id gruppiert die Zweige.
 @export var parent_card_id: String = ""
 @export var family_id: String = ""
-@export var evolution_branch: String = "" # "A" oder "B"
+@export var evolution_branch: String = "" # "A", "B" oder "C"
 
 # Stat Modifiers
 @export var max_hp_mult: float = 1.0
@@ -155,6 +155,8 @@ extends Resource
 @export var ability_radius_mult: float = 1.0 # Wirkungsradius der Fähigkeit
 @export var ability_duration_mult: float = 1.0 # Dauer von Wolke, Feld, Singularität, Frost, Betäubung, Unverwundbarkeit
 @export var ability_range_mult: float = 1.0 # Teleport-, Sprung- bzw. Wurfweite
+# Druide: zusätzliche Wände, die gleichzeitig stehen dürfen.
+@export var wall_count_add: int = 0
 # Schaltet einen Evolutionseffekt der Fähigkeit frei, z. B. "ignis_napalm".
 # Die Effekte selbst sind in player.gd hinterlegt.
 @export var ability_evolution: String = ""

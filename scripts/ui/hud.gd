@@ -1159,6 +1159,8 @@ func _add_modifier_totals(p: Player) -> void:
 		rows.append(["FÄHIGKEIT DAUER", "x%.2f" % p.ability_duration_mult, ability])
 	if not is_equal_approx(p.ability_range_mult, 1.0):
 		rows.append(["FÄHIGKEIT REICHWEITE", "x%.2f" % p.ability_range_mult, ability])
+	if p.druid_max_walls > Player.DRUID_WALL_MAX_ACTIVE:
+		rows.append(["WÄNDE GLEICHZEITIG", "%d" % p.druid_max_walls, ability])
 	if not is_equal_approx(p.powerup_strength_mult, 1.0):
 		rows.append(["POWERUP-WIRKUNG", "x%.2f" % p.powerup_strength_mult, effect])
 	if p.powerup_pickup_range > 0.0:

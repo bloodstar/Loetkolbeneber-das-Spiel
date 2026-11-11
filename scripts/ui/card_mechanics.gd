@@ -228,6 +228,7 @@ static func _has_ability_effect(card: CardData) -> bool:
 		or card.ability_radius_mult != 1.0 \
 		or card.ability_duration_mult != 1.0 \
 		or card.ability_range_mult != 1.0 \
+		or card.wall_count_add > 0 \
 		or not card.ability_evolution.is_empty()
 
 ## Alle Bedingungen, unter denen die Karte im Draft angeboten wird

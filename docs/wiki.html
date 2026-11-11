@@ -435,7 +435,7 @@ online läuft die Runde weiter</td>
 </table>
 <hr />
 <h2 id="-helden">🐷 Helden</h2>
-<p>Es gibt <strong>7 Klassen</strong>. Jede hat eigene Werte, ein
+<p>Es gibt <strong>8 Klassen</strong>. Jede hat eigene Werte, ein
 Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am
 Kopf.</p>
 <table>
@@ -536,6 +536,19 @@ kürzestes Feuerintervall</td>
 260 px mit Treffer, 0,9 s unverwundbar</td>
 <td style="text-align: left;">Ninja-Stirnband</td>
 </tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Druide</strong></td>
+<td style="text-align: left;">Grove Warden</td>
+<td style="text-align: right;">105</td>
+<td style="text-align: right;">295</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: left;"><strong>Wurzelkraft</strong>: Regeneriert
+ständig 2 HP/s</td>
+<td style="text-align: left;"><strong>Wurzelwall</strong>: Rankenwand
+quer zur Zielrichtung (108 px, 5 s, 150 HP), blockt Bewegung und
+Kugeln</td>
+<td style="text-align: left;">Blätterkranz mit Geweih</td>
+</tr>
 </tbody>
 </table>
 <p>Die genauen Zahlen der Fähigkeiten stehen im Spiel unter
@@ -597,6 +610,12 @@ einstellbar).</p>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">0,14 s</td>
 <td style="text-align: right;">1,05 s</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Druide</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0,24 s</td>
+<td style="text-align: right;">1,2 s</td>
 </tr>
 </tbody>
 </table>
@@ -1018,6 +1037,85 @@ selbst.</li>
 <li>Team-Punkte sind die Summe der Spielerpunkte. Nach einer verlorenen
 Runde draften alle Mitglieder der Verliererteams.</li>
 <li>Teamfarben: ROT, BLAU, GRÜN.</li>
+</ul>
+<h3 id="spielart-arena-draufsicht-beta">Spielart: Arena (Draufsicht,
+Beta)</h3>
+<p>Im Tab <strong>Regeln</strong> unter <em>Spielmodus &amp;
+Spielfeld</em> wählt der Host die <strong>Spielart</strong>:
+<em>Seitenansicht</em> (klassisch) oder <em>Arena (Draufsicht)</em>. Die
+Spielart gilt für alle Teammodi oben, wird online übertragen und im
+Loadout gespeichert.</p>
+<ul>
+<li><strong>Ansicht:</strong> schräg von oben in einfachem Voxel-3D.
+Effekte, Zonen, Powerups und Kugeln liegen als 2D-Ebene passgenau auf
+dem Boden.</li>
+<li><strong>Steuerung:</strong> <code>W</code> <code>A</code>
+<code>S</code> <code>D</code> laufen in alle Richtungen, die Maus zielt,
+<code>Leertaste</code> springt. Alle anderen Tasten bleiben gleich.</li>
+<li><strong>Höhe:</strong> Springen ist ein echter Sprung in die Höhe.
+Niedrige Deckung (eine Schicht) kann man überspringen und darauf stehen,
+halbhohe und hohe Mauern nur mit viel Sprungkraft. Kugeln fliegen in
+Schusshöhe und fliegen über Deckung, wenn der Schütze höher steht.
+Hinter Mauern sieht man die Schweine als Umriss in Teamfarbe.</li>
+<li><strong>Karten:</strong> Alle Karten bleiben gleich. Sprungkraft,
+Luftsprünge und Schwerkraft wirken auf die Sprunghöhe.
+<em>Projektil-Schwerkraft</em> (Leichtes/Schweres Geschoss, Mörser) hat
+in der Arena noch keine Wirkung, Kugeln fliegen flach.</li>
+<li><strong>Kamera:</strong> fester Zoom, sie zoomt nicht heraus. Sie
+folgt dem eigenen Schwein (lokal zu zweit: beiden) und bleibt innerhalb
+der Karte. Gegner außerhalb des Bildes zeigt ein Randpfeil in
+Teamfarbe.</li>
+<li><strong>Erhöhungen, Rampen, Stege:</strong> Erhöhungen haben oben
+Boden und seitlich Felswände. Rampen führen ohne Sprung hinauf, ihre
+höheren Teile kann man von der Seite nicht betreten. Unter Holzstegen
+läuft man durch, oben läuft man darüber. Wer von einer Kante läuft,
+fällt herunter.</li>
+<li><strong>Maps:</strong> zufällig eine von acht Arenen. Kompakt:
+<em>Burghof</em>, <em>Kistenlager</em>, <em>Ruinen</em>. Groß und offen
+(etwa die vierfache Fläche): <em>Weite Steppe</em>, <em>Marktplatz</em>,
+<em>Canyon</em>, <em>Hochplateau</em> (große Erhöhung in der Mitte mit
+vier Rampen, erhöhte Randplattform), <em>Stegwerk</em> (fünf Türme mit
+Holzstegen). Wände gibt es gerade und schräg, Boden und Mauern haben
+32×32-Pixeltexturen. Die Levelauswahl der Seitenansicht gilt hier
+nicht.</li>
+<li><strong>Karteneditor:</strong> <em>Optionen → KARTENEDITOR</em>.
+Links malen, rechts radieren, Mausrad zoomt, mittlere Maustaste oder
+Leertaste + Ziehen verschiebt. Werkzeuge: Pinsel (B, 1×1 bis 5×5),
+Rechteck (R), Füllen (F), schräge Wand (W, von Ecke zu Ecke ziehen,
+Rechtsklick löscht). Kacheln: Boden, Deckung, Halbmauer, Mauer, Kiste,
+Spawn, Erhöhung 1 bis 3, Steg, Rampe (Richtung wählen; eine Reihe
+gleicher Pfeile endet an der Erhöhung). Symmetrie spiegelt links/rechts,
+oben/unten, vierfach oder um den Mittelpunkt, Rampen drehen mit. Strg+Z
+/ Strg+Y, Strg+S speichert. Die Prüfung zeigt, ob alle Spawns erreichbar
+sind. Vorlagen laden eine eingebaute Arena als Kopie. Gespeichert wird
+unter <code>user://arena_maps/</code>. Mit <em>Im Zufallspool</em> kommt
+die Karte in die Arena-Auswahl, online schickt der Host sie an alle.
+<strong>TESTEN</strong> speichert und startet eine Runde auf der Karte
+mit den Spielern und Bots der letzten Lobby; ESC → Hauptmenü beendet den
+Test.</li>
+<li><strong>Seitenansicht-Level im Editor:</strong> Im Karteneditor
+führt <em>Zum Seitenansicht-Editor</em> zu den klassischen Leveln. Jedes
+Level lässt sich laden und ändern: Plattformen, Einweg-Stege,
+Kistenblöcke und Gruben waagrecht ziehen, Wände als Rechteck, Stacheln,
+Sprungfedern und Mystery-Blöcke anklicken, Röhrenpaare mit zwei Klicks.
+Mit <em>Objekt setzen</em> kommen Wippen, Kettenplattformen,
+Fahrplattformen, Drehbalken, Häuser, Pyramiden, Treppen, Kistenketten,
+Gitterzäune, Schrägen und Kugel-Objekte dazu. Ein ausgewähltes Objekt
+zeigt unter <em>Eigenschaften</em> alle Werte (z. B. Kettenlänge,
+Wippenbreite, Drehtempo und Stil, Kistengrößen); Verschieben per Ziehen,
+Löschen per Rechtsklick oder Entf. Gespiegelte Level zeigen die
+automatische Spiegelung blass. <em>Speichern</em> legt eine geänderte
+Fassung an, die das Spiel statt des eingebauten Bauplans nutzt;
+<em>Original</em> stellt ihn wieder her. <em>Als neues Level</em> legt
+ein eigenes Level an, das im Levels-Tab der Lobby erscheint.
+<em>Zufällige Extras</em> schaltet die zufälligen Zusatzplattformen,
+Kistenhaufen und Eisflächen des Levels ab. Gespeichert wird unter
+<code>user://side_levels/</code>, online schickt der Host den Bauplan
+vor jeder Runde an alle.</li>
+<li><strong>Runden-Modifier:</strong> nur Sturmwind, Mondgravitation,
+Schwerewelt, Mini-Chaos, Schadensrausch, Turboschweine, Luftakrobatik,
+Regeneration, Startschild und Zone. Die übrigen sind in der Arena
+vorerst aus.</li>
 </ul>
 <hr />
 <h2 id="-karten-draft">🃏 Karten-Draft</h2>
@@ -1448,6 +1546,73 @@ Grundkarte, und nur ein Zweig ist wählbar.</p>
 </tr>
 </tbody>
 </table>
+<p><strong>Druide (Wurzelwall)</strong> hat statt 3 Klassen- und 4
+Fähigkeitskarten 4 Wandkarten plus 3 Evolutionen:</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Karte</th>
+<th style="text-align: left;">Seltenheit</th>
+<th style="text-align: left;">Wirkung</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Wurzelwerk</strong></td>
+<td style="text-align: left;">Uncommon</td>
+<td style="text-align: left;">Wände +30 % größer</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Immergrün</strong></td>
+<td style="text-align: left;">Uncommon</td>
+<td style="text-align: left;">Wände halten 40 % länger</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Schnellwuchs</strong></td>
+<td style="text-align: left;">Uncommon</td>
+<td style="text-align: left;">−25 % Fähigkeits-Abklingzeit</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Wildwuchs</strong>
+(Grundkarte)</td>
+<td style="text-align: left;">Rare</td>
+<td style="text-align: left;">+1 Wand gleichzeitig</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">↳ A <strong>Elementarwand</strong></td>
+<td style="text-align: left;">Epic</td>
+<td style="text-align: left;">Gegner, die eine deiner Wände berühren,
+bekommen deine Waffeneffekte ab (Gift, Feuer, Frost, Blitz; höchstens
+alle 0,6 s pro Gegner). Ohne Elementeffekt vergiften die Dornen (2
+Stapel).</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">↳ B <strong>Urwald</strong></td>
+<td style="text-align: left;">Epic</td>
+<td style="text-align: left;">Wände halten 50 % länger, zusammen mit
+Wildwuchs +4 Wände gleichzeitig (5 insgesamt)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">↳ C <strong>Lebensborke</strong></td>
+<td style="text-align: left;">Epic</td>
+<td style="text-align: left;">Berührst du deine Wand, heilt sie dich um
+12 HP/s</td>
+</tr>
+</tbody>
+</table>
+<p>So funktioniert die Wand: Sie wächst 62 px vor dem Druiden quer zur
+Zielrichtung. Zielst du in der Seitenansicht eher waagerecht, steht sie
+senkrecht auf dem Boden darunter; schräg oder nach oben gezielt liegt
+sie entsprechend gedreht in der Luft (z. B. als Dach oder Trittstufe).
+Sie hält Kugeln und Spieler aller Teams auf, man kann auf ihr stehen.
+Kugeln und Nahkampf beschädigen sie, Durchschlag geht wie durch
+zerstörbare Blöcke hindurch. Wer beim Aufbau in ihr steht, wird zur
+Seite geschoben. Ist das Limit erreicht, zerfällt die älteste Wand.
+<em>Fähigkeitsgröße</em> verlängert die Wand, <em>Fähigkeitsdauer</em>
+verlängert ihre Standzeit, <em>Fähigkeitsschaden</em> (Kraftladung)
+erhöht ihre HP und die Stärke von Elementarwand und Lebensborke. In der
+Arena ist die Wand 108 px (3 Höhenbänder) hoch, also nicht
+überspringbar, und wird als 3D-Block gezeigt.</p>
 <p><strong>Für alle Helden:</strong> <strong>Weitstrahler</strong> (+25
 % Fähigkeitsgröße) mit Evolution <strong>Flächenbrecher</strong> (+50 %)
 und <strong>Kraftladung</strong> (+25 % Fähigkeitsschaden) mit Evolution

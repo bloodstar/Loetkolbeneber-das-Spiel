@@ -124,6 +124,27 @@ const BASTION_PULSE_DAMAGE: float = 7.0
 const BASTION_PULSE_KNOCKBACK: float = 220.0
 const PHANTOM_CUT_WIDTH: float = 55.0
 const PHANTOM_MARK_STUN: float = 0.7
+# Druide: Wurzelwall. Eine Rankenwand quer zur Zielrichtung (siehe DruidWall).
+# Länge skaliert mit ability_radius_mult ("Größe"), Dauer mit
+# ability_duration_mult, Wand-HP mit ability_damage_mult.
+const DRUID_WALL_LENGTH: float = 108.0
+const DRUID_WALL_THICKNESS: float = 22.0
+const DRUID_WALL_DISTANCE: float = 62.0
+const DRUID_WALL_DURATION: float = 5.0
+const DRUID_WALL_HP: float = 150.0
+const DRUID_WALL_MAX_ACTIVE: int = 1
+# Seitenansicht: Sucht so weit unter der Wand nach Boden, um sie daraufzustellen.
+const DRUID_WALL_FLOOR_SNAP: float = 90.0
+# Druiden-Passiv "Wurzelkraft": Lebensregeneration pro Sekunde.
+const DRUID_PASSIVE_REGEN: float = 2.0
+# Druiden-Evolutionen (Karten, nicht Teil der Grundfähigkeit).
+const DRUID_MAX_WALLS: int = 6
+const DRUID_ELEMENT_INTERVAL: float = 0.6
+const DRUID_ELEMENT_POISON_STACKS: int = 2
+const DRUID_ELEMENT_BURN_STACKS: int = 2
+const DRUID_ELEMENT_FREEZE: float = 0.8
+const DRUID_ELEMENT_STUN: float = 0.25
+const DRUID_LIFEBARK_HPS: float = 12.0
 const POISON_TICK_INTERVAL: float = 0.8
 const SHIELD_REGEN_PER_SEC: float = 15.0
 # Lebensregeneration startet sofort, auch direkt nach einem Treffer. Der Schild
@@ -321,6 +342,7 @@ var ability_range_mult: float = 1.0
 var ability_evolutions: Array[String] = []
 var heal_field_pos: Vector2 = Vector2.ZERO       # Bastion: Ort des Heilfelds
 var blade_echo_timer: float = 0.0                # Klinge: verzögerter Echowirbel
+var druid_max_walls: int = 1                     # Druide: gleichzeitige Wände
 
 # Status Effects
 var poison_ticks_left: int = 0
@@ -647,6 +669,7 @@ func apply_stats() -> void:
 	var ab_radius_mult = 1.0
 	var ab_duration_mult = 1.0
 	var ab_range_mult = 1.0
+	var wall_add := 0
 	var pw_strength_add := 0.0
 	var pw_range_tiles := 0.0
 	ability_evolutions.clear()
@@ -711,6 +734,7 @@ func apply_stats() -> void:
 		ab_radius_mult *= c.ability_radius_mult
 		ab_duration_mult *= c.ability_duration_mult
 		ab_range_mult *= c.ability_range_mult
+		wall_add += c.wall_count_add
 		if not c.ability_evolution.is_empty() and not ability_evolutions.has(c.ability_evolution):
 			ability_evolutions.append(c.ability_evolution)
 		shield_regen_stack *= c.shield_regen_mult
@@ -846,6 +870,7 @@ func apply_stats() -> void:
 	ability_radius_mult = clampf(ab_radius_mult, 0.5, 2.5)
 	ability_duration_mult = clampf(ab_duration_mult, 0.5, 3.0)
 	ability_range_mult = clampf(ab_range_mult, 0.5, 2.5)
+	druid_max_walls = clampi(DRUID_WALL_MAX_ACTIVE + wall_add, 1, DRUID_MAX_WALLS)
 	powerup_strength_mult = 1.0 + clampf(pw_strength_add, 0.0, 3.0)
 	powerup_pickup_range = clampf(pw_range_tiles, 0.0, 10.0) * POWERUP_PICKUP_TILE
 	blade_echo_timer = 0.0
@@ -857,6 +882,9 @@ func apply_stats() -> void:
 	if hero.id == "bastion":
 		shield_regen_mult *= 2.0
 	hp_regen = hp_regen_total
+	# Druiden-Passive "Wurzelkraft": ständige Lebensregeneration.
+	if hero.id == "druid":
+		hp_regen += DRUID_PASSIVE_REGEN
 	hp_regen_always = hp_regen_always_total
 
 	# Universeller Block: Basiswerte plus Kartenboni. Dauer und Cooldown sind
@@ -1679,6 +1707,9 @@ func use_ability() -> void:
 		"phantom":
 			# Schattensprung: Teleport mit Treffer und kurzer Unverwundbarkeit
 			_shadow_step()
+		"druid":
+			# Wurzelwall: Rankenwand quer zur Zielrichtung
+			_place_druid_wall()
 
 	# Turm-Talent: Die SpezialfÃƒÂ¤higkeit platziert zusÃƒÂ¤tzlich einen Turm.
 	if tower_enabled:
@@ -2405,6 +2436,86 @@ func _shadow_step() -> void:
 		# Evolution "Lähmendes Mal": getroffene Gegner werden betäubt.
 		if stun:
 			p.apply_stun(PHANTOM_MARK_STUN * ability_duration_mult)
+
+# --- Druide: Wurzelwall ---
+func _place_druid_wall() -> void:
+	if is_replica or get_parent() == null:
+		return
+	var aim := aim_direction.normalized()
+	if aim.length_squared() < 0.1:
+		aim = Vector2.LEFT if sprite.flip_h else Vector2.RIGHT
+	var wall_len := DRUID_WALL_LENGTH * ability_radius_mult
+	var thick := DRUID_WALL_THICKNESS
+	var center := global_position + aim * (DRUID_WALL_DISTANCE + thick * 0.5)
+	# Lokale x-Achse der Wand quer zur Zielrichtung.
+	var rot := aim.angle() + PI * 0.5
+	if not ArenaMode.active and absf(aim.x) > 0.7:
+		# Eher waagerecht gezielt: senkrechte Wand, auf den Boden gestellt.
+		rot = PI * 0.5
+		center.y = global_position.y
+		var space := get_world_2d().direct_space_state
+		var from := center + Vector2(0.0, -wall_len * 0.25)
+		var query := PhysicsRayQueryParameters2D.create(from, center + Vector2(0.0, wall_len * 0.5 + DRUID_WALL_FLOOR_SNAP), 1)
+		query.exclude = [get_rid()]
+		var hit := space.intersect_ray(query)
+		if not hit.is_empty() and not (hit.get("collider") is DruidWall):
+			center.y = (hit["position"] as Vector2).y - wall_len * 0.5
+	center = _clamp_to_map(center)
+	var own: Array = []
+	for w in get_tree().get_nodes_in_group("druid_wall"):
+		if is_instance_valid(w) and not w.is_queued_for_deletion() and w.owner_player == self:
+			own.append(w)
+	# Älteste Wand zerfällt, wenn das Limit erreicht ist.
+	while own.size() >= druid_max_walls:
+		own.pop_front().discard()
+	var wall := DruidWall.new()
+	wall.setup(self, wall_len, thick, DRUID_WALL_DURATION * ability_duration_mult, DRUID_WALL_HP * ability_damage_mult)
+	if _has_ability_evolution("druid_elemental"):
+		wall.elemental = true
+		wall.element_interval = DRUID_ELEMENT_INTERVAL
+		wall.element_color = _druid_element_color()
+	if _has_ability_evolution("druid_lifebark"):
+		wall.heal_per_sec = DRUID_LIFEBARK_HPS * ability_damage_mult
+	wall.position = center
+	wall.rotation = rot
+	get_parent().add_child(wall)
+	wall.global_position = center
+	wall.push_out_players()
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(center, Color(0.45, 0.8, 0.3, 0.8),
+		1.0, wall_len / 14.0, 0.2, 0.3), "poison", 0.15, -2.0))
+
+# Evolution "Elementarwand": Gegner, die die Wand berühren, bekommen die
+# Elementeffekte der eigenen Waffe ab (Gift, Feuer, Frost, Blitz). Ohne
+# Elementeffekt vergiften die Dornen der Wand.
+func apply_druid_wall_elements(target: Player, wall_pos: Vector2) -> void:
+	if target == null or not is_instance_valid(target):
+		return
+	var any := false
+	var strength := ability_damage_mult
+	if poison_stacks > 0 or poison_impact_cloud or poison_trail:
+		target.apply_poison(maxi(poison_stacks, DRUID_ELEMENT_POISON_STACKS), poison_damage_per_tick * strength)
+		any = true
+	if fire_shot or fire_impact_zone or fire_trail:
+		target.apply_burn(DRUID_ELEMENT_BURN_STACKS, burn_damage_per_tick * strength)
+		any = true
+	if freeze_duration > 0.0 or frost_nova or frost_trail:
+		target.apply_freeze(maxf(freeze_duration, DRUID_ELEMENT_FREEZE) * ability_duration_mult)
+		any = true
+	if lightning_shot or chain_lightning or lightning_zone:
+		target.apply_stun(DRUID_ELEMENT_STUN * ability_duration_mult)
+		_spawn_lightning_arc(wall_pos, target.global_position)
+		any = true
+	if not any:
+		target.apply_poison(DRUID_ELEMENT_POISON_STACKS, poison_damage_per_tick * strength)
+
+func _druid_element_color() -> Color:
+	if fire_shot or fire_impact_zone or fire_trail:
+		return Color(1.0, 0.5, 0.15, 1.0)
+	if lightning_shot or chain_lightning or lightning_zone:
+		return Color(1.0, 0.92, 0.3, 1.0)
+	if freeze_duration > 0.0 or frost_nova or frost_trail:
+		return Color(0.5, 0.85, 1.0, 1.0)
+	return Color(0.55, 1.0, 0.3, 1.0)
 
 # Treffer der Heldenfähigkeit: zählt zusätzlich als "ability_damage", damit die
 # Statistik den Anteil der Fähigkeit am eigenen Schaden zeigen kann.

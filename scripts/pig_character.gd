@@ -441,6 +441,8 @@ func _draw_outfit_front(head: Vector2, neck: Vector2) -> void:
 			_draw_hard_hat(head)
 		"phantom":
 			_draw_ninja_band(head)
+		"druid":
+			_draw_druid_wreath(head)
 
 # Wehendes Stoffband nach hinten. Im Stand hängt es schlaff herunter, beim
 # Laufen weht es fast waagerecht hinter der Figur her.
@@ -610,6 +612,35 @@ func _draw_hard_hat(head: Vector2) -> void:
 	draw_circle(head + Vector2(0.0, -8.9), 2.6, Color(1.0, 0.95, 0.55, 0.22))
 	draw_rect(Rect2(head + Vector2(-1.8, -10.2), Vector2(3.6, 2.4)), Color(0.22, 0.24, 0.27, 1.0), true)
 	draw_circle(head + Vector2(0.0, -9.0), 1.0, Color(1.0, 0.95, 0.60, 1.0))
+
+# Druide: Kranz aus Zweigen und Blättern mit zwei kleinen Geweih-Ästen.
+func _draw_druid_wreath(head: Vector2) -> void:
+	var bark := Color(0.40, 0.26, 0.14, 1.0)
+	var bark_outline := Color(0.18, 0.11, 0.05, 1.0)
+	var leaf := _cloth(Color(0.42, 0.78, 0.30, 1.0))
+	var leaf_dark := _cloth(Color(0.26, 0.56, 0.18, 1.0), 0.2)
+	var leaf_outline := _cloth(Color(0.12, 0.30, 0.08, 1.0), 0.6)
+	# Geweih-Äste hinter dem Kranz.
+	for side in [-1.0, 1.0]:
+		var base := head + Vector2(side * 5.5, -8.0)
+		var tip := base + Vector2(side * 3.2, -8.5)
+		draw_line(base, tip, bark_outline, 2.6, true)
+		draw_line(base, tip, bark, 1.6, true)
+		var fork := base.lerp(tip, 0.55)
+		var fork_tip := fork + Vector2(side * 3.4, -2.2)
+		draw_line(fork, fork_tip, bark_outline, 2.2, true)
+		draw_line(fork, fork_tip, bark, 1.2, true)
+	# Zweigring um den Kopf.
+	_draw_ellipse(head + Vector2(0.0, -7.4), 10.6, 2.2, bark, bark_outline, 0.8)
+	# Blätter entlang des Rings.
+	for i in range(7):
+		var u := lerpf(-1.0, 1.0, float(i) / 6.0)
+		var c := head + Vector2(u * 9.6, -7.6 + absf(u) * 0.8)
+		var tilt := u * 0.6 + (0.35 if i % 2 == 0 else -0.35)
+		var dir := Vector2(sin(tilt), -cos(tilt))
+		var side_v := Vector2(dir.y, -dir.x)
+		var pts := PackedVector2Array([c - dir * 1.2, c + side_v * 1.8 + dir * 1.4, c + dir * 4.0, c - side_v * 1.8 + dir * 1.4])
+		_draw_closed_polygon(pts, leaf if i % 2 == 0 else leaf_dark, leaf_outline, 0.6)
 
 # Hauerformen für die rechte Seite; die linke wird gespiegelt.
 func _tusk_points(shape: String) -> Array[PackedVector2Array]:

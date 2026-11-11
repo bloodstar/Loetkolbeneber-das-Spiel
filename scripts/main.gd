@@ -70,6 +70,7 @@ var pending_drop: bool = false
 var remote_bullets: Dictionary = {}
 var remote_towers: Dictionary = {}
 var remote_mines: Dictionary = {}
+var remote_druid_walls: Dictionary = {}
 # Auf Clients: zuletzt gesehener Lebenszustand pro Slot. Ein leerer Snapshot
 # nach einem lebenden Snapshot ist ein Tod und löst den lokalen Todeston aus.
 var network_alive_slots: Dictionary = {}
@@ -1384,6 +1385,7 @@ func _send_snapshot() -> void:
 		"bullets": _bullet_snapshots(),
 		"towers": _tower_snapshots(),
 		"mines": _mine_snapshots(),
+		"dwalls": _druid_wall_snapshots(),
 		"map_objects": level_generator.get_moving_object_snapshots(),
 		"statics": level_generator.get_static_object_snapshot(),
 		"scores": Global.get_scores(),
@@ -1499,6 +1501,7 @@ func _on_network_snapshot(data: Dictionary) -> void:
 	_sync_remote_bullets(data.get("bullets", []))
 	_sync_remote_towers(data.get("towers", []))
 	_sync_remote_mines(data.get("mines", []))
+	_sync_remote_druid_walls(data.get("dwalls", []))
 	level_generator.apply_moving_object_snapshots(data.get("map_objects", []))
 	var statics = data.get("statics", {})
 	if statics is Dictionary:
@@ -1632,6 +1635,42 @@ func _sync_remote_mines(list: Array) -> void:
 				mine.remove_replica()
 			remote_mines.erase(mine_id)
 
+# Wände des Druiden: Clients bekommen Lage, Zustand und Kollision, die
+# Lebensdauer und alle Berührungseffekte simuliert der Host.
+func _druid_wall_snapshots() -> Array:
+	var result: Array = []
+	for w in get_tree().get_nodes_in_group("druid_wall"):
+		if not is_instance_valid(w) or w.is_replica or w.is_queued_for_deletion():
+			continue
+		result.append(w.get_network_state())
+	return result
+
+func _sync_remote_druid_walls(list: Array) -> void:
+	var seen := {}
+	for entry in list:
+		var wall_id := int(entry.get("id", 0))
+		if wall_id == 0:
+			continue
+		seen[wall_id] = true
+		var wall = remote_druid_walls.get(wall_id, null)
+		if wall == null or not is_instance_valid(wall):
+			wall = DruidWall.new()
+			wall.is_replica = true
+			wall.net_id = wall_id
+			wall.length = float(entry.get("len", wall.length))
+			wall.thickness = float(entry.get("th", wall.thickness))
+			wall.position = entry.get("pos", Vector2.ZERO)
+			wall.rotation = float(entry.get("rot", 0.0))
+			add_child(wall)
+			remote_druid_walls[wall_id] = wall
+		wall.apply_network_state(entry)
+	for wall_id in remote_druid_walls.keys():
+		if not seen.has(wall_id):
+			var wall = remote_druid_walls[wall_id]
+			if is_instance_valid(wall):
+				wall.remove_replica()
+			remote_druid_walls.erase(wall_id)
+
 func _clear_remote_towers() -> void:
 	for t in remote_towers.values():
 		if is_instance_valid(t):
@@ -1657,6 +1696,7 @@ func _clear_round_effects() -> void:
 	remote_bullets.clear()
 	remote_towers.clear()
 	remote_mines.clear()
+	remote_druid_walls.clear()
 	if modifier_manager != null:
 		modifier_manager.clear_round()
 
