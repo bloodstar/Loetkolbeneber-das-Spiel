@@ -128,14 +128,14 @@ func _style_menu_buttons() -> void:
 func _on_menu_child_added(node: Node) -> void:
 	var button := node as Button
 	if button != null:
-		WorkshopStyle.style_button(button, false, 20)
+		WorkshopStyle.style_button(button, false, UiTheme.FS_XL)
 		button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 56.0)
 
 func _build_version_label() -> void:
 	var version_label := Label.new()
 	version_label.name = "VersionLabel"
 	version_label.text = BuildInfo.get_display_text()
-	version_label.add_theme_font_size_override("font_size", 14)
+	version_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	version_label.add_theme_color_override("font_color", Color(0.6, 0.66, 0.78, 0.9))
 	version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	version_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -207,14 +207,15 @@ func _build_hero_stats_ui() -> void:
 
 	var title := Label.new()
 	title.text = "HELDEN-STATS"
-	title.add_theme_font_size_override("font_size", 28)
+	title.theme_type_variation = &"TitleLabel"
+	title.add_theme_font_size_override("font_size", UiTheme.FS_H2)
 	title.add_theme_color_override("font_color", Color(0.45, 0.82, 1.0, 1.0))
 	header.add_child(title)
 
 	var subtitle := Label.new()
 	subtitle.text = "HP, Tempo, Fähigkeiten und Passivwerte aller Charaktere"
-	subtitle.add_theme_font_size_override("font_size", 13)
-	subtitle.add_theme_color_override("font_color", Color(0.58, 0.64, 0.74, 1.0))
+	subtitle.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	subtitle.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 	subtitle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	subtitle.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	header.add_child(subtitle)
@@ -283,7 +284,7 @@ func _build_hero_stats_card(hero: HeroData) -> Control:
 
 	var title := Label.new()
 	title.text = "%s  ·  %s" % [hero.name.to_upper(), hero.role]
-	title.add_theme_font_size_override("font_size", 20)
+	title.add_theme_font_size_override("font_size", UiTheme.FS_XL)
 	title.add_theme_color_override("font_color", hero.color_tint)
 	box.add_child(title)
 
@@ -294,29 +295,29 @@ func _build_hero_stats_card(hero: HeroData) -> Control:
 		int(absf(hero.base_jump_force)), hero.extra_jumps, int(Global.base_damage),
 		hero.base_ammo, hero.base_fire_rate_cooldown, hero.base_reload_time,
 	]
-	stats.add_theme_font_size_override("font_size", 12)
-	stats.add_theme_color_override("font_color", Color(0.78, 0.82, 0.9, 1.0))
+	stats.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	stats.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
 	stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(stats)
 
 	var ability := Label.new()
 	ability.text = "Aktiv: %s (%.1fs Cooldown) — %s\n%s" % [hero.ability_name, hero.ability_cooldown, hero.ability_desc, Global.get_hero_ability_details(hero)]
-	ability.add_theme_font_size_override("font_size", 12)
+	ability.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	ability.add_theme_color_override("font_color", Color(0.52, 0.8, 1.0, 1.0))
 	ability.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(ability)
 
 	var passive := Label.new()
 	passive.text = "Passiv: %s" % hero.passive_desc
-	passive.add_theme_font_size_override("font_size", 12)
+	passive.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	passive.add_theme_color_override("font_color", Color(0.95, 0.78, 0.46, 1.0))
 	passive.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(passive)
 
 	var description := Label.new()
 	description.text = hero.description
-	description.add_theme_font_size_override("font_size", 11)
-	description.add_theme_color_override("font_color", Color(0.56, 0.6, 0.7, 1.0))
+	description.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	description.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(description)
 	return card
@@ -389,7 +390,7 @@ func _build_epic_section() -> void:
 	var header := Label.new()
 	header.text = "Übers Internet (Epic, mit Code)"
 	header.add_theme_color_override("font_color", Color(0.55, 0.95, 0.55, 1))
-	header.add_theme_font_size_override("font_size", 17)
+	header.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	epic_host_btn = Button.new()
@@ -411,8 +412,8 @@ func _build_epic_section() -> void:
 	row.add_child(epic_code_edit)
 	row.add_child(epic_join_btn)
 	epic_hint = Label.new()
-	epic_hint.add_theme_color_override("font_color", Color(0.5, 0.55, 0.65, 1))
-	epic_hint.add_theme_font_size_override("font_size", 12)
+	epic_hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	epic_hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	epic_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var sep := HSeparator.new()
 	# Direkt unter Titel und Info einfügen, vor dem LAN-Teil.

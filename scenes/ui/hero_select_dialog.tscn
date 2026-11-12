@@ -33,8 +33,9 @@ theme_override_constants/separation = 15
 alignment = 1
 
 [node name="Title" type="Label" parent="Panel/VBox" unique_id=339190142]
+theme_type_variation = &"TitleLabel"
 layout_mode = 2
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 28
 text = "BAPBAP HELDENAUSWAHL"
 horizontal_alignment = 1
 
@@ -70,5 +71,5 @@ alignment = 1
 custom_minimum_size = Vector2(220, 48)
 layout_mode = 2
 size_flags_horizontal = 4
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 22
 text = "KAMPF STARTEN"

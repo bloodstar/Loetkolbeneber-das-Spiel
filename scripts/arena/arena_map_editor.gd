@@ -525,7 +525,7 @@ func _build_ui() -> void:
 
 	var title := Label.new()
 	title.text = "KARTENEDITOR (ARENA)"
-	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_font_size_override("font_size", UiTheme.FS_XL)
 	title.add_theme_color_override("font_color", Color(0.5, 0.95, 1.0))
 	side.add_child(title)
 	var top_row := HBoxContainer.new()
@@ -695,8 +695,8 @@ func _build_ui() -> void:
 
 	var help := Label.new()
 	help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	help.add_theme_font_size_override("font_size", 12)
-	help.add_theme_color_override("font_color", Color(0.6, 0.65, 0.72))
+	help.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	help.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 	help.text = "Mausrad zoomt, mittlere Maustaste oder Leertaste + Ziehen verschiebt. Schräge Wände: von Ecke zu Ecke ziehen, Rechtsklick auf eine Wand löscht sie. Rampen: eine Reihe gleicher Pfeile, die an einer Erhöhung endet."
 	side.add_child(help)
 
@@ -721,14 +721,14 @@ func _build_ui() -> void:
 func _section(parent: Control, text: String) -> void:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", 15)
-	l.add_theme_color_override("font_color", Color(1.0, 0.82, 0.4))
+	l.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	l.add_theme_color_override("font_color", UiTheme.GOLD)
 	parent.add_child(l)
 
 func _small_label(text: String) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", 13)
+	l.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	return l
 
 func _button(text: String, cb: Callable, primary: bool = false) -> Button:
@@ -748,7 +748,7 @@ func _toggle(text: String, group: ButtonGroup, cb: Callable) -> Button:
 	b.toggle_mode = true
 	b.button_group = group
 	b.focus_mode = Control.FOCUS_NONE
-	WorkshopStyle.style_button(b, false, 13)
+	WorkshopStyle.style_button(b, false, UiTheme.FS_S)
 	b.pressed.connect(cb)
 	return b
 

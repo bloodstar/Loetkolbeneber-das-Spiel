@@ -756,20 +756,20 @@ func _build_ui() -> void:
 
 	var title := Label.new()
 	title.text = "PIG-CHARACTER DEMO"
-	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_font_size_override("font_size", UiTheme.FS_XL)
 	title.add_theme_color_override("font_color", Color(1.0, 0.72, 0.35, 1.0))
 	box.add_child(title)
 
 	var hint := Label.new()
 	hint.text = "Jede Animation einzeln testen. Der Auto-Modus spielt einen typischen Spielablauf. Tasten 1–9, Leertaste, A."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hint.add_theme_font_size_override("font_size", 12)
-	hint.add_theme_color_override("font_color", Color(0.62, 0.68, 0.78, 1.0))
+	hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 	box.add_child(hint)
 
 	_status_label = Label.new()
 	_status_label.text = "IDLE"
-	_status_label.add_theme_font_size_override("font_size", 14)
+	_status_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	_status_label.add_theme_color_override("font_color", Color(0.55, 0.95, 0.70, 1.0))
 	box.add_child(_status_label)
 
@@ -876,7 +876,7 @@ func _build_ui() -> void:
 
 	_auto_toggle = CheckButton.new()
 	_auto_toggle.text = "AUTO – Spielablauf abspielen"
-	_auto_toggle.add_theme_font_size_override("font_size", 16)
+	_auto_toggle.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	_auto_toggle.toggled.connect(_on_auto_toggled)
 	box.add_child(_auto_toggle)
 
@@ -962,21 +962,21 @@ func _build_ui() -> void:
 	var note := Label.new()
 	note.text = "Die Figur wird komplett prozedural gezeichnet. Animationen entstehen aus Geschwindigkeit und Bodenkontakt des Parents – wie im Spiel."
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	note.add_theme_font_size_override("font_size", 11)
-	note.add_theme_color_override("font_color", Color(0.55, 0.60, 0.70, 1.0))
+	note.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	note.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 	box.add_child(note)
 
 func _section_label(text: String) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", 13)
-	label.add_theme_color_override("font_color", Color(0.70, 0.76, 0.90, 1.0))
+	label.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	label.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
 	return label
 
 func _add_labeled(grid: GridContainer, text: String, control: Control) -> void:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	grid.add_child(label)
 	grid.add_child(control)
 

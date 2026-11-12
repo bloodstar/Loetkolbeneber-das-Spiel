@@ -712,7 +712,7 @@ func _create_card_button(card: CardData, slot_index: int, show_button: bool = tr
 	var top_row = HBoxContainer.new()
 	var key_badge = Label.new()
 	key_badge.text = "[%d]" % slot_index
-	key_badge.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+	key_badge.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 	top_row.add_child(key_badge)
 
 	var card_icon := CardIcon.new()
@@ -743,7 +743,7 @@ func _create_card_button(card: CardData, slot_index: int, show_button: bool = tr
 		talent_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		talent_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		talent_label.add_theme_color_override("font_color", Color(0.55, 0.85, 1.0))
-		talent_label.add_theme_font_size_override("font_size", 11)
+		talent_label.add_theme_font_size_override("font_size", UiTheme.FS_XS)
 		vbox.add_child(talent_label)
 	
 	# Title
@@ -751,7 +751,8 @@ func _create_card_button(card: CardData, slot_index: int, show_button: bool = tr
 	title.text = card.title
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	title.add_theme_font_size_override("font_size", 16)
+	title.add_theme_font_size_override("font_size", UiTheme.FS_L)
+	title.add_theme_font_override("font", UiTheme.FONT_BOLD)
 	vbox.add_child(title)
 	
 	var sep = HSeparator.new()
@@ -763,7 +764,7 @@ func _create_card_button(card: CardData, slot_index: int, show_button: bool = tr
 	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	desc.add_theme_font_size_override("font_size", 13)
+	desc.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	vbox.add_child(desc)
 
 	var unlock_label := CardMechanics.make_unlock_label(card, 11)
@@ -781,7 +782,7 @@ func _create_card_button(card: CardData, slot_index: int, show_button: bool = tr
 			footer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			footer_label.custom_minimum_size = Vector2(0, 34)
 			footer_label.add_theme_color_override("font_color", footer_color)
-			footer_label.add_theme_font_size_override("font_size", 15)
+			footer_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 			vbox.add_child(footer_label)
 		CardMechanics.apply_tooltip(panel, card)
 		return panel
@@ -823,8 +824,8 @@ func _create_hidden_card(slot_index: int) -> PanelContainer:
 
 	var key_badge := Label.new()
 	key_badge.text = "[%d]" % slot_index
-	key_badge.add_theme_color_override("font_color", Color(0.55, 0.55, 0.65))
-	key_badge.add_theme_font_size_override("font_size", 14)
+	key_badge.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	key_badge.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	vbox.add_child(key_badge)
 
 	var question := Label.new()
@@ -833,21 +834,21 @@ func _create_hidden_card(slot_index: int) -> PanelContainer:
 	question.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	question.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	question.add_theme_color_override("font_color", Color(0.72, 0.64, 0.96))
-	question.add_theme_font_size_override("font_size", 96)
+	question.add_theme_font_size_override("font_size", UiTheme.FS_HERO)
 	vbox.add_child(question)
 
 	var label := Label.new()
 	label.text = "BLIND PICK"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_color_override("font_color", Color(0.82, 0.74, 1.0))
-	label.add_theme_font_size_override("font_size", 17)
+	label.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	vbox.add_child(label)
 
 	var hint := Label.new()
 	hint.text = "Kartenrückseite"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_color_override("font_color", Color(0.5, 0.54, 0.64))
-	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	vbox.add_child(hint)
 	return panel
 
@@ -894,8 +895,8 @@ func _create_gamble_back(card: CardData, slot_index: int, is_next: bool, hidden:
 
 	var key_badge := Label.new()
 	key_badge.text = "[%d]" % slot_index
-	key_badge.add_theme_color_override("font_color", Color(0.6, 0.6, 0.66))
-	key_badge.add_theme_font_size_override("font_size", 14)
+	key_badge.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	key_badge.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	vbox.add_child(key_badge)
 
 	var question := Label.new()
@@ -904,14 +905,14 @@ func _create_gamble_back(card: CardData, slot_index: int, is_next: bool, hidden:
 	question.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	question.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	question.add_theme_color_override("font_color", rarity_color)
-	question.add_theme_font_size_override("font_size", 96)
+	question.add_theme_font_size_override("font_size", UiTheme.FS_HERO)
 	vbox.add_child(question)
 
 	var label := Label.new()
 	label.text = "GAMBLE"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_color_override("font_color", rarity_color.lightened(0.25))
-	label.add_theme_font_size_override("font_size", 17)
+	label.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	vbox.add_child(label)
 
 	if is_next:
@@ -926,14 +927,14 @@ func _create_gamble_back(card: CardData, slot_index: int, is_next: bool, hidden:
 			warn.text = "Die offene Karte verbrennt!"
 			warn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			warn.add_theme_color_override("font_color", Color(1.0, 0.55, 0.25))
-			warn.add_theme_font_size_override("font_size", 12)
+			warn.add_theme_font_size_override("font_size", UiTheme.FS_S)
 			vbox.add_child(warn)
 	else:
 		var hint := Label.new()
 		hint.text = "Kartenrückseite"
 		hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		hint.add_theme_color_override("font_color", Color(0.5, 0.54, 0.64))
-		hint.add_theme_font_size_override("font_size", 12)
+		hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+		hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
 		vbox.add_child(hint)
 	return panel
 
@@ -964,7 +965,7 @@ func _create_charred_card(card: CardData, slot_index: int, hidden: bool) -> Pane
 	var key_badge := Label.new()
 	key_badge.text = "[%d]" % slot_index
 	key_badge.add_theme_color_override("font_color", Color(0.35, 0.30, 0.28))
-	key_badge.add_theme_font_size_override("font_size", 14)
+	key_badge.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	vbox.add_child(key_badge)
 
 	# Verkohlte Fläche mit Glutrissen statt Text.
@@ -987,7 +988,7 @@ func _create_charred_card(card: CardData, slot_index: int, hidden: bool) -> Pane
 		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		title.add_theme_color_override("font_color", Color(0.42, 0.38, 0.35))
-		title.add_theme_font_size_override("font_size", 13)
+		title.add_theme_font_size_override("font_size", UiTheme.FS_S)
 		vbox.add_child(title)
 
 	return panel
@@ -1067,14 +1068,14 @@ func _create_hidden_reveal_card() -> PanelContainer:
 	label.text = "KARTE VERDECKT"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_color_override("font_color", Color(0.86, 0.78, 1.0))
-	label.add_theme_font_size_override("font_size", 20)
+	label.add_theme_font_size_override("font_size", UiTheme.FS_XL)
 	vbox.add_child(label)
 
 	var hint := Label.new()
 	hint.text = "Blind pick ist aktiv."
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_color_override("font_color", Color(0.58, 0.62, 0.72))
-	hint.add_theme_font_size_override("font_size", 14)
+	hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	hint.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	vbox.add_child(hint)
 	return panel
 
@@ -1269,7 +1270,7 @@ func _show_public_reveal(drafter_idx: int, card: CardData) -> void:
 	rarity.text = "⭐ " + card.rarity.to_upper() + " ⭐"
 	rarity.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	rarity.add_theme_color_override("font_color", CardDatabase.get_rarity_color(card.rarity))
-	rarity.add_theme_font_size_override("font_size", 16)
+	rarity.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	rarity_row.add_child(rarity)
 	vbox.add_child(rarity_row)
 
@@ -1288,14 +1289,14 @@ func _show_public_reveal(drafter_idx: int, card: CardData) -> void:
 		talent_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		talent_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		talent_label.add_theme_color_override("font_color", Color(0.55, 0.85, 1.0))
-		talent_label.add_theme_font_size_override("font_size", 12)
+		talent_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
 		vbox.add_child(talent_label)
 	
 	var title = Label.new()
 	title.text = card.title
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	title.add_theme_font_size_override("font_size", 20)
+	title.add_theme_font_size_override("font_size", UiTheme.FS_XL)
 	vbox.add_child(title)
 	
 	vbox.add_child(HSeparator.new())
@@ -1305,7 +1306,7 @@ func _show_public_reveal(drafter_idx: int, card: CardData) -> void:
 	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	desc.add_theme_font_size_override("font_size", 15)
+	desc.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	vbox.add_child(desc)
 
 	var unlock_label := CardMechanics.make_unlock_label(card, 12)
@@ -1480,8 +1481,8 @@ func _build_own_cards_bar() -> void:
 	margin.add_child(vbox)
 
 	own_cards_title = Label.new()
-	own_cards_title.add_theme_font_size_override("font_size", 12)
-	own_cards_title.add_theme_color_override("font_color", Color(0.72, 0.82, 0.92, 1.0))
+	own_cards_title.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	own_cards_title.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
 	own_cards_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(own_cards_title)
 
@@ -1505,7 +1506,7 @@ func _build_own_cards_bar() -> void:
 	hover_style.set_content_margin_all(8)
 	own_card_hover.add_theme_stylebox_override("panel", hover_style)
 	own_card_hover_label = Label.new()
-	own_card_hover_label.add_theme_font_size_override("font_size", 13)
+	own_card_hover_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	own_card_hover_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	own_card_hover.add_child(own_card_hover_label)
 	main_control.add_child(own_card_hover)
@@ -1567,8 +1568,8 @@ func _refresh_own_cards_bar() -> void:
 	if cards.is_empty():
 		var empty := Label.new()
 		empty.text = "Noch keine Karten."
-		empty.add_theme_font_size_override("font_size", 12)
-		empty.add_theme_color_override("font_color", Color(0.55, 0.60, 0.68, 1.0))
+		empty.add_theme_font_size_override("font_size", UiTheme.FS_S)
+		empty.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 		empty.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		own_cards_flow.add_child(empty)
 		return
@@ -1587,8 +1588,8 @@ func _refresh_own_cards_bar() -> void:
 	if cards.size() > shown:
 		var more := Label.new()
 		more.text = "+%d" % (cards.size() - shown)
-		more.add_theme_font_size_override("font_size", 13)
-		more.add_theme_color_override("font_color", Color(0.72, 0.82, 0.92, 1.0))
+		more.add_theme_font_size_override("font_size", UiTheme.FS_S)
+		more.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
 		more.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		more.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		own_cards_flow.add_child(more)
@@ -1620,7 +1621,7 @@ func _create_own_card_chip(card: CardData, is_new: bool) -> PanelContainer:
 	var title := Label.new()
 	title.text = ("NEU · " if is_new else "") + card.title
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 12)
+	title.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	title.add_theme_color_override("font_color", card.color)
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(title)

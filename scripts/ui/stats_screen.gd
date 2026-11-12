@@ -158,7 +158,8 @@ func _build_ui() -> void:
 	body.add_child(header)
 	var title := Label.new()
 	title.text = "STATISTIK"
-	title.add_theme_font_size_override("font_size", 32)
+	title.theme_type_variation = &"TitleLabel"
+	title.add_theme_font_size_override("font_size", UiTheme.FS_H1)
 	title.add_theme_color_override("font_color", WorkshopStyle.CYAN_LIGHT)
 	title.add_theme_color_override("font_outline_color", Color(0.02, 0.2, 0.2))
 	title.add_theme_constant_override("outline_size", 6)
@@ -166,7 +167,7 @@ func _build_ui() -> void:
 	_summary_label = Label.new()
 	_summary_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_summary_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_summary_label.add_theme_font_size_override("font_size", 16)
+	_summary_label.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	_summary_label.add_theme_color_override("font_color", WorkshopStyle.ACCENT_LIGHT)
 	_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	header.add_child(_summary_label)
@@ -175,7 +176,7 @@ func _build_ui() -> void:
 
 	var tabs := TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	tabs.add_theme_font_size_override("font_size", 18)
+	tabs.add_theme_font_size_override("font_size", UiTheme.FS_L)
 	body.add_child(tabs)
 	_tabs = tabs
 	_card_tree = _make_tree("Karten", CARD_COLUMNS)
@@ -189,8 +190,8 @@ func _build_ui() -> void:
 	_notes.bbcode_enabled = true
 	_notes.scroll_active = true
 	_notes.selection_enabled = true
-	_notes.add_theme_font_size_override("normal_font_size", 16)
-	_notes.add_theme_font_size_override("bold_font_size", 18)
+	_notes.add_theme_font_size_override("normal_font_size", UiTheme.FS_BODY)
+	_notes.add_theme_font_size_override("bold_font_size", UiTheme.FS_L)
 	_notes.add_theme_color_override("default_color", WorkshopStyle.TEXT)
 	_notes.meta_hover_started.connect(func(meta: Variant): _notes_hover_key = str(meta))
 	_notes.meta_hover_ended.connect(func(_meta: Variant): _notes_hover_key = "")
@@ -202,14 +203,14 @@ func _build_ui() -> void:
 	_path_label = Label.new()
 	_path_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_path_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_path_label.add_theme_font_size_override("font_size", 13)
+	_path_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	_path_label.add_theme_color_override("font_color", WorkshopStyle.TEXT_DIM)
 	_path_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	footer.add_child(_path_label)
 	_back_btn = Button.new()
 	_back_btn.text = "ZURÜCK"
 	_back_btn.custom_minimum_size = Vector2(240, 48)
-	WorkshopStyle.style_button(_back_btn, true, 20)
+	WorkshopStyle.style_button(_back_btn, true, UiTheme.FS_XL)
 	_back_btn.pressed.connect(func():
 		SoundManager.play_sound("confirm")
 		close_screen()
@@ -249,7 +250,7 @@ func _build_filter_row() -> Control:
 	source_option.add_item("Ohne Bot-Test", BalanceReport.Source.NORMAL)
 	source_option.add_item("Nur Bot-Test", BalanceReport.Source.BOT_TEST)
 	source_option.tooltip_text = "Bot-Test-Matches (Lobby → Regeln → BOT-TEST) getrennt oder gemeinsam mit normalen Matches auswerten."
-	source_option.add_theme_font_size_override("font_size", 16)
+	source_option.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	source_option.custom_minimum_size = Vector2(170, 36)
 	source_option.select(source_option.get_item_index(source_filter))
 	source_option.item_selected.connect(func(index: int):
@@ -274,7 +275,7 @@ func _build_filter_row() -> Control:
 	var min_label := Label.new()
 	min_label.text = "Mind. Runden für Vorschlag"
 	min_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	min_label.add_theme_font_size_override("font_size", 16)
+	min_label.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	min_label.add_theme_color_override("font_color", WorkshopStyle.TEXT)
 	row.add_child(min_label)
 	var min_spin := SpinBox.new()
@@ -296,7 +297,7 @@ func _build_filter_row() -> Control:
 	var reload_btn := Button.new()
 	reload_btn.text = "NEU LADEN"
 	reload_btn.custom_minimum_size = Vector2(170, 40)
-	WorkshopStyle.style_button(reload_btn, false, 16)
+	WorkshopStyle.style_button(reload_btn, false, UiTheme.FS_BODY)
 	reload_btn.pressed.connect(func():
 		SoundManager.play_sound("click")
 		reload()
@@ -305,7 +306,7 @@ func _build_filter_row() -> Control:
 	return row
 
 func _style_toggle(box: CheckBox) -> void:
-	box.add_theme_font_size_override("font_size", 16)
+	box.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	box.add_theme_color_override("font_color", WorkshopStyle.TEXT)
 	box.add_theme_color_override("font_hover_color", Color.WHITE)
 	box.add_theme_color_override("font_pressed_color", WorkshopStyle.CYAN_LIGHT)
@@ -318,8 +319,8 @@ func _make_tree(tab_name: String, columns: Array) -> Tree:
 	tree.hide_root = true
 	tree.select_mode = Tree.SELECT_ROW
 	tree.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	tree.add_theme_font_size_override("font_size", 15)
-	tree.add_theme_font_size_override("title_button_font_size", 15)
+	tree.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	tree.add_theme_font_size_override("title_button_font_size", UiTheme.FS_M)
 	tree.add_theme_color_override("font_color", WorkshopStyle.TEXT)
 	tree.add_theme_color_override("title_button_color", WorkshopStyle.CYAN_LIGHT)
 	tree.add_theme_stylebox_override("panel", WorkshopStyle.neon_box(WorkshopStyle.PLATE, Color(WorkshopStyle.CYAN.r, WorkshopStyle.CYAN.g, WorkshopStyle.CYAN.b, 0.35), 1, 4))

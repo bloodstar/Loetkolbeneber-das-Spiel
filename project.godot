@@ -52,6 +52,7 @@ enabled=PackedStringArray("res://addons/build_info/plugin.cfg", "res://addons/ep
 
 [gui]
 
+theme/custom="res://assets/ui/ui_theme.tres"
 timers/tooltip_delay_sec=0.35
 
 [physics]

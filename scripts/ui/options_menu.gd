@@ -113,7 +113,8 @@ func _build_ui() -> void:
 
 	var title := Label.new()
 	title.text = "OPTIONEN"
-	title.add_theme_font_size_override("font_size", 34)
+	title.theme_type_variation = &"TitleLabel"
+	title.add_theme_font_size_override("font_size", UiTheme.FS_H1)
 	title.add_theme_color_override("font_color", WorkshopStyle.CYAN_LIGHT)
 	title.add_theme_color_override("font_outline_color", Color(0.02, 0.2, 0.2))
 	title.add_theme_constant_override("outline_size", 6)
@@ -121,14 +122,14 @@ func _build_ui() -> void:
 
 	_tabs = TabContainer.new()
 	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_tabs.add_theme_font_size_override("font_size", 18)
+	_tabs.add_theme_font_size_override("font_size", UiTheme.FS_L)
 	body.add_child(_tabs)
 	_tabs.add_child(_build_graphics_tab())
 	_tabs.add_child(_build_audio_tab())
 	_tabs.add_child(_build_controls_tab())
 
 	_status_label = Label.new()
-	_status_label.add_theme_font_size_override("font_size", 14)
+	_status_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	_status_label.add_theme_color_override("font_color", WorkshopStyle.ACCENT_LIGHT)
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status_label.custom_minimum_size = Vector2(0, 22)
@@ -141,7 +142,7 @@ func _build_ui() -> void:
 	_menu_btn = Button.new()
 	_menu_btn.text = "ZUM HAUPTMENÜ"
 	_menu_btn.custom_minimum_size = Vector2(240, 50)
-	WorkshopStyle.style_button(_menu_btn, false, 18)
+	WorkshopStyle.style_button(_menu_btn, false, UiTheme.FS_L)
 	_menu_btn.pressed.connect(_on_main_menu_pressed)
 	buttons.add_child(_menu_btn)
 
@@ -149,7 +150,7 @@ func _build_ui() -> void:
 	stats_btn.text = "STATISTIK"
 	stats_btn.tooltip_text = "Balance-Auswertung aller gespielten Runden: Karten, Waffen und Helden."
 	stats_btn.custom_minimum_size = Vector2(200, 50)
-	WorkshopStyle.style_button(stats_btn, false, 18)
+	WorkshopStyle.style_button(stats_btn, false, UiTheme.FS_L)
 	stats_btn.pressed.connect(func():
 		SoundManager.play_sound("click")
 		_cancel_rebind()
@@ -161,7 +162,7 @@ func _build_ui() -> void:
 	_editor_btn.text = "KARTENEDITOR"
 	_editor_btn.tooltip_text = "Eigene Arena-Karten bauen, speichern und mit Bots testen."
 	_editor_btn.custom_minimum_size = Vector2(220, 50)
-	WorkshopStyle.style_button(_editor_btn, false, 18)
+	WorkshopStyle.style_button(_editor_btn, false, UiTheme.FS_L)
 	_editor_btn.pressed.connect(func():
 		SoundManager.play_sound("click")
 		_cancel_rebind()
@@ -176,7 +177,7 @@ func _build_ui() -> void:
 	_back_btn = Button.new()
 	_back_btn.text = "ZURÜCK"
 	_back_btn.custom_minimum_size = Vector2(260, 50)
-	WorkshopStyle.style_button(_back_btn, true, 20)
+	WorkshopStyle.style_button(_back_btn, true, UiTheme.FS_XL)
 	_back_btn.pressed.connect(func():
 		SoundManager.play_sound("confirm")
 		close_options()
@@ -195,7 +196,7 @@ func _row(parent: Control, label_text: String) -> HBoxContainer:
 	var label := Label.new()
 	label.text = label_text
 	label.custom_minimum_size = Vector2(240, 0)
-	label.add_theme_font_size_override("font_size", 18)
+	label.add_theme_font_size_override("font_size", UiTheme.FS_L)
 	label.add_theme_color_override("font_color", WorkshopStyle.TEXT)
 	row.add_child(label)
 	parent.add_child(row)
@@ -207,7 +208,7 @@ func _build_graphics_tab() -> Control:
 	var row := _row(page, "Anzeigemodus")
 	_window_option = OptionButton.new()
 	_window_option.custom_minimum_size = Vector2(340, 44)
-	_window_option.add_theme_font_size_override("font_size", 18)
+	_window_option.add_theme_font_size_override("font_size", UiTheme.FS_L)
 	for i in range(GameSettings.WINDOW_MODES.size()):
 		var mode: String = GameSettings.WINDOW_MODES[i]
 		_window_option.add_item(str(GameSettings.WINDOW_MODE_LABELS[mode]), i)
@@ -233,7 +234,7 @@ func _build_audio_tab() -> Control:
 		row.add_child(slider)
 		var value_label := Label.new()
 		value_label.custom_minimum_size = Vector2(64, 0)
-		value_label.add_theme_font_size_override("font_size", 18)
+		value_label.add_theme_font_size_override("font_size", UiTheme.FS_L)
 		value_label.add_theme_color_override("font_color", WorkshopStyle.ACCENT_LIGHT)
 		row.add_child(value_label)
 		_volume_sliders[key] = slider
@@ -254,7 +255,7 @@ func _build_audio_tab() -> Control:
 	var pack_row := _row(page, "Soundpaket")
 	_pack_option = OptionButton.new()
 	_pack_option.custom_minimum_size = Vector2(300, 44)
-	_pack_option.add_theme_font_size_override("font_size", 18)
+	_pack_option.add_theme_font_size_override("font_size", UiTheme.FS_L)
 	var pack_list := SoundManager.get_sound_pack_list()
 	for i in range(pack_list.size()):
 		_pack_option.add_item(str(pack_list[i]["label"]), i)
@@ -266,12 +267,12 @@ func _build_audio_tab() -> Control:
 	var demo_btn := Button.new()
 	demo_btn.text = "PROBE"
 	demo_btn.custom_minimum_size = Vector2(110, 44)
-	WorkshopStyle.style_button(demo_btn, false, 16)
+	WorkshopStyle.style_button(demo_btn, false, UiTheme.FS_BODY)
 	demo_btn.pressed.connect(_play_pack_demo)
 	pack_row.add_child(demo_btn)
 	var pack_hint := Label.new()
 	pack_hint.text = "Test: andere Effekt-Sets ausprobieren. Gilt nur auf diesem PC, Mitspieler hören ihr eigenes Set."
-	pack_hint.add_theme_font_size_override("font_size", 14)
+	pack_hint.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	pack_hint.add_theme_color_override("font_color", WorkshopStyle.TEXT_DIM)
 	pack_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	page.add_child(pack_hint)
@@ -292,7 +293,7 @@ func _build_controls_tab() -> Control:
 	var page := _tab_page("Steuerung")
 	var hint := Label.new()
 	hint.text = "Feld anklicken, dann neue Taste oder Maustaste drücken. Esc bricht ab."
-	hint.add_theme_font_size_override("font_size", 14)
+	hint.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	hint.add_theme_color_override("font_color", WorkshopStyle.TEXT_DIM)
 	page.add_child(hint)
 
@@ -310,7 +311,7 @@ func _build_controls_tab() -> Control:
 		if entry.has("group"):
 			var header := Label.new()
 			header.text = str(entry["group"]).to_upper()
-			header.add_theme_font_size_override("font_size", 15)
+			header.add_theme_font_size_override("font_size", UiTheme.FS_M)
 			header.add_theme_color_override("font_color", WorkshopStyle.CYAN)
 			list.add_child(_spacer(4))
 			list.add_child(header)
@@ -323,12 +324,12 @@ func _build_controls_tab() -> Control:
 		var label := Label.new()
 		label.text = str(entry["label"])
 		label.custom_minimum_size = Vector2(300, 0)
-		label.add_theme_font_size_override("font_size", 16)
+		label.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 		label.add_theme_color_override("font_color", WorkshopStyle.TEXT)
 		row.add_child(label)
 		var bind_btn := Button.new()
 		bind_btn.custom_minimum_size = Vector2(260, 36)
-		WorkshopStyle.style_button(bind_btn, false, 16)
+		WorkshopStyle.style_button(bind_btn, false, UiTheme.FS_BODY)
 		bind_btn.pressed.connect(_start_rebind.bind(action, bind_btn))
 		row.add_child(bind_btn)
 		list.add_child(row)
@@ -338,7 +339,7 @@ func _build_controls_tab() -> Control:
 	reset_btn.text = "STANDARD WIEDERHERSTELLEN"
 	reset_btn.custom_minimum_size = Vector2(320, 42)
 	reset_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	WorkshopStyle.style_button(reset_btn, false, 16)
+	WorkshopStyle.style_button(reset_btn, false, UiTheme.FS_BODY)
 	reset_btn.pressed.connect(func():
 		SoundManager.play_sound("click")
 		_cancel_rebind()

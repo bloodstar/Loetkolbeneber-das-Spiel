@@ -332,7 +332,7 @@ func _build_slot_list() -> void:
 
 		var title := Label.new()
 		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		title.add_theme_font_size_override("font_size", 15)
+		title.add_theme_font_size_override("font_size", UiTheme.FS_M)
 		row.add_child(title)
 
 		var kind := OptionButton.new()
@@ -429,8 +429,8 @@ func _create_hero_button(hero: HeroData) -> Button:
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	label.add_theme_font_size_override("font_size", 11)
-	label.add_theme_color_override("font_color", Color(0.92, 0.95, 1.0))
+	label.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	label.add_theme_color_override("font_color", UiTheme.TEXT)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	content.add_child(label)
 	btn.set_meta("stats_label", label)
@@ -707,8 +707,8 @@ func _build_character_tab() -> void:
 	var preview_title := Label.new()
 	preview_title.text = "CHARAKTERVORSCHAU"
 	preview_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	preview_title.add_theme_font_size_override("font_size", 20)
-	preview_title.add_theme_color_override("font_color", Color(1.0, 0.84, 0.45))
+	preview_title.add_theme_font_size_override("font_size", UiTheme.FS_XL)
+	preview_title.add_theme_color_override("font_color", UiTheme.GOLD)
 	preview_column.add_child(preview_title)
 
 	var preview_frame := PanelContainer.new()
@@ -755,8 +755,8 @@ func _build_character_tab() -> void:
 
 	character_slot_label = Label.new()
 	character_slot_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	character_slot_label.add_theme_font_size_override("font_size", 13)
-	character_slot_label.add_theme_color_override("font_color", Color(0.66, 0.72, 0.82))
+	character_slot_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	character_slot_label.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
 	preview_column.add_child(character_slot_label)
 	_add_character_melee_tiles(preview_column)
 
@@ -768,13 +768,13 @@ func _build_character_tab() -> void:
 
 	var heading := Label.new()
 	heading.text = "CHARAKTER ANPASSEN"
-	heading.add_theme_font_size_override("font_size", 22)
+	heading.add_theme_font_size_override("font_size", UiTheme.FS_XL)
 	heading.add_theme_color_override("font_color", Color(1.0, 0.9, 0.7))
 	controls.add_child(heading)
 
 	character_hint = Label.new()
 	character_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	character_hint.add_theme_font_size_override("font_size", 13)
+	character_hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	character_hint.add_theme_color_override("font_color", Color(0.65, 0.70, 0.78))
 	controls.add_child(character_hint)
 
@@ -784,8 +784,8 @@ func _build_character_tab() -> void:
 
 	var slot_caption := Label.new()
 	slot_caption.text = "SPIELER-SLOT"
-	slot_caption.add_theme_font_size_override("font_size", 15)
-	slot_caption.add_theme_color_override("font_color", Color(0.92, 0.94, 0.98))
+	slot_caption.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	slot_caption.add_theme_color_override("font_color", UiTheme.TEXT)
 	slot_caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	slot_row.add_child(slot_caption)
 
@@ -835,15 +835,15 @@ func _add_character_color_row(parent: VBoxContainer, title: String, description:
 
 	var title_label := Label.new()
 	title_label.text = title
-	title_label.add_theme_font_size_override("font_size", 16)
-	title_label.add_theme_color_override("font_color", Color(0.92, 0.94, 0.98))
+	title_label.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
+	title_label.add_theme_color_override("font_color", UiTheme.TEXT)
 	text_column.add_child(title_label)
 
 	var desc_label := Label.new()
 	desc_label.text = description
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc_label.add_theme_font_size_override("font_size", 11)
-	desc_label.add_theme_color_override("font_color", Color(0.50, 0.56, 0.65))
+	desc_label.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	desc_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 	text_column.add_child(desc_label)
 
 	picker.custom_minimum_size = Vector2(120, 42)
@@ -864,15 +864,15 @@ func _add_character_shape_row(parent: VBoxContainer) -> void:
 
 	var title_label := Label.new()
 	title_label.text = "Spitzenform"
-	title_label.add_theme_font_size_override("font_size", 16)
-	title_label.add_theme_color_override("font_color", Color(0.92, 0.94, 0.98))
+	title_label.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
+	title_label.add_theme_color_override("font_color", UiTheme.TEXT)
 	text_column.add_child(title_label)
 
 	var desc_label := Label.new()
 	desc_label.text = "Form der Lötspitze, z. B. Kegel, Meißel, Kugel oder Diamant."
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc_label.add_theme_font_size_override("font_size", 11)
-	desc_label.add_theme_color_override("font_color", Color(0.50, 0.56, 0.65))
+	desc_label.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	desc_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 	text_column.add_child(desc_label)
 
 	wand_shape_option = OptionButton.new()
@@ -892,15 +892,15 @@ func _add_character_text_column(row: HBoxContainer, title: String, description: 
 
 	var title_label := Label.new()
 	title_label.text = title
-	title_label.add_theme_font_size_override("font_size", 16)
-	title_label.add_theme_color_override("font_color", Color(0.92, 0.94, 0.98))
+	title_label.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
+	title_label.add_theme_color_override("font_color", UiTheme.TEXT)
 	text_column.add_child(title_label)
 
 	var desc_label := Label.new()
 	desc_label.text = description
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc_label.add_theme_font_size_override("font_size", 11)
-	desc_label.add_theme_color_override("font_color", Color(0.50, 0.56, 0.65))
+	desc_label.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	desc_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 	text_column.add_child(desc_label)
 
 func _add_character_name_row(parent: VBoxContainer) -> void:
@@ -1017,8 +1017,8 @@ func _add_character_parts_section(parent: VBoxContainer) -> void:
 func _add_character_grid_row(grid: GridContainer, title: String, control: Control) -> void:
 	var label := Label.new()
 	label.text = title
-	label.add_theme_font_size_override("font_size", 14)
-	label.add_theme_color_override("font_color", Color(0.86, 0.89, 0.95))
+	label.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	label.add_theme_color_override("font_color", UiTheme.TEXT)
 	grid.add_child(label)
 	control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grid.add_child(control)
@@ -1120,8 +1120,8 @@ func _add_character_melee_tiles(parent: VBoxContainer) -> void:
 	var caption := Label.new()
 	caption.text = "NAHKAMPFWAFFE [E]"
 	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	caption.add_theme_font_size_override("font_size", 14)
-	caption.add_theme_color_override("font_color", Color(0.92, 0.94, 0.98))
+	caption.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	caption.add_theme_color_override("font_color", UiTheme.TEXT)
 	parent.add_child(caption)
 
 	var row := HBoxContainer.new()
@@ -1599,7 +1599,7 @@ func _build_rules_tab() -> void:
 	melee_enabled_check = CheckButton.new()
 	melee_enabled_check.text = "Nahkampfwaffen (Taste E) und Nahkampf-Karten"
 	melee_enabled_check.tooltip_text = "Aus: Niemand kann mit E zuschlagen, und Karten aus dem Pool „Nahkampf“ werden nicht angeboten."
-	melee_enabled_check.add_theme_font_size_override("font_size", 15)
+	melee_enabled_check.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	melee_enabled_check.button_pressed = Global.melee_enabled
 	melee_enabled_check.toggled.connect(_on_melee_enabled_toggled)
 	body.add_child(melee_enabled_check)
@@ -1646,7 +1646,7 @@ func _build_rules_tab() -> void:
 	body.add_child(view_row)
 	var view_label := Label.new()
 	view_label.text = "Spielart:"
-	view_label.add_theme_font_size_override("font_size", 15)
+	view_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	view_row.add_child(view_label)
 	game_mode_option = OptionButton.new()
 	game_mode_option.custom_minimum_size = Vector2(200, 0)
@@ -1656,8 +1656,8 @@ func _build_rules_tab() -> void:
 	view_row.add_child(game_mode_option)
 	game_mode_info_label = Label.new()
 	game_mode_info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	game_mode_info_label.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
-	game_mode_info_label.add_theme_font_size_override("font_size", 12)
+	game_mode_info_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	game_mode_info_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	game_mode_info_label.autowrap_mode = 2
 	view_row.add_child(game_mode_info_label)
 	# Modus und Map stehen nebeneinander, darunter jeweils ihre Erklärung.
@@ -1675,7 +1675,7 @@ func _build_rules_tab() -> void:
 
 	var mode_label := Label.new()
 	mode_label.text = "Modus:"
-	mode_label.add_theme_font_size_override("font_size", 15)
+	mode_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	mode_row.add_child(mode_label)
 
 	mode_option = OptionButton.new()
@@ -1687,8 +1687,8 @@ func _build_rules_tab() -> void:
 
 	mode_info_label = Label.new()
 	mode_info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	mode_info_label.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
-	mode_info_label.add_theme_font_size_override("font_size", 12)
+	mode_info_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	mode_info_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	mode_info_label.autowrap_mode = 2
 	mode_column.add_child(mode_info_label)
 
@@ -1702,7 +1702,7 @@ func _build_rules_tab() -> void:
 
 	var map_label := Label.new()
 	map_label.text = "Map:"
-	map_label.add_theme_font_size_override("font_size", 15)
+	map_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	map_row.add_child(map_label)
 
 	map_option = OptionButton.new()
@@ -1714,8 +1714,8 @@ func _build_rules_tab() -> void:
 
 	map_info_label = Label.new()
 	map_info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	map_info_label.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
-	map_info_label.add_theme_font_size_override("font_size", 12)
+	map_info_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	map_info_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	map_info_label.autowrap_mode = 2
 	map_column.add_child(map_info_label)
 
@@ -1727,7 +1727,7 @@ func _build_rules_tab() -> void:
 
 	var draft_label := Label.new()
 	draft_label.text = "Auswahl:"
-	draft_label.add_theme_font_size_override("font_size", 15)
+	draft_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	draft_row.add_child(draft_label)
 
 	picks_spin = SpinBox.new()
@@ -1741,7 +1741,7 @@ func _build_rules_tab() -> void:
 
 	var von_label := Label.new()
 	von_label.text = "von"
-	von_label.add_theme_font_size_override("font_size", 15)
+	von_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	draft_row.add_child(von_label)
 
 	offer_spin = SpinBox.new()
@@ -1756,8 +1756,8 @@ func _build_rules_tab() -> void:
 	var draft_hint := Label.new()
 	draft_hint.text = "Karten pro Spieler und angebotene Karten pro Draft."
 	draft_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	draft_hint.add_theme_color_override("font_color", Color(0.5, 0.55, 0.65, 1.0))
-	draft_hint.add_theme_font_size_override("font_size", 12)
+	draft_hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	draft_hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	draft_row.add_child(draft_hint)
 
 	var pre_draft_row := HBoxContainer.new()
@@ -1766,7 +1766,7 @@ func _build_rules_tab() -> void:
 
 	var pre_draft_label := Label.new()
 	pre_draft_label.text = "Pre-Draft:"
-	pre_draft_label.add_theme_font_size_override("font_size", 15)
+	pre_draft_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	pre_draft_row.add_child(pre_draft_label)
 
 	pre_draft_spin = SpinBox.new()
@@ -1789,8 +1789,8 @@ func _build_rules_tab() -> void:
 	var pre_draft_hint := Label.new()
 	pre_draft_hint.text = "Picks pro Spieler vor Matchbeginn (0 = aus)."
 	pre_draft_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pre_draft_hint.add_theme_color_override("font_color", Color(0.5, 0.55, 0.65, 1.0))
-	pre_draft_hint.add_theme_font_size_override("font_size", 12)
+	pre_draft_hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	pre_draft_hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	pre_draft_hint.autowrap_mode = 2
 	pre_draft_row.add_child(pre_draft_hint)
 
@@ -1798,8 +1798,8 @@ func _build_rules_tab() -> void:
 	_add_section_title(body, "DRAFT-MODIFIER", Color(0.82, 0.62, 1.0, 1.0))
 	var modifier_intro := Label.new()
 	modifier_intro.text = "Modifier gelten für alle Drafts. Blind pick verdeckt Angebot und Auswahl online vor anderen menschlichen Spielern; lokal gegen Bots bleibt er ohne Wirkung. Random pick zieht automatisch eine zufällige Karte. Gamble legt die Karten verdeckt aus: aufdecken von links, wer weiterdreht, verkohlt die offene Karte."
-	modifier_intro.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
-	modifier_intro.add_theme_font_size_override("font_size", 12)
+	modifier_intro.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	modifier_intro.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	modifier_intro.autowrap_mode = 2
 	body.add_child(modifier_intro)
 
@@ -1820,8 +1820,8 @@ func _build_rules_tab() -> void:
 	var blind_hint := Label.new()
 	blind_hint.text = "Nur online gegen menschliche Spieler wirksam; lokal mit Bots ohne Effekt."
 	blind_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	blind_hint.add_theme_color_override("font_color", Color(0.5, 0.55, 0.65, 1.0))
-	blind_hint.add_theme_font_size_override("font_size", 12)
+	blind_hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	blind_hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	blind_hint.autowrap_mode = 2
 	modifier_grid.add_child(blind_hint)
 
@@ -1835,8 +1835,8 @@ func _build_rules_tab() -> void:
 	var random_hint := Label.new()
 	random_hint.text = "Automatische Zufallswahl statt manuellem Picken."
 	random_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	random_hint.add_theme_color_override("font_color", Color(0.5, 0.55, 0.65, 1.0))
-	random_hint.add_theme_font_size_override("font_size", 12)
+	random_hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	random_hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	random_hint.autowrap_mode = 2
 	modifier_grid.add_child(random_hint)
 
@@ -1850,15 +1850,15 @@ func _build_rules_tab() -> void:
 	var gamble_hint := Label.new()
 	gamble_hint.text = "Verdeckt aufdecken: nehmen oder weiterdrehen, die vorherige Karte verkohlt."
 	gamble_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	gamble_hint.add_theme_color_override("font_color", Color(0.5, 0.55, 0.65, 1.0))
-	gamble_hint.add_theme_font_size_override("font_size", 12)
+	gamble_hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	gamble_hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	gamble_hint.autowrap_mode = 2
 	modifier_grid.add_child(gamble_hint)
 
 	var info := Label.new()
 	info.text = "Kills geben sofort Punkte. In FFA erhält der Überlebende den Bonus, in Team-Modi alle Mitglieder des Siegerteams. Bei einem Doppel-KO gibt es keinen Überlebensbonus."
-	info.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
-	info.add_theme_font_size_override("font_size", 12)
+	info.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	info.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	info.autowrap_mode = 2
 	body.add_child(info)
 
@@ -1869,8 +1869,8 @@ func _build_loadout_section(body: VBoxContainer) -> void:
 
 	var intro := Label.new()
 	intro.text = "Gespeicherte Presets für Modus, Spielerzahl, Punkte, Draft inkl. Modifier, Kartenpools, Sperren, Map sowie HP und Schaden. Die aktuellen Regeln werden automatisch als \"Last\" gespeichert und beim nächsten Start geladen. Nur der Host kann Loadouts laden, speichern oder löschen."
-	intro.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
-	intro.add_theme_font_size_override("font_size", 12)
+	intro.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	intro.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	intro.autowrap_mode = 2
 	body.add_child(intro)
 
@@ -1880,7 +1880,7 @@ func _build_loadout_section(body: VBoxContainer) -> void:
 
 	var preset_label := Label.new()
 	preset_label.text = "Preset:"
-	preset_label.add_theme_font_size_override("font_size", 15)
+	preset_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	preset_row.add_child(preset_label)
 
 	loadout_option = OptionButton.new()
@@ -1907,7 +1907,7 @@ func _build_loadout_section(body: VBoxContainer) -> void:
 
 	var name_label := Label.new()
 	name_label.text = "Name:"
-	name_label.add_theme_font_size_override("font_size", 15)
+	name_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	save_row.add_child(name_label)
 
 	loadout_name_edit = LineEdit.new()
@@ -1923,13 +1923,13 @@ func _build_loadout_section(body: VBoxContainer) -> void:
 	save_row.add_child(loadout_save_btn)
 
 	loadout_desc_label = Label.new()
-	loadout_desc_label.add_theme_color_override("font_color", Color(0.72, 0.78, 0.9, 1.0))
-	loadout_desc_label.add_theme_font_size_override("font_size", 12)
+	loadout_desc_label.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
+	loadout_desc_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	loadout_desc_label.autowrap_mode = 2
 	body.add_child(loadout_desc_label)
 
 	loadout_status = Label.new()
-	loadout_status.add_theme_font_size_override("font_size", 12)
+	loadout_status.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	loadout_status.autowrap_mode = 2
 	body.add_child(loadout_status)
 
@@ -2113,7 +2113,7 @@ func _apply_lobby_loadout(preset_name: String) -> bool:
 func _add_spin_row(grid: GridContainer, label_text: String, min_value: float, max_value: float, step: float, value: float, hint_text: String) -> SpinBox:
 	var label := Label.new()
 	label.text = label_text
-	label.add_theme_font_size_override("font_size", 15)
+	label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	grid.add_child(label)
 
 	var spin := SpinBox.new()
@@ -2127,8 +2127,8 @@ func _add_spin_row(grid: GridContainer, label_text: String, min_value: float, ma
 	var hint := Label.new()
 	hint.text = hint_text
 	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hint.add_theme_color_override("font_color", Color(0.5, 0.55, 0.65, 1.0))
-	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	hint.autowrap_mode = 2
 	grid.add_child(hint)
 	return spin
@@ -2152,8 +2152,8 @@ func _build_modifier_tab() -> void:
 	_add_section_title(body, "RUNDEN-MODIFIER", Color(1.0, 0.55, 0.9, 1.0))
 	var intro := Label.new()
 	intro.text = "Lege fest, wie oft und mit welchen Modifiern eine Runde startet. Die Rate wirkt auf die bisherige Verteilung: 0 % deaktiviert Modifier, 100 % entspricht dem Standard, 200 % garantiert einen zusätzlichen Modifier."
-	intro.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
-	intro.add_theme_font_size_override("font_size", 12)
+	intro.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	intro.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(intro)
 
@@ -2163,7 +2163,7 @@ func _build_modifier_tab() -> void:
 
 	var rate_label := Label.new()
 	rate_label.text = "Modifier-Rate:"
-	rate_label.add_theme_font_size_override("font_size", 16)
+	rate_label.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	rate_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	rate_row.add_child(rate_label)
 
@@ -2180,8 +2180,8 @@ func _build_modifier_tab() -> void:
 	var rate_hint := Label.new()
 	rate_hint.text = "0 % = aus  |  100 % = Standard  |  200 % = garantiert +1"
 	rate_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rate_hint.add_theme_color_override("font_color", Color(0.55, 0.62, 0.72, 1.0))
-	rate_hint.add_theme_font_size_override("font_size", 12)
+	rate_hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	rate_hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	rate_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	rate_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	rate_row.add_child(rate_hint)
@@ -2192,8 +2192,8 @@ func _build_modifier_tab() -> void:
 
 	modifier_count_label = Label.new()
 	modifier_count_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	modifier_count_label.add_theme_color_override("font_color", Color(0.78, 0.84, 0.96, 1.0))
-	modifier_count_label.add_theme_font_size_override("font_size", 14)
+	modifier_count_label.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
+	modifier_count_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	modifier_count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	header.add_child(modifier_count_label)
 
@@ -2226,7 +2226,7 @@ func _build_modifier_tab() -> void:
 		check.tooltip_text = str(definition.get("description", ""))
 		check.button_pressed = Global.is_level_modifier_enabled(id)
 		check.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		check.add_theme_font_size_override("font_size", 14)
+		check.add_theme_font_size_override("font_size", UiTheme.FS_M)
 		check.toggled.connect(_on_modifier_toggled.bind(id))
 		grid.add_child(check)
 		modifier_checks[id] = check
@@ -2234,7 +2234,7 @@ func _build_modifier_tab() -> void:
 	var note := Label.new()
 	note.text = "Nicht kombinierbar: Höhle + Der Boden ist Lava sowie Mondgravitation + Schwerewelt."
 	note.add_theme_color_override("font_color", Color(0.6, 0.55, 0.5, 1.0))
-	note.add_theme_font_size_override("font_size", 12)
+	note.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(note)
 
@@ -2336,8 +2336,8 @@ func _build_levels_tab() -> void:
 	_add_section_title(body, "LEVELS", Color(0.4, 0.95, 0.6, 1.0))
 	var intro := Label.new()
 	intro.text = "Abgeschaltete Levels kommen bei Map „Zufällig“ nicht mehr dran. Ein Klick auf ein Vorschaubild zeigt das Level groß. Ohne aktives Level lässt sich das Match nicht starten."
-	intro.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
-	intro.add_theme_font_size_override("font_size", 12)
+	intro.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	intro.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(intro)
 
@@ -2347,8 +2347,8 @@ func _build_levels_tab() -> void:
 
 	level_count_label = Label.new()
 	level_count_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	level_count_label.add_theme_color_override("font_color", Color(0.78, 0.84, 0.96, 1.0))
-	level_count_label.add_theme_font_size_override("font_size", 14)
+	level_count_label.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
+	level_count_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	level_count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	header.add_child(level_count_label)
 
@@ -2434,8 +2434,8 @@ func _create_level_card(map_id: String) -> PanelContainer:
 	placeholder.text = "Vorschau wird erstellt …"
 	placeholder.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	placeholder.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	placeholder.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7, 1.0))
-	placeholder.add_theme_font_size_override("font_size", 12)
+	placeholder.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	placeholder.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	placeholder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	placeholder.visible = texture_rect.texture == null
 	thumb.add_child(placeholder)
@@ -2446,7 +2446,7 @@ func _create_level_card(map_id: String) -> PanelContainer:
 	off_badge.add_theme_color_override("font_color", Color(1.0, 0.45, 0.4, 1.0))
 	off_badge.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
 	off_badge.add_theme_constant_override("outline_size", 4)
-	off_badge.add_theme_font_size_override("font_size", 16)
+	off_badge.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	off_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	thumb.add_child(off_badge)
 
@@ -2458,7 +2458,7 @@ func _create_level_card(map_id: String) -> PanelContainer:
 	name_label.text = Global.get_map_name(map_id)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 15)
+	name_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	name_label.clip_text = true
 	row.add_child(name_label)
 
@@ -2594,8 +2594,8 @@ func _build_powerups_tab() -> void:
 	_add_section_title(body, "POWERUPS", Color(1.0, 0.8, 0.3, 1.0))
 	var intro := Label.new()
 	intro.text = "Powerups liegen zufällig in der Arena, fallen aus Kisten und kommen beim Modifier „Powerup-Regen“. Abgeschaltete Powerups erscheinen nicht mehr. Sind alle aus, gibt es keine Powerups, keinen Powerup-Regen und keine Powerup-Karten im Draft."
-	intro.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
-	intro.add_theme_font_size_override("font_size", 12)
+	intro.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	intro.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(intro)
 
@@ -2605,8 +2605,8 @@ func _build_powerups_tab() -> void:
 
 	powerup_count_label = Label.new()
 	powerup_count_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	powerup_count_label.add_theme_color_override("font_color", Color(0.78, 0.84, 0.96, 1.0))
-	powerup_count_label.add_theme_font_size_override("font_size", 14)
+	powerup_count_label.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
+	powerup_count_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	powerup_count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	powerup_count_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	header.add_child(powerup_count_label)
@@ -2668,7 +2668,7 @@ func _create_powerup_card(kind: String) -> PanelContainer:
 	off_badge.add_theme_color_override("font_color", Color(1.0, 0.45, 0.4, 1.0))
 	off_badge.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
 	off_badge.add_theme_constant_override("outline_size", 4)
-	off_badge.add_theme_font_size_override("font_size", 16)
+	off_badge.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	off_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	preview.add_child(off_badge)
 
@@ -2680,7 +2680,7 @@ func _create_powerup_card(kind: String) -> PanelContainer:
 	name_label.text = Global.get_powerup_name(kind)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 15)
+	name_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	name_label.clip_text = true
 	row.add_child(name_label)
 
@@ -2694,7 +2694,7 @@ func _create_powerup_card(kind: String) -> PanelContainer:
 	desc.text = Global.get_powerup_description(kind)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.custom_minimum_size = Vector2(POWERUP_PREVIEW_SIZE.x, 0)
-	desc.add_theme_font_size_override("font_size", 12)
+	desc.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	vbox.add_child(desc)
 
 	powerup_cards[kind] = {
@@ -2828,7 +2828,7 @@ func _build_level_viewer() -> void:
 	level_viewer_title = Label.new()
 	level_viewer_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	level_viewer_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	level_viewer_title.add_theme_font_size_override("font_size", 22)
+	level_viewer_title.add_theme_font_size_override("font_size", UiTheme.FS_XL)
 	level_viewer_title.add_theme_color_override("font_color", Color(0.4, 0.95, 0.6, 1.0))
 	header.add_child(level_viewer_title)
 
@@ -2859,14 +2859,14 @@ func _build_level_viewer() -> void:
 	level_viewer_placeholder.text = "Vorschau wird erstellt …"
 	level_viewer_placeholder.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	level_viewer_placeholder.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	level_viewer_placeholder.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7, 1.0))
+	level_viewer_placeholder.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 	level_viewer_placeholder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	image_frame.add_child(level_viewer_placeholder)
 
 	level_viewer_desc = Label.new()
 	level_viewer_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	level_viewer_desc.add_theme_color_override("font_color", Color(0.72, 0.76, 0.85, 1.0))
-	level_viewer_desc.add_theme_font_size_override("font_size", 14)
+	level_viewer_desc.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
+	level_viewer_desc.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	vbox.add_child(level_viewer_desc)
 
 	var footer := HBoxContainer.new()
@@ -2875,15 +2875,15 @@ func _build_level_viewer() -> void:
 
 	level_viewer_check = CheckButton.new()
 	level_viewer_check.text = "Level aktiv"
-	level_viewer_check.add_theme_font_size_override("font_size", 15)
+	level_viewer_check.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	level_viewer_check.toggled.connect(_on_level_viewer_toggled)
 	footer.add_child(level_viewer_check)
 
 	level_viewer_status = Label.new()
 	level_viewer_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	level_viewer_status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	level_viewer_status.add_theme_color_override("font_color", Color(0.55, 0.62, 0.72, 1.0))
-	level_viewer_status.add_theme_font_size_override("font_size", 12)
+	level_viewer_status.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	level_viewer_status.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	footer.add_child(level_viewer_status)
 
 func _open_level_viewer(map_id: String) -> void:
@@ -2987,8 +2987,8 @@ func _build_cards_tab() -> void:
 	_add_section_title(body, "KARTENPOOLS", Color(0.45, 0.9, 1.0, 1.0))
 	var pool_intro := Label.new()
 	pool_intro.text = "Nur Karten aus aktiven Pools erscheinen im Draft. Mindestens ein Pool bleibt aktiv; Ausbaukarten erben den Pool ihrer Grundkarte. Karten eines abgeschalteten Pools sind unten gesperrt und lassen sich einzeln wieder freigeben."
-	pool_intro.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
-	pool_intro.add_theme_font_size_override("font_size", 12)
+	pool_intro.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	pool_intro.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	pool_intro.autowrap_mode = 2
 	body.add_child(pool_intro)
 
@@ -2998,8 +2998,8 @@ func _build_cards_tab() -> void:
 
 	pool_count_label = Label.new()
 	pool_count_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pool_count_label.add_theme_color_override("font_color", Color(0.75, 0.82, 0.95, 1.0))
-	pool_count_label.add_theme_font_size_override("font_size", 13)
+	pool_count_label.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
+	pool_count_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	pool_count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	pool_header.add_child(pool_count_label)
 
@@ -3022,7 +3022,7 @@ func _build_cards_tab() -> void:
 		cb.text = pool
 		cb.button_pressed = Global.is_card_pool_enabled(pool)
 		cb.tooltip_text = Global.CARD_POOL_DESCRIPTIONS.get(pool, "")
-		cb.add_theme_font_size_override("font_size", 14)
+		cb.add_theme_font_size_override("font_size", UiTheme.FS_M)
 		cb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		cb.toggled.connect(_on_card_pool_toggled.bind(pool, cb))
 		pool_grid.add_child(cb)
@@ -3030,8 +3030,8 @@ func _build_cards_tab() -> void:
 
 	var chart_intro := Label.new()
 	chart_intro.text = "Verteilung aller aktuell verfügbaren Karten (aktive Pools und Freigaben, ohne Sperren): Haupt-Tags, Sub-Tags je Haupt-Tag und Seltenheiten."
-	chart_intro.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
-	chart_intro.add_theme_font_size_override("font_size", 12)
+	chart_intro.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	chart_intro.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	chart_intro.autowrap_mode = 2
 	body.add_child(chart_intro)
 	pool_charts_box = VBoxContainer.new()
@@ -3042,8 +3042,8 @@ func _build_cards_tab() -> void:
 	_add_section_title(body, "SELTENHEITEN", Color(1.0, 0.72, 0.3, 1.0))
 	var intro := Label.new()
 	intro.text = "Prozentsatz pro Seltenheit im Kartenangebot. Die Summe wird automatisch normalisiert; alle 0 % bedeutet Gleichverteilung."
-	intro.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
-	intro.add_theme_font_size_override("font_size", 12)
+	intro.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	intro.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	intro.autowrap_mode = 2
 	body.add_child(intro)
 
@@ -3063,7 +3063,7 @@ func _build_cards_tab() -> void:
 		var label := Label.new()
 		label.text = rarity
 		label.add_theme_color_override("font_color", CardDatabase.get_rarity_color(rarity))
-		label.add_theme_font_size_override("font_size", 15)
+		label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 		cell.add_child(label)
 
 		var row := HBoxContainer.new()
@@ -3083,18 +3083,18 @@ func _build_cards_tab() -> void:
 
 		var percent := Label.new()
 		percent.text = "%"
-		percent.add_theme_font_size_override("font_size", 14)
+		percent.add_theme_font_size_override("font_size", UiTheme.FS_M)
 		row.add_child(percent)
 
 	rarity_sum_label = Label.new()
-	rarity_sum_label.add_theme_color_override("font_color", Color(0.75, 0.8, 0.9, 1.0))
-	rarity_sum_label.add_theme_font_size_override("font_size", 13)
+	rarity_sum_label.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
+	rarity_sum_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	body.add_child(rarity_sum_label)
 
 	var legend := Label.new()
 	legend.text = "Kartenrahmen: außen = Seltenheit, innen = Effektfarbe der Karte."
-	legend.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
-	legend.add_theme_font_size_override("font_size", 12)
+	legend.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	legend.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	body.add_child(legend)
 
 	body.add_child(HSeparator.new())
@@ -3106,12 +3106,12 @@ func _build_cards_tab() -> void:
 	var ban_title := Label.new()
 	ban_title.text = "Powerup-Karten sperren:"
 	ban_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	ban_title.add_theme_font_size_override("font_size", 16)
+	ban_title.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	ban_header.add_child(ban_title)
 
 	ban_count = Label.new()
-	ban_count.add_theme_color_override("font_color", Color(0.6, 0.65, 0.75, 1.0))
-	ban_count.add_theme_font_size_override("font_size", 13)
+	ban_count.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	ban_count.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	ban_count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	ban_header.add_child(ban_count)
 
@@ -3134,8 +3134,8 @@ func _build_cards_tab() -> void:
 
 	ban_filter_label = Label.new()
 	ban_filter_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	ban_filter_label.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
-	ban_filter_label.add_theme_font_size_override("font_size", 12)
+	ban_filter_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	ban_filter_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	ban_filter_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	ban_filter_label.autowrap_mode = 2
 	filter_row.add_child(ban_filter_label)
@@ -3187,8 +3187,8 @@ func _build_ban_sections() -> void:
 	if shown == 0:
 		var empty := Label.new()
 		empty.text = "Keine Karte passt zum Filter."
-		empty.add_theme_color_override("font_color", Color(0.62, 0.66, 0.75, 1.0))
-		empty.add_theme_font_size_override("font_size", 13)
+		empty.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+		empty.add_theme_font_size_override("font_size", UiTheme.FS_S)
 		ban_sections.add_child(empty)
 	_refresh_ban_states()
 
@@ -3282,7 +3282,7 @@ func _add_ban_section(rarity: String, cards: Array) -> void:
 	var header := Label.new()
 	header.text = "%s  ·  %d Karten" % [rarity, cards.size()]
 	header.add_theme_color_override("font_color", CardDatabase.get_rarity_color(rarity))
-	header.add_theme_font_size_override("font_size", 16)
+	header.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	header.custom_minimum_size = Vector2(0, 26)
 	ban_sections.add_child(header)
 
@@ -3336,14 +3336,14 @@ func _create_ban_card(card: CardData) -> PanelContainer:
 	var title := Label.new()
 	title.text = card.title
 	title.add_theme_color_override("font_color", card.color)
-	title.add_theme_font_size_override("font_size", 13)
+	title.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	title.clip_text = true
 	text_box.add_child(title)
 
 	var meta := Label.new()
 	meta.text = _ban_meta_text(card)
 	meta.add_theme_color_override("font_color", CardDatabase.get_rarity_color(card.rarity))
-	meta.add_theme_font_size_override("font_size", 10)
+	meta.add_theme_font_size_override("font_size", UiTheme.FS_XXS)
 	text_box.add_child(meta)
 	ban_meta_labels[card.id] = meta
 
@@ -3351,7 +3351,7 @@ func _create_ban_card(card: CardData) -> PanelContainer:
 		var tags := Label.new()
 		tags.text = " · ".join(card.sub_tags)
 		tags.add_theme_color_override("font_color", Color(0.55, 0.78, 0.95, 1.0))
-		tags.add_theme_font_size_override("font_size", 9)
+		tags.add_theme_font_size_override("font_size", UiTheme.FS_XXS)
 		tags.clip_text = true
 		text_box.add_child(tags)
 
@@ -3365,8 +3365,8 @@ func _create_ban_card(card: CardData) -> PanelContainer:
 
 	var description := Label.new()
 	description.text = CardMechanics.format_description(card.description)
-	description.add_theme_color_override("font_color", Color(0.68, 0.72, 0.80, 1.0))
-	description.add_theme_font_size_override("font_size", 10)
+	description.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
+	description.add_theme_font_size_override("font_size", UiTheme.FS_XXS)
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text_box.add_child(description)
 
@@ -3880,7 +3880,7 @@ func _build_bot_test_section(body: VBoxContainer) -> void:
 	bot_test_check = CheckButton.new()
 	bot_test_check.text = "Nur Bots spielen lassen (auch Spieler 1)"
 	bot_test_check.tooltip_text = "Alle aktiven Slots werden von Bots gesteuert. Nach jedem Match startet automatisch das nächste, bis du über ESC ins Hauptmenü gehst.\nDie Runden landen markiert im Runden-Protokoll (STATISTIK → „Nur Bot-Test“) und ändern die Karten-Seltenheiten nicht.\nWird nicht im Loadout gespeichert."
-	bot_test_check.add_theme_font_size_override("font_size", 15)
+	bot_test_check.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	bot_test_check.toggled.connect(func(pressed: bool):
 		SoundManager.play_sound("click")
 		Global.set_bot_test_mode(pressed)
@@ -3894,7 +3894,7 @@ func _build_bot_test_section(body: VBoxContainer) -> void:
 	bot_test_random_check = CheckButton.new()
 	bot_test_random_check.text = "Klassen und Nahkampfwaffen pro Match zufällig"
 	bot_test_random_check.tooltip_text = "An: Jedes Match bekommt jeder Slot zufällig Held und Waffe, gleichmäßig verteilt (alle kommen gleich oft dran, kein Held doppelt im selben Match).\nAus: Die Helden aus dem Reiter Spieler bleiben, Waffen sind wie bei Bots üblich zufällig."
-	bot_test_random_check.add_theme_font_size_override("font_size", 15)
+	bot_test_random_check.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	bot_test_random_check.toggled.connect(func(pressed: bool):
 		SoundManager.play_sound("click")
 		Global.set_bot_test_random_loadouts(pressed)
@@ -3903,7 +3903,7 @@ func _build_bot_test_section(body: VBoxContainer) -> void:
 
 	var speed_label := Label.new()
 	speed_label.text = "Tempo:"
-	speed_label.add_theme_font_size_override("font_size", 15)
+	speed_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	speed_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(speed_label)
 	bot_test_speed_option = OptionButton.new()
@@ -3917,8 +3917,8 @@ func _build_bot_test_section(body: VBoxContainer) -> void:
 	row.add_child(bot_test_speed_option)
 
 	bot_test_info_label = Label.new()
-	bot_test_info_label.add_theme_font_size_override("font_size", 13)
-	bot_test_info_label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.75, 1.0))
+	bot_test_info_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	bot_test_info_label.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
 	bot_test_info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	bot_test_section.add_child(bot_test_info_label)
 	bot_test_section.add_child(HSeparator.new())
@@ -3946,7 +3946,7 @@ func _refresh_bot_test_controls() -> void:
 func _add_section_title(parent: VBoxContainer, text: String, color: Color) -> void:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", 17)
+	label.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	label.add_theme_color_override("font_color", color)
 	parent.add_child(label)
 
@@ -3976,10 +3976,10 @@ func _refresh_online_code_row() -> void:
 		online_code_row.add_theme_constant_override("separation", 12)
 		var caption := Label.new()
 		caption.text = "Online-Code:"
-		caption.add_theme_font_size_override("font_size", 20)
-		caption.add_theme_color_override("font_color", Color(0.75, 0.8, 0.9, 1))
+		caption.add_theme_font_size_override("font_size", UiTheme.FS_XL)
+		caption.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
 		online_code_label = Label.new()
-		online_code_label.add_theme_font_size_override("font_size", 30)
+		online_code_label.add_theme_font_size_override("font_size", UiTheme.FS_H2)
 		online_code_label.add_theme_color_override("font_color", Color(0.55, 1.0, 0.55, 1))
 		online_code_copy_btn = Button.new()
 		online_code_copy_btn.text = "Kopieren"
@@ -3990,8 +3990,8 @@ func _refresh_online_code_row() -> void:
 		)
 		var hint := Label.new()
 		hint.text = "an Mitspieler schicken, sie geben ihn bei \"Mit Code beitreten\" ein"
-		hint.add_theme_font_size_override("font_size", 13)
-		hint.add_theme_color_override("font_color", Color(0.6, 0.65, 0.75, 1))
+		hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
+		hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 		for node in [caption, online_code_label, online_code_copy_btn, hint]:
 			node.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			online_code_row.add_child(node)

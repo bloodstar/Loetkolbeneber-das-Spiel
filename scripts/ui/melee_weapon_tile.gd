@@ -42,7 +42,7 @@ func _ready() -> void:
 	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_name_label.position = Vector2(-8.0, ICON_SIZE + 4.0)
 	_name_label.size = Vector2(TILE_WIDTH + 16.0, 16.0)
-	_name_label.add_theme_font_size_override("font_size", 12)
+	_name_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_name_label)
 
