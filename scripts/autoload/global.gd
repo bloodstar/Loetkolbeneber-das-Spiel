@@ -735,6 +735,29 @@ func _setup_heroes() -> void:
 	phantom.ability_version = 1
 	heroes["phantom"] = phantom
 
+	# 8. Druide – Hainwächter
+	var druid = HeroData.new()
+	druid.id = "druid"
+	druid.name = "Druide"
+	druid.role = "Grove Warden"
+	druid.description = "Formt das Schlachtfeld mit lebenden Wänden."
+	druid.passive_desc = "Wurzelkraft: Regeneriert ständig %d HP pro Sekunde" % int(Player.DRUID_PASSIVE_REGEN)
+	druid.ability_name = "Wurzelwall"
+	druid.ability_desc = "Lässt quer zur Zielrichtung eine Rankenwand wachsen, die Schüsse und Gegner aufhält!"
+	druid.ability_cooldown = 7.0
+	druid.base_hp = 105
+	druid.base_shield = 10
+	druid.base_speed = 295.0
+	druid.base_jump_force = -505.0
+	druid.base_ammo = 3
+	druid.base_fire_rate_cooldown = 0.24
+	druid.base_reload_time = 1.2
+	druid.color_tint = Color(0.50, 0.72, 0.36)
+	druid.sprite_tile_name = "tile_0004.png"
+	druid.version = 1
+	druid.ability_version = 1
+	heroes["druid"] = druid
+
 func get_hero(id: String) -> HeroData:
 	return heroes.get(id, heroes["ignis"])
 
@@ -788,6 +811,12 @@ func get_hero_ability_details(hero: HeroData) -> String:
 				int(Player.SHADOW_STEP_RADIUS),
 				int(round(base_damage * Player.SHADOW_STEP_DAMAGE_MULT)),
 				int(round(Player.SHADOW_STEP_DAMAGE_MULT * 100.0)),
+			]
+		"druid":
+			return "Rankenwand %d px vor dir, quer zur Zielrichtung: %d px lang, %.0f s lang, %d HP. Hält Bewegung und Kugeln aller Spieler auf, man kann darauf stehen. Zielst du eher waagerecht, steht sie senkrecht auf dem Boden. Höchstens %d Wand gleichzeitig, die älteste zerfällt." % [
+				int(Player.DRUID_WALL_DISTANCE), int(Player.DRUID_WALL_LENGTH),
+				Player.DRUID_WALL_DURATION, int(Player.DRUID_WALL_HP),
+				Player.DRUID_WALL_MAX_ACTIVE,
 			]
 	return hero.ability_desc
 

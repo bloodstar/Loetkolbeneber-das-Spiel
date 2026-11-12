@@ -91,7 +91,7 @@ Alle Tasten lassen sich unter **Optionen → Steuerung** neu belegen. Hier steht
 
 ## 🐷 Helden
 
-Es gibt **7 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am Kopf.
+Es gibt **8 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am Kopf.
 
 | Held | Rolle | HP | Tempo | Schild | Passiv | Fähigkeit | Outfit |
 | :--- | :--- | ---: | ---: | ---: | :--- | :--- | :--- |
@@ -102,6 +102,7 @@ Es gibt **7 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit
 | **Klinge** | Blade Dancer | 110 | 315 | 15 | **Klingentanz**: Start-Schild und hohes Tempo | **Klingensturm**: Rundumschlag mit Rückstoß, 0,5 s unverwundbar | Roter Schal |
 | **Bastion** | Field Engineer | 125 | 270 | 20 | **Aurora**: Doppelte Schild-Regeneration, Schild-Cooldown nur 4 s | **Heilfeld**: 4 s lang 8 HP und 10 Schild alle 0,5 s | Bauhelm mit Lampe |
 | **Phantom** | Shadow Assassin | 90 | 325 | 5 | **Nachtwind**: Sehr schnell, kürzestes Feuerintervall | **Schattensprung**: Teleport 260 px mit Treffer, 0,9 s unverwundbar | Ninja-Stirnband |
+| **Druide** | Grove Warden | 105 | 295 | 10 | **Wurzelkraft**: Regeneriert ständig 2 HP/s | **Wurzelwall**: Rankenwand quer zur Zielrichtung (108 px, 5 s, 150 HP), blockt Bewegung und Kugeln | Blätterkranz mit Geweih |
 
 Die genauen Zahlen der Fähigkeiten stehen im Spiel unter **HELDEN** im Hauptmenü und im Tooltip der Heldenwahl. Sie kommen direkt aus den Konstanten in `player.gd`, stimmen also immer.
 
@@ -118,6 +119,7 @@ Alle Eber schießen mit einem **Lötkolben**. Basis-Schaden pro Schuss ist **22*
 | Klinge | 4 | 0,20 s | 1,25 s |
 | Bastion | 3 | 0,30 s | 1,45 s |
 | Phantom | 2 | 0,14 s | 1,05 s |
+| Druide | 3 | 0,24 s | 1,2 s |
 
 Die HP-Werte gelten bei **Basis-HP-Faktor 100 %**. In der Lobby lässt sich der Faktor von 50–300 % einstellen, die Unterschiede zwischen den Klassen bleiben dabei erhalten.
 
@@ -411,6 +413,20 @@ Eine Grundkarte (Rare) mit zwei exklusiven Evolutionen (Epic) und eine Einzelkar
 | **Klinge** | Geschliffene Klingen | Echowirbel | Blutrausch | Tanzschritt |
 | **Bastion** | Verstärkte Emitter | Schutzkuppel | Pulsfeld | Notfallprotokoll |
 | **Phantom** | Lautlose Klinge | Schattenschnitt | Lähmendes Mal | Lange Schatten |
+
+**Druide (Wurzelwall)** hat statt 3 Klassen- und 4 Fähigkeitskarten 4 Wandkarten plus 3 Evolutionen:
+
+| Karte | Seltenheit | Wirkung |
+| :--- | :--- | :--- |
+| **Wurzelwerk** | Uncommon | Wände +30 % größer |
+| **Immergrün** | Uncommon | Wände halten 40 % länger |
+| **Schnellwuchs** | Uncommon | −25 % Fähigkeits-Abklingzeit |
+| **Wildwuchs** (Grundkarte) | Rare | +1 Wand gleichzeitig |
+| ↳ A **Elementarwand** | Epic | Gegner, die eine deiner Wände berühren, bekommen deine Waffeneffekte ab (Gift, Feuer, Frost, Blitz; höchstens alle 0,6 s pro Gegner). Ohne Elementeffekt vergiften die Dornen (2 Stapel). |
+| ↳ B **Urwald** | Epic | Wände halten 50 % länger, zusammen mit Wildwuchs +4 Wände gleichzeitig (5 insgesamt) |
+| ↳ C **Lebensborke** | Epic | Berührst du deine Wand, heilt sie dich um 12 HP/s |
+
+So funktioniert die Wand: Sie wächst 62 px vor dem Druiden quer zur Zielrichtung. Zielst du in der Seitenansicht eher waagerecht, steht sie senkrecht auf dem Boden darunter; schräg oder nach oben gezielt liegt sie entsprechend gedreht in der Luft (z. B. als Dach oder Trittstufe). Sie hält Kugeln und Spieler aller Teams auf, man kann auf ihr stehen. Kugeln und Nahkampf beschädigen sie, Durchschlag geht wie durch zerstörbare Blöcke hindurch. Wer beim Aufbau in ihr steht, wird zur Seite geschoben. Ist das Limit erreicht, zerfällt die älteste Wand. *Fähigkeitsgröße* verlängert die Wand, *Fähigkeitsdauer* verlängert ihre Standzeit, *Fähigkeitsschaden* (Kraftladung) erhöht ihre HP und die Stärke von Elementarwand und Lebensborke. In der Arena ist die Wand 108 px (3 Höhenbänder) hoch, also nicht überspringbar, und wird als 3D-Block gezeigt.
 
 **Für alle Helden:** **Weitstrahler** (+25 % Fähigkeitsgröße) mit Evolution **Flächenbrecher** (+50 %) und **Kraftladung** (+25 % Fähigkeitsschaden) mit Evolution **Überladung** (+50 %), alle Common. Die Boni multiplizieren sich (Grundkarte + Evolution = ×1,875). *Fähigkeitsgröße* vergrößert Wirkungsradius und Effektfläche der Klassenfähigkeit samt Evolutionen (Einschlag, Schockwelle, Giftwolke, Sog, Klingenwirbel, Heilfeld-Optik, Schattenschnitt, Napalm, Blitzzonen, Splitter-Explosionen), aber **nicht** die Teleport-, Sprung- oder Wurfweite. *Fähigkeitsschaden* erhöht allen Schaden der Fähigkeit inklusive Kettenblitz, Splitter, Blitzzonen und Gift von „Ätzender Nebel“; bei Bastion steigen Heilung und Schild. Novas Singularität selbst macht keinen Schaden, deshalb bekommt Nova Kraftladung und Überladung erst angeboten, wenn „Implosion“ im Deck ist. Gesamtwerte sind gedeckelt (Größe ×2,5, Schaden ×4).
 

@@ -1997,6 +1997,94 @@ func _init_database() -> void:
 	fa28.ability_cooldown_mult = 0.90
 	_register(fa28)
 
+	# --- Druide: Wurzelwall ---
+	var dr1 = CardData.new()
+	dr1.id = "druid_wurzelwerk"
+	dr1.title = "Wurzelwerk"
+	dr1.description = "Druide – Wurzelwall: Wände +30% größer."
+	dr1.rarity = "Uncommon"
+	dr1.pool = "Defensive"
+	dr1.color = Color(0.50, 0.72, 0.36)
+	dr1.hero_id = "druid"
+	dr1.ability_radius_mult = 1.30
+	_register(dr1)
+
+	var dr2 = CardData.new()
+	dr2.id = "druid_immergruen"
+	dr2.title = "Immergrün"
+	dr2.description = "Druide – Wurzelwall: Wände halten 40% länger."
+	dr2.rarity = "Uncommon"
+	dr2.pool = "Defensive"
+	dr2.color = Color(0.50, 0.72, 0.36)
+	dr2.hero_id = "druid"
+	dr2.ability_duration_mult = 1.40
+	_register(dr2)
+
+	var dr3 = CardData.new()
+	dr3.id = "druid_schnellwuchs"
+	dr3.title = "Schnellwuchs"
+	dr3.description = "Druide – Wurzelwall: -25% Fähigkeits-Abklingzeit."
+	dr3.rarity = "Uncommon"
+	dr3.pool = "Defensive"
+	dr3.color = Color(0.50, 0.72, 0.36)
+	dr3.hero_id = "druid"
+	dr3.ability_cooldown_mult = 0.75
+	_register(dr3)
+
+	var dr4 = CardData.new()
+	dr4.id = "druid_wildwuchs"
+	dr4.title = "Wildwuchs"
+	dr4.description = "Druide – Wurzelwall: +1 Wand gleichzeitig."
+	dr4.rarity = "Rare"
+	dr4.pool = "Defensive"
+	dr4.color = Color(0.50, 0.72, 0.36)
+	dr4.hero_id = "druid"
+	dr4.family_id = "druid_wall"
+	dr4.wall_count_add = 1
+	_register(dr4)
+
+	var dr5 = CardData.new()
+	dr5.id = "druid_elementarwand"
+	dr5.title = "Elementarwand"
+	dr5.description = "Wurzelwall-Evolution: Gegner, die deine Wand berühren, bekommen die Effekte deiner Waffe ab (Gift, Feuer, Frost, Blitz). Ohne Elementeffekt vergiften die Dornen."
+	dr5.rarity = "Epic"
+	dr5.color = Color(0.50, 0.72, 0.36)
+	dr5.hero_id = "druid"
+	dr5.family_id = "druid_wall"
+	dr5.parent_card_id = "druid_wildwuchs"
+	dr5.evolution_branch = "A"
+	dr5.ability_evolution = "druid_elemental"
+	_register(dr5)
+
+	var dr6 = CardData.new()
+	dr6.id = "druid_urwald"
+	dr6.title = "Urwald"
+	dr6.description = "Wurzelwall-Evolution: Wände halten 50% länger, bis zu +4 Wände gleichzeitig."
+	dr6.rarity = "Epic"
+	dr6.color = Color(0.50, 0.72, 0.36)
+	dr6.hero_id = "druid"
+	dr6.family_id = "druid_wall"
+	dr6.parent_card_id = "druid_wildwuchs"
+	dr6.evolution_branch = "B"
+	dr6.ability_evolution = "druid_grove"
+	dr6.ability_duration_mult = 1.50
+	# Zusammen mit Wildwuchs (+1) ergibt das +4 Wände.
+	dr6.wall_count_add = 3
+	_register(dr6)
+
+	var dr7 = CardData.new()
+	dr7.id = "druid_lebensborke"
+	dr7.title = "Lebensborke"
+	dr7.description = "Wurzelwall-Evolution: Berührst du deine Wand, heilt sie dich um 12 HP pro Sekunde."
+	dr7.rarity = "Epic"
+	dr7.color = Color(0.50, 0.72, 0.36)
+	dr7.hero_id = "druid"
+	dr7.family_id = "druid_wall"
+	dr7.parent_card_id = "druid_wildwuchs"
+	dr7.evolution_branch = "C"
+	dr7.ability_evolution = "druid_lifebark"
+	_register(dr7)
+
 	# ============================================================
 	# Block-Karten (universell, verbessern die Q-Fähigkeit)
 	# ============================================================
@@ -3075,7 +3163,8 @@ func _infer_sub_tags(card: CardData) -> Array[String]:
 	# Übergreifend
 	add.call("Fähigkeit", card.ability_cooldown_mult != 1.0 or card.ability_damage_mult != 1.0 \
 		or card.ability_radius_mult != 1.0 or card.ability_duration_mult != 1.0 \
-		or card.ability_range_mult != 1.0 or not card.ability_evolution.is_empty())
+		or card.ability_range_mult != 1.0 or card.wall_count_add > 0 \
+		or not card.ability_evolution.is_empty())
 	add.call("Powerup", is_powerup_card(card))
 	add.call("Unique", card.border_bounce or card.bounce_split or card.kamikaze or card.tower_enabled \
 		or card.tower_auto_spawn or card.tower_follow or card.poison_impact_cloud or card.poison_trail \

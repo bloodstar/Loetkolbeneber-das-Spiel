@@ -19,6 +19,7 @@ var camera_2d: Camera2D = null
 var cam: Camera3D
 var _pigs: Dictionary = {}        # Player-Instanz-ID -> VoxelPig
 var _crates: Dictionary = {}      # Vector2i -> Node3D
+var _druid_walls: Dictionary = {} # DruidWall-Instanz-ID -> MeshInstance3D
 var _shadow_mat: StandardMaterial3D
 var _shadow_mesh: PlaneMesh
 var _contact_mat: StandardMaterial3D
@@ -442,6 +443,56 @@ func _process(delta: float) -> void:
 	_sync_camera()
 	_sync_players(delta)
 	_sync_crates()
+	_sync_druid_walls()
+
+# Wände des Druiden als Rindenblock mit Moosdecke.
+func _sync_druid_walls() -> void:
+	var seen := {}
+	for node in get_tree().get_nodes_in_group("druid_wall"):
+		var w := node as DruidWall
+		if w == null or not is_instance_valid(w) or w.is_queued_for_deletion():
+			continue
+		var wid := w.get_instance_id()
+		seen[wid] = true
+		var mi: MeshInstance3D = _druid_walls.get(wid, null)
+		if mi == null:
+			mi = MeshInstance3D.new()
+			mi.mesh = BoxMesh.new()
+			var mat := StandardMaterial3D.new()
+			mat.roughness = 0.95
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			mi.material_override = mat
+			var moss := MeshInstance3D.new()
+			moss.name = "Moss"
+			moss.mesh = BoxMesh.new()
+			var moss_mat := StandardMaterial3D.new()
+			moss_mat.roughness = 1.0
+			moss_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			moss.material_override = moss_mat
+			mi.add_child(moss)
+			add_child(mi)
+			_druid_walls[wid] = mi
+		var h := DruidWall.ARENA_HEIGHT
+		(mi.mesh as BoxMesh).size = Vector3(w.length, h, w.thickness)
+		mi.position = Vector3(w.global_position.x, h * 0.5, w.global_position.y)
+		mi.rotation = Vector3(0.0, -w.rotation, 0.0)
+		var col := w.base_color()
+		col.a = w.visual_alpha()
+		(mi.material_override as StandardMaterial3D).albedo_color = col
+		var moss_node := mi.get_node("Moss") as MeshInstance3D
+		(moss_node.mesh as BoxMesh).size = Vector3(w.length + 2.0, 6.0, w.thickness + 2.0)
+		moss_node.position = Vector3(0.0, h * 0.5, 0.0)
+		var moss_col := Color(0.36, 0.7, 0.26)
+		if w.element_color.a > 0.0:
+			moss_col = moss_col.lerp(Color(w.element_color.r, w.element_color.g, w.element_color.b), 0.5)
+		elif w.heal_per_sec > 0.0:
+			moss_col = Color(0.5, 0.95, 0.55)
+		moss_col.a = col.a
+		(moss_node.material_override as StandardMaterial3D).albedo_color = moss_col
+	for wid in _druid_walls.keys():
+		if not seen.has(wid):
+			(_druid_walls[wid] as Node).queue_free()
+			_druid_walls.erase(wid)
 
 func _sync_camera() -> void:
 	if cam == null or camera_2d == null or not is_instance_valid(camera_2d):
