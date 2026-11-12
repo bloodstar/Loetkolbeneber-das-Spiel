@@ -211,8 +211,8 @@ func _roll_with_config(seed_val: int, rate_percent: int, allowed_ids: Array[Stri
 	for k in all_keys:
 		if chosen.size() >= count:
 			break
-		# Ohne Nahkampf (Lobby-Regel) ergibt Brawl keinen Sinn.
-		if k == "brawl" and not Global.melee_enabled:
+		# Ohne Nahkampfheld im Match ergibt Brawl keinen Sinn.
+		if k == "brawl" and not Global.has_melee_hero_in_match():
 			continue
 		# Ohne aktive Powerups (Lobby-Reiter "Powerups") regnet es nichts.
 		if k == "powerup_rain" and not Global.has_active_powerups():

@@ -53,8 +53,9 @@ func _physics_process(delta: float) -> void:
 		block_decision_timer -= delta
 	
 	# Ziel wählen: der nächstgelegene lebende Gegner (FFA-tauglich).
-	# Unsichtbare Gegner (Powerup) werden nicht anvisiert.
-	if not target or not is_instance_valid(target) or target.current_health <= 0.0 or target.is_invisible():
+	# Unsichtbare Gegner (Powerup, Phantom) werden nicht anvisiert, außer sie
+	# haben einen Köder stehen: auf den fällt der Bot herein.
+	if not target or not is_instance_valid(target) or target.current_health <= 0.0 or _is_hidden(target):
 		target = _find_nearest_opponent()
 
 	if not target or not is_instance_valid(target):
@@ -65,11 +66,19 @@ func _physics_process(delta: float) -> void:
 	_handle_navigation(delta)
 	_handle_combat(delta)
 
+# Unsichtbar und ohne Köder: für den Bot nicht zu sehen.
+func _is_hidden(p: Player) -> bool:
+	return p.is_invisible() and p.get_lure_target() == p
+
+# Wohin der Bot zielt und läuft: der Köder des Ziels, falls einer steht.
+func target_pos() -> Vector2:
+	return target.get_lure_target().global_position
+
 func _find_nearest_opponent() -> Player:
 	var best: Player = null
 	var best_dist := INF
 	for p in get_tree().get_nodes_in_group("player"):
-		if p == player or not is_instance_valid(p) or p.current_health <= 0.0 or p.is_invisible():
+		if p == player or not is_instance_valid(p) or p.current_health <= 0.0 or _is_hidden(p):
 			continue
 		if p.team_id == player.team_id:
 			continue
@@ -82,7 +91,7 @@ func _find_nearest_opponent() -> Player:
 	return best
 
 func _handle_aim(delta: float) -> void:
-	var goal: Vector2 = _devil_aim if _devil_aim != Vector2.INF else target.global_position
+	var goal: Vector2 = _devil_aim if _devil_aim != Vector2.INF else target_pos()
 	var to_target = (_drop_compensated_aim_point(goal) - player.global_position).normalized()
 	# Add slight noisy deviation
 	var noise = Vector2(randf_range(-aim_spread, aim_spread), randf_range(-aim_spread, aim_spread))
@@ -137,7 +146,7 @@ func _devil_in_line_of_fire() -> bool:
 			or int(_devil["target_slot"]) == player.player_index:
 		return false
 	var pos: Vector2 = _devil["pos"]
-	var closest := Geometry2D.get_closest_point_to_segment(pos, player.global_position, target.global_position)
+	var closest := Geometry2D.get_closest_point_to_segment(pos, player.global_position, target_pos())
 	return closest.distance_to(pos) < DEVIL_LINE_MARGIN
 
 func _handle_navigation(_delta: float) -> void:
@@ -156,16 +165,18 @@ func _handle_navigation(_delta: float) -> void:
 	if _handle_zone_escape():
 		return
 
-	var diff = target.global_position - player.global_position
+	var diff = target_pos() - player.global_position
 	var dist_x = diff.x
 	var dist_y = diff.y
 	var current_spd = player.move_speed
 	
-	# Horizontal pursuit / spacing
+	# Horizontal pursuit / spacing. Nahkämpfer gehen auf Schlagdistanz und
+	# weichen bei wenig Leben nicht zurück.
 	var move_input = 0.0
-	if abs(dist_x) > combat_range:
+	var keep_range: float = player.get_melee_reach() * 0.6 if player.is_melee else combat_range
+	if abs(dist_x) > keep_range:
 		move_input = signf(dist_x)
-	elif abs(dist_x) < 80.0 and player.current_health < player.max_health * 0.4:
+	elif not player.is_melee and abs(dist_x) < 80.0 and player.current_health < player.max_health * 0.4:
 		# Low health kite away
 		move_input = -signf(dist_x)
 	else:
@@ -295,7 +306,7 @@ func _handle_zone_escape() -> bool:
 func _avoid_ground_hazards(move_input: float) -> float:
 	var facing := signf(move_input)
 	if facing == 0.0:
-		facing = signf(target.global_position.x - player.global_position.x)
+		facing = signf(target_pos().x - player.global_position.x)
 	if facing == 0.0:
 		facing = 1.0
 
@@ -338,10 +349,14 @@ func _avoid_ground_hazards(move_input: float) -> float:
 	return move_input
 
 func _handle_combat(_delta: float) -> void:
-	var dist = player.global_position.distance_to(target.global_position)
+	var dist = player.global_position.distance_to(target_pos())
+	var hero_id: String = Global.get_player_hero_id(player.player_index)
 	
-	# Shooting
-	if shoot_decision_timer <= 0.0:
+	# Hauptangriff: Fernkämpfer schießen, Nahkämpfer schlagen in Reichweite.
+	if player.is_melee:
+		if player.melee_cooldown_timer <= 0.0 and dist < player.get_melee_reach() and randf() < 0.5:
+			player.attack()
+	elif shoot_decision_timer <= 0.0:
 		# Schnellere Klassen sollen ihre höhere Feuerrate auch als Bots nutzen.
 		shoot_decision_timer = maxf(0.06, player.fire_rate_cooldown * randf_range(1.0, 2.0))
 		var shot_dist: float = dist
@@ -349,12 +364,15 @@ func _handle_combat(_delta: float) -> void:
 			shot_dist = player.global_position.distance_to(_devil_aim)
 		var line_clear := not ArenaMode.active or _devil_aim != Vector2.INF or ArenaBot.has_line_of_sight(player, target)
 		if shot_dist < 650.0 and line_clear and not _devil_in_line_of_fire():
-			player.shoot()
+			player.attack()
 	
-	# Defensive Dash
+	# Dash: Fernkämpfer weichen aus, Nahkämpfer schließen damit die Lücke.
 	if dash_decision_timer <= 0.0:
 		dash_decision_timer = randf_range(1.5, 3.0)
-		if dist < 150.0 or (player.current_health < player.max_health * 0.5 and randf() < 0.6):
+		if player.is_melee:
+			if dist > player.get_melee_reach() * 1.2 and dist < 420.0 and randf() < 0.7:
+				player.dash()
+		elif dist < 150.0 or (player.current_health < player.max_health * 0.5 and randf() < 0.6):
 			player.dash()
 
 	# Standard-Block: bei Druck oder niedriger HP gelegentlich hochhalten.
@@ -365,16 +383,24 @@ func _handle_combat(_delta: float) -> void:
 		# Minenleger: auch ohne Druck ab und zu blocken, um Minen zu legen.
 		elif player.block_mine and player.is_on_floor() and randf() < 0.35:
 			player.start_block()
-	
-	# Nahkampf: zuschlagen, sobald der Gegner in Reichweite der Waffe ist.
-	if Global.melee_enabled and player.melee_cooldown_timer <= 0.0 and dist < player.get_melee_reach() and randf() < 0.35:
-		player.melee_attack()
+
+	# Ulti: einsetzen, sobald der Gegner in sinnvoller Nähe ist.
+	if player.has_ult() and player.ult_timer <= 0.0 and dist < 450.0 and randf() < 0.05:
+		player.use_ultimate()
 
 	# Ability Usage
 	if player.ability_timer <= 0.0:
-		if dist < 220.0 or player.current_health < player.max_health * 0.6:
+		var wants: bool = dist < 220.0 or player.current_health < player.max_health * 0.6
+		match hero_id:
+			"volt":
+				# Kugelblitz dem Gegner in den Weg schicken.
+				wants = dist < 380.0
+			"phantom":
+				# Köder zum Anschleichen oder zum Entkommen.
+				wants = dist < 320.0
+		if wants:
 			# Nova-Bots setzen das Schwarze Loch direkt auf den Gegner.
-			if Global.get_player_hero_id(player.player_index) == "nova" and is_instance_valid(target):
-				player.use_ability(target.global_position)
+			if hero_id == "nova" and is_instance_valid(target):
+				player.use_ability(target_pos())
 			else:
 				player.use_ability()

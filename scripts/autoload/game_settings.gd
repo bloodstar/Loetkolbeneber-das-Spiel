@@ -36,12 +36,12 @@ const REBINDABLE_ACTIONS: Array[Dictionary] = [
 	{"action": "p1_up", "label": "Hoch / Zielen"},
 	{"action": "p1_down", "label": "Runter / Durchfallen"},
 	{"action": "p1_jump", "label": "Springen"},
-	{"action": "p1_shoot", "label": "Schießen"},
+	{"action": "p1_shoot", "label": "Angriff"},
 	{"action": "p1_dash", "label": "Dash"},
 	{"action": "p1_block", "label": "Barriere"},
 	{"action": "p1_reload", "label": "Nachladen"},
-	{"action": "p1_melee", "label": "Nahkampf"},
 	{"action": "p1_ability", "label": "Fähigkeit"},
+	{"action": "p1_ult", "label": "Ulti"},
 	{"group": "Allgemein"},
 	{"action": "restart_game", "label": "Neustart (nur lokal)"},
 ]
@@ -99,8 +99,10 @@ func load_settings() -> void:
 	if cfg.has_section("controls"):
 		for action in cfg.get_section_keys("controls"):
 			var data = cfg.get_value("controls", action)
-			if data is Dictionary and _default_events.has(action):
-				bindings[action] = data
+			# Die frühere Nahkampf-Taste (E) ist jetzt die Ulti.
+			var target_action := "p1_ult" if str(action) == "p1_melee" else str(action)
+			if data is Dictionary and _default_events.has(target_action):
+				bindings[target_action] = data
 
 func save_settings() -> void:
 	var cfg := ConfigFile.new()

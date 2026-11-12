@@ -18,6 +18,7 @@ const MECHANIC_NAMES := {
 	"tower": "Turm",
 	"drone": "Drohnen",
 	"mine": "Minen",
+	"ult": "Ulti",
 }
 const UNLOCK_COLOR := Color(1.0, 0.72, 0.35)
 const MAX_PROVIDER_NAMES := 4
@@ -331,6 +332,8 @@ static func _mechanic_condition(mechanic: String) -> String:
 		return ""
 	if mechanic == "shield":
 		return "Mindestens %d Schild (Held + Karten)." % CardDatabase.SHIELD_UPGRADE_MIN
+	if mechanic == "ult":
+		return "Nur für Helden mit Ulti."
 	var mechanic_name := str(MECHANIC_NAMES.get(mechanic, mechanic))
 	var text := "Eine %s-Karte im Deck" % mechanic_name
 	if CardDatabase.HERO_MECHANICS.has(mechanic):

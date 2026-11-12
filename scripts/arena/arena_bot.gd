@@ -22,8 +22,14 @@ static func navigate(ai: AIController, delta: float) -> void:
 		st["strafe_t"] = randf_range(0.6, 1.6)
 		st["strafe"] = 1.0 if randf() < 0.5 else -1.0
 
-	var goal := target.global_position
+	var goal := ai.target_pos()
 	var mode := "fight"
+	# Nahkämpfer gehen auf Schlagdistanz, statt Abstand zu halten.
+	var pref_max := PREFERRED_MAX
+	var pref_min := PREFERRED_MIN
+	if p.is_melee:
+		pref_max = p.get_melee_reach() * 0.8
+		pref_min = 0.0
 	var zone := ai._zone_state()
 	if not zone.is_empty():
 		var center: Vector2 = zone["center"]
@@ -35,9 +41,9 @@ static func navigate(ai: AIController, delta: float) -> void:
 	var dist := to_goal.length()
 	var sees := has_line_of_sight(p, target)
 	var dir := Vector2.ZERO
-	if mode == "zone" or not sees or dist > PREFERRED_MAX:
+	if mode == "zone" or not sees or dist > pref_max:
 		dir = _path_direction(p, goal, st)
-	elif dist < PREFERRED_MIN or p.current_health < p.max_health * 0.35:
+	elif dist < pref_min or (not p.is_melee and p.current_health < p.max_health * 0.35):
 		dir = -to_goal.normalized()
 		dir += to_goal.orthogonal().normalized() * float(st.get("strafe", 1.0)) * 0.6
 	else:

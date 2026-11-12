@@ -28,6 +28,8 @@ const BLOCK_COLOR: Color = Color(0.55, 0.85, 1.0, 0.96)
 const BLOCK_ACTIVE_COLOR: Color = Color(0.92, 0.98, 1.0, 1.0)
 const DASH_COLOR: Color = Color(0.42, 0.88, 1.0, 0.96)
 const ABILITY_COLOR: Color = Color(1.0, 0.82, 0.36, 0.96)
+const ULT_COLOR: Color = Color(1.0, 0.42, 0.85, 0.98)
+const MELEE_COLOR: Color = Color(1.0, 0.72, 0.42, 0.96)
 const READY_GLOW: Color = Color(1.0, 1.0, 1.0, 0.20)
 const COOLDOWN_OVERLAY: Color = Color(0.01, 0.015, 0.03, 0.52)
 
@@ -50,7 +52,9 @@ func _draw() -> void:
 	_draw_status_icons()
 
 func _draw_weapon_status() -> void:
-	if player.is_reloading:
+	if player.is_melee:
+		_draw_melee_bar()
+	elif player.is_reloading:
 		_draw_reload_ring()
 	else:
 		_draw_ammo_pips()
@@ -74,6 +78,18 @@ func _draw_ammo_pips() -> void:
 		draw_rect(pip, color, true)
 		if i < filled:
 			draw_rect(Rect2(pip.position, Vector2(pip.size.x, 0.55)), Color(1.0, 1.0, 1.0, 0.30), true)
+
+# Nahkampfhelden: kurzer Balken, der sich bis zum nächsten Schlag füllt.
+func _draw_melee_bar() -> void:
+	var width: float = 14.0
+	var height: float = 2.6
+	var panel := Rect2(-width * 0.5 - 1.3, TOP_Y - 1.2, width + 2.6, height + 2.4)
+	draw_rect(panel, PANEL_COLOR, true)
+	draw_rect(panel, PANEL_BORDER, false, 0.45, true)
+	var duration: float = maxf(0.001, player.melee_cooldown)
+	var ratio: float = 1.0 - clampf(player.melee_cooldown_timer / duration, 0.0, 1.0)
+	var color: Color = MELEE_COLOR if ratio >= 1.0 else Color(0.70, 0.52, 0.34, 0.9)
+	draw_rect(Rect2(-width * 0.5, TOP_Y, width * ratio, height), color, true)
 
 func _draw_reload_ring() -> void:
 	var center := Vector2(0.0, TOP_Y + 1.3)
@@ -119,6 +135,8 @@ func _draw_status_icons() -> void:
 		icons.append("shield")
 	icons.append("dash")
 	icons.append("ability")
+	if player.has_ult():
+		icons.append("ult")
 	var start_x: float = -ICON_SPACING * float(icons.size() - 1) * 0.5
 	for i in range(icons.size()):
 		var center := Vector2(start_x + float(i) * ICON_SPACING, ICON_Y)
@@ -131,6 +149,8 @@ func _draw_status_icons() -> void:
 				_draw_dash_icon(center)
 			"ability":
 				_draw_ability_icon(center)
+			"ult":
+				_draw_ult_icon(center)
 
 func _draw_icon_background(center: Vector2, ready: bool) -> void:
 	draw_circle(center, ICON_RADIUS + 0.6, PANEL_COLOR)
@@ -183,7 +203,7 @@ func _draw_shield_icon(center: Vector2) -> void:
 func _draw_dash_icon(center: Vector2) -> void:
 	var cooldown: float = maxf(0.0, player.dash_cooldown_timer)
 	var duration: float = maxf(0.001, player.dash_cooldown)
-	var ready: bool = cooldown <= 0.0
+	var ready: bool = player.dash_charges > 0
 	_draw_icon_background(center, ready)
 	var color: Color = DASH_COLOR if ready else Color(0.34, 0.52, 0.64, 0.62)
 	var first := PackedVector2Array([
@@ -199,6 +219,37 @@ func _draw_dash_icon(center: Vector2) -> void:
 	draw_polyline(first, color, 0.9, true)
 	draw_polyline(second, color, 0.9, true)
 	if not ready:
+		_draw_cooldown_overlay(center, ICON_RADIUS + 0.6, cooldown / duration)
+	# Mehrere Dash-Ladungen (z. B. Volts Blitzschritt): Punkte unter dem Symbol.
+	if player.dash_charges_max > 1:
+		var n: int = player.dash_charges_max
+		for i in range(n):
+			var dot := center + Vector2((float(i) - float(n - 1) * 0.5) * 2.4, ICON_RADIUS + 2.6)
+			draw_circle(dot, 0.85, DASH_COLOR if i < player.dash_charges else Color(0.22, 0.30, 0.38, 0.85))
+
+# Ulti (Taste E): Krone. Füllt sich mit der Abklingzeit, leuchtet wenn bereit.
+func _draw_ult_icon(center: Vector2) -> void:
+	var cooldown: float = maxf(0.0, player.ult_timer)
+	var duration: float = maxf(0.001, player.ult_max_cooldown)
+	var ready: bool = cooldown <= 0.0
+	_draw_icon_background(center, ready)
+	var color: Color = ULT_COLOR if ready else Color(0.58, 0.36, 0.54, 0.66)
+	var points := PackedVector2Array([
+		center + Vector2(-3.0, 2.2),
+		center + Vector2(-3.0, -1.8),
+		center + Vector2(-1.4, 0.0),
+		center + Vector2(0.0, -2.8),
+		center + Vector2(1.4, 0.0),
+		center + Vector2(3.0, -1.8),
+		center + Vector2(3.0, 2.2),
+	])
+	draw_colored_polygon(points, Color(color.r, color.g, color.b, 0.55 if ready else 0.28))
+	points.append(points[0])
+	draw_polyline(points, color, 0.8, true)
+	if ready:
+		var pulse: float = 0.5 + 0.5 * sin(float(Time.get_ticks_msec()) * 0.006)
+		draw_arc(center, ICON_RADIUS + 1.3, 0.0, TAU, 24, Color(ULT_COLOR.r, ULT_COLOR.g, ULT_COLOR.b, 0.35 + 0.45 * pulse), 0.8, true)
+	else:
 		_draw_cooldown_overlay(center, ICON_RADIUS + 0.6, cooldown / duration)
 
 func _draw_ability_icon(center: Vector2) -> void:
