@@ -50,6 +50,14 @@ var window_mode: String = "windowed"
 var volumes: Dictionary = DEFAULT_VOLUMES.duplicate()
 # Effekt-Set, siehe SoundManager.SOUND_PACKS. Gilt nur auf diesem Rechner.
 var sound_pack: String = "arena"
+# Zielen platzierbarer Fähigkeiten: "hold" = Taste halten zeigt die Vorschau,
+# Loslassen zaubert. "instant" = Tastendruck zaubert sofort am Mauszeiger.
+const ABILITY_CAST_MODES: Array[String] = ["hold", "instant"]
+const ABILITY_CAST_MODE_LABELS: Dictionary = {
+	"hold": "Halten und loslassen (mit Vorschau)",
+	"instant": "Sofort am Mauszeiger",
+}
+var ability_cast_mode: String = "hold"
 # action -> serialisiertes Event (siehe _event_to_dict)
 var bindings: Dictionary = {}
 # Solange das Optionsmenü in einer Runde offen ist, ignorieren lokale
@@ -84,6 +92,9 @@ func load_settings() -> void:
 	var pack := str(cfg.get_value("audio", "sound_set", sound_pack))
 	if SoundManager.has_sound_pack(pack):
 		sound_pack = pack
+	var cast_mode := str(cfg.get_value("gameplay", "ability_cast_mode", ability_cast_mode))
+	if ABILITY_CAST_MODES.has(cast_mode):
+		ability_cast_mode = cast_mode
 	bindings.clear()
 	if cfg.has_section("controls"):
 		for action in cfg.get_section_keys("controls"):
@@ -97,6 +108,7 @@ func save_settings() -> void:
 	for key in VOLUME_KEYS:
 		cfg.set_value("audio", key, volumes[key])
 	cfg.set_value("audio", "sound_set", sound_pack)
+	cfg.set_value("gameplay", "ability_cast_mode", ability_cast_mode)
 	for action in bindings.keys():
 		cfg.set_value("controls", action, bindings[action])
 	var err := cfg.save(SETTINGS_PATH)
@@ -151,6 +163,15 @@ func _center_window() -> void:
 	size.y = mini(size.y, screen_rect.size.y)
 	DisplayServer.window_set_size(size)
 	DisplayServer.window_set_position(screen_rect.position + (screen_rect.size - size) / 2)
+
+# --- Steuerung ---
+
+func set_ability_cast_mode(mode: String) -> void:
+	if not ABILITY_CAST_MODES.has(mode):
+		return
+	ability_cast_mode = mode
+	save_settings()
+	settings_changed.emit()
 
 # --- Audio ---
 

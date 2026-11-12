@@ -64,6 +64,8 @@ Alle Tasten lassen sich unter **Optionen → Steuerung** neu belegen. Hier steht
 | Nahkampf | `E` |
 | Heldenfähigkeit | `Rechtsklick` |
 
+**Fähigkeiten zielen:** Alle gerichteten Fähigkeiten zielen auf den Mauszeiger: Schwarzes Loch (Nova), Wurzelwall (Druide), Blink (Volt), Schattensprung (Phantom) und Raketensprung (Ignis, nur die Flugrichtung). Fähigkeitstaste **halten** zeigt die Vorschau (Reichweitenring, Form am Ziel bzw. Flugbahn), **Loslassen** zaubert. Der Zeiger wird auf die Reichweite begrenzt. Liegt er in einer Wand, landet der Zauber an der nächsten freien Stelle; die Vorschau zeigt sie mit einer gestrichelten Linie an. `Esc` bricht ab (auch Rechtsklick, wenn die Fähigkeit auf einer anderen Taste liegt). Der Wurzelwall steht immer mit der breiten Seite zum Druiden. Unter *Optionen → Steuerung → Fähigkeit zielen* lässt sich auf **Sofort am Mauszeiger** umstellen (ohne Vorschau). Bots und Spieler 2 nutzen weiter die feste Entfernung in Zielrichtung. Giftwolke, Klingensturm und Heilfeld wirken weiter an der eigenen Position.
+
 ### Spieler 2 (nur lokaler 2-Spieler-Modus am selben PC)
 
 | Aktion | Taste |
@@ -102,7 +104,7 @@ Es gibt **8 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit
 | **Klinge** | Blade Dancer | 110 | 315 | 15 | **Klingentanz**: Start-Schild und hohes Tempo | **Klingensturm**: Rundumschlag mit Rückstoß, 0,5 s unverwundbar | Roter Schal |
 | **Bastion** | Field Engineer | 125 | 270 | 20 | **Aurora**: Doppelte Schild-Regeneration, Schild-Cooldown nur 4 s | **Heilfeld**: 4 s lang 8 HP und 10 Schild alle 0,5 s | Bauhelm mit Lampe |
 | **Phantom** | Shadow Assassin | 90 | 325 | 5 | **Nachtwind**: Sehr schnell, kürzestes Feuerintervall | **Schattensprung**: Teleport 260 px mit Treffer, 0,9 s unverwundbar | Ninja-Stirnband |
-| **Druide** | Grove Warden | 105 | 295 | 10 | **Wurzelkraft**: Regeneriert ständig 2 HP/s | **Wurzelwall**: Rankenwand quer zur Zielrichtung (108 px, 5 s, 150 HP), blockt Bewegung und Kugeln | Blätterkranz mit Geweih |
+| **Druide** | Grove Warden | 105 | 295 | 10 | **Wurzelkraft**: Regeneriert ständig 2 HP/s | **Wurzelwall**: Rankenwand am Zielpunkt, breite Seite zum Druiden (108 px, 5 s, 150 HP), blockt Bewegung und Kugeln | Blätterkranz mit Geweih |
 
 Die genauen Zahlen der Fähigkeiten stehen im Spiel unter **HELDEN** im Hauptmenü und im Tooltip der Heldenwahl. Sie kommen direkt aus den Konstanten in `player.gd`, stimmen also immer.
 

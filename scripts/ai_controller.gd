@@ -373,4 +373,8 @@ func _handle_combat(_delta: float) -> void:
 	# Ability Usage
 	if player.ability_timer <= 0.0:
 		if dist < 220.0 or player.current_health < player.max_health * 0.6:
-			player.use_ability()
+			# Nova-Bots setzen das Schwarze Loch direkt auf den Gegner.
+			if Global.get_player_hero_id(player.player_index) == "nova" and is_instance_valid(target):
+				player.use_ability(target.global_position)
+			else:
+				player.use_ability()
