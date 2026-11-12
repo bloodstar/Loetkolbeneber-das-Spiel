@@ -535,6 +535,11 @@ func _ready() -> void:
 	
 	if ArenaMode.active:
 		_setup_arena_body()
+	else:
+		# Schatten auf dem Boden (Seitenansicht); die Arena hat eigene.
+		var ground_shadow := GroundShadow.new()
+		ground_shadow.body = self
+		add_child(ground_shadow)
 
 	if is_replica:
 		collision_layer = 0

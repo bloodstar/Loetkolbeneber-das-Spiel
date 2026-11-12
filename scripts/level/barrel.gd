@@ -87,6 +87,8 @@ func _build_visual() -> void:
 	])
 	body.color = body_color
 	add_child(body)
+	if not ArenaMode.active:
+		LevelDepth.attach(self, body.polygon, body_color.darkened(0.1), highlight.darkened(0.15))
 
 	var inner := Polygon2D.new()
 	inner.polygon = PackedVector2Array([

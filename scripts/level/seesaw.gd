@@ -109,6 +109,7 @@ func _build() -> void:
 	])
 	wood.color = Color(0.58, 0.35, 0.18, 1.0)
 	plank.add_child(wood)
+	LevelDepth.attach(plank, wood.polygon, wood.color.darkened(0.1), wood.color.lightened(0.12))
 
 	var top_light := Line2D.new()
 	top_light.points = PackedVector2Array([

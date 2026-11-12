@@ -915,6 +915,8 @@ var _spawn_seed: int = 0
 var _crate_powerup_chance: float = 0.0
 var _crate_drops_spawned: int = 0
 var active_level_modifiers: Array[String] = []
+# Seitenflächen aller festen Blöcke (räumliche Tiefe), siehe LevelDepth.
+var level_depth: LevelDepth = null
 
 func _ready() -> void:
 	_load_textures()
@@ -1002,6 +1004,7 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 		remove_child(child)
 		child.queue_free()
 	
+	level_depth = null
 	_solid_cells.clear()
 	_special_cells.clear()
 	_object_cells.clear()
@@ -1101,6 +1104,8 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 		_build_cave_boundary()
 	else:
 		_build_rubber_boundary()
+	if level_depth != null:
+		level_depth.bake()
 
 func get_map_width() -> int:
 	return map_w
@@ -1897,6 +1902,8 @@ func _build_oneway_platform(x_start: int, x_end: int, row: int) -> void:
 		_solid_cells[Vector2i(x, row)] = true
 		_oneway_cells[Vector2i(x, row)] = true
 	add_child(body)
+	if level_depth != null:
+		level_depth.add_rect(Rect2(x_start * TILE_SIZE, row * TILE_SIZE, width_tiles * TILE_SIZE, ONE_WAY_VISUAL_PX), _depth_color(platform_textures), LevelDepth.average_color(platform_textures[0] as Texture2D, true))
 
 # --- Pyramide und Haus --------------------------------------------------------
 
@@ -2056,6 +2063,8 @@ func _build_shape_solid(polys: Array, interior: Array, outline: Array) -> void:
 			fill.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		body.add_child(fill)
 		_mark_shape_cells(raw_poly)
+		if level_depth != null and Geometry2D.convex_hull(pts).size() == pts.size() + 1:
+			level_depth.add_polygon(pts, _depth_color(textures))
 	if outline.size() >= 2:
 		var edge := Line2D.new()
 		edge.points = _tiles_to_px(outline)
@@ -2328,6 +2337,8 @@ func _build_rect_solid(x_start: int, x_end: int, y_start: int, y_end: int, textu
 			_solid_cells[Vector2i(x, y)] = true
 	
 	add_child(body)
+	if level_depth != null:
+		level_depth.add_rect(Rect2(x_start * TILE_SIZE, y_start * TILE_SIZE, width_tiles * TILE_SIZE, height_tiles * TILE_SIZE), _depth_color(textures), LevelDepth.average_color(textures[0] as Texture2D, true))
 
 func _pick_texture(textures: Array, x: int, y: int) -> Texture2D:
 	if textures.size() == 1:
@@ -2705,6 +2716,18 @@ func _build_theme_backdrop(level_seed: int) -> void:
 		level_seed
 	)
 	add_child(backdrop)
+	LevelDepth.fog = backdrop.horizon_color.darkened(0.25)
+	level_depth = LevelDepth.new()
+	level_depth.name = "LevelDepth"
+	add_child(level_depth)
+	var map_px := Vector2(map_w * TILE_SIZE, map_h * TILE_SIZE)
+	level_depth.set_backdrop(backdrop, map_px * 0.5, ThemeBackdrop.PADDING * 0.7)
+
+## Grundfarbe der Seitenflächen: Mittel der Füllkachel des Themas.
+func _depth_color(textures: Array) -> Color:
+	if textures.is_empty():
+		return Color(0.3, 0.3, 0.34)
+	return LevelDepth.average_color(textures[0] as Texture2D)
 
 func _is_top_available(cell: Vector2i, check_spawn: bool = true) -> bool:
 	if cell.x < 0 or cell.x >= map_w or cell.y <= 0 or cell.y >= map_h:
@@ -2773,6 +2796,7 @@ func _spawn_special_tile(tx: int, ty: int, kind: int) -> void:
 			tile.tile_texture = destructible_textures[_rng.randi() % destructible_textures.size()]
 	tile.position = Vector2((tx + 0.5) * TILE_SIZE, (ty + 0.5) * TILE_SIZE)
 	add_child(tile)
+	tile.add_depth(LevelDepth.average_color(tile.tile_texture), LevelDepth.average_color(tile.tile_texture, true))
 	tile.broken.connect(_on_special_tile_broken)
 	tile.regrown.connect(_on_special_tile_regrown)
 	_special_tiles[tile_id] = tile

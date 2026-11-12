@@ -63,6 +63,7 @@ func _build() -> void:
 	])
 	wood.color = Color(0.50, 0.32, 0.18, 1.0)
 	platform.add_child(wood)
+	LevelDepth.attach(platform, wood.polygon, wood.color.darkened(0.1), wood.color.lightened(0.12))
 
 	var top_light := Line2D.new()
 	top_light.points = PackedVector2Array([

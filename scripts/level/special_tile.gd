@@ -33,6 +33,18 @@ var grace_timer: Timer
 var step_timer: Timer
 var _base_sprite_scale: Vector2 = Vector2(2.0, 2.0)
 
+## Seitenflächen für die räumliche Tiefe (nur Seitenansicht). Hängt am
+## Sprite und verschwindet deshalb mit ihm, wenn die Kachel bricht.
+func add_depth(base: Color, top: Color = Color(0, 0, 0, 0)) -> void:
+	if sprite == null or sprite.texture == null:
+		return
+	var size := sprite.texture.get_size()
+	if kind != Kind.DESTRUCTIBLE:
+		# Ranken sind dünne Stege: nur der obere Teil hat Tiefe.
+		LevelDepth.attach_box(sprite, Vector2(size.x, size.y * 0.4), base, Vector2(0.0, -size.y * 0.3), top)
+	else:
+		LevelDepth.attach_box(sprite, size, base, Vector2.ZERO, top)
+
 func _ready() -> void:
 	add_to_group("net_fx_static")
 	if tile_texture:

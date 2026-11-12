@@ -87,6 +87,7 @@ func _build_tiles(half_w: float, half_h: float) -> void:
 			sp.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		sp.position = Vector2(-half_w + tile_w * (float(i) + 0.5), 0.0)
 		body.add_child(sp)
+	LevelDepth.attach_box(body, Vector2(platform_width, platform_height), LevelDepth.average_color(tile_texture), Vector2.ZERO, LevelDepth.average_color(tile_texture, true))
 	# Leuchtende Unterkante in Akzentfarbe markiert die bewegliche Plattform.
 	var glow := Line2D.new()
 	glow.points = PackedVector2Array([Vector2(-half_w + 3.0, half_h - 1.0), Vector2(half_w - 3.0, half_h - 1.0)])
