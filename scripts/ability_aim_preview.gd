@@ -1,10 +1,11 @@
 class_name AbilityAimPreview
 extends Node2D
 
-# Zielvorschau für platzierbare Heldenfähigkeiten (Schwarzes Loch, Wurzelwall,
-# Blink, Schattensprung). Sie wird nur beim lokalen Spieler mit Maus erzeugt
+# Zielvorschau für gerichtete Heldenfähigkeiten (Schwarzes Loch, Wurzelwall,
+# Blink, Schattensprung, Raketensprung). Sie wird nur beim lokalen Spieler mit Maus erzeugt
 # und zeichnet in Weltkoordinaten: Reichweitenring um den Eber und die Form
-# der Fähigkeit am Zielpunkt. Ungültige Ziele erscheinen rot.
+# der Fähigkeit am Zielpunkt. Liegt der Zeiger im Gelände, zeigt eine
+# gestrichelte Linie zur nächsten freien Stelle, an der gezaubert wird.
 #
 # Die Daten kommen aus Player.ability_target_info(). In der Arena liegt die
 # 2D-Ebene durch die gestauchte Kamera auf dem 3D-Boden, Kreise werden dort
@@ -64,6 +65,12 @@ func _draw() -> void:
 	if _range > 1.0:
 		_dashed_circle(_origin, _range, Color(col.r, col.g, col.b, 0.2), 1.5, 40)
 	draw_line(_origin, pos, Color(col.r, col.g, col.b, 0.22), 1.5, true)
+	# Zeiger im Gelände: kleiner Punkt am Zeiger, Strich zur Ausweichstelle.
+	if _info.get("cursor") is Vector2:
+		var cursor: Vector2 = _info["cursor"]
+		var anchor: Vector2 = _info.get("point", pos)
+		draw_dashed_line(cursor, anchor, Color(col.r, col.g, col.b, 0.6), 1.5, 5.0, true)
+		draw_circle(cursor, 4.0, Color(col.r, col.g, col.b, 0.6))
 
 	match str(_info.get("kind", "")):
 		"circle":
@@ -91,6 +98,18 @@ func _draw() -> void:
 			corners.append(corners[0])
 			draw_polyline(corners, OUTLINE, 5.0, true)
 			draw_polyline(corners, Color(col.r, col.g, col.b, 0.95), 2.0, true)
+		"leap":
+			# Flugbahn mit Pfeilspitze und Einschlagradius am Ende.
+			var dir := (pos - _origin).normalized()
+			draw_line(_origin, pos, OUTLINE, 6.0, true)
+			draw_line(_origin, pos, Color(col.r, col.g, col.b, 0.85), 3.0, true)
+			if dir.length_squared() > 0.5:
+				var tip := PackedVector2Array([pos + dir * 12.0, pos - dir * 6.0 + dir.orthogonal() * 9.0, pos - dir * 6.0 - dir.orthogonal() * 9.0])
+				draw_colored_polygon(tip, Color(col.r, col.g, col.b, 0.95))
+			var impact := float(_info.get("radius", 0.0))
+			if impact > 0.0:
+				draw_circle(pos, impact, Color(col.r, col.g, col.b, 0.06))
+				_dashed_circle(pos, impact, Color(col.r, col.g, col.b, 0.4), 1.5, 32)
 		"blink":
 			var hit_radius := float(_info.get("radius", 0.0))
 			if hit_radius > 0.0:
