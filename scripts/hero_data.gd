@@ -22,6 +22,22 @@ extends Resource
 @export var base_fire_rate_cooldown: float = 0.22
 @export var base_reload_time: float = 1.2
 
+# Hauptangriff auf Linksklick: "ranged" schießt, "melee" schlägt mit der
+# Nahkampfwaffe des Helden (Eintrag in Global.MELEE_WEAPON_DATA). Die beiden
+# Faktoren passen Schaden und Abklingzeit der Waffe an den Helden an.
+@export var attack_type: String = "ranged"
+@export var melee_weapon: String = ""
+@export var melee_damage_mult: float = 1.0
+@export var melee_cooldown_mult: float = 1.0
+
+# Helden-Dash (Shift) und Ulti (E). ult_cooldown 0 = der Held hat noch keine Ulti.
+@export var dash_name: String = "Dash"
+@export var dash_desc: String = ""
+@export var dash_charges: int = 1
+@export var ult_name: String = ""
+@export var ult_desc: String = ""
+@export var ult_cooldown: float = 0.0
+
 @export var color_tint: Color = Color.WHITE
 @export var sprite_tile_name: String = "tile_0000.png"
 
@@ -36,19 +52,26 @@ extends Resource
 # Klassenkarten (IGNIS_NAPALM_* usw.) gehören zu den Karten, nicht hierher.
 const ABILITY_CONSTANT_PREFIXES: Dictionary = {
 	"ignis": ["ROCKET_"],
-	"volt": ["FLASH_BLINK_", "FREEZE_SPEED_MULT"],
+	"volt": ["VOLT_", "FREEZE_SPEED_MULT"],
 	"spore": ["SPORE_CLOUD_"],
 	"nova": ["SINGULARITY_"],
 	"klinge": ["BLADE_STORM_"],
 	"bastion": ["HEAL_FIELD_"],
-	"phantom": ["SHADOW_STEP_"],
+	"phantom": ["PHANTOM_DECOY_", "PHANTOM_HUNT_", "PHANTOM_STEALTH_", "PHANTOM_BACKSTAB_"],
 	"druid": ["DRUID_WALL_"],
 }
 # Werte, die nichts an der Spielstärke ändern oder zur Fähigkeit gehören.
 const _FINGERPRINT_IGNORED: Array[String] = [
 	"id", "name", "role", "description", "ability_name", "ability_desc",
 	"ability_cooldown", "color_tint", "sprite_tile_name", "version", "ability_version",
+	"dash_name", "dash_desc", "ult_name", "ult_desc", "ult_cooldown",
 ]
+
+func is_melee() -> bool:
+	return attack_type == "melee"
+
+func has_ult() -> bool:
+	return ult_cooldown > 0.0
 
 # Fingerabdruck der Basiswerte und des Passivs. Ändert er sich ohne neue
 # version, warnt die Statistik.
@@ -66,7 +89,10 @@ func get_balance_fingerprint() -> String:
 
 # Fingerabdruck der aktiven Fähigkeit aus Abklingzeit und player.gd-Konstanten.
 func get_ability_fingerprint() -> String:
-	var parts: PackedStringArray = ["ability_cooldown=%s" % var_to_str(ability_cooldown)]
+	var parts: PackedStringArray = [
+		"ability_cooldown=%s" % var_to_str(ability_cooldown),
+		"ult_cooldown=%s" % var_to_str(ult_cooldown),
+	]
 	var player_script: Script = load("res://scripts/player.gd")
 	var constants: Dictionary = player_script.get_script_constant_map()
 	for const_name in constants.keys():

@@ -611,9 +611,15 @@ func _setup_heroes() -> void:
 	volt.role = "Hyper Speedster"
 	volt.description = "Extrem schnell und mobil."
 	volt.passive_desc = "Overcharge: Standardmäßig Doppelsprung aktiv"
-	volt.ability_name = "Flash Blink"
-	volt.ability_desc = "Sofortiger Teleport-Dash in Zielrichtung!"
-	volt.ability_cooldown = 4.5
+	volt.ability_name = "Kugelblitz"
+	volt.ability_desc = "Schickt eine langsame Blitzkugel los, die Gegner in ihrer Nähe schockt und bremst!"
+	volt.ability_cooldown = 7.0
+	volt.dash_name = "Blitzschritt"
+	volt.dash_desc = "Kurzer Teleport statt Dash, mit zwei Ladungen."
+	volt.dash_charges = 2
+	volt.ult_name = "Überladung"
+	volt.ult_desc = "Kurzzeitig schneller, Dauerfeuer ohne Nachladen, jeder Schuss springt als Kettenblitz weiter!"
+	volt.ult_cooldown = 26.0
 	volt.base_hp = 85
 	volt.base_shield = 0
 	volt.base_speed = 350.0
@@ -624,8 +630,8 @@ func _setup_heroes() -> void:
 	volt.base_reload_time = 1.4
 	volt.color_tint = Color(1.0, 0.9, 0.2)
 	volt.sprite_tile_name = "tile_0006.png"
-	volt.version = 2
-	volt.ability_version = 1
+	volt.version = 3 # Blitzschritt mit 2 Ladungen, Ulti Überladung
+	volt.ability_version = 2 # Kugelblitz statt Flash Blink
 	heroes["volt"] = volt
 
 	# 3. Spore
@@ -684,7 +690,10 @@ func _setup_heroes() -> void:
 	klinge.ability_name = "Klingensturm"
 	klinge.ability_desc = "Wirbelt herum und verletzt alle Gegner in der Nähe mit Rückstoß!"
 	klinge.ability_cooldown = 5.5
-	klinge.base_hp = 110
+	klinge.attack_type = "melee"
+	klinge.melee_weapon = "sword"
+	klinge.melee_cooldown_mult = 0.75
+	klinge.base_hp = 125
 	klinge.base_shield = 15
 	klinge.base_speed = 315.0
 	klinge.base_jump_force = -505.0
@@ -693,7 +702,7 @@ func _setup_heroes() -> void:
 	klinge.base_reload_time = 1.25
 	klinge.color_tint = Color(1.0, 0.3, 0.5)
 	klinge.sprite_tile_name = "tile_0005.png"
-	klinge.version = 3 # Schild-Cooldown 5 s statt 3 s (Bastion 4 s)
+	klinge.version = 4 # Nahkämpfer: Schwert auf Linksklick, 125 HP
 	klinge.ability_version = 1
 	heroes["klinge"] = klinge
 
@@ -707,7 +716,11 @@ func _setup_heroes() -> void:
 	bastion.ability_name = "Heilfeld"
 	bastion.ability_desc = "Errichtet ein Feld, das dich über Zeit heilt und Schild aufbaut!"
 	bastion.ability_cooldown = 8.0
-	bastion.base_hp = 125
+	bastion.attack_type = "melee"
+	bastion.melee_weapon = "hammer"
+	bastion.melee_damage_mult = 1.5
+	bastion.melee_cooldown_mult = 0.8
+	bastion.base_hp = 145
 	bastion.base_shield = 20
 	bastion.base_speed = 270.0
 	bastion.base_jump_force = -490.0
@@ -716,7 +729,7 @@ func _setup_heroes() -> void:
 	bastion.base_reload_time = 1.45
 	bastion.color_tint = Color(0.3, 0.9, 0.7)
 	bastion.sprite_tile_name = "tile_0001.png"
-	bastion.version = 3 # Schild-Cooldown 5 s statt 3 s (Bastion 4 s)
+	bastion.version = 4 # Nahkämpfer: Hammer auf Linksklick, 145 HP
 	bastion.ability_version = 1
 	heroes["bastion"] = bastion
 
@@ -726,11 +739,20 @@ func _setup_heroes() -> void:
 	phantom.name = "Phantom"
 	phantom.role = "Shadow Assassin"
 	phantom.description = "Blitzschnelle Überraschungsangriffe aus dem Nichts."
-	phantom.passive_desc = "Nachtwind: Sehr hohes Grundtempo (325) und schnellstes Feuerintervall (0,14 s)"
-	phantom.ability_name = "Schattensprung"
-	phantom.ability_desc = "Teleportiert in Zielrichtung, wird kurz unverwundbar und schlägt zu!"
-	phantom.ability_cooldown = 5.0
-	phantom.base_hp = 90
+	phantom.passive_desc = "Hinterhalt: Sehr hohes Grundtempo (325). Stiche aus der Unsichtbarkeit oder in den Rücken machen +%d %% Schaden" % int(round(Player.PHANTOM_BACKSTAB_BONUS * 100.0))
+	phantom.ability_name = "Köder"
+	phantom.ability_desc = "Ein Doppelgänger läuft weiter, während du kurz unsichtbar wirst!"
+	phantom.ability_cooldown = 9.0
+	phantom.attack_type = "melee"
+	phantom.melee_weapon = "iron"
+	phantom.melee_damage_mult = 0.55
+	phantom.melee_cooldown_mult = 0.55
+	phantom.dash_name = "Schattenschritt"
+	phantom.dash_desc = "Dash, nach dem du kurz unsichtbar bist."
+	phantom.ult_name = "Nachtjagd"
+	phantom.ult_desc = "Lange unsichtbar und schneller. Angriffe lassen dich nur kurz aufflackern, der erste Treffer trifft doppelt!"
+	phantom.ult_cooldown = 28.0
+	phantom.base_hp = 100
 	phantom.base_shield = 5
 	phantom.base_speed = 325.0
 	phantom.base_jump_force = -515.0
@@ -739,8 +761,8 @@ func _setup_heroes() -> void:
 	phantom.base_reload_time = 1.05
 	phantom.color_tint = Color(0.45, 0.45, 0.6)
 	phantom.sprite_tile_name = "tile_0007.png"
-	phantom.version = 3 # Schild-Cooldown 5 s statt 3 s (Bastion 4 s)
-	phantom.ability_version = 1
+	phantom.version = 4 # Nahkämpfer: Stich auf Linksklick, 100 HP, Schattenschritt
+	phantom.ability_version = 2 # Köder statt Schattensprung, Ulti Nachtjagd
 	heroes["phantom"] = phantom
 
 	# 8. Druide – Hainwächter
@@ -782,9 +804,9 @@ func get_hero_ability_details(hero: HeroData) -> String:
 				int(Player.ROCKET_IMPACT_RADIUS), int(Player.ROCKET_IMPACT_DAMAGE),
 			]
 		"volt":
-			return "Teleport zum Zielpunkt, höchstens %d px weit. Schockwelle am Ziel: Radius %d px, %d Schaden und verlangsamt Gegner %.1f s lang um %d%%." % [
-				int(Player.FLASH_BLINK_DISTANCE), int(Player.FLASH_BLINK_RADIUS),
-				int(Player.FLASH_BLINK_DAMAGE), Player.FLASH_BLINK_FREEZE,
+			return "Blitzkugel in Zielrichtung: fliegt %.1f s lang mit Tempo %d. Schockt alle %.1f s Gegner im Radius %d px mit %d Schaden und verlangsamt sie %.1f s lang um %d%%." % [
+				Player.VOLT_ORB_DURATION, int(Player.VOLT_ORB_SPEED), Player.VOLT_ORB_TICK,
+				int(Player.VOLT_ORB_RADIUS), int(Player.VOLT_ORB_DAMAGE), Player.VOLT_ORB_SLOW,
 				int(round((1.0 - Player.FREEZE_SPEED_MULT) * 100.0)),
 			]
 		"spore":
@@ -814,11 +836,8 @@ func get_hero_ability_details(hero: HeroData) -> String:
 				int(round(Player.HEAL_FIELD_TICK_SHIELD / Player.HEAL_FIELD_TICK_INTERVAL)),
 			]
 		"phantom":
-			return "Teleport zum Zielpunkt, höchstens %d px weit, danach %.1f s unverwundbar. Am Ziel: Radius %d px, %d Schaden (%d%% des Schussschadens) mit Rückstoß." % [
-				int(Player.SHADOW_STEP_DISTANCE), Player.SHADOW_STEP_INVULN,
-				int(Player.SHADOW_STEP_RADIUS),
-				int(round(base_damage * Player.SHADOW_STEP_DAMAGE_MULT)),
-				int(round(Player.SHADOW_STEP_DAMAGE_MULT * 100.0)),
+			return "Ein Doppelgänger mit %d HP läuft %.1f s lang in Blickrichtung weiter. Du selbst bist %.1f s unsichtbar. Bots, Türme und Zielsuche fallen auf den Köder herein." % [
+				int(Player.PHANTOM_DECOY_HP), Player.PHANTOM_DECOY_DURATION, Player.PHANTOM_STEALTH_DECOY,
 			]
 		"druid":
 			return "Rankenwand am Zielpunkt, höchstens %d px entfernt. Die breite Seite zeigt immer zu dir: %d px lang, %.0f s lang, %d HP. Hält Bewegung und Kugeln aller Spieler auf, man kann darauf stehen. Höchstens %d Wand gleichzeitig, die älteste zerfällt." % [
@@ -827,6 +846,79 @@ func get_hero_ability_details(hero: HeroData) -> String:
 				Player.DRUID_WALL_MAX_ACTIVE,
 			]
 	return hero.ability_desc
+
+# Ausführlicher Text zur Ulti (Taste E). Leer, wenn der Held noch keine hat.
+func get_hero_ult_details(hero: HeroData) -> String:
+	match hero.id:
+		"volt":
+			return "%.0f s lang: +%d%% Tempo, +%d%% Feuerrate, kein Munitionsverbrauch. Jeder Schuss springt als Kettenblitz auf einen weiteren Gegner." % [
+				Player.VOLT_OVERCHARGE_DURATION,
+				int(round((Player.VOLT_OVERCHARGE_SPEED_MULT - 1.0) * 100.0)),
+				int(round((Player.VOLT_OVERCHARGE_FIRE_RATE_MULT - 1.0) * 100.0)),
+			]
+		"phantom":
+			return "%.0f s lang unsichtbar und +%d%% Tempo. Angriffe und Treffer lassen dich nur %.2f s aufflackern. Der erste Treffer macht %d%% Schaden." % [
+				Player.PHANTOM_HUNT_DURATION,
+				int(round((Player.PHANTOM_HUNT_SPEED_MULT - 1.0) * 100.0)),
+				Player.PHANTOM_STEALTH_FLICKER,
+				int(round(Player.PHANTOM_HUNT_FIRST_HIT_MULT * 100.0)),
+			]
+	return hero.ult_desc
+
+# Ausführlicher Text zum Helden-Dash (Shift).
+func get_hero_dash_details(hero: HeroData) -> String:
+	match hero.id:
+		"ignis":
+			return "Dash in Laufrichtung, kurz unverwundbar, hinterlässt eine Feuerspur."
+		"volt":
+			return "Teleportiert %d px in Lauf- bzw. Zielrichtung. %d Ladungen, jede lädt einzeln nach." % [
+				int(Player.VOLT_DASH_DISTANCE), hero.dash_charges,
+			]
+		"phantom":
+			return "Dash in Laufrichtung, kurz unverwundbar. Danach %.1f s unsichtbar." % Player.PHANTOM_STEALTH_DASH
+	return "Dash in Laufrichtung, kurz unverwundbar."
+
+# Zeile zum Hauptangriff (Linksklick) für Menü und Tooltips.
+func get_hero_attack_text(hero: HeroData) -> String:
+	if not hero.is_melee():
+		return "Fernkampf: %d Schuss, Feuerintervall %.2f s, Nachladen %.2f s" % [
+			hero.base_ammo, hero.base_fire_rate_cooldown, hero.base_reload_time,
+		]
+	var data := get_melee_weapon_data(hero.melee_weapon)
+	return "Nahkampf: %s, %d Schaden alle %.2f s, Reichweite %.1f Felder" % [
+		str(data["label"]), int(round(float(data["damage"]) * hero.melee_damage_mult)),
+		float(data["cooldown"]) * hero.melee_cooldown_mult, float(data["range_tiles"]),
+	]
+
+# Angriff, Dash und Ulti eines Helden als Textblock für Menü und Tooltips.
+func get_hero_kit_text(hero: HeroData) -> String:
+	var lines: Array[String] = ["Angriff [LMB]: %s" % get_hero_attack_text(hero)]
+	var dash_label := hero.dash_name if not hero.dash_name.is_empty() else "Dash"
+	lines.append("Dash [Shift]: %s. %s" % [dash_label, get_hero_dash_details(hero)])
+	if hero.has_ult():
+		lines.append("Ulti [E]: %s (%.0fs Cooldown). %s" % [hero.ult_name, hero.ult_cooldown, get_hero_ult_details(hero)])
+	return "\n".join(lines)
+
+func is_melee_hero(hero_id: String) -> bool:
+	var hero: HeroData = heroes.get(hero_id, null)
+	return hero != null and hero.is_melee()
+
+func is_melee_slot(index: int) -> bool:
+	return is_melee_hero(get_player_hero_id(index))
+
+func has_melee_hero_in_match() -> bool:
+	for slot in get_active_player_indices():
+		if is_melee_slot(slot):
+			return true
+	return false
+
+# Restliche Ulti-Abklingzeit je Slot. Sie läuft über Rundenwechsel weiter;
+# -1 = noch nicht gesetzt, der Spieler startet dann halb geladen.
+var player_ult_timers: Array[float] = [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0]
+
+func reset_ult_timers() -> void:
+	for i in range(player_ult_timers.size()):
+		player_ult_timers[i] = -1.0
 
 func _setup_default_inputs() -> void:
 	_ensure_key_action("p1_left", KEY_A)
@@ -841,8 +933,8 @@ func _setup_default_inputs() -> void:
 	_ensure_key_action("p1_block", KEY_Q)
 	# Manuelles Nachladen.
 	_ensure_key_action("p1_reload", KEY_R)
-	# Nahkampfwaffe aus dem Charakter-Tab.
-	_ensure_key_action("p1_melee", KEY_E)
+	# Ulti des Helden.
+	_ensure_key_action("p1_ult", KEY_E)
 
 	# P2 bindings (Keyboard fallback for local 2-player)
 	_ensure_key_action("p2_left", KEY_LEFT)
@@ -855,7 +947,7 @@ func _setup_default_inputs() -> void:
 	_ensure_key_action("p2_ability", KEY_COMMA)
 	_ensure_key_action("p2_block", KEY_M)
 	_ensure_key_action("p2_reload", KEY_L)
-	_ensure_key_action("p2_melee", KEY_K)
+	_ensure_key_action("p2_ult", KEY_K)
 
 	# Utility
 	_ensure_key_action("restart_game", KEY_F9)
@@ -926,9 +1018,14 @@ func get_tusk_shape_label(shape: String) -> String:
 func normalize_melee_weapon(weapon_id: String) -> String:
 	return weapon_id if MELEE_WEAPONS.has(weapon_id) else "iron"
 
+# Die Nahkampfwaffe gehört zum Helden. Fernkämpfer haben keine; für sie
+# bleibt der alte, im Charakter-Tab gespeicherte Wert nur als Platzhalter.
 func get_melee_weapon(index: int) -> String:
 	if index < 1 or index > MAX_PLAYERS:
 		return "iron"
+	var hero: HeroData = heroes.get(get_player_hero_id(index), null)
+	if hero != null and hero.is_melee():
+		return normalize_melee_weapon(hero.melee_weapon)
 	return player_melee_weapons[index - 1]
 
 func get_melee_weapon_data(weapon_id: String) -> Dictionary:
@@ -1426,6 +1523,7 @@ func get_scores() -> Array:
 	return result
 
 func reset_match() -> void:
+	reset_ult_timers()
 	for i in range(MAX_PLAYERS):
 		player_scores[i] = 0
 		if player_cards[i] is Array:
@@ -2031,7 +2129,10 @@ func set_draft_config(picks: int, offered: int) -> void:
 	draft_config_changed.emit(draft_picks, cards_per_draft)
 	cards_per_draft_changed.emit(cards_per_draft)
 
-func set_melee_enabled(enabled: bool) -> void:
+# Nahkampf ist seit den Helden-Kits fester Teil der Nahkampfhelden und lässt
+# sich nicht mehr abschalten. Alte Lobby-Einstellungen mit "aus" zählen als an.
+func set_melee_enabled(_enabled: bool) -> void:
+	var enabled := true
 	if melee_enabled == enabled:
 		return
 	melee_enabled = enabled

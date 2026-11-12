@@ -67,12 +67,13 @@ var pending_ability: bool = false
 var pending_ability_target = null
 var pending_block: bool = false
 var pending_reload: bool = false
-var pending_melee: bool = false
+var pending_ult: bool = false
 var pending_drop: bool = false
 var remote_bullets: Dictionary = {}
 var remote_towers: Dictionary = {}
 var remote_mines: Dictionary = {}
 var remote_druid_walls: Dictionary = {}
+var remote_entities: Dictionary = {}
 # Auf Clients: zuletzt gesehener Lebenszustand pro Slot. Ein leerer Snapshot
 # nach einem lebenden Snapshot ist ein Tod und löst den lokalen Todeston aus.
 var network_alive_slots: Dictionary = {}
@@ -1267,7 +1268,7 @@ func _process_network_client(delta: float) -> void:
 		pending_ability = false
 		pending_block = false
 		pending_reload = false
-		pending_melee = false
+		pending_ult = false
 		pending_drop = false
 		return
 
@@ -1282,7 +1283,7 @@ func _process_network_client(delta: float) -> void:
 		pending_ability = false
 		pending_block = false
 		pending_reload = false
-		pending_melee = false
+		pending_ult = false
 		pending_drop = false
 		net_input_timer += delta
 		if net_input_timer >= INPUT_INTERVAL:
@@ -1290,7 +1291,7 @@ func _process_network_client(delta: float) -> void:
 			NetworkManager.send_input({
 				"move_x": 0.0, "move_y": 0.0, "aim": Vector2.ZERO, "shoot": false, "jump": false,
 				"jump_release": false, "dash": false, "ability": false, "block": false, "reload": false,
-				"melee": false, "drop": false,
+				"ult": false, "drop": false,
 			})
 		return
 
@@ -1316,8 +1317,8 @@ func _process_network_client(delta: float) -> void:
 	elif Input.is_action_just_pressed("p1_ability"):
 		pending_ability = true
 		pending_ability_target = null
-	if Input.is_action_just_pressed("p1_melee"):
-		pending_melee = true
+	if Input.is_action_just_pressed("p1_ult"):
+		pending_ult = true
 	if Input.is_action_just_pressed("p1_down"):
 		pending_drop = true
 	if Input.is_action_pressed("p1_shoot") and local_shoot_sound_timer <= 0.0:
@@ -1352,7 +1353,7 @@ func _process_network_client(delta: float) -> void:
 		"ability_target": pending_ability_target if pending_ability else null,
 		"block": pending_block,
 		"reload": pending_reload,
-		"melee": pending_melee,
+		"ult": pending_ult,
 		"drop": pending_drop,
 	})
 	pending_jump = false
@@ -1362,7 +1363,7 @@ func _process_network_client(delta: float) -> void:
 	pending_ability_target = null
 	pending_block = false
 	pending_reload = false
-	pending_melee = false
+	pending_ult = false
 	pending_drop = false
 
 # Bricht die Zielvorschau des lokalen Spielers ab. true = es lief eine.
@@ -1380,8 +1381,8 @@ func _can_local_shoot(local: Player) -> bool:
 	if local == null or not is_instance_valid(local):
 		return false
 	return local.visible and local.current_health > 0.0 \
-		and local.control_enabled and local.current_ammo > 0 \
-		and not local.is_reloading
+		and local.control_enabled and not local.is_melee \
+		and (local.overcharge_timer > 0.0 or (local.current_ammo > 0 and not local.is_reloading))
 
 func _on_network_input(slot: int, data: Dictionary) -> void:
 	if not is_network_host or Global.current_state != Global.GameState.PLAYING:
@@ -1409,6 +1410,7 @@ func _send_snapshot() -> void:
 		"towers": _tower_snapshots(),
 		"mines": _mine_snapshots(),
 		"dwalls": _druid_wall_snapshots(),
+		"ents": _entity_snapshots(),
 		"map_objects": level_generator.get_moving_object_snapshots(),
 		"statics": level_generator.get_static_object_snapshot(),
 		"scores": Global.get_scores(),
@@ -1443,6 +1445,14 @@ func _player_snapshot(player: Player, with_appearance: bool = true) -> Dictionar
 		"reload_time": player.reload_time,
 		"dash_cd": player.dash_cooldown_timer,
 		"dash_cd_max": player.dash_cooldown,
+		"dash_n": player.dash_charges,
+		"dash_n_max": player.dash_charges_max,
+		"ult": player.ult_timer,
+		"ult_max": player.ult_max_cooldown,
+		"ovc": player.overcharge_timer,
+		"stealth": player.stealth_timer,
+		"flicker": player.stealth_flicker_timer,
+		"hunt": player.hunt_timer,
 		"blocking": player.is_blocking,
 		"block_cd": player.block_cooldown_timer,
 		"block_cd_max": player.block_cooldown,
@@ -1525,6 +1535,7 @@ func _on_network_snapshot(data: Dictionary) -> void:
 	_sync_remote_towers(data.get("towers", []))
 	_sync_remote_mines(data.get("mines", []))
 	_sync_remote_druid_walls(data.get("dwalls", []))
+	_sync_remote_entities(data.get("ents", []))
 	level_generator.apply_moving_object_snapshots(data.get("map_objects", []))
 	var statics = data.get("statics", {})
 	if statics is Dictionary:
@@ -1694,6 +1705,43 @@ func _sync_remote_druid_walls(list: Array) -> void:
 				wall.remove_replica()
 			remote_druid_walls.erase(wall_id)
 
+# Fähigkeits-Objekte (Köder, Kugelblitz): der Host simuliert, Clients bauen
+# sie nach ihrer Art ("k") nach. Siehe NetEntity.
+func _entity_snapshots() -> Array:
+	var result: Array = []
+	for e in get_tree().get_nodes_in_group(NetEntity.GROUP):
+		if not is_instance_valid(e) or e.is_replica or e.is_queued_for_deletion():
+			continue
+		result.append(e.get_network_state())
+	return result
+
+func _sync_remote_entities(list: Array) -> void:
+	var seen := {}
+	for entry in list:
+		var ent_id := int(entry.get("id", 0))
+		if ent_id == 0:
+			continue
+		seen[ent_id] = true
+		var ent = remote_entities.get(ent_id, null)
+		if ent == null or not is_instance_valid(ent):
+			ent = NetEntity.create_replica(str(entry.get("k", "")))
+			if ent == null:
+				continue
+			ent.is_replica = true
+			ent.net_id = ent_id
+			if "owner_index" in ent:
+				ent.owner_index = int(entry.get("o", 0))
+			ent.position = entry.get("pos", Vector2.ZERO)
+			add_child(ent)
+			remote_entities[ent_id] = ent
+		ent.apply_network_state(entry)
+	for ent_id in remote_entities.keys():
+		if not seen.has(ent_id):
+			var ent = remote_entities[ent_id]
+			if is_instance_valid(ent):
+				ent.remove_replica()
+			remote_entities.erase(ent_id)
+
 func _clear_remote_towers() -> void:
 	for t in remote_towers.values():
 		if is_instance_valid(t):
@@ -1720,6 +1768,7 @@ func _clear_round_effects() -> void:
 	remote_towers.clear()
 	remote_mines.clear()
 	remote_druid_walls.clear()
+	remote_entities.clear()
 	if modifier_manager != null:
 		modifier_manager.clear_round()
 

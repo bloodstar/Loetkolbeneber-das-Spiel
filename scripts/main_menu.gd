@@ -302,6 +302,7 @@ func _build_hero_stats_card(hero: HeroData) -> Control:
 
 	var ability := Label.new()
 	ability.text = "Aktiv: %s (%.1fs Cooldown) — %s\n%s" % [hero.ability_name, hero.ability_cooldown, hero.ability_desc, Global.get_hero_ability_details(hero)]
+	ability.text += "\n" + Global.get_hero_kit_text(hero)
 	ability.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	ability.add_theme_color_override("font_color", Color(0.52, 0.8, 1.0, 1.0))
 	ability.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

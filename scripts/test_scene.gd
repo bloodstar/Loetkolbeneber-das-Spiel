@@ -189,7 +189,6 @@ func _ready() -> void:
 	Global.set_base_damage(27.0)
 	Global.set_enabled_level_modifiers(["wind", "zone"])
 	Global.set_level_modifier_rate_percent(180)
-	Global.set_melee_enabled(false)
 	Global.set_selected_map("eisgrotte")
 	Global.set_rarity_percent("Rare", 42.0)
 	Global.save_lobby_loadout(ui_preset_name)
@@ -209,7 +208,6 @@ func _ready() -> void:
 	assert(int(main.lobby.picks_spin.value) == 2 and int(main.lobby.offer_spin.value) == 6, "Loading a preset should update the draft controls")
 	assert(int(main.lobby.base_hp_spin.value) == 115 and int(main.lobby.base_damage_spin.value) == 27, "Loading a preset should update HP and damage controls")
 	assert(int(main.lobby.modifier_rate_spin.value) == 180, "Loading a preset should update the modifier rate control")
-	assert(not main.lobby.melee_enabled_check.button_pressed, "Loading a preset should update the melee toggle")
 	assert(is_equal_approx(float(main.lobby.rarity_spins["Rare"].value), 42.0), "Loading a preset should update rarity controls")
 	assert(
 		main.lobby.map_option.get_item_text(main.lobby.map_option.selected) == Global.get_map_name("eisgrotte"),

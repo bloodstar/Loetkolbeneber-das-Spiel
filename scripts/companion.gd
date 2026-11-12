@@ -125,7 +125,7 @@ func _physics_process(delta: float) -> void:
 			if not is_instance_valid(target_enemy) or target_enemy.current_health <= 0.0:
 				target_enemy = _find_target()
 			if is_instance_valid(target_enemy):
-				aim_angle = (target_enemy.global_position - global_position).angle()
+				aim_angle = (target_enemy.get_lure_target().global_position - global_position).angle()
 			if follow_owner:
 				_orbit_angle += delta * 0.7
 				var tower_offset := Vector2(cos(_orbit_angle), sin(_orbit_angle)) * (orbit_radius + 12.0)
@@ -226,14 +226,16 @@ func _try_fire() -> void:
 	if not is_instance_valid(target_enemy):
 		return
 
-	var direction := (target_enemy.global_position - global_position).normalized()
+	# Ein Köder (Phantom) lenkt Türme und Drohnen auf sich.
+	var lure: Node2D = target_enemy.get_lure_target()
+	var direction := (lure.global_position - global_position).normalized()
 	if direction == Vector2.ZERO:
 		return
 
 	var bullet = BULLET_SCENE.instantiate()
 	bullet.shooter = owner_player
 	# Nur gültige, lebende Ziele setzen (Gegner kann zwischen Frames sterben).
-	bullet.target_enemy = target_enemy if is_instance_valid(target_enemy) else null
+	bullet.target_enemy = lure if is_instance_valid(lure) else null
 	bullet.damage = owner_player.bullet_damage * damage_mult
 	bullet.velocity = direction * 680.0
 	# Drohnenschüsse behalten ihre flache Flugbahn (früherer Fallwert 90).
