@@ -163,7 +163,7 @@ Die HP-Werte gelten bei **Basis-HP-Faktor 100 %**. In der Lobby lässt sich der 
 
 ### Barriere (`Q`)
 
-Jeder Held hat die Barriere (früher „Block“): **0,5 s kein Schaden**, gegnerische Projektile werden **zurückgeworfen**, **4 s Abklingzeit**. Eine aktive Barriere fängt auch Nahkampfschläge ab. Barriere-Karten verlängern sie oder lösen Bomben, Heilzonen, Minen und Rückstoß aus. Die Barriere ist **nicht** der Schild: Barriere-Karten verbessern nie den Schild und Schild-Karten nie die Barriere.
+Jeder Held hat die Barriere (früher „Block“): **0,5 s kein Schaden**, gegnerische Projektile werden **zurückgeworfen**, **4 s Abklingzeit**. Eine aktive Barriere fängt auch Nahkampfschläge ab. Sie hält **2 Treffer** aus (abgewehrte Kugeln zählen mit, eine Schrotsalve oder Rakete samt Explosion zählt als ein Treffer, Gift-Ticks gar nicht) und zerbricht danach mit Scherben und Glasklirren; die Abklingzeit beginnt dann sofort. Jeder Treffer hinterlässt einen Riss. Barriere-Karten verlängern sie oder lösen Bomben, Heilzonen, Minen und Rückstoß aus. Die Barriere ist **nicht** der Schild: Barriere-Karten verbessern nie den Schild und Schild-Karten nie die Barriere.
 
 ### Dash (`Shift`)
 
@@ -530,7 +530,7 @@ Dazu kommen einzelne Reflexions-Karten im Pool Defensive: **Stachelweste**, **Ra
 | Seltenheit | Karten |
 | :--- | :--- |
 | Common | Barriereübung (+0,15 s), Schnelle Deckung (−15 % Abklingzeit) |
-| Uncommon | Verstärkte Deckung (+0,3 s, Evolution: Ausdauerbarriere), Barrierestoß (stößt weg) |
+| Uncommon | Verstärkte Deckung (+0,3 s, Evolution: Ausdauerbarriere), Barrierestoß (stößt weg), Panzerglas (+1 Treffer, bevor die Barriere zerbricht) |
 | Rare | Barrierebombe, Heilzone, Druckwelle |
 | Epic | Konterblitz (+50 % auf reflektierte Schüsse), Barriere-Experte, Unzerbrechlich |
 

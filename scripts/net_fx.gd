@@ -20,6 +20,8 @@ extends RefCounted
 #   "mobj"        Animation eines beweglichen Map-Objekts über seine net_id
 #   "pfx"         Spieler-Effekt (Treffer-, Heil-, Powerup-Blitz) über den Slot
 #   "plasma"      roter Plasma-Schlag an der Gummiwand ("p" Punkt, "d" ins Feld)
+#   "barrier_break" Bruch der Barriere: Scherben ("p" Spieler, "c" Farbe,
+#                 "d" Richtung zum Einschlag)
 # Jeder Effekt kann zusätzlich "snd" = [key, pitch_range, volume_db] und
 # "shake" = Stärke mitbringen. "x" = Slot, dessen Rechner den Effekt schon
 # selbst vorhersagt (eigener Schuss/Sprung), "o" = nur dieser Slot.
@@ -55,6 +57,13 @@ static func play(parent: Node, fx: String, args: Dictionary) -> void:
 			_pickup(parent, args)
 		"plasma":
 			_plasma(parent, args)
+		"barrier_break":
+			BarrierShatter.spawn(parent, args.get("p", Vector2.ZERO), args.get("c", Color(0.3, 0.8, 1.0)),
+				args.get("d", Vector2.ZERO))
+			if args.has("s") and parent.has_method("get_player"):
+				var bp = parent.get_player(int(args.get("s", 0)))
+				if bp != null and is_instance_valid(bp) and bp.has_method("on_network_barrier_break"):
+					bp.on_network_barrier_break()
 		"laser":
 			var laser := OrbitalLaser.new()
 			var no_players: Array[Player] = []

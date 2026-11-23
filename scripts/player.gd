@@ -613,7 +613,7 @@ var time_haste_mult: float = 1.0
 var ability_name: String = ""
 var ability_max_cooldown: float = 6.0
 var ability_timer: float = 0.0
-var shield_dome_node: Sprite2D = null
+var shield_dome_node: BarrierDome = null
 
 # --- Standard-Block (Taste Q), fÃƒÂ¼r alle Spieler gleich ---
 # Kurzer Schutz: verhindert Schaden vollstÃƒÂ¤ndig und reflektiert Projektile.
@@ -624,6 +624,19 @@ var block_timer: float = 0.0
 var block_duration: float = BLOCK_BASE_DURATION
 var block_cooldown: float = BLOCK_BASE_COOLDOWN
 var block_cooldown_timer: float = 0.0
+# Die Barriere hält nur eine begrenzte Zahl an Treffern aus und zerbricht
+# danach. Treffer derselben Quelle kurz hintereinander (Schrotsalve,
+# Rakete + Explosion) zählen als einer; Kleinstschaden (Gift-Ticks) zählt nicht.
+const BLOCK_BASE_HITS: int = 2
+const BLOCK_HIT_MERGE_MS: int = 60
+const BLOCK_HIT_MIN_DAMAGE: float = 3.0
+var block_max_hits: int = BLOCK_BASE_HITS
+var block_hits_left: int = BLOCK_BASE_HITS
+var _block_last_hit_ms: int = -1000
+var _block_last_hit_source: int = 0 # instance id
+# Client: Barriere ist laut Host zerbrochen, Kugel nicht wieder zeigen,
+# bis der Snapshot is_blocking = false meldet.
+var _barrier_broken_hold: bool = false
 var block_reflect_damage_add: float = 0.0
 var block_knockback_radius: float = 0.0
 var block_knockback_force: float = 0.0
@@ -931,11 +944,7 @@ func _ready() -> void:
 	ghost_timer.timeout.connect(_spawn_ghost_trail)
 	
 	# Schildwabe fÃƒÂ¼r den universellen Block.
-	shield_dome_node = Sprite2D.new()
-	shield_dome_node.texture = EFFECT_CIRCLE_TEXTURE
-	shield_dome_node.modulate = Color(0.3, 0.8, 1.0, 0.7)
-	shield_dome_node.scale = Vector2(4.5, 4.5)
-	shield_dome_node.visible = false
+	shield_dome_node = BarrierDome.new()
 	add_child(shield_dome_node)
 
 	_poison_bubbles = POISON_BUBBLE_EFFECT_SCRIPT.new()
@@ -985,6 +994,7 @@ func _setup_arena_body() -> void:
 func _process(delta: float) -> void:
 	_update_powerup_glow(delta)
 	_update_powerup_aura()
+	_sync_barrier_dome()
 	_update_body_alpha()
 	if not is_replica or not visible:
 		return
@@ -1043,6 +1053,7 @@ func apply_stats() -> void:
 	# Block-Modifikatoren aus Karten.
 	var block_dur_add = 0.0
 	var block_cd_mult = 1.0
+	var block_hits_add := 0
 	var block_kb_radius = 0.0
 	var block_kb_force = 0.0
 	var block_bomb_enabled = false
@@ -1165,6 +1176,7 @@ func apply_stats() -> void:
 		# Standard-Block verbessern.
 		block_dur_add += c.block_duration_add
 		block_cd_mult *= c.block_cooldown_mult
+		block_hits_add += c.block_hits_add
 		block_kb_radius += c.block_knockback_radius_add
 		block_kb_force += c.block_knockback_force_add
 		block_reflect_dmg_add += c.block_reflect_damage_add
@@ -1337,6 +1349,8 @@ func apply_stats() -> void:
 	# gedeckelt, damit gestapelte Block-Karten nicht zu dauerhafter ImmunitÃƒÂ¤t fÃƒÂ¼hren.
 	block_duration = clampf(BLOCK_BASE_DURATION + block_dur_add, 0.2, 1.5)
 	block_cooldown = maxf(2.5, BLOCK_BASE_COOLDOWN * block_cd_mult)
+	block_max_hits = clampi(BLOCK_BASE_HITS + block_hits_add, 1, 8)
+	block_hits_left = block_max_hits
 	block_reflect_damage_add = block_reflect_dmg_add
 	block_knockback_radius = block_kb_radius
 	block_knockback_force = block_kb_force
@@ -1354,7 +1368,7 @@ func apply_stats() -> void:
 	block_cooldown_timer = 0.0
 	block_heal_timer = 0.0
 	if shield_dome_node:
-		shield_dome_node.visible = false
+		shield_dome_node.hide_dome(true)
 	var melee_data := Global.get_melee_weapon_data(Global.get_melee_weapon(player_index))
 	melee_weapon = Global.get_melee_weapon(player_index)
 	if is_melee:
@@ -1454,13 +1468,15 @@ func _physics_process(delta: float) -> void:
 	
 	# Universeller Block: Schildwabe anzeigen und Projektile reflektieren.
 	if is_blocking and shield_dome_node:
-		shield_dome_node.visible = true
-		shield_dome_node.rotation += delta * 8.0
 		if block_reflect:
 			for b in get_tree().get_nodes_in_group("bullet"):
+				if not is_blocking:
+					break # Barriere ist an einem Treffer zerbrochen
 				if is_instance_valid(b) and b.shooter != self and global_position.distance_to(b.global_position) < 60.0:
 					if is_instance_valid(b.shooter) and b.shooter is Player and b.shooter.team_id == team_id:
 						continue
+					# Abgewehrte Kugeln zählen als Treffer auf die Barriere.
+					_barrier_absorb_hit(b.global_position, b.shooter, b.damage)
 					b.shooter = self
 					b.target_enemy = _homing_target()
 					b.velocity = -b.velocity * 1.3
@@ -1468,8 +1484,6 @@ func _physics_process(delta: float) -> void:
 					b.damage *= 1.0 + block_reflect_damage_add
 					b.modulate = Color(0.75, 0.5, 1.0)
 					_fx("sound", {"snd": ["bounce", 0.3, 3.0]})
-	elif shield_dome_node:
-		shield_dome_node.visible = false
 	
 	# Gravity & Movement
 	if ArenaMode.active:
@@ -1882,10 +1896,7 @@ func apply_network_state(data: Dictionary) -> void:
 		wand.set_flip_v(false)
 		sprite.flip_h = false
 	
-	if shield_dome_node:
-		shield_dome_node.visible = is_blocking
-		if is_blocking:
-			shield_dome_node.modulate = _block_dome_color()
+	_sync_barrier_dome()
 
 	_refresh_poison_visual()
 	emit_signal("health_changed", current_health, max_health, current_shield, max_shield)
@@ -2796,9 +2807,11 @@ func start_block() -> void:
 	block_timer = block_duration
 	block_cooldown_timer = 0.0
 	block_cd_display_tenths = -1
+	block_hits_left = block_max_hits
+	_block_last_hit_ms = -1000
+	_block_last_hit_source = 0
 	if shield_dome_node:
-		shield_dome_node.modulate = _block_dome_color()
-		shield_dome_node.visible = true
+		shield_dome_node.show_dome(_block_dome_color())
 	_fx("sound", {"snd": ["shield", 0.2, 0.0]})
 	_trigger_block_effects()
 	emit_signal("block_state_changed", true, block_cooldown_timer, block_cooldown)
@@ -2810,8 +2823,59 @@ func _end_block() -> void:
 	block_cooldown_timer = block_cooldown
 	block_cd_display_tenths = -1
 	if shield_dome_node:
-		shield_dome_node.visible = false
+		shield_dome_node.hide_dome()
 	emit_signal("block_state_changed", false, block_cooldown_timer, block_cooldown)
+
+# Ein Treffer auf die aktive Barriere (Schaden oder abgewehrte Kugel).
+# Zählt die Haltbarkeit herunter; beim letzten Treffer zerbricht sie.
+# Nur dort, wo simuliert wird; Clients sehen Puls und Bruch über NetFx.
+func _barrier_absorb_hit(from_pos: Vector2, source: Object, amount: float) -> void:
+	if not is_blocking:
+		return
+	var dir := from_pos - global_position
+	var now := Time.get_ticks_msec()
+	var source_id: int = source.get_instance_id() if is_instance_valid(source) else 0
+	var counts := amount >= BLOCK_HIT_MIN_DAMAGE \
+		and not (source_id == _block_last_hit_source and now - _block_last_hit_ms < BLOCK_HIT_MERGE_MS)
+	if counts:
+		_block_last_hit_ms = now
+		_block_last_hit_source = source_id
+		block_hits_left -= 1
+	if block_hits_left <= 0:
+		_break_barrier(dir)
+		return
+	var left := float(block_hits_left) / float(maxi(1, block_max_hits))
+	_pulse_block_shield(0.16, dir, left)
+
+func _break_barrier(dir: Vector2) -> void:
+	_fx("barrier_break", NetFx.with_sound({"p": global_position, "c": _block_dome_color(),
+		"d": dir.normalized() if dir.length_squared() > 0.01 else Vector2.ZERO, "s": player_index,
+		"shake": 0.3}, "barrier_break", 0.12, 1.0))
+	if shield_dome_node:
+		shield_dome_node.hide_dome(true)
+	_end_block()
+
+# Barrieren-Kugel an is_blocking angleichen (auch auf Replikas per Snapshot).
+func _sync_barrier_dome() -> void:
+	if shield_dome_node == null:
+		return
+	if not is_blocking:
+		_barrier_broken_hold = false
+	if is_blocking and not _barrier_broken_hold:
+		if not shield_dome_node.active:
+			shield_dome_node.show_dome(_block_dome_color())
+		else:
+			shield_dome_node.color = _block_dome_color()
+	elif shield_dome_node.active:
+		shield_dome_node.hide_dome(_barrier_broken_hold)
+
+# Client: der Host meldet den Bruch (NetFx "barrier_break").
+func on_network_barrier_break() -> void:
+	if not is_replica:
+		return
+	_barrier_broken_hold = true
+	if shield_dome_node:
+		shield_dome_node.hide_dome(true)
 
 # Karten-Effekte, die beim Aktivieren des Blocks ausgelÃƒÂ¶st werden.
 func _trigger_block_effects() -> void:
@@ -2882,14 +2946,14 @@ func _block_dome_color() -> Color:
 	return Color(0.3, 0.8, 1.0, 0.7)
 
 # shake > 0: Clients wackeln mit der Kamera wie der Host.
-func _pulse_block_shield(shake: float = 0.0) -> void:
-	_net_player_fx("_pulse_block_shield", [], {"shake": shake})
+# dir = Richtung zum Einschlag, hits_left = verbleibende Haltbarkeit 0..1.
+func _pulse_block_shield(shake: float = 0.0, dir: Vector2 = Vector2.ZERO, hits_left: float = 1.0) -> void:
+	_net_player_fx("_pulse_block_shield", [0.0, dir, hits_left], {"shake": shake})
 	SoundManager.play_sound("bounce", 0.2, 2.0)
-	if shield_dome_node:
-		var base_color := _block_dome_color()
-		var tw := create_tween()
-		tw.tween_property(shield_dome_node, "modulate", Color(2.0, 2.0, 2.0, 0.95), 0.05)
-		tw.tween_property(shield_dome_node, "modulate", base_color, 0.1)
+	if shield_dome_node and not _barrier_broken_hold:
+		if not shield_dome_node.active:
+			shield_dome_node.show_dome(_block_dome_color())
+		shield_dome_node.hit(dir, hits_left)
 
 # Liefert nur einen gÃƒÂ¼ltigen, lebenden Gegner. Verhindert Zuweisungen an
 # bereits freigegebene Player-Objekte (z. B. nach einem Tod).
@@ -5090,7 +5154,10 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null
 		Global.add_match_stat(player_index, "damage_blocked", amount)
 		Global.add_match_stat(player_index, "blocked_hits", 1.0)
 		Global.shake_camera(0.16)
-		_pulse_block_shield(0.16)
+		var hit_from := global_position - knockback
+		if is_instance_valid(source) and source is Node2D and source != self:
+			hit_from = (source as Node2D).global_position
+		_barrier_absorb_hit(hit_from, source, amount)
 		damage_received.emit(amount, source, "block")
 		return
 	

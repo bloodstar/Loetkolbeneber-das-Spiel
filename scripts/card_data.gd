@@ -119,6 +119,7 @@ extends Resource
 # --- Standard-Block (universell, Taste Q) ---
 @export var block_duration_add: float = 0.0 # Zusätzliche Sekunden Blockdauer
 @export var block_cooldown_mult: float = 1.0 # <1.0 = kürzerer Block-Cooldown
+@export var block_hits_add: int = 0 # Barriere hält so viele Treffer mehr aus, bevor sie zerbricht
 @export var block_reflect_damage_add: float = 0.0 # Reflektierte Projektile: +Schaden (0.5 = +50%)
 @export var block_knockback_radius_add: float = 0.0 # Rückstoß-Radius beim Blocken
 @export var block_knockback_force_add: float = 0.0 # Stärke des Rückstoßes
