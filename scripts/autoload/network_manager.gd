@@ -32,7 +32,7 @@ signal draft_pick_requested(slot: int, card_id: String)
 signal draft_gamble_flip_received(revealed: int)
 signal draft_gamble_flip_requested(slot: int, revealed: int)
 signal draft_finished_received()
-signal match_over_received(winner_index: int, scores: Array, stats: Array, reason: String)
+signal match_over_received(winner_index: int, scores: Array, stats: Array, reason: String, honors: Array)
 signal kill_cam_received(point: Vector2, killer_slot: int, duration: float)
 signal tile_broken_received(tile_id: int)
 signal tile_regrown_received(tile_id: int)
@@ -907,15 +907,16 @@ func receive_input(data: Dictionary) -> void:
 	input_received.emit(slot, data)
 
 # reason wie Global.match_end_reason ("", "tiebreak", "early"); winner 0 = Unentschieden.
-func send_match_over(winner_index: int, scores: Array, stats: Array = [], reason: String = "") -> void:
+# honors: MVP-Ehrungen des Hosts (MatchHonors.get_honors()).
+func send_match_over(winner_index: int, scores: Array, stats: Array = [], reason: String = "", honors: Array = []) -> void:
 	if not is_host:
 		return
 	for peer_id in _broadcast_targets():
-		receive_match_over.rpc_id(int(peer_id), winner_index, scores, stats, reason)
+		receive_match_over.rpc_id(int(peer_id), winner_index, scores, stats, reason, honors)
 
 @rpc("authority", "call_remote", "reliable")
-func receive_match_over(winner_index: int, scores: Array, stats: Array, reason: String = "") -> void:
-	match_over_received.emit(winner_index, scores, stats, reason)
+func receive_match_over(winner_index: int, scores: Array, stats: Array, reason: String = "", honors: Array = []) -> void:
+	match_over_received.emit(winner_index, scores, stats, reason, honors)
 
 # Rundenentscheidender Tod: Clients starten Zeitlupe und Kill-Cam gleichzeitig mit dem Host.
 func send_kill_cam(point: Vector2, killer_slot: int, duration: float) -> void:

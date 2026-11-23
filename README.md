@@ -274,6 +274,30 @@ Die Lobby hat mehrere Tabs. **Spieler 1 ist Host** und stellt Regeln, Map und Ka
 
 **Weiterspielen**: Nach dem Match-Sieg kann der Host **WEITERSPIELEN** wählen. Punkte und Decks bleiben, das Ziel steigt um 30 %.
 
+### MVP-Ehrungen
+
+Am Matchende zeigt der Win-Screen unter der Match-Statistik bis zu **8 Ehrungen**. Pro Spieler gibt es höchstens 2 (bei 2 bis 3 Spielern etwas mehr), der MVP-Titel zählt nicht mit. Spaß-Ehrungen erscheinen höchstens zwei.
+
+| Ehrung | Wer bekommt sie |
+|---|---|
+| **MVP** | Bester Gesamtwert aus Punkten, Kills, Schaden, Barriere, Heilung, Rundensiegen und Toden |
+| **Schadenskönig** | Meister Schaden |
+| **Serienkiller** | Längste Kill-Serie ohne eigenen Tod (ab 3) |
+| **Beste Karte** | Karte, mit der ihr Besitzer am stärksten war: Schadensanteil und Rundensiege in den Runden mit der Karte, plus die Verbesserung gegenüber den Runden davor |
+| **Scharfschütze** | Beste Trefferquote (ab 20 Schüssen und 25 %) |
+| **Erstes Blut** | Am häufigsten den ersten Kill einer Runde (ab 2) |
+| **Fähigkeiten-Ass** | Meister Fähigkeitsschaden (ab 100) |
+| **Nahkampf-Metzger** | Meister Nahkampfschaden (ab 60) |
+| **Bollwerk** | Meister Barriere-Schaden (ab 60) |
+| **Sanitäter** | Meiste Heilung (ab 60) |
+| **Überlebenskünstler** | Am häufigsten bis zum Rundenende überlebt (ab 2) |
+| **Haarscharf** | Runde mit höchstens 20 % Leben gewonnen |
+| **Größter Pechvogel** *(Spaß)* | Meiste Tode (ab 2), bei Gleichstand mehr eingesteckter Schaden |
+| **Tollpatsch** *(Spaß)* | Tode ohne gegnerischen Schützen (Lava, Absturz, eigene Schüsse) |
+| **Kugelfang** *(Spaß)* | Am meisten Schaden eingesteckt |
+
+Online berechnet der Host die Ehrungen und schickt sie mit dem Match-Ende an alle Clients.
+
 ---
 
 ## 👥 Spielmodi

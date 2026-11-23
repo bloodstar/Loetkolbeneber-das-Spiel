@@ -124,6 +124,7 @@ func _ready() -> void:
 	sudden_death_timer.timeout.connect(_start_sudden_death)
 	main_menu.start_requested.connect(_on_menu_start_requested)
 	Global.match_over.connect(_on_match_over)
+	Global.match_reset.connect(MatchHonors.reset)
 	Global.tiebreak_started.connect(_on_tiebreak_started)
 	hud.restart_requested.connect(_on_hud_restart_requested)
 	hud.continue_requested.connect(_on_hud_continue_requested)
@@ -350,6 +351,7 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	if not is_network_client:
 		RoundStats.begin_round(level_seed, map_id, active_mods)
 		AchievementManager.begin_round(active_mods)
+		MatchHonors.begin_round(Global.get_round_player_indices())
 		CardStats.record_round_start()
 
 	# 3. Reset Sudden Death. Der Timer startet erst nach dem Start-Countdown.
@@ -723,6 +725,10 @@ func _on_player_died(dead_player_index: int) -> void:
 			Global.add_match_stat(killer.player_index, "kills", 1.0)
 			CardStats.record_kill(killer.player_index)
 			RoundStats.record_kill(killer.player_index, dead_player_index)
+			if not is_network_client:
+				MatchHonors.record_death(dead_player_index, killer.player_index)
+		elif not is_network_client:
+			MatchHonors.record_death(dead_player_index, 0)
 
 	# Während der Kill-Cam steht der Rundensieger schon fest. Weitere Tode
 	# zählen nur noch für Punkte und Statistik.
@@ -783,11 +789,22 @@ func _on_player_died(dead_player_index: int) -> void:
 
 func _finish_round(winner: int, award_survival: bool) -> void:
 	last_match_winner = 0
+	# Vor award_round: Endet damit das Match, gehört diese Runde schon zu den Ehrungen.
+	if not is_network_client:
+		MatchHonors.end_round(winner, _survivor_hp_ratios())
 	Global.award_round(winner, award_survival)
 	# Nach award_round, damit Rundensieg und Punkte schon verbucht sind.
 	# Endet damit das Match, hat _on_match_over last_match_winner gesetzt.
 	RoundStats.end_round(winner, round_death_order, last_match_winner)
 	AchievementManager.end_round(winner, round_death_order, last_match_winner, is_sudden_death)
+
+# HP-Anteil aller Überlebenden (für die Ehrung "Haarscharf").
+func _survivor_hp_ratios() -> Dictionary:
+	var result := {}
+	for p in players:
+		if is_instance_valid(p) and p.current_health > 0.0:
+			result[p.player_index] = p.current_health / maxf(1.0, p.max_health)
+	return result
 
 # --- Kill-Cam ---
 
@@ -929,7 +946,7 @@ func _on_match_over(winner_index: int) -> void:
 	sudden_death_timer.stop()
 	if is_network_host and NetworkManager.has_clients():
 		_send_snapshot()
-		NetworkManager.send_match_over(winner_index, Global.get_scores(), Global.get_match_stats(), Global.match_end_reason)
+		NetworkManager.send_match_over(winner_index, Global.get_scores(), Global.get_match_stats(), Global.match_end_reason, MatchHonors.get_honors())
 	# Abgebrochene Matches verfälschen die Karten-Siegquoten nicht.
 	if Global.match_end_reason != "early":
 		_record_card_statistics(winner_index)
@@ -1846,12 +1863,13 @@ func _on_network_draft_pick_requested(slot: int, card_id: String) -> void:
 		return
 	card_draft_ui.apply_network_pick(card_id)
 
-func _on_network_match_over(winner_index: int, scores: Array, stats: Array, reason: String = "") -> void:
+func _on_network_match_over(winner_index: int, scores: Array, stats: Array, reason: String = "", honors: Array = []) -> void:
 	if not is_network_client:
 		return
 	_cancel_kill_cam()
 	card_draft_ui.close_draft()
 	Global.set_network_scores(scores)
+	MatchHonors.set_received(honors)
 	Global.set_network_match_over(winner_index, stats, reason)
 
 func _clear_players() -> void:
