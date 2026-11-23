@@ -125,6 +125,7 @@ func _resolve_kind(c: CardData) -> String:
 func _has_block_effect(c: CardData) -> bool:
 	return c.block_duration_add > 0.0 \
 		or c.block_cooldown_mult < 1.0 \
+		or c.block_hits_add > 0 \
 		or c.block_reflect_damage_add > 0.0 \
 		or c.block_knockback_radius_add > 0.0 \
 		or c.block_knockback_force_add > 0.0 \

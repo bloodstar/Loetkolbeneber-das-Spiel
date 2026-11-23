@@ -1216,7 +1216,7 @@ func _ready() -> void:
 	assert(bollwerk.block_duration_add == 0.0 and bollwerk.shield_regen_delay_add < 0.0, "Bollwerk must only upgrade the shield, not the Barriere")
 	for c in CardDatabase.all_cards:
 		var has_shield: bool = c.shield_max_add > 0 or c.shield_regen_mult > 1.0 or c.shield_regen_delay_add < 0.0
-		var has_barrier: bool = c.block_duration_add > 0.0 or c.block_cooldown_mult < 1.0
+		var has_barrier: bool = c.block_duration_add > 0.0 or c.block_cooldown_mult < 1.0 or c.block_hits_add > 0
 		assert(not (has_shield and has_barrier), "Card %s must not upgrade Schild and Barriere at once" % c.id)
 	# Powerups wirken sofort und laufen anschließend über kurze Timer aus.
 	p1.current_health = 40.0

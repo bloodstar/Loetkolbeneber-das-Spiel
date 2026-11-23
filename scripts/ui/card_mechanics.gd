@@ -150,7 +150,7 @@ static func mechanic_notes(card: CardData) -> Array[String]:
 	if card.melee_parry:
 		notes.append("PARADE: Ist der Nahkampfschlag bereit, löst er automatisch aus, sobald ein gegnerisches Projektil in Reichweite auf dich zufliegt. Projektile im Schlagbereich werden wie bei der Barriere zurückgeworfen.")
 	if _has_block_effect(card):
-		notes.append("BARRIERE (Q): Schirmt dich kurz gegen jeden Schaden ab, reflektiert Projektile und hat einen eigenen Cooldown. Hat nichts mit dem Schild zu tun: Barriere-Karten verbessern nur die Barriere.")
+		notes.append("BARRIERE (Q): Schirmt dich kurz gegen jeden Schaden ab, reflektiert Projektile und hat einen eigenen Cooldown. Nach 2 Treffern zerbricht sie. Hat nichts mit dem Schild zu tun: Barriere-Karten verbessern nur die Barriere.")
 	if card.block_mine or card.mine_damage_add > 0.0 or card.mine_radius_add > 0.0 or card.mine_instant:
 		notes.append("MINEN: Jede Barriere lässt eine Mine fallen, die auf dem Boden darunter liegen bleibt (auf Plattformen und Wippen fährt sie mit). Gegner sehen sie nicht, am selben Bildschirm ist sie nur schwach zu erkennen. Nach 2 s ist sie scharf; läuft ein Gegner darüber, blinkt sie und explodiert 1,5 s später (Sofortzünder: sofort). Höchstens 8 Minen pro Spieler, die älteste verschwindet. Minen treffen nur Gegner.")
 	if card.dash_cooldown_mult < 1.0:
@@ -213,6 +213,7 @@ static func has_melee_effect(card: CardData) -> bool:
 static func _has_block_effect(card: CardData) -> bool:
 	return card.block_duration_add > 0.0 \
 		or card.block_cooldown_mult < 1.0 \
+		or card.block_hits_add > 0 \
 		or card.block_reflect_damage_add > 0.0 \
 		or card.block_knockback_radius_add > 0.0 \
 		or card.block_knockback_force_add > 0.0 \

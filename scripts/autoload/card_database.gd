@@ -2203,6 +2203,15 @@ func _init_database() -> void:
 	bl11.block_cooldown_mult = 0.90
 	_register(bl11)
 
+	var bl12 = CardData.new()
+	bl12.id = "panzerglas"
+	bl12.title = "Panzerglas"
+	bl12.description = "Die Barriere zerbricht nicht so schnell.\n+1 Treffer, den die Barriere aushält."
+	bl12.rarity = "Uncommon"
+	bl12.color = Color(0.55, 0.90, 1.00)
+	bl12.block_hits_add = 1
+	_register(bl12)
+
 	# --- Minenleger (Talentbaum + Minen-Karten) ---
 	var mn1 = CardData.new()
 	mn1.id = "minenleger"
@@ -3081,7 +3090,7 @@ func _infer_pool(card: CardData) -> String:
 	if card.max_hp_mult > 1.0 or card.max_hp_flat > 0 or card.hp_regen_add > 0.0 \
 		or card.hp_regen_always_add > 0.0 \
 		or card.shield_max_add > 0 or card.shield_regen_mult > 1.0 or card.shield_regen_delay_add < 0.0 \
-		or card.block_duration_add > 0.0 or card.block_cooldown_mult < 1.0 \
+		or card.block_duration_add > 0.0 or card.block_cooldown_mult < 1.0 or card.block_hits_add > 0 \
 		or card.block_reflect_damage_add > 0.0 or card.block_knockback_radius_add > 0.0 \
 		or card.block_knockback_force_add > 0.0 or card.block_bomb or card.block_heal_zone \
 		or card.block_mine or card.mine_damage_add > 0.0 or card.mine_radius_add > 0.0 or card.mine_instant \
@@ -3139,7 +3148,7 @@ func _infer_sub_tags(card: CardData) -> Array[String]:
 		or card.lifesteal_percent_add > 0.0 or card.block_heal_zone or card.blocker_drone_heal \
 		or card.reflect_heal_percent_add > 0.0 or card.melee_lifesteal_add > 0.0)
 	add.call("Schild", card.shield_max_add > 0 or card.shield_regen_mult > 1.0 or card.shield_regen_delay_add < 0.0)
-	add.call("Barriere", card.block_duration_add > 0.0 or card.block_cooldown_mult < 1.0 \
+	add.call("Barriere", card.block_duration_add > 0.0 or card.block_cooldown_mult < 1.0 or card.block_hits_add > 0 \
 		or card.block_knockback_radius_add > 0.0 or card.block_knockback_force_add > 0.0 \
 		or card.block_bomb or card.block_heal_zone or card.block_reflect_damage_add > 0.0 \
 		or card.block_mine or card.mine_damage_add > 0.0 or card.mine_radius_add > 0.0 or card.mine_instant)

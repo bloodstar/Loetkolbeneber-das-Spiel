@@ -1142,6 +1142,8 @@ func _add_modifier_totals(p: Player) -> void:
 		rows.append(["REFLEXION BEI WENIG HP", "+%.0f %%" % (p.reflect_low_hp_bonus * 100.0), defense])
 	if p.reflect_heal_percent > 0.0:
 		rows.append(["HEILUNG DURCH REFLEXION", "%.0f %%" % (p.reflect_heal_percent * 100.0), defense])
+	if p.block_max_hits != Player.BLOCK_BASE_HITS:
+		rows.append(["BARRIERE-TREFFER", "%d" % p.block_max_hits, defense])
 	if p.block_reflect_damage_add > 0.0:
 		rows.append(["BARRIERE-REFLEXSCHADEN", "+%.0f" % p.block_reflect_damage_add, defense])
 	if p.block_knockback_radius > 0.0:
