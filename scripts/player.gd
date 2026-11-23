@@ -148,6 +148,15 @@ const VAMPIRE_BAT_DURATION: float = 7.0
 const VAMPIRE_BAT_SPEED: float = 270.0
 const VAMPIRE_BAT_DAMAGE: float = 8.0
 const VAMPIRE_BAT_BITE_INTERVAL: float = 0.7
+# Vampir-Evolutionen aus Klassenkarten: Aderlass (Explosion heilt), Gerinnung
+# (Explosion verlangsamt), Blutrausch (Kugel jeden 2. Treffer), Rote Flut
+# (Dash doppelter Schaden), Fledermauskönig (mehr Fledermäuse, Bisse heilen).
+const VAMPIRE_LEECH_HEAL: float = 8.0
+const VAMPIRE_CLOT_SLOW: float = 1.2
+const VAMPIRE_FRENZY_HIT_INTERVAL: int = 2
+const VAMPIRE_STRONG_DASH_MULT: float = 2.0
+const VAMPIRE_KING_MIN_BATS: int = 4
+const VAMPIRE_KING_BITE_HEAL: float = 0.5
 
 # Fähigkeits-Evolutionen aus den Klassenkarten. Die Werte gelten vor den
 # Fähigkeits-Multiplikatoren (ability_damage_mult usw.).
@@ -2918,7 +2927,8 @@ func register_vampire_hit(target: Node2D) -> void:
 	if is_replica or not is_instance_valid(target):
 		return
 	vampire_hit_count += 1
-	if vampire_hit_count >= VAMPIRE_ORB_HIT_INTERVAL:
+	var interval := VAMPIRE_FRENZY_HIT_INTERVAL if _has_ability_evolution("vampire_frenzy") else VAMPIRE_ORB_HIT_INTERVAL
+	if vampire_hit_count >= interval:
 		vampire_hit_count = 0
 		spawn_blood_orb(target.global_position)
 
@@ -2956,6 +2966,10 @@ func _vampire_blood_burst() -> void:
 			if dir.length_squared() < 1.0:
 				dir = Vector2.UP
 			_ability_hit(p, damage, dir.normalized() * VAMPIRE_BURST_KNOCKBACK)
+			if _has_ability_evolution("vampire_burst_slow"):
+				p.apply_freeze(VAMPIRE_CLOT_SLOW)
+			if _has_ability_evolution("vampire_burst_leech"):
+				heal(VAMPIRE_LEECH_HEAL)
 	_fx("sound", {"snd": ["explosion", 0.25, -1.0 if orbs.size() > 1 else -4.0]})
 
 # Vampir-Dashs stürmen durch andere Eber hindurch: für die Dauer des Dashs
@@ -2978,7 +2992,10 @@ func _vampire_dash_tick() -> void:
 		if _vampire_dash_hits.has(p):
 			continue
 		_vampire_dash_hits.append(p)
-		_ability_hit(p, VAMPIRE_DASH_DAMAGE * ability_damage_mult, dash_dir * 120.0)
+		var dash_damage := VAMPIRE_DASH_DAMAGE * ability_damage_mult
+		if _has_ability_evolution("vampire_dash_strong"):
+			dash_damage *= VAMPIRE_STRONG_DASH_MULT
+		_ability_hit(p, dash_damage, dash_dir * 120.0)
 		spawn_blood_orb(p.global_position)
 		_fx("ring", NetFx.with_sound(NetFx.ring_args(p.global_position,
 			Color(0.85, 0.05, 0.15, 0.85), 0.4, 2.2, 0.18, 0.2), "hit", 0.2, -2.0))
@@ -2994,7 +3011,8 @@ func _vampire_bat_swarm() -> void:
 		if spots.size() >= VAMPIRE_ULT_MAX_BATS:
 			break
 		spots.append(orb.take())
-	while spots.size() < VAMPIRE_ULT_MIN_BATS:
+	var min_bats := VAMPIRE_KING_MIN_BATS if _has_ability_evolution("vampire_bat_king") else VAMPIRE_ULT_MIN_BATS
+	while spots.size() < min_bats:
 		spots.append(global_position + Vector2(randf_range(-14.0, 14.0), -20.0 - randf() * 10.0))
 	for pos in spots:
 		var bat := VampireBat.new()
@@ -3007,6 +3025,8 @@ func _vampire_bat_swarm() -> void:
 		bat.speed = VAMPIRE_BAT_SPEED
 		bat.bite_damage = VAMPIRE_BAT_DAMAGE * ability_damage_mult
 		bat.bite_interval = VAMPIRE_BAT_BITE_INTERVAL
+		if _has_ability_evolution("vampire_bat_king"):
+			bat.heal_share = VAMPIRE_KING_BITE_HEAL
 		if ArenaMode.active:
 			bat.arena_z = arena_z
 		bat.position = pos

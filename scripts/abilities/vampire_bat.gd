@@ -28,6 +28,8 @@ var duration: float = 7.0
 var speed: float = 270.0
 var bite_damage: float = 8.0
 var bite_interval: float = 0.7
+# Evolution "Fledermauskönig": Anteil des Bissschadens, der den Vampir heilt.
+var heal_share: float = 0.0
 var arena_z: float = 0.0
 
 var _age: float = 0.0
@@ -104,6 +106,8 @@ func _bite(target: Player) -> void:
 	_bite_timer = bite_interval
 	var dir := (target.global_position - global_position).normalized()
 	owner_player._ability_hit(target, bite_damage, dir * 80.0)
+	if heal_share > 0.0 and owner_player.current_health > 0.0:
+		owner_player.heal(bite_damage * heal_share)
 	NetFx.emit(get_parent(), "ring", NetFx.with_sound(NetFx.ring_args(target.global_position,
 		Color(0.85, 0.05, 0.15, 0.8), 0.3, 1.6, 0.15, 0.18), "hit", 0.25, -6.0))
 	# Nach dem Biss kurz zurückflattern.

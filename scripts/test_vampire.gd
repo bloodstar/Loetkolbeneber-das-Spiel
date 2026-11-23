@@ -152,5 +152,30 @@ func _ready() -> void:
 	await get_tree().process_frame
 	_check(get_tree().get_nodes_in_group(VampireBat.GROUP).size() == Player.VAMPIRE_ULT_MIN_BATS, "Ohne Kugeln mindestens 2 Fledermäuse")
 
+	# Klassenkarten
+	for id in ["vampire_blutdurst", "vampire_nachtschwinge", "vampire_blutfontaene", "vampire_blutrausch",
+			"vampire_blutsturm_plus", "vampire_fledermauskoenig"]:
+		var card := CardDatabase.get_card(id)
+		_check(card != null and CardDatabase.is_card_available_for_player(card, "vampire", []), "Karte %s für Vampir verfügbar" % id)
+		_check(card != null and not CardDatabase.is_card_available_for_player(card, "volt", []), "Karte %s nicht für Volt" % id)
+	_check(not CardDatabase.is_card_available_for_player(CardDatabase.get_card("vampire_aderlass"), "vampire", []), "Aderlass braucht Blutfontäne")
+	_check(CardDatabase.is_card_available_for_player(CardDatabase.get_card("vampire_aderlass"), "vampire", ["vampire_blutfontaene"]), "Aderlass mit Blutfontäne verfügbar")
+	# Blutrausch: Kugel schon beim 2. Treffer.
+	_clear_orbs()
+	vamp.ability_evolutions.append("vampire_frenzy")
+	vamp.vampire_hit_count = 0
+	foe.take_damage(5.0, Vector2.ZERO, vamp)
+	foe.take_damage(5.0, Vector2.ZERO, vamp)
+	_check(_orbs().size() == 1, "Blutrausch: Kugel beim 2. Treffer")
+	# Fledermauskönig: mindestens 4.
+	_clear_orbs()
+	for b in get_tree().get_nodes_in_group(VampireBat.GROUP):
+		b.pop()
+	vamp.ability_evolutions.append("vampire_bat_king")
+	vamp.ult_timer = 0.0
+	vamp.use_ultimate()
+	await get_tree().process_frame
+	_check(get_tree().get_nodes_in_group(VampireBat.GROUP).size() == Player.VAMPIRE_KING_MIN_BATS, "Fledermauskönig: 4 Fledermäuse")
+
 	print("[TEST] fertig, Fehler: %d" % _failed)
 	get_tree().quit(1 if _failed > 0 else 0)

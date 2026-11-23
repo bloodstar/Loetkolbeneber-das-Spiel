@@ -2117,6 +2117,106 @@ func _init_database() -> void:
 	fa28.ability_cooldown_mult = 0.9
 	_register(fa28)
 
+	# --- Vampir (Fernkampf): Blutkugeln ---
+	var vp1 = CardData.new()
+	vp1.id = "vampire_blutdurst"
+	vp1.title = "Blutdurst"
+	vp1.description = "Vampir: +15% Schaden, +10% Lebensraub."
+	vp1.rarity = "Rare"
+	vp1.pool = "Offensive"
+	vp1.color = Color(0.72, 0.10, 0.18)
+	vp1.hero_id = "vampire"
+	vp1.damage_mult = 1.15
+	vp1.lifesteal_percent_add = 0.10
+	_register(vp1)
+
+	var vp2 = CardData.new()
+	vp2.id = "vampire_nachtschwinge"
+	vp2.title = "Nachtschwinge"
+	vp2.description = "Vampir: -20% Fähigkeits-Abklingzeit, +1 Luft-Sprung."
+	vp2.rarity = "Rare"
+	vp2.pool = "Bewegung"
+	vp2.color = Color(0.62, 0.08, 0.20)
+	vp2.hero_id = "vampire"
+	vp2.ability_cooldown_mult = 0.8
+	vp2.extra_jumps_add = 1
+	_register(vp2)
+
+	var vp3 = CardData.new()
+	vp3.id = "vampire_blutfontaene"
+	vp3.title = "Blutfontäne"
+	vp3.description = "Vampir – Blutexplosion: +30% Explosionsradius, +20% Schaden, -15% Fähigkeits-Abklingzeit."
+	vp3.rarity = "Rare"
+	vp3.pool = "Offensive"
+	vp3.color = Color(0.72, 0.10, 0.18)
+	vp3.hero_id = "vampire"
+	vp3.family_id = "vampire_burst"
+	vp3.ability_radius_mult = 1.3
+	vp3.ability_damage_mult = 1.2
+	vp3.ability_cooldown_mult = 0.85
+	_register(vp3)
+
+	var vp3a = CardData.new()
+	vp3a.id = "vampire_aderlass"
+	vp3a.title = "Aderlass"
+	vp3a.description = "Blutexplosion-Evolution: Jeder getroffene Gegner heilt dich um %d HP." % int(Player.VAMPIRE_LEECH_HEAL)
+	vp3a.rarity = "Epic"
+	vp3a.color = Color(0.72, 0.10, 0.18)
+	vp3a.hero_id = "vampire"
+	vp3a.family_id = "vampire_burst"
+	vp3a.parent_card_id = "vampire_blutfontaene"
+	vp3a.evolution_branch = "A"
+	vp3a.ability_evolution = "vampire_burst_leech"
+	_register(vp3a)
+
+	var vp3b = CardData.new()
+	vp3b.id = "vampire_gerinnung"
+	vp3b.title = "Gerinnung"
+	vp3b.description = "Blutexplosion-Evolution: Getroffene Gegner sind %.1f s verlangsamt." % Player.VAMPIRE_CLOT_SLOW
+	vp3b.rarity = "Epic"
+	vp3b.color = Color(0.72, 0.10, 0.18)
+	vp3b.hero_id = "vampire"
+	vp3b.family_id = "vampire_burst"
+	vp3b.parent_card_id = "vampire_blutfontaene"
+	vp3b.evolution_branch = "B"
+	vp3b.ability_evolution = "vampire_burst_slow"
+	_register(vp3b)
+
+	var vp4 = CardData.new()
+	vp4.id = "vampire_blutrausch"
+	vp4.title = "Blutrausch"
+	vp4.description = "Vampir: Schon jeder 2. Treffer lässt eine Blutkugel fallen."
+	vp4.rarity = "Epic"
+	vp4.pool = "Offensive"
+	vp4.color = Color(0.80, 0.08, 0.16)
+	vp4.hero_id = "vampire"
+	vp4.ability_evolution = "vampire_frenzy"
+	_register(vp4)
+
+	var vp5 = CardData.new()
+	vp5.id = "vampire_blutsturm_plus"
+	vp5.title = "Rote Flut"
+	vp5.description = "Vampir – Blutsturm: +1 Dash-Ladung, der Dash macht doppelten Schaden."
+	vp5.rarity = "Epic"
+	vp5.pool = "Bewegung"
+	vp5.color = Color(0.62, 0.08, 0.20)
+	vp5.hero_id = "vampire"
+	vp5.dash_charges_add = 1
+	vp5.ability_evolution = "vampire_dash_strong"
+	_register(vp5)
+
+	var vp6 = CardData.new()
+	vp6.id = "vampire_fledermauskoenig"
+	vp6.title = "Fledermauskönig"
+	vp6.description = "Vampir – Fledermausschwarm: mindestens %d Fledermäuse, +30%% Dauer, ihre Bisse heilen dich um die Hälfte des Schadens." % Player.VAMPIRE_KING_MIN_BATS
+	vp6.rarity = "Epic"
+	vp6.pool = "Offensive"
+	vp6.color = Color(0.40, 0.08, 0.30)
+	vp6.hero_id = "vampire"
+	vp6.ult_duration_mult = 1.3
+	vp6.ability_evolution = "vampire_bat_king"
+	_register(vp6)
+
 	var gu1 = CardData.new()
 	gu1.id = "ulti_akku"
 	gu1.title = "Ulti-Akku"
