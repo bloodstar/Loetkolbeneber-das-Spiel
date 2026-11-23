@@ -49,7 +49,18 @@ var _ears: Array[Node3D] = []
 var _tail: Node3D
 var _iron: Node3D
 var _lids: Node3D
-var _mat: ShaderMaterial
+var _mat: StandardMaterial3D
+var _mats: Array[StandardMaterial3D] = []
+var _base_emission: Array = []
+var _glow_mats: Dictionary = {}
+var _last_alpha: float = 1.0
+## Silhouette durch Mauern zeigen (Arena). Vor build() setzen.
+var xray: bool = false
+## Zielwinkel nach oben (Bogenmaß, + = hoch). Dreht Lötkolben-Arm mit.
+var aim_pitch: float = 0.0
+var _bound_spec: Dictionary = {}
+var _spec_timer: float = 0.0
+var _last_state: Dictionary = {}
 var _head_y: float = 0.0
 var _hip_y: float = 0.0
 
@@ -76,6 +87,60 @@ static func preset_spec(preset_name: String, overrides: Dictionary = {}) -> Dict
 	var s := default_spec()
 	s.merge(PRESETS.get(preset_name, {}), true)
 	s.merge(overrides, true)
+	return s
+
+## Übersetzt die 2D-Baukasten-Teile (PigModular) und das Aussehen eines
+## Spielers in eine Voxel-Spec. So bestimmt die Lobby-Auswahl weiter, wie der
+## Eber aussieht, ohne dass es eigene Voxel-Einstellungen braucht.
+static func spec_from_look(look: Dictionary, parts: Dictionary) -> Dictionary:
+	var s := default_spec()
+	if look.has("fur"):
+		s["fur"] = look["fur"]
+	if look.has("pants"):
+		s["pants"] = look["pants"]
+	if look.has("wand_tip_color"):
+		s["tip"] = look["wand_tip_color"]
+	match str(look.get("tusk_shape", "small")):
+		"none": s["tusks"] = "none"
+		"long", "double", "saber": s["tusks"] = "big"
+		_: s["tusks"] = "small"
+	match str(parts.get("body", "original")):
+		"slim": s["body"] = "slim"
+		"comic", "boar": s["body"] = "strong"
+		"mascot": s["head"] = "big"
+	match str(parts.get("snout", "round")):
+		"wide", "chubby", "boar": s["snout"] = "wide"
+		"small", "heart": s["snout"] = "short"
+		"long": s["snout"] = "long"
+	match str(parts.get("ears", "floppy")):
+		"floppy": s["ears"] = "flop"
+		"pointy", "bat": s["ears"] = "pointy"
+		"round", "small", "none": s["ears"] = "small"
+		_: s["ears"] = "up"
+	var hair := str(parts.get("hair", "tuft"))
+	s["mane"] = hair == "mane" or hair == "mohawk" or str(parts.get("body", "")) == "boar"
+	match str(parts.get("tail", "curly")):
+		"straight", "droopy", "short": s["tail"] = "straight"
+		"bushy": s["tail"] = "tuft"
+		_: s["tail"] = "curly"
+	match str(parts.get("bottom", "shorts")):
+		"pants", "long_skirt": s["bottom"] = "pants"
+		_: s["bottom"] = "shorts"
+	match str(parts.get("top", "none")):
+		"muscle", "bikini": s["top"] = "muscle"
+		"robe": s["top"] = "robe"
+		_: s["top"] = "none"
+	var tc = parts.get("top_color", null)
+	if tc is Color:
+		s["top_color"] = tc
+	return s
+
+## Spec für einen Spieler-Slot: Aussehen + Baukasten aus Global, Klassen-
+## Outfit nach Held, Akzent (Gürtelschnalle, Ring) in Teamfarbe.
+static func spec_for_player(index: int, accent: Color, hero_id: String) -> Dictionary:
+	var s := spec_from_look(Global.get_pig_appearance(index), Global.get_pig_parts(index))
+	s["outfit"] = hero_id
+	s["accent"] = accent
 	return s
 
 # ---------------------------------------------------------------------------
@@ -161,10 +226,11 @@ func build(p_spec: Dictionary) -> void:
 	_legs.clear()
 	_arms.clear()
 	_ears.clear()
-	var shader := Shader.new()
-	shader.code = SHADER_CODE
-	_mat = ShaderMaterial.new()
-	_mat.shader = shader
+	_mats.clear()
+	_base_emission.clear()
+	_glow_mats.clear()
+	_last_alpha = 1.0
+	_mat = _new_material()
 	_pose = Node3D.new()
 	add_child(_pose)
 	_body = Node3D.new()
@@ -559,15 +625,21 @@ const DIRS: Array[Vector3i] = [Vector3i(1, 0, 0), Vector3i(-1, 0, 0), Vector3i(0
 const AO_CURVE: Array[float] = [0.62, 0.77, 0.9, 1.0]
 
 func _add_mesh(g: Grid, parent: Node3D, _unused: Vector3 = Vector3.ZERO, offset_vox: Vector3 = Vector3.ZERO) -> MeshInstance3D:
-	var verts := PackedVector3Array()
-	var normals := PackedVector3Array()
-	var colors := PackedColorArray()
-	var uvs := PackedVector2Array()
-	var idx := PackedInt32Array()
+	# Normale Voxel landen in einer Fläche mit Vertex-Farben; leuchtende
+	# Voxel (Lötspitze, Lampe) je Farbe in einer eigenen Fläche mit Emission.
+	var surfaces: Dictionary = {}   # Schlüssel -> [verts, normals, colors, idx, material]
 	for p in g.cells.keys():
 		var cell: Array = g.cells[p]
 		var col: Color = cell[0]
 		var glow: float = cell[1]
+		var key := "" if glow <= 0.0 else "%s|%.2f" % [col.to_html(), glow]
+		if not surfaces.has(key):
+			surfaces[key] = [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedInt32Array(), _mat if key == "" else _glow_material(col, glow)]
+		var surf: Array = surfaces[key]
+		var verts: PackedVector3Array = surf[0]
+		var normals: PackedVector3Array = surf[1]
+		var colors: PackedColorArray = surf[2]
+		var idx: PackedInt32Array = surf[3]
 		for d in DIRS:
 			if g.has(p + d):
 				continue
@@ -595,10 +667,8 @@ func _add_mesh(g: Grid, parent: Node3D, _unused: Vector3 = Vector3.ZERO, offset_
 			for i in range(4):
 				verts.append((corners[i] + offset_vox) * VOX)
 				normals.append(n)
-				var c := Color(col.r * ao[i], col.g * ao[i], col.b * ao[i]).srgb_to_linear()
-				colors.append(c)
-				uvs.append(Vector2(glow, 0.0))
-			# Wicklung je nach Normalenrichtung; Diagonale nach AO wählen
+				colors.append(Color(col.r * ao[i], col.g * ao[i], col.b * ao[i]))
+			# Diagonale nach AO wählen, Wicklung passend zur Normalen
 			var flip := ao[0] + ao[2] < ao[1] + ao[3]
 			var tri: Array[int]
 			if flip:
@@ -613,34 +683,52 @@ func _add_mesh(g: Grid, parent: Node3D, _unused: Vector3 = Vector3.ZERO, offset_
 					idx.append(base + tri[k]); idx.append(base + tri[k + 2]); idx.append(base + tri[k + 1])
 				else:
 					idx.append(base + tri[k]); idx.append(base + tri[k + 1]); idx.append(base + tri[k + 2])
-	var arrays := []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = verts
-	arrays[Mesh.ARRAY_NORMAL] = normals
-	arrays[Mesh.ARRAY_COLOR] = colors
-	arrays[Mesh.ARRAY_TEX_UV] = uvs
-	arrays[Mesh.ARRAY_INDEX] = idx
+		surf[0] = verts; surf[1] = normals; surf[2] = colors; surf[3] = idx
 	var mesh := ArrayMesh.new()
-	if verts.size() > 0:
+	for key in surfaces.keys():
+		var surf: Array = surfaces[key]
+		var verts: PackedVector3Array = surf[0]
+		if verts.is_empty():
+			continue
+		var arrays := []
+		arrays.resize(Mesh.ARRAY_MAX)
+		arrays[Mesh.ARRAY_VERTEX] = verts
+		arrays[Mesh.ARRAY_NORMAL] = surf[1]
+		arrays[Mesh.ARRAY_COLOR] = surf[2]
+		arrays[Mesh.ARRAY_INDEX] = surf[3]
 		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-		mesh.surface_set_material(0, _mat)
+		mesh.surface_set_material(mesh.get_surface_count() - 1, surf[4])
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	parent.add_child(mi)
 	return mi
 
-const SHADER_CODE := """
-shader_type spatial;
-render_mode cull_back, diffuse_burley, specular_schlick_ggx;
-uniform float flash = 0.0;
-uniform float alpha_mult = 1.0;
-void fragment() {
-	ALBEDO = COLOR.rgb;
-	ROUGHNESS = 0.82;
-	SPECULAR = 0.3;
-	EMISSION = COLOR.rgb * UV.x + vec3(flash);
-}
-"""
+func _new_material() -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.vertex_color_use_as_albedo = true
+	m.vertex_color_is_srgb = true
+	m.roughness = 0.82
+	m.metallic_specular = 0.3
+	# Silhouette hinter Mauern (Arena): Stencil-X-Ray in Team-/Akzentfarbe.
+	if xray:
+		var acc: Color = spec.get("accent", Color(1, 1, 1))
+		m.stencil_mode = BaseMaterial3D.STENCIL_MODE_XRAY
+		m.stencil_color = Color(acc.r, acc.g, acc.b, 0.55)
+	_mats.append(m)
+	_base_emission.append([false, Color(0, 0, 0), 0.0])
+	return m
+
+func _glow_material(col: Color, glow: float) -> StandardMaterial3D:
+	var key := "%s|%.2f" % [col.to_html(), glow]
+	if _glow_mats.has(key):
+		return _glow_mats[key]
+	var m := _new_material()
+	m.emission_enabled = true
+	m.emission = col
+	m.emission_energy_multiplier = glow
+	_base_emission[_base_emission.size() - 1] = [true, col, glow]
+	_glow_mats[key] = m
+	return m
 
 # ---------------------------------------------------------------------------
 # Animation (gleiche Signatur wie VoxelPig)
@@ -673,18 +761,18 @@ func animate(delta: float, moving: bool, airborne: bool, _alpha: float, planar: 
 		var sgn2 := -1.0 if i == 0 else 1.0
 		var a := swing * sgn2 * 0.55 * _walk_amount
 		if i == 1:
-			a = a * 0.4 + 0.9   # Lötkolben-Arm zeigt nach vorn
+			a = a * 0.4 + 0.9 + aim_pitch   # Lötkolben-Arm zeigt in Zielrichtung
 		_arms[i].rotation.z = a
 		_arms[i].rotation.x = (0.12 if i == 0 else -0.12)
 	if airborne and not _was_airborne:
 		_squash = -0.22
 	elif not airborne and _was_airborne:
-		_squash = 0.3
+		_squash = 0.22
 		_squash_vel = 0.0
 	_was_airborne = airborne
 	_squash_vel += (-_squash * 260.0 - _squash_vel * 17.0) * delta
 	_squash += _squash_vel * delta
-	var stretch := clampf(-_squash + (clampf(absf(vertical_speed) / 900.0, 0.0, 0.14) if airborne else 0.0), -0.35, 0.3)
+	var stretch := clampf(-_squash + (clampf(absf(vertical_speed) / 1400.0, 0.0, 0.08) if airborne else 0.0), -0.25, 0.2)
 	var breathe := sin(_time * 2.4) * 0.012 * (1.0 - _walk_amount)
 	_pose.scale = Vector3(1.0 - stretch * 0.5, 1.0 + stretch + breathe, 1.0 - stretch * 0.5)
 	_body.position.y = absf(cos(_walk_phase)) * 1.2 * VOX * _walk_amount
@@ -718,7 +806,46 @@ func animate(delta: float, moving: bool, airborne: bool, _alpha: float, planar: 
 			_blink = randf_range(1.8, 4.5)
 	if _flash > 0.0:
 		_flash = maxf(0.0, _flash - delta)
-	_mat.set_shader_parameter("flash", (_flash / HIT_FLASH_TIME) * 0.9)
+		var k := _flash / HIT_FLASH_TIME
+		for m in _mats:
+			m.emission_enabled = true
+			m.emission = Color(1, 1, 1)
+			m.emission_energy_multiplier = k * 1.6
+		if _flash == 0.0:
+			_restore_emission()
+	var want_alpha := clampf(_alpha, 0.0, 1.0)
+	if not is_equal_approx(want_alpha, _last_alpha):
+		_last_alpha = want_alpha
+		for m in _mats:
+			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if want_alpha < 0.99 else BaseMaterial3D.TRANSPARENCY_DISABLED
+			m.albedo_color.a = want_alpha
+
+func _restore_emission() -> void:
+	for i in range(_mats.size()):
+		var e: Array = _base_emission[i]
+		_mats[i].emission_enabled = e[0]
+		_mats[i].emission = e[1]
+		_mats[i].emission_energy_multiplier = e[2]
+
+## Spieler-Anbindung: baut die Figur aus Lobby-Aussehen + Baukasten und
+## baut neu, wenn sich etwas ändert (Held, Teile, Teamfarbe). Liest Schuss
+## und Treffer aus dem Spielerzustand ab, damit es auch auf Clients läuft,
+## die nur Snapshots bekommen.
+func sync_with_player(p: Player, delta: float) -> void:
+	_spec_timer -= delta
+	if _spec_timer <= 0.0 or _pose == null:
+		_spec_timer = 0.5
+		var s := spec_for_player(p.player_index, Global.get_team_color(p.team_id), Global.get_player_hero_id(p.player_index))
+		if s != _bound_spec or _pose == null:
+			_bound_spec = s
+			build(s)
+	var pool: float = p.current_health + p.current_shield
+	if not _last_state.is_empty():
+		if pool < float(_last_state["pool"]) - 0.5:
+			flash()
+		if p.current_ammo < int(_last_state["ammo"]) or p.fire_timer > float(_last_state["fire"]) + 0.01:
+			recoil(1.0)
+	_last_state = {"pool": pool, "ammo": p.current_ammo, "fire": p.fire_timer}
 
 func flash() -> void:
 	_flash = HIT_FLASH_TIME

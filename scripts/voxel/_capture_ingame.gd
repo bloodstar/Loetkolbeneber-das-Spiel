@@ -10,6 +10,7 @@ const BOAR_SCALE: float = 1.12
 var out_dir := "/tmp/voxcap"
 var map_id := "sonnentempel"
 var wait_s := 6.0
+var mode := "mockup"   # mockup | side | arena (side/arena = echtes Spiel ohne Overlay)
 var main: Node
 var overlay: Node3D
 var cam: Camera3D
@@ -21,6 +22,8 @@ func _ready() -> void:
 			out_dir = a.substr(4)
 		elif a.begins_with("map="):
 			map_id = a.substr(4)
+		elif a.begins_with("mode="):
+			mode = a.substr(5)
 		elif a.begins_with("wait="):
 			wait_s = float(a.substr(5))
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -29,17 +32,39 @@ func _ready() -> void:
 	get_tree().root.add_child.call_deferred(main)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	if mode == "menu":
+		await get_tree().create_timer(2.5).timeout
+		get_viewport().get_texture().get_image().save_png("%s/real_menu.png" % out_dir)
+		main.main_menu.close_menu()
+		main._on_menu_start_requested()
+		await get_tree().create_timer(0.8).timeout
+		main.lobby.tabs.current_tab = 1
+		await get_tree().create_timer(1.2).timeout
+		get_viewport().get_texture().get_image().save_png("%s/real_lobby.png" % out_dir)
+		get_tree().quit()
+		return
 	Global.set_player_count(4)
 	Global.set_bot_test_mode(true)
-	Global.set_game_mode("side")
-	Global.selected_map_id = map_id
 	main.main_menu.close_menu()
 	main._on_menu_start_requested()
 	await get_tree().process_frame
+	if mode == "arena":
+		Global.set_game_mode("arena")
+		ArenaMaps.test_map_id = map_id
+	else:
+		Global.set_game_mode("side")
+		Global.selected_map_id = map_id
 	main._on_lobby_confirmed()
 	await get_tree().create_timer(wait_s).timeout
 	Engine.time_scale = 0.0
 	await RenderingServer.frame_post_draw
+	if mode != "mockup":
+		get_viewport().get_texture().get_image().save_png("%s/real_%s_%s.png" % [out_dir, mode, map_id])
+		Engine.time_scale = 1.0
+		await get_tree().create_timer(1.2).timeout
+		get_viewport().get_texture().get_image().save_png("%s/real_%s_%s_b.png" % [out_dir, mode, map_id])
+		get_tree().quit()
+		return
 	get_viewport().get_texture().get_image().save_png("%s/ingame_%s_2d.png" % [out_dir, map_id])
 	_build_overlay()
 	for i in range(3):

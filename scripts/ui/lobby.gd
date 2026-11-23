@@ -153,6 +153,7 @@ var tusk_shape_option: OptionButton = null
 var player_name_edit: LineEdit = null
 # Vier Waffenkacheln unter der Charaktervorschau, Reihenfolge wie MELEE_WEAPONS.
 var melee_weapon_tiles: Array = []
+var character_preview_voxel: VoxelSprite = null
 var character_preview: PigModular = null
 # Baukasten-Steuerelemente: Teile-Schlüssel (PigModular.PART_OPTIONS) -> OptionButton.
 var part_options: Dictionary = {}
@@ -735,6 +736,11 @@ func _build_character_tab() -> void:
 	character_preview.animate = true
 	character_preview.follow_parent_motion = false
 	preview_canvas.add_child(character_preview)
+	# Voxel-Eber als Vorschau; das 2D-Schwein liefert nur noch Position/Größe.
+	character_preview.voxel_mode = true
+	character_preview_voxel = VoxelSprite.new()
+	character_preview_voxel.px_per_unit = 6.0
+	character_preview.add_child(character_preview_voxel)
 
 	character_preview_wand_pivot = Node2D.new()
 	character_preview_wand_pivot.position = Vector2(140, 176)
@@ -744,6 +750,7 @@ func _build_character_tab() -> void:
 
 	character_preview_wand = MagicWand.new()
 	character_preview_wand_pivot.add_child(character_preview_wand)
+	character_preview_wand_pivot.visible = false   # Lötkolben steckt im Voxel-Arm
 
 	character_hero_icon = TextureRect.new()
 	character_hero_icon.position = Vector2(14, 14)
@@ -1255,6 +1262,13 @@ func _refresh_character_tab() -> void:
 		character_preview.set_team_color(_character_team_tint(look_slot))
 		character_preview.set_tusk_shape(str(look.get("tusk_shape", "small")))
 		character_preview.apply_parts(parts)
+		if character_preview_voxel:
+			var vspec := VoxelBoar.spec_from_look(look, parts)
+			vspec["outfit"] = Global.get_player_hero_id(look_slot)
+			var tint := _character_team_tint(look_slot)
+			if tint.a > 0.0:
+				vspec["accent"] = tint
+			character_preview_voxel.build_spec(vspec)
 	if character_preview_wand:
 		character_preview_wand.setup(look["wand_tip_shape"], look["wand_tip_color"])
 		character_preview_wand.set_grip_color(_character_team_tint(look_slot))

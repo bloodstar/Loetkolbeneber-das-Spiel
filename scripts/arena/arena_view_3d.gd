@@ -11,13 +11,13 @@ extends Node3D
 
 const CAMERA_DISTANCE: float = 3000.0
 # Voxel-Schwein etwas größer als die Kollisionsbox, damit es gut lesbar ist.
-const PIG_SCALE: float = 1.45
+const PIG_SCALE: float = 1.2
 # Sichtbare Dicke der Stege.
 const STEG_VIS: float = 14.0
 
 var camera_2d: Camera2D = null
 var cam: Camera3D
-var _pigs: Dictionary = {}        # Player-Instanz-ID -> VoxelPig
+var _pigs: Dictionary = {}        # Player-Instanz-ID -> VoxelBoar
 var _crates: Dictionary = {}      # Vector2i -> Node3D
 var _druid_walls: Dictionary = {} # DruidWall-Instanz-ID -> MeshInstance3D
 var _shadow_mat: StandardMaterial3D
@@ -515,20 +515,11 @@ func _sync_players(delta: float) -> void:
 			continue
 		var pid := p.get_instance_id()
 		seen[pid] = true
-		var pig: VoxelPig = _pigs.get(pid, null)
+		var pig: VoxelBoar = _pigs.get(pid, null)
 		if pig == null:
-			pig = VoxelPig.new()
+			pig = VoxelBoar.new()
+			pig.xray = true
 			add_child(pig)
-			var fur: Color = Color(0.91, 0.60, 0.67)
-			var pants: Color = Color(0.25, 0.35, 0.8)
-			if p.sprite != null:
-				var f = p.sprite.get("fur_color")
-				if f is Color:
-					fur = f
-				var pc = p.sprite.get("pants_color")
-				if pc is Color:
-					pants = pc
-			pig.build(fur, pants, Global.get_team_color(p.team_id), 1.0, Global.get_player_hero_id(p.player_index), p.wand_tip_color)
 			var shadow := MeshInstance3D.new()
 			shadow.name = "Shadow"
 			shadow.mesh = _shadow_mesh
@@ -536,6 +527,7 @@ func _sync_players(delta: float) -> void:
 			add_child(shadow)
 			pig.set_meta("shadow", shadow)
 			_pigs[pid] = pig
+		pig.sync_with_player(p, delta)
 		var z: float = p.arena_z
 		var pos := p.global_position
 		pig.visible = p.visible and not p.is_dead
@@ -546,16 +538,6 @@ func _sync_players(delta: float) -> void:
 		if aim.length_squared() > 0.001:
 			pig.rotation.y = -atan2(aim.y, aim.x)
 		pig.animate(delta, p.velocity.length() > 30.0, not p.arena_grounded, p.modulate.a, p.velocity, pig.rotation.y, p.arena_vz)
-		# Schuss und Treffer aus dem Spielerzustand ablesen (läuft so auch auf
-		# Clients, die nur Snapshots bekommen).
-		var pool: float = p.current_health + p.current_shield
-		var last: Dictionary = pig.get_meta("last", {})
-		if not last.is_empty():
-			if pool < float(last["pool"]) - 0.5:
-				pig.flash()
-			if p.current_ammo < int(last["ammo"]) or p.fire_timer > float(last["fire"]) + 0.01:
-				pig.recoil(1.0)
-		pig.set_meta("last", {"pool": pool, "ammo": p.current_ammo, "fire": p.fire_timer})
 		var shadow_node := pig.get_meta("shadow") as MeshInstance3D
 		if shadow_node:
 			shadow_node.visible = pig.visible
@@ -568,7 +550,7 @@ func _sync_players(delta: float) -> void:
 			shadow_node.scale = Vector3.ONE * pig.scale.x / PIG_SCALE * lerpf(1.0, 0.6, lift)
 	for pid in _pigs.keys():
 		if not seen.has(pid):
-			var pig: VoxelPig = _pigs[pid]
+			var pig: VoxelBoar = _pigs[pid]
 			var sh = pig.get_meta("shadow")
 			if sh is Node:
 				(sh as Node).queue_free()
