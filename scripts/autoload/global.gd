@@ -65,7 +65,9 @@ const MATCH_MODE_FFA: String = "ffa"
 const MATCH_MODE_2V2: String = "2v2"
 const MATCH_MODE_3V3: String = "3v3"
 const MATCH_MODE_2V2V2: String = "2v2v2"
-const MATCH_MODE_ORDER: Array[String] = [MATCH_MODE_FFA, MATCH_MODE_2V2, MATCH_MODE_3V3, MATCH_MODE_2V2V2]
+# Horden-Modus: alle Eber in einem Team gegen Schweinejäger (scripts/horde/).
+const MATCH_MODE_HORDE: String = "horde"
+const MATCH_MODE_ORDER: Array[String] = [MATCH_MODE_FFA, MATCH_MODE_2V2, MATCH_MODE_3V3, MATCH_MODE_2V2V2, MATCH_MODE_HORDE]
 const MATCH_MODES: Dictionary = {
 	MATCH_MODE_FFA: {
 		"name": "FFA",
@@ -90,6 +92,12 @@ const MATCH_MODES: Dictionary = {
 		"players": 6,
 		"teams": 3,
 		"description": "Sechs Spieler, drei Teams mit je zwei Mitgliedern.",
+	},
+	MATCH_MODE_HORDE: {
+		"name": "Horde (Koop)",
+		"players": 0,
+		"teams": 1,
+		"description": "Alle zusammen gegen Horden von Schweinejägern: Wölfe, Bären, Metzger … XP sammeln, bei jedem Stufenaufstieg eine Karte, Bosse alle 3 Minuten. 10 Minuten überleben und den Endboss besiegen. Allein oder bis zu 6 Eber, immer in der Arena.",
 	},
 }
 const TEAM_NAMES: Array[String] = ["ROT", "BLAU", "GRÜN"]
@@ -1594,7 +1602,10 @@ func set_game_mode(mode: String) -> void:
 	lobby_state_changed.emit()
 
 func is_arena_mode() -> bool:
-	return game_mode == GAME_MODE_ARENA
+	return game_mode == GAME_MODE_ARENA or is_horde_mode()
+
+func is_horde_mode() -> bool:
+	return match_mode == MATCH_MODE_HORDE
 
 func get_game_mode_name(mode: String = "") -> String:
 	var resolved := mode if not mode.is_empty() else game_mode
@@ -1605,6 +1616,9 @@ func set_match_mode(mode: String) -> void:
 	if match_mode == resolved:
 		return
 	match_mode = resolved
+	# Solo gibt es nur in der Horde; sonst mindestens zwei Spieler.
+	if resolved != MATCH_MODE_HORDE and player_count < MIN_PLAYERS:
+		set_player_count(MIN_PLAYERS)
 	match_mode_changed.emit(match_mode)
 
 func get_match_mode_name(mode: String = "") -> String:
@@ -1633,6 +1647,8 @@ func get_team_count() -> int:
 	if not is_team_mode():
 		return player_count
 	match match_mode:
+		MATCH_MODE_HORDE:
+			return 1
 		MATCH_MODE_2V2:
 			return 2
 		MATCH_MODE_3V3:
@@ -1645,6 +1661,8 @@ func get_team_count() -> int:
 func get_team_for_slot(slot: int) -> int:
 	if slot < 1 or slot > MAX_PLAYERS:
 		return 0
+	if match_mode == MATCH_MODE_HORDE:
+		return 1
 	if not is_team_mode():
 		return slot
 	var per_team := 2
@@ -1685,7 +1703,8 @@ func get_team_color(team: int) -> Color:
 	return TEAM_COLORS[team - 1]
 
 func set_player_count(count: int) -> void:
-	var clamped := clampi(count, MIN_PLAYERS, MAX_PLAYERS)
+	var min_players := 1 if match_mode == MATCH_MODE_HORDE else MIN_PLAYERS
+	var clamped := clampi(count, min_players, MAX_PLAYERS)
 	if player_count == clamped:
 		return
 	player_count = clamped
@@ -2249,6 +2268,8 @@ func set_disabled_powerups(kinds: Array) -> void:
 # Löst "zufall" deterministisch anhand des Runden-Seeds auf. Host und Client
 # erhalten so dieselbe Map, auch wenn der Host "Zufällig" ausgewählt hat.
 func resolve_map_id(level_seed: int) -> String:
+	if is_horde_mode():
+		return ArenaMaps.HORDE_MAP_ID
 	if is_arena_mode():
 		return ArenaMaps.pick_random(level_seed)
 	if not SideLevels.test_map_id.is_empty() and SideLevels.has(SideLevels.test_map_id):

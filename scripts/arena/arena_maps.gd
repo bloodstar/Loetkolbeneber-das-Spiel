@@ -487,12 +487,15 @@ const CUSTOM_PREFIX: String = "arena_custom_"
 const COLOR_KEYS: Array[String] = ["floor", "wall", "cliff", "top", "accent"]
 static var custom: Dictionary = {}
 static var _custom_loaded: bool = false
+## Karte des Horden-Modus (nicht im normalen Arena-Pool).
+const HORDE_MAP_ID: String = "arena_wildnis"
+static var _horde_map: Dictionary = {}
 ## Editor-Test: Solange gesetzt, spielt jede Runde auf dieser Karte.
 static var test_map_id: String = ""
 
 static func is_arena_map(map_id: String) -> bool:
 	_ensure_custom()
-	return MAPS.has(map_id) or custom.has(map_id)
+	return MAPS.has(map_id) or custom.has(map_id) or map_id == HORDE_MAP_ID
 
 static func is_custom(map_id: String) -> bool:
 	_ensure_custom()
@@ -502,6 +505,8 @@ static func get_map(map_id: String) -> Dictionary:
 	_ensure_custom()
 	if MAPS.has(map_id):
 		return MAPS[map_id]
+	if map_id == HORDE_MAP_ID:
+		return horde_map()
 	return custom.get(map_id, {})
 
 static func display_name(map_id: String) -> String:
@@ -603,3 +608,70 @@ static func from_json(text: String) -> Dictionary:
 	if rows.is_empty():
 		return {}
 	return data
+
+
+## Große Wildnis für den Horden-Modus: 110 x 80 Kacheln, viel freie Fläche,
+## Felsgruppen und Mauerreste als Deckung. Nur hohe Hindernisse (#, H), damit
+## man sich nicht dauerhaft auf eine niedrige Deckung retten kann. Fester
+## Seed, damit Host und Clients dieselbe Karte bauen.
+static func horde_map() -> Dictionary:
+	if not _horde_map.is_empty():
+		return _horde_map
+	var w := 110
+	var h := 80
+	var grid: Array = []
+	for y in range(h):
+		var row: Array = []
+		row.resize(w)
+		row.fill(".")
+		grid.append(row)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7741
+	var cx := w / 2
+	var cy := h / 2
+	var free_zone := func(x: int, y: int) -> bool:
+		return absi(x - cx) < 9 and absi(y - cy) < 7
+	# Felsgruppen
+	for i in range(46):
+		var fx := rng.randi_range(4, w - 5)
+		var fy := rng.randi_range(4, h - 5)
+		var r := rng.randf_range(0.8, 2.3)
+		for oy in range(-3, 4):
+			for ox in range(-3, 4):
+				var x := fx + ox
+				var y := fy + oy
+				if x < 2 or y < 2 or x >= w - 2 or y >= h - 2 or free_zone.call(x, y):
+					continue
+				if Vector2(ox, oy * 1.2).length() <= r + rng.randf_range(-0.3, 0.3):
+					grid[y][x] = "#"
+	# Mauerreste (gerade Stücke mit Lücken)
+	for i in range(18):
+		var mx := rng.randi_range(6, w - 12)
+		var my := rng.randi_range(6, h - 12)
+		var horizontal := rng.randf() < 0.5
+		var length := rng.randi_range(4, 9)
+		for k in range(length):
+			if rng.randf() < 0.18:
+				continue
+			var x := mx + (k if horizontal else 0)
+			var y := my + (0 if horizontal else k)
+			if x < 2 or y < 2 or x >= w - 2 or y >= h - 2 or free_zone.call(x, y):
+				continue
+			grid[y][x] = "H"
+	# Spawnpunkte dicht in der Mitte (Koop: alle starten zusammen).
+	for o in [Vector2i(-2, -1), Vector2i(2, -1), Vector2i(-2, 1), Vector2i(2, 1), Vector2i(0, -2), Vector2i(0, 2)]:
+		grid[cy + o.y][cx + o.x] = "S"
+	var rows: Array = []
+	for y in range(h):
+		rows.append("".join(PackedStringArray(grid[y])))
+	_horde_map = {
+		"name": "Wildnis",
+		"description": "Weite Wildnis für die Horden-Jagd.",
+		"floor": Color(0.4, 0.56, 0.3),
+		"wall": Color(0.55, 0.53, 0.5),
+		"accent": Color(1.0, 0.55, 0.3, 0.95),
+		"floor_tex": "grass",
+		"wall_tex": "rock",
+		"rows": rows,
+	}
+	return _horde_map

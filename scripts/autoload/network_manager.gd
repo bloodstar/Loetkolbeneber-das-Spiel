@@ -718,8 +718,8 @@ func receive_lobby_sync(data: Dictionary) -> void:
 
 func _apply_lobby_sync(data: Dictionary) -> void:
 	host_build_id = str(data.get("build_id", "?"))
-	Global.set_player_count(int(data.get("player_count", Global.player_count)))
 	Global.set_match_mode(str(data.get("match_mode", Global.MATCH_MODE_FFA)))
+	Global.set_player_count(int(data.get("player_count", Global.player_count)))
 	Global.set_game_mode(str(data.get("game_mode", Global.GAME_MODE_SIDE)))
 	var heroes: Array = data.get("heroes", [])
 	for i in range(mini(heroes.size(), Global.MAX_PLAYERS)):

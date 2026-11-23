@@ -113,11 +113,20 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _apply_tick() -> void:
+	# Horden-Modus: Zonen wirken auf alle Gegner in ihrem Radius.
+	if HordeDirector.is_active():
+		for node in get_tree().get_nodes_in_group(HordeEnemy.GROUP):
+			var e := node as HordeEnemy
+			if e != null and e.is_alive() and not e.is_replica \
+					and global_position.distance_to(e.global_position) <= radius + e.radius:
+				_apply_effect_to(e)
 	if not is_instance_valid(target) or target.current_health <= 0.0:
 		return
 	if global_position.distance_to(target.global_position) > radius + 12.0:
 		return
+	_apply_effect_to(target)
 
+func _apply_effect_to(target) -> void:
 	match kind:
 		Kind.POISON:
 			target.apply_poison(poison_stacks, poison_damage)

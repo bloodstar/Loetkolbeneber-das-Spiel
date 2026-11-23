@@ -260,7 +260,11 @@ func _build_box(index: int) -> Dictionary:
 	return ui
 
 func _connect_player(player: Player, ui: Dictionary) -> void:
+	# Ein Neuaufbau der Boxen (Wiederbelebung, Testraum) lässt alte Verbindungen
+	# zurück: dann ins Leere zeigen, nicht abstürzen.
 	player.health_changed.connect(func(cur_h, max_h, cur_s, max_s):
+		if not is_instance_valid(ui["hp"]):
+			return
 		ui["hp"].max_value = maxf(max_h, 1.0)
 		ui["hp"].value = cur_h
 		# Blutschild (Blutritter) kann über max_shield steigen, bis 2x Max-HP.
@@ -270,16 +274,22 @@ func _connect_player(player: Player, ui: Dictionary) -> void:
 		ui["shield"].visible = max_s > 0.0 or cur_s > 0.0
 	)
 	player.ammo_changed.connect(func(_cur, _max_a):
+		if not is_instance_valid(ui["ammo"]):
+			return
 		_update_ammo_row(ui, player)
 	)
 	ui["ammo_ring"].draw.connect(_draw_hud_reload_ring.bind(ui["ammo_ring"], player))
 	player.ability_cooldown_updated.connect(func(cur, _max_c):
+		if not is_instance_valid(ui["ability"]):
+			return
 		if cur <= 0.0:
 			ui["ability"].text = "%s: BEREIT!" % player.ability_name
 		else:
 			ui["ability"].text = "%s: %.1fs" % [player.ability_name, cur]
 	)
 	player.block_state_changed.connect(func(active, cur, _max_c):
+		if not is_instance_valid(ui["block"]):
+			return
 		ui["block"].text = _block_text(active, cur)
 	)
 
@@ -292,7 +302,7 @@ func update_all() -> void:
 			continue
 		var hero: HeroData = Global.get_hero(Global.get_player_hero_id(p.player_index))
 		var tag := ""
-		if Global.is_team_mode():
+		if Global.is_team_mode() and not Global.is_horde_mode():
 			var member := "DU" if (Global.network_mode and p.player_index == Global.local_player_index) else ("BOT" if Global.is_bot_slot(p.player_index) else "P%d" % p.player_index)
 			tag = "[%s·%s] " % [Global.get_team_name(p.team_id), member]
 		elif Global.network_mode and p.player_index == Global.local_player_index:
@@ -302,7 +312,7 @@ func update_all() -> void:
 		else:
 			tag = "[P%d] " % p.player_index
 		ui["name"].text = "%s%s" % [tag, hero.name]
-		if Global.is_team_mode():
+		if Global.is_team_mode() and not Global.is_horde_mode():
 			ui["name"].add_theme_color_override("font_color", Global.get_team_color(p.team_id))
 		else:
 			ui["name"].add_theme_color_override("font_color", hero.color_tint)
@@ -383,6 +393,9 @@ func _update_score() -> void:
 	# Darüber bleibt nur das Match-Ziel als kleine Orientierung.
 	var target_prefix := "Team-Ziel" if Global.is_team_mode() else "Ziel"
 	score_label.text = "%s: %d Punkte" % [target_prefix, Global.points_to_win]
+	# Horden-Modus: keine Punkte, eigene Anzeige (HordeHud).
+	var horde := Global.is_horde_mode()
+	score_label.visible = not horde
 	_update_score_bars()
 
 # Baut die Fortschrittsbalken einmalig auf. Die Zeilen werden anschließend nur
@@ -456,6 +469,9 @@ func _build_score_bars() -> void:
 
 func _update_score_bars() -> void:
 	if _score_bars == null:
+		return
+	if Global.is_horde_mode():
+		_score_bars.visible = false
 		return
 	var target := maxi(1, Global.points_to_win)
 	if Global.is_team_mode():

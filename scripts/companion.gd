@@ -31,7 +31,7 @@ static var _next_net_id: int = 1
 
 var mode: Mode = Mode.TOWER
 var owner_player: Player = null
-var target_enemy: Player = null
+var target_enemy = null # Player oder HordeEnemy
 var follow_owner: bool = false
 var support: bool = false
 var is_replica: bool = false
@@ -251,7 +251,20 @@ func _try_fire() -> void:
 	if is_instance_valid(cannon):
 		cannon.play_recoil()
 
-func _find_target() -> Player:
+func _find_target() -> Node2D:
+	# Horden-Modus: nächster Gegner in Reichweite.
+	if HordeDirector.is_active() and is_instance_valid(owner_player):
+		var best: Node2D = null
+		var best_d := 700.0 * 700.0
+		for node in get_tree().get_nodes_in_group(HordeEnemy.GROUP):
+			var e := node as HordeEnemy
+			if e == null or not e.is_alive() or e.is_replica:
+				continue
+			var d := global_position.distance_squared_to(e.global_position)
+			if d < best_d:
+				best_d = d
+				best = e
+		return best
 	for p in get_tree().get_nodes_in_group("player"):
 		if p != owner_player and is_instance_valid(p) and p.current_health > 0.0 and p.team_id != owner_player.team_id:
 			return p

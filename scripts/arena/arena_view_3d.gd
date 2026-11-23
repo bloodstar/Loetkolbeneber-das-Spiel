@@ -21,6 +21,7 @@ var _decoy_pigs: Dictionary = {}  # Köder-Instanz-ID -> VoxelPig
 var _pigs: Dictionary = {}        # Player-Instanz-ID -> VoxelPig
 var _crates: Dictionary = {}      # Vector2i -> Node3D
 var _druid_walls: Dictionary = {} # DruidWall-Instanz-ID -> MeshInstance3D
+var _beasts: Dictionary = {}      # HordeEnemy-Instanz-ID -> HordeBeast / VoxelPig (Boss)
 var _shadow_mat: StandardMaterial3D
 var _shadow_mesh: PlaneMesh
 var _contact_mat: StandardMaterial3D
@@ -446,6 +447,7 @@ func _process(delta: float) -> void:
 	_sync_decoys(delta)
 	_sync_crates()
 	_sync_druid_walls()
+	_sync_horde(delta)
 
 # Wände des Druiden als Rindenblock mit Moosdecke.
 func _sync_druid_walls() -> void:
@@ -633,3 +635,66 @@ func _sync_crates() -> void:
 		if broken and crate.visible:
 			crate.visible = false
 			ArenaMode.grid.clear_cell(cell)
+
+# Horden-Modus: Gegner als Voxel-Tiere, Bosse als riesiges Helden-Schwein.
+func _sync_horde(delta: float) -> void:
+	if _beasts.is_empty() and not HordeDirector.is_active():
+		return
+	var seen := {}
+	for node in get_tree().get_nodes_in_group(HordeEnemy.GROUP):
+		var e := node as HordeEnemy
+		if e == null or not is_instance_valid(e) or e.is_dead or e.is_queued_for_deletion():
+			continue
+		var eid := e.get_instance_id()
+		seen[eid] = true
+		var model: Node3D = _beasts.get(eid, null)
+		if model == null:
+			if e.is_boss:
+				var pig := VoxelPig.new()
+				add_child(pig)
+				pig.build(Color(0.62, 0.42, 0.46), Color(0.3, 0.08, 0.1), Color(1.0, 0.25, 0.2), 1.0, e.hero_id, Color(1.0, 0.3, 0.3))
+				model = pig
+			else:
+				var beast := HordeBeast.new()
+				add_child(beast)
+				beast.build(e.kind)
+				model = beast
+			var shadow := MeshInstance3D.new()
+			shadow.mesh = _shadow_mesh
+			shadow.material_override = _shadow_mat
+			add_child(shadow)
+			model.set_meta("shadow", shadow)
+			_beasts[eid] = model
+		var pos := e.global_position
+		model.global_position = Vector3(pos.x, e.arena_z, pos.y)
+		var aim := e.aim_direction
+		if e.velocity.length_squared() > 400.0 and not e.is_boss and e.ai != "ranged" and e.ai != "throw":
+			aim = e.velocity.normalized()
+		if aim.length_squared() > 0.001:
+			model.rotation.y = lerp_angle(model.rotation.y, -atan2(aim.y, aim.x), minf(1.0, delta * 12.0))
+		var frozen := e.freeze_timer > 0.0
+		if model is VoxelPig:
+			var pig2 := model as VoxelPig
+			pig2.scale = Vector3.ONE * e.size * PIG_SCALE
+			pig2.animate(delta, e.velocity.length() > 30.0, false, 1.0, e.velocity, pig2.rotation.y, 0.0)
+			if e.hit_flash > 0.0:
+				pig2.flash()
+			if e.anim_action > 0.0:
+				pig2.recoil(1.0)
+		else:
+			var beast2 := model as HordeBeast
+			beast2.scale = Vector3.ONE * e.size * PIG_SCALE
+			beast2.animate(delta, e.velocity.length(), e.anim_action, e.hit_flash > 0.0, frozen, e.riese)
+		var sh := model.get_meta("shadow") as MeshInstance3D
+		if sh:
+			sh.global_position = Vector3(pos.x, 0.8, pos.y)
+			var lift := clampf(e.arena_z / 120.0, 0.0, 1.0)
+			sh.scale = Vector3.ONE * (e.radius / 16.0) * lerpf(1.0, 0.55, lift)
+	for eid in _beasts.keys():
+		if not seen.has(eid):
+			var m: Node3D = _beasts[eid]
+			var sh2 = m.get_meta("shadow")
+			if sh2 is Node:
+				(sh2 as Node).queue_free()
+			m.queue_free()
+			_beasts.erase(eid)
