@@ -453,13 +453,14 @@ online läuft die Runde weiter</td>
 </table>
 <hr />
 <h2 id="-helden">🐷 Helden</h2>
-<p>Es gibt <strong>8 Klassen</strong>. Jede hat eigene Werte, ein
+<p>Es gibt <strong>9 Klassen</strong>. Jede hat eigene Werte, ein
 Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am
 Kopf. Jeder Held ist entweder <strong>Fernkämpfer</strong> (Linksklick
 schießt) oder <strong>Nahkämpfer</strong> (Linksklick schlägt mit seiner
-festen Waffe): Klinge (Schwert), Bastion (Hammer) und Phantom
-(Lötkolben-Stich) sind Nahkämpfer, alle anderen schießen. Im Draft
-erscheinen nur Karten, die zur Angriffsart passen.</p>
+festen Waffe): Klinge (Schwert), Bastion (Hammer), Phantom
+(Lötkolben-Stich) und Zeitschläger (Uhrenpendel) sind Nahkämpfer, alle
+anderen schießen. Im Draft erscheinen nur Karten, die zur Angriffsart
+passen.</p>
 <p><strong>Helden-Kits:</strong> Jeder Held hat einen eigenen Dash
 (<code>Shift</code>), eine Fähigkeit (Rechtsklick) und eine
 <strong>Ulti</strong> (<code>E</code>). Meteorschauer (Ignis) und
@@ -564,6 +565,19 @@ Dash</td>
 <td style="text-align: left;"><strong>Urkeiler</strong> (35 s): 7 s
 riesiger Keiler, +60 % Leben, Hammer-Nahkampf, der Dash wird zum Ansturm
 (schleudert weg, bricht Kisten)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Zeitschläger</strong></td>
+<td style="text-align: left;"><strong>Rückspul</strong> (6 s
+Abklingzeit): springt an die Stelle von vor 2 s zurück und bekommt den
+Schaden aus dieser Zeit als Leben zurück. Ein blasses Nachbild zeigt dir
+die Stelle</td>
+<td style="text-align: left;"><strong>Zeitblase</strong> (10 s): Kuppel
+an deiner Position (Radius 150 px, 4 s), Gegner darin 60 % langsamer,
+gegnerische Kugeln fliegen nur mit 25 % Tempo</td>
+<td style="text-align: left;"><strong>Zeitstopp</strong> (32 s): 2 s
+lang frieren alle Gegner und ihre Kugeln ein. Deine Treffer an ihnen
+stauen sich und schlagen am Ende gesammelt ein</td>
 </tr>
 </tbody>
 </table>
@@ -703,6 +717,18 @@ im Umkreis 520 px fliegen zu ihm, treffen sie unterwegs einen Gegner: 30
 Schaden und +30 HP</td>
 <td style="text-align: left;">Hoher Dracula-Kragen mit rotem
 Edelstein</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Zeitschläger</strong></td>
+<td style="text-align: left;">Chrono Brawler</td>
+<td style="text-align: right;">120</td>
+<td style="text-align: right;">300</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: left;"><strong>Taktschlag</strong>: Jeder 3.
+Pendeltreffer verlangsamt den Gegner 1,5 s um 30 %</td>
+<td style="text-align: left;"><strong>Zeitblase</strong>: Kuppel, in der
+Gegner und ihre Kugeln stark verlangsamt sind</td>
+<td style="text-align: left;">Wecker mit zwei Glocken</td>
 </tr>
 </tbody>
 </table>
@@ -1141,6 +1167,86 @@ an.</li>
 <p><strong>Weiterspielen</strong>: Nach dem Match-Sieg kann der Host
 <strong>WEITERSPIELEN</strong> wählen. Punkte und Decks bleiben, das
 Ziel steigt um 30 %.</p>
+<h3 id="mvp-ehrungen">MVP-Ehrungen</h3>
+<p>Am Matchende zeigt der Win-Screen unter der Match-Statistik bis zu
+<strong>8 Ehrungen</strong>. Pro Spieler gibt es höchstens 2 (bei 2 bis
+3 Spielern etwas mehr), der MVP-Titel zählt nicht mit. Spaß-Ehrungen
+erscheinen höchstens zwei.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Ehrung</th>
+<th>Wer bekommt sie</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>MVP</strong></td>
+<td>Bester Gesamtwert aus Punkten, Kills, Schaden, Barriere, Heilung,
+Rundensiegen und Toden</td>
+</tr>
+<tr class="even">
+<td><strong>Schadenskönig</strong></td>
+<td>Meister Schaden</td>
+</tr>
+<tr class="odd">
+<td><strong>Serienkiller</strong></td>
+<td>Längste Kill-Serie ohne eigenen Tod (ab 3)</td>
+</tr>
+<tr class="even">
+<td><strong>Beste Karte</strong></td>
+<td>Karte, mit der ihr Besitzer am stärksten war: Schadensanteil und
+Rundensiege in den Runden mit der Karte, plus die Verbesserung gegenüber
+den Runden davor</td>
+</tr>
+<tr class="odd">
+<td><strong>Scharfschütze</strong></td>
+<td>Beste Trefferquote (ab 20 Schüssen und 25 %)</td>
+</tr>
+<tr class="even">
+<td><strong>Erstes Blut</strong></td>
+<td>Am häufigsten den ersten Kill einer Runde (ab 2)</td>
+</tr>
+<tr class="odd">
+<td><strong>Fähigkeiten-Ass</strong></td>
+<td>Meister Fähigkeitsschaden (ab 100)</td>
+</tr>
+<tr class="even">
+<td><strong>Nahkampf-Metzger</strong></td>
+<td>Meister Nahkampfschaden (ab 60)</td>
+</tr>
+<tr class="odd">
+<td><strong>Bollwerk</strong></td>
+<td>Meister Barriere-Schaden (ab 60)</td>
+</tr>
+<tr class="even">
+<td><strong>Sanitäter</strong></td>
+<td>Meiste Heilung (ab 60)</td>
+</tr>
+<tr class="odd">
+<td><strong>Überlebenskünstler</strong></td>
+<td>Am häufigsten bis zum Rundenende überlebt (ab 2)</td>
+</tr>
+<tr class="even">
+<td><strong>Haarscharf</strong></td>
+<td>Runde mit höchstens 20 % Leben gewonnen</td>
+</tr>
+<tr class="odd">
+<td><strong>Größter Pechvogel</strong> <em>(Spaß)</em></td>
+<td>Meiste Tode (ab 2), bei Gleichstand mehr eingesteckter Schaden</td>
+</tr>
+<tr class="even">
+<td><strong>Tollpatsch</strong> <em>(Spaß)</em></td>
+<td>Tode ohne gegnerischen Schützen (Lava, Absturz, eigene Schüsse)</td>
+</tr>
+<tr class="odd">
+<td><strong>Kugelfang</strong> <em>(Spaß)</em></td>
+<td>Am meisten Schaden eingesteckt</td>
+</tr>
+</tbody>
+</table>
+<p>Online berechnet der Host die Ehrungen und schickt sie mit dem
+Match-Ende an alle Clients.</p>
 <hr />
 <h2 id="-spielmodi">👥 Spielmodi</h2>
 <table>
@@ -1724,6 +1830,24 @@ fallen)</td>
 </tr>
 </tbody>
 </table>
+<p><strong>Zeitschläger</strong> (Nahkampf mit Uhrenpendel = Flegel, 30
+Schaden, Rundumschlag) hat 7 Klassenkarten und 2 Familien mit je 2
+Evolutionen: <strong>Taktgeber</strong> (Common, +15 % Nahkampftempo,
++10 % Tempo), <strong>Schweres Pendel</strong> (Uncommon, +30 %
+Nahkampfschaden, +0,5 Felder, −10 % Tempo),
+<strong>Schnellladung</strong> (Uncommon, −15 % Ulti- und −10 %
+Fähigkeits-Abklingzeit), <strong>Stundenschlag</strong> (Epic,
+Taktschlag schon jeden 2. Treffer, 2,5 s lang), <strong>Ewige
+Sekunde</strong> (Epic, Zeitstopp +50 % Dauer),
+<strong>Zinseszins</strong> (Epic, gestaute Treffer schlagen mit 150 %
+ein). Familie Zeitblase: <strong>Große Blase</strong> (Rare, +30 %
+Radius, +25 % Dauer) → A <strong>Zerfall</strong> (8 Schaden/s in der
+Blase) oder B <strong>Eigenzeit</strong> (+30 % Tempo in der eigenen
+Blase). Familie Rückspul: <strong>Lange Erinnerung</strong> (Rare, 1 s
+weiter zurück, −15 % Dash-Abklingzeit) → A <strong>Zeitriss</strong>
+(Explosion an der verlassenen Stelle, 25 Schaden) oder B
+<strong>Reinigung</strong> (entfernt Gift, Brand und Verlangsamung, +20
+Schild).</p>
 <p><strong>Dash- und Ulti-Karten (neu):</strong> Volt:
 <strong>Dreifachblitz</strong> (Rare, +1 Blitzschritt-Ladung, +20 %
 Teleportweite) mit den Evolutionen <strong>Kettenblink</strong>
@@ -2326,7 +2450,7 @@ Gipfel-Arena</td>
 <td style="text-align: left;">Feder, Aufzug, Wolkenfähre,
 Gipfelportal</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><strong>Turbotrasse</strong></td>
 <td style="text-align: left;">Autoscroll</td>
 <td style="text-align: left;">Das Bild fährt von selbst nach rechts.
@@ -2334,14 +2458,14 @@ Kurze Abzweigungen laufen wieder zusammen: Steg über zwei Gruben oder
 unten durch, Tunnel unter der Decke oder obendrüber, Trittsteine oder
 Fähre über die große Grube. Turbo- und Umkehrfelder</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><strong>Asteroidenfeld</strong></td>
 <td style="text-align: left;">Weltraum</td>
 <td style="text-align: left;">Schwerelos zwischen schwebenden Stationen.
 Asteroiden treiben durchs Bild, kleine mit goldenem Kern enthalten
 Powerups, Weltraumquallen jagen die Spieler</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><strong>Kometenjagd</strong></td>
 <td style="text-align: left;">Weltraum, Autoscroll</td>
 <td style="text-align: left;">Schwerelose Autoscroll-Strecke durch einen
@@ -2893,23 +3017,28 @@ Leiterbahnen, zwei Eber mit Lötkolben, die Knöpfe in der Mitte.</p>
 <td style="text-align: left;">Hosten oder beitreten (Code oder IP)</td>
 </tr>
 <tr class="odd">
+<td style="text-align: left;"><strong>PROFIL</strong></td>
+<td style="text-align: left;">Deine Werte über alle Partien (siehe
+unten)</td>
+</tr>
+<tr class="even">
 <td style="text-align: left;"><strong>HELDEN</strong></td>
 <td style="text-align: left;">Übersicht aller Helden mit Werten und
 Fähigkeiten</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><strong>ERFOLGE</strong></td>
 <td style="text-align: left;">Erfolge, Fortschritt, Titel-Auswahl</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><strong>WIKI</strong></td>
 <td style="text-align: left;">Öffnet dieses Wiki im Browser</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><strong>OPTIONEN</strong></td>
 <td style="text-align: left;">Einstellungen</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><strong>BEENDEN</strong></td>
 <td style="text-align: left;">Spiel schließen</td>
 </tr>
@@ -3133,6 +3262,18 @@ Barriere-Treffer</strong>, <strong>meiste Heilung</strong> und
 <strong>Meister Nahkampf</strong>.</li>
 <li><strong>ALLE SPIELER, KARTEN &amp; STATS</strong>: Nach dem Match
 für jeden Spieler das komplette Blatt mit Karten.</li>
+<li><strong>Spielerprofil</strong>: Hauptmenü → <strong>PROFIL</strong>.
+Deine Werte über alle Partien: Matches und Siegquote, Runden, K/D,
+MVP-Ehrungen, Schaden, Trefferquote, Heilung, gewählte Karten und
+Spielzeit. Dazu <strong>Lieblingsheld</strong>, <strong>meistgewählte
+Karte</strong>, <strong>Lieblingsmap</strong>, <strong>Rekorde</strong>
+(meiste Kills pro Runde und Match, meister Schaden, längste
+Siegesserie), Tabellen für Helden, Karten und Maps und die letzten 20
+Matches. Es zählt nur dein eigener Slot auf diesem PC (online dein Slot,
+lokal Spieler 1); Bot-Test, Zuschauen und Testrunden aus den Editoren
+zählen nicht. Eine abgebrochene Runde zählt nicht, ein vorzeitig
+beendetes Match schon (als „abgebr.“). <strong>ZURÜCKSETZEN</strong>
+(zweimal klicken) löscht die Werte.</li>
 <li><strong>Rundenstatistik</strong>: Jede Runde wird als Zeile in
 <code>round_stats.jsonl</code> gespeichert (für Balancing).</li>
 <li><strong>Balance-Statistik im Spiel</strong>: Optionen →
@@ -3194,15 +3335,20 @@ gewählter Titel</td>
 <td style="text-align: left;">Eine Zeile pro gespielter Runde</td>
 </tr>
 <tr class="odd">
+<td style="text-align: left;"><code>player_profile.json</code></td>
+<td style="text-align: left;">Dein Spielerprofil mit
+Lebenszeit-Werten</td>
+</tr>
+<tr class="even">
 <td style="text-align: left;"><code>epic_online.log</code></td>
 <td style="text-align: left;">Protokoll der Epic-Verbindung</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><code>wiki.html</code></td>
 <td style="text-align: left;">Kopie dieses Wikis, wird beim Klick auf
 <strong>WIKI</strong> angelegt</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><code>logs/</code></td>
 <td style="text-align: left;">Godot-Logs</td>
 </tr>
@@ -3262,42 +3408,50 @@ style="text-align: left;"><code>scripts/autoload/card_stats.gd</code>,
 <td style="text-align: left;">Balance-Statistik im Optionsmenü</td>
 </tr>
 <tr class="odd">
+<td
+style="text-align: left;"><code>scripts/autoload/player_profile.gd</code>,
+<code>scripts/ui/profile_screen.gd</code></td>
+<td style="text-align: left;">Spielerprofil: Lebenszeit-Werte, Signale
+<code>round_recorded</code>/<code>match_recorded</code>, Erweiterungen
+über <code>get_ext()</code></td>
+</tr>
+<tr class="even">
 <td style="text-align: left;"><code>scripts/main.gd</code></td>
 <td style="text-align: left;">Rundenablauf, Snapshots, Kill-Cam,
 Lava</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><code>scripts/player.gd</code></td>
 <td style="text-align: left;">Spieler, Fähigkeiten (Konstanten oben),
 Nahkampf</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><code>scripts/bullet.gd</code></td>
 <td style="text-align: left;">Ballistik, Durchschlag, Zielsuche,
 Kollision</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td
 style="text-align: left;"><code>scripts/level_generator.gd</code></td>
 <td style="text-align: left;">Maps und Tilesets, Einweg-Stege, Pyramide,
 Haus</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><code>scripts/level/crate_chain.gd</code>,
 <code>chain_link.gd</code></td>
 <td style="text-align: left;">Kistenketten (Bauplan, Gelenke,
 Netzwerk)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td
 style="text-align: left;"><code>scripts/level_modifier_defs.gd</code></td>
 <td style="text-align: left;">Liste der Runden-Modifier</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><code>scripts/main_menu.gd</code></td>
 <td style="text-align: left;">Hauptmenü inkl. Wiki-Knopf</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><code>scripts/ui/hud.gd</code></td>
 <td style="text-align: left;">HUD, Tab-Blatt, Match-Ende</td>
 </tr>
