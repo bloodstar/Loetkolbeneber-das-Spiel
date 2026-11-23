@@ -720,6 +720,9 @@ var melee_lifesteal: float = 0.0
 var melee_wall_stun_bonus: float = 0.0
 var melee_execute_bonus: float = 0.0
 var melee_chain_lightning: bool = false
+# Kettenreaktion (allgemeiner Kettenblitz) bei Nahkampfhelden: ohne weiteren
+# Gegner springt der Blitz wie beim Schuss auf das getroffene Ziel zurück (1-gegen-1).
+var melee_chain_return: bool = false
 var melee_echo: bool = false
 var melee_parry: bool = false
 var melee_echo_timer: float = 0.0
@@ -1095,6 +1098,7 @@ func apply_stats() -> void:
 	var m_wall_stun := 0.0
 	var m_execute := 0.0
 	var m_chain := false
+	var m_chain_return := false
 	var m_echo := false
 	var m_parry := false
 	var size_mult = BASE_CHARACTER_SCALE
@@ -1402,6 +1406,7 @@ func apply_stats() -> void:
 		if lightning_shot:
 			m_stun += 0.1
 		m_chain = m_chain or chain_lightning
+		m_chain_return = chain_lightning
 	# Gedeckelt, damit gestapelte Karten den Nahkampf nicht zum Dauerfeuer machen.
 	melee_cooldown = maxf(0.3, float(melee_data["cooldown"]) * m_cd_mult)
 	melee_cooldown_timer = 0.0
@@ -1419,6 +1424,7 @@ func apply_stats() -> void:
 	melee_wall_stun_bonus = minf(m_wall_stun, 1.5)
 	melee_execute_bonus = m_execute
 	melee_chain_lightning = m_chain
+	melee_chain_return = m_chain_return
 	melee_echo = m_echo
 	melee_parry = m_parry
 	melee_echo_timer = 0.0
@@ -2553,12 +2559,17 @@ func _melee_chain_lightning(hit_targets: Array, damage: float) -> float:
 		if d < best_dist:
 			best_dist = d
 			best = p
+	if best == null and melee_chain_return and origin is Player \
+			and (origin as Player).current_health > 0.0 and not (origin as Player).is_dead:
+		best = origin as Player
 	if best == null:
 		return 0.0
 	var before := best.current_health + best.current_shield
 	best.take_damage(damage, Vector2.ZERO, self)
 	best.apply_stun(maxf(0.15, melee_stun))
-	_spawn_lightning_arc(origin.global_position, best.global_position)
+	# Rücksprung aufs selbe Ziel: Bogen vom Eber aus, sonst wäre er unsichtbar.
+	var arc_from: Vector2 = global_position if best == origin else origin.global_position
+	_spawn_lightning_arc(arc_from, best.global_position)
 	return maxf(0.0, before - (maxf(best.current_health, 0.0) + best.current_shield))
 
 # Parade: gegnerische Projektile im Schlagbereich fliegen zurück wie beim Block.
