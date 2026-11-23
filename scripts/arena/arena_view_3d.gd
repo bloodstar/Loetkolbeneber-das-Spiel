@@ -17,6 +17,7 @@ const STEG_VIS: float = 14.0
 
 var camera_2d: Camera2D = null
 var cam: Camera3D
+var _decoy_pigs: Dictionary = {}  # Köder-Instanz-ID -> VoxelPig
 var _pigs: Dictionary = {}        # Player-Instanz-ID -> VoxelPig
 var _crates: Dictionary = {}      # Vector2i -> Node3D
 var _druid_walls: Dictionary = {} # DruidWall-Instanz-ID -> MeshInstance3D
@@ -442,6 +443,7 @@ func _add_box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> Mesh
 func _process(delta: float) -> void:
 	_sync_camera()
 	_sync_players(delta)
+	_sync_decoys(delta)
 	_sync_crates()
 	_sync_druid_walls()
 
@@ -574,6 +576,50 @@ func _sync_players(delta: float) -> void:
 				(sh as Node).queue_free()
 			pig.queue_free()
 			_pigs.erase(pid)
+
+# Phantoms Köder: gleiches Voxel-Schwein wie sein Besitzer, damit er in der
+# Arena nicht vom echten Eber zu unterscheiden ist.
+func _sync_decoys(delta: float) -> void:
+	var seen := {}
+	for node in get_tree().get_nodes_in_group("phantom_decoy"):
+		var d := node as PhantomDecoy
+		if d == null or not is_instance_valid(d) or not d.is_active():
+			continue
+		var did := d.get_instance_id()
+		seen[did] = true
+		var pig: VoxelPig = _decoy_pigs.get(did, null)
+		if pig == null:
+			pig = VoxelPig.new()
+			add_child(pig)
+			var fur: Color = Color(0.91, 0.60, 0.67)
+			var pants: Color = Color(0.25, 0.35, 0.8)
+			var tip: Color = Color.WHITE
+			var hero_id := "phantom"
+			for pn in get_tree().get_nodes_in_group("player"):
+				var p := pn as Player
+				if p != null and p.player_index == d.owner_index:
+					hero_id = Global.get_player_hero_id(p.player_index)
+					tip = p.wand_tip_color
+					if p.sprite != null:
+						var f = p.sprite.get("fur_color")
+						if f is Color:
+							fur = f
+						var pc = p.sprite.get("pants_color")
+						if pc is Color:
+							pants = pc
+			pig.build(fur, pants, Global.get_team_color(d.team_id), 1.0, hero_id, tip)
+			_decoy_pigs[did] = pig
+		var size_scale: float = d.scale.x / Player.BASE_CHARACTER_SCALE if Player.BASE_CHARACTER_SCALE > 0.0 else 1.0
+		pig.scale = Vector3.ONE * clampf(size_scale, 0.3, 3.0) * PIG_SCALE
+		pig.global_position = Vector3(d.global_position.x, d.arena_z, d.global_position.y)
+		var aim: Vector2 = d.aim_direction
+		if aim.length_squared() > 0.001:
+			pig.rotation.y = -atan2(aim.y, aim.x)
+		pig.animate(delta, d.velocity.length() > 30.0, false, 1.0, d.velocity, pig.rotation.y, 0.0)
+	for did in _decoy_pigs.keys():
+		if not seen.has(did):
+			(_decoy_pigs[did] as VoxelPig).queue_free()
+			_decoy_pigs.erase(did)
 
 func _sync_crates() -> void:
 	var lg := get_parent().get_node_or_null("ProceduralLevel") as LevelGenerator

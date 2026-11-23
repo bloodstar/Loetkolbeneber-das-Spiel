@@ -21,6 +21,8 @@ var hero_stats_panel: PanelContainer = null
 var hero_stats_grid: GridContainer = null
 var options_btn: Button = null
 var wiki_btn: Button = null
+var achievements_btn: Button = null
+var _achievements_screen: AchievementsScreen = null
 
 # Das Wiki (aus README.md gebaut, siehe tools/build_wiki.py) liegt im PCK.
 # Der Browser kann dort nicht lesen, darum wird es vor dem Öffnen nach
@@ -54,6 +56,7 @@ func _ready() -> void:
 	main_box.visible = true
 	_build_epic_section()
 	_build_hero_stats_ui()
+	_build_achievements_button()
 	_build_wiki_button()
 	_build_options_button()
 	_build_version_label()
@@ -75,6 +78,25 @@ func _build_options_button() -> void:
 func _on_options_pressed() -> void:
 	SoundManager.play_sound("click")
 	options_requested.emit()
+
+func _build_achievements_button() -> void:
+	achievements_btn = Button.new()
+	achievements_btn.name = "AchievementsBtn"
+	achievements_btn.text = "ERFOLGE"
+	achievements_btn.tooltip_text = "Erfolge, Titel und freischaltbare Aussehens-Teile."
+	achievements_btn.custom_minimum_size = Vector2(360, 56)
+	achievements_btn.pressed.connect(_on_achievements_pressed)
+	main_box.add_child(achievements_btn)
+	main_box.move_child(achievements_btn, quit_btn.get_index())
+
+func _on_achievements_pressed() -> void:
+	SoundManager.play_sound("click")
+	if _achievements_screen == null:
+		_achievements_screen = AchievementsScreen.new()
+		_achievements_screen.name = "AchievementsScreen"
+		add_child(_achievements_screen)
+		_achievements_screen.closed.connect(func(): achievements_btn.grab_focus())
+	_achievements_screen.open_screen()
 
 func _build_wiki_button() -> void:
 	wiki_btn = Button.new()
@@ -302,6 +324,7 @@ func _build_hero_stats_card(hero: HeroData) -> Control:
 
 	var ability := Label.new()
 	ability.text = "Aktiv: %s (%.1fs Cooldown) — %s\n%s" % [hero.ability_name, hero.ability_cooldown, hero.ability_desc, Global.get_hero_ability_details(hero)]
+	ability.text += "\n" + Global.get_hero_kit_text(hero)
 	ability.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	ability.add_theme_color_override("font_color", Color(0.52, 0.8, 1.0, 1.0))
 	ability.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

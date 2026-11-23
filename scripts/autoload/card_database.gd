@@ -1514,7 +1514,7 @@ func _init_database() -> void:
 	var kl1 = CardData.new()
 	kl1.id = "klinge_wirbel"
 	kl1.title = "Wirbelklinge"
-	kl1.description = "Klinge: +25% Schaden, +15% Feuerrate."
+	kl1.description = "Klinge: +25% Schaden, +15% Angriffstempo."
 	kl1.rarity = "Rare"
 	kl1.color = Color(1.0, 0.35, 0.55)
 	kl1.hero_id = "klinge"
@@ -1562,12 +1562,13 @@ func _init_database() -> void:
 	var ba2 = CardData.new()
 	ba2.id = "bastion_wartung"
 	ba2.title = "Feldwartung"
-	ba2.description = "Bastion: +40% Schild-Regeneration, +15% Nachladegeschwindigkeit."
+	ba2.version = 2 # Nahkampfheld: Angriffstempo statt Nachladen
+	ba2.description = "Bastion: +40% Schild-Regeneration, +15% Angriffstempo."
 	ba2.rarity = "Rare"
 	ba2.color = Color(0.35, 0.85, 0.75)
 	ba2.hero_id = "bastion"
 	ba2.shield_regen_mult = 1.40
-	ba2.reload_speed_mult = 1.15
+	ba2.melee_cooldown_mult = 0.85
 	_register(ba2)
 
 	var ba3 = CardData.new()
@@ -1587,18 +1588,18 @@ func _init_database() -> void:
 	var ph1 = CardData.new()
 	ph1.id = "phantom_schattenklinge"
 	ph1.title = "Schattenklinge"
-	ph1.description = "Phantom: +20% Schaden, +2 Durchschlag."
+	ph1.description = "Phantom: +20% Schaden, +0,5 Felder Reichweite."
 	ph1.rarity = "Rare"
 	ph1.color = Color(0.50, 0.50, 0.70)
 	ph1.hero_id = "phantom"
 	ph1.damage_mult = 1.20
-	ph1.piercing_add = 2
-	ph1.version = 2 # Durchschlag wirkt jetzt auch durch Wände
+	ph1.melee_range_add = 0.5
+	ph1.version = 3 # Nahkampfheld: Reichweite statt Durchschlag
 	_register(ph1)
 
 	var ph2 = CardData.new()
 	ph2.id = "phantom_sprungkraft"
-	ph2.title = "Schattensprung"
+	ph2.title = "Schattenlauf"
 	ph2.description = "Phantom: -25% Fähigkeits-Abklingzeit, +1 Luft-Sprung."
 	ph2.rarity = "Rare"
 	ph2.color = Color(0.45, 0.45, 0.65)
@@ -1683,54 +1684,135 @@ func _init_database() -> void:
 	# --- Volt ---
 	var fa5 = CardData.new()
 	fa5.id = "volt_hochspannung"
+	fa5.version = 2
 	fa5.title = "Hochspannung"
-	fa5.description = "Volt – Flash Blink: +35% Schockschaden, +20% Schockradius, +25% Teleportweite."
+	fa5.description = "Volt – Kugelblitz: +35% Schockschaden, +25% Radius."
 	fa5.rarity = "Rare"
 	fa5.pool = "Offensive"
 	fa5.color = Color(1.00, 0.90, 0.20)
 	fa5.hero_id = "volt"
-	fa5.family_id = "volt_blink"
+	fa5.family_id = "volt_orb"
 	fa5.ability_damage_mult = 1.35
-	fa5.ability_radius_mult = 1.20
-	fa5.ability_range_mult = 1.25
+	fa5.ability_radius_mult = 1.25
 	_register(fa5)
+
+	var fa5a = CardData.new()
+	fa5a.id = "volt_sprungziel"
+	fa5a.title = "Sprungziel"
+	fa5a.description = "Kugelblitz-Evolution: Fähigkeit erneut drücken, solange der Kugelblitz fliegt: Volt springt zu ihm und der Kugelblitz entlädt sich."
+	fa5a.rarity = "Epic"
+	fa5a.color = Color(1.00, 0.90, 0.20)
+	fa5a.hero_id = "volt"
+	fa5a.family_id = "volt_orb"
+	fa5a.parent_card_id = "volt_hochspannung"
+	fa5a.evolution_branch = "A"
+	fa5a.ability_evolution = "volt_orb_jump"
+	_register(fa5a)
+
+	var fa5b = CardData.new()
+	fa5b.id = "volt_entladung"
+	fa5b.title = "Entladung"
+	fa5b.description = "Kugelblitz-Evolution: Am Ende explodiert der Kugelblitz (20 Schaden, 0,6 s Betäubung)."
+	fa5b.rarity = "Epic"
+	fa5b.color = Color(1.00, 0.90, 0.20)
+	fa5b.hero_id = "volt"
+	fa5b.family_id = "volt_orb"
+	fa5b.parent_card_id = "volt_hochspannung"
+	fa5b.evolution_branch = "B"
+	fa5b.ability_evolution = "volt_orb_burst"
+	_register(fa5b)
+
+	var vd1 = CardData.new()
+	vd1.id = "volt_doppelladung"
+	vd1.title = "Dreifachblitz"
+	vd1.description = "Volt – Blitzschritt: +1 Ladung, +20% Teleportweite."
+	vd1.rarity = "Rare"
+	vd1.pool = "Bewegung"
+	vd1.color = Color(1.00, 0.90, 0.20)
+	vd1.hero_id = "volt"
+	vd1.family_id = "volt_dash"
+	vd1.dash_charges_add = 1
+	vd1.ability_range_mult = 1.2
+	_register(vd1)
 
 	var fa6 = CardData.new()
 	fa6.id = "volt_kettenblink"
+	fa6.version = 2
 	fa6.title = "Kettenblink"
-	fa6.description = "Flash-Blink-Evolution: Jeder Gegner, den die Schockwelle trifft, löst einen Kettenblitz auf einen weiteren Gegner aus."
+	fa6.description = "Blitzschritt-Evolution: Am Zielpunkt springt ein Kettenblitz auf den nächsten Gegner in der Nähe."
 	fa6.rarity = "Epic"
 	fa6.color = Color(1.00, 0.90, 0.20)
 	fa6.hero_id = "volt"
-	fa6.family_id = "volt_blink"
-	fa6.parent_card_id = "volt_hochspannung"
+	fa6.family_id = "volt_dash"
+	fa6.parent_card_id = "volt_doppelladung"
 	fa6.evolution_branch = "A"
 	fa6.ability_evolution = "volt_chain"
 	_register(fa6)
 
 	var fa7 = CardData.new()
 	fa7.id = "volt_gewitterspur"
+	fa7.version = 2
 	fa7.title = "Gewitterspur"
-	fa7.description = "Flash-Blink-Evolution: Start- und Zielpunkt des Blinks werden 4 s lang zu Blitzzonen, die Gegner beim Betreten betäuben."
+	fa7.description = "Blitzschritt-Evolution: Der Zielpunkt wird 4 s lang zur Blitzzone, die Gegner beim Betreten betäubt."
 	fa7.rarity = "Epic"
 	fa7.color = Color(1.00, 0.90, 0.20)
 	fa7.hero_id = "volt"
-	fa7.family_id = "volt_blink"
-	fa7.parent_card_id = "volt_hochspannung"
+	fa7.family_id = "volt_dash"
+	fa7.parent_card_id = "volt_doppelladung"
 	fa7.evolution_branch = "B"
 	fa7.ability_evolution = "volt_storm"
 	_register(fa7)
 
+	var vu1 = CardData.new()
+	vu1.id = "volt_starkstrom"
+	vu1.title = "Starkstrom"
+	vu1.description = "Volt – Überladung: +30% Dauer, -10% Ulti-Abklingzeit."
+	vu1.rarity = "Rare"
+	vu1.pool = "Offensive"
+	vu1.color = Color(1.00, 0.90, 0.20)
+	vu1.hero_id = "volt"
+	vu1.family_id = "volt_ult"
+	vu1.ult_duration_mult = 1.3
+	vu1.ult_cooldown_mult = 0.9
+	_register(vu1)
+
+	var vu2 = CardData.new()
+	vu2.id = "volt_dauerblitz"
+	vu2.title = "Dauerblitz"
+	vu2.description = "Überladung-Evolution: Während der Überladung lädt der Blitzschritt dreimal so schnell nach."
+	vu2.rarity = "Epic"
+	vu2.color = Color(1.00, 0.90, 0.20)
+	vu2.hero_id = "volt"
+	vu2.family_id = "volt_ult"
+	vu2.parent_card_id = "volt_starkstrom"
+	vu2.evolution_branch = "A"
+	vu2.ability_evolution = "volt_ult_blink"
+	_register(vu2)
+
+	var vu3 = CardData.new()
+	vu3.id = "volt_schockring"
+	vu3.title = "Schockring"
+	vu3.description = "Überladung-Evolution: Am Ende der Überladung entlädt sich ein Schockring (25 Schaden, Rückstoß, 1,5 s Verlangsamung)."
+	vu3.rarity = "Epic"
+	vu3.color = Color(1.00, 0.90, 0.20)
+	vu3.hero_id = "volt"
+	vu3.family_id = "volt_ult"
+	vu3.parent_card_id = "volt_starkstrom"
+	vu3.evolution_branch = "B"
+	vu3.ability_evolution = "volt_ult_ring"
+	_register(vu3)
+
 	var fa8 = CardData.new()
 	fa8.id = "volt_restladung"
+	fa8.version = 2
 	fa8.title = "Restladung"
-	fa8.description = "Volt – Flash Blink: Getroffene Gegner bleiben 50% länger verlangsamt, -10% Fähigkeits-Abklingzeit."
+	fa8.description = "Volt – Kugelblitz: Fliegt 50% länger und verlangsamt 50% länger, -10% Fähigkeits-Abklingzeit."
 	fa8.rarity = "Uncommon"
 	fa8.pool = "Offensive"
 	fa8.color = Color(1.00, 0.90, 0.20)
 	fa8.hero_id = "volt"
-	fa8.ability_duration_mult = 1.50
-	fa8.ability_cooldown_mult = 0.90
+	fa8.ability_duration_mult = 1.5
+	fa8.ability_cooldown_mult = 0.9
 	_register(fa8)
 
 	# --- Spore ---
@@ -1947,55 +2029,104 @@ func _init_database() -> void:
 	# --- Phantom ---
 	var fa25 = CardData.new()
 	fa25.id = "phantom_lautlose_klinge"
-	fa25.title = "Lautlose Klinge"
-	fa25.description = "Phantom – Schattensprung: +30% Schaden, +20% Trefferradius, +20% Sprungweite."
+	fa25.version = 2
+	fa25.title = "Doppelgänger"
+	fa25.description = "Phantom – Köder: Der Köder hält doppelt so viel aus, -15% Fähigkeits-Abklingzeit."
 	fa25.rarity = "Rare"
-	fa25.pool = "Offensive"
+	fa25.pool = "Defensive"
 	fa25.color = Color(0.45, 0.45, 0.60)
 	fa25.hero_id = "phantom"
-	fa25.family_id = "phantom_step"
-	fa25.ability_damage_mult = 1.30
-	fa25.ability_radius_mult = 1.20
-	fa25.ability_range_mult = 1.20
+	fa25.family_id = "phantom_decoy"
+	fa25.ability_damage_mult = 2.0
+	fa25.ability_cooldown_mult = 0.85
 	_register(fa25)
 
-	var fa26 = CardData.new()
-	fa26.id = "phantom_schattenschnitt"
-	fa26.title = "Schattenschnitt"
-	fa26.description = "Schattensprung-Evolution: Trifft zusätzlich alle Gegner entlang der Sprungbahn."
-	fa26.rarity = "Epic"
-	fa26.color = Color(0.45, 0.45, 0.60)
-	fa26.hero_id = "phantom"
-	fa26.family_id = "phantom_step"
-	fa26.parent_card_id = "phantom_lautlose_klinge"
-	fa26.evolution_branch = "A"
-	fa26.ability_evolution = "phantom_cut"
-	_register(fa26)
+	var fa25a = CardData.new()
+	fa25a.id = "phantom_sprengkoeder"
+	fa25a.title = "Sprengköder"
+	fa25a.description = "Köder-Evolution: Der Köder explodiert, wenn er zerstört wird oder abläuft (30 Schaden, Rückstoß)."
+	fa25a.rarity = "Epic"
+	fa25a.color = Color(0.45, 0.45, 0.60)
+	fa25a.hero_id = "phantom"
+	fa25a.family_id = "phantom_decoy"
+	fa25a.parent_card_id = "phantom_lautlose_klinge"
+	fa25a.evolution_branch = "A"
+	fa25a.ability_evolution = "phantom_decoy_bomb"
+	_register(fa25a)
+
+	var fa25b = CardData.new()
+	fa25b.id = "phantom_platztausch"
+	fa25b.title = "Platztausch"
+	fa25b.description = "Köder-Evolution: Fähigkeit erneut drücken, solange der Köder lebt: Phantom tauscht den Platz mit ihm."
+	fa25b.rarity = "Epic"
+	fa25b.color = Color(0.45, 0.45, 0.60)
+	fa25b.hero_id = "phantom"
+	fa25b.family_id = "phantom_decoy"
+	fa25b.parent_card_id = "phantom_lautlose_klinge"
+	fa25b.evolution_branch = "B"
+	fa25b.ability_evolution = "phantom_decoy_swap"
+	_register(fa25b)
 
 	var fa27 = CardData.new()
 	fa27.id = "phantom_laehmendes_mal"
+	fa27.version = 2
 	fa27.title = "Lähmendes Mal"
-	fa27.description = "Schattensprung-Evolution: Getroffene Gegner werden 0,7 s betäubt."
+	fa27.description = "Köder-Evolution: Wer den Köder trifft, wird 0,7 s betäubt."
 	fa27.rarity = "Epic"
 	fa27.color = Color(0.45, 0.45, 0.60)
 	fa27.hero_id = "phantom"
-	fa27.family_id = "phantom_step"
+	fa27.family_id = "phantom_decoy"
 	fa27.parent_card_id = "phantom_lautlose_klinge"
-	fa27.evolution_branch = "B"
+	fa27.evolution_branch = "C"
 	fa27.ability_evolution = "phantom_mark"
 	_register(fa27)
 
+	var fa26 = CardData.new()
+	fa26.id = "phantom_schattenschnitt"
+	fa26.version = 2
+	fa26.title = "Schattenschnitt"
+	fa26.description = "Phantom – Schattenschritt: Der Dash sticht alle Gegner auf dem Weg (60% Nahkampfschaden)."
+	fa26.rarity = "Epic"
+	fa26.pool = "Offensive"
+	fa26.color = Color(0.45, 0.45, 0.60)
+	fa26.hero_id = "phantom"
+	fa26.ability_evolution = "phantom_cut"
+	_register(fa26)
+
+	var ph4 = CardData.new()
+	ph4.id = "phantom_blutspur"
+	ph4.title = "Blutspur"
+	ph4.description = "Phantom – Nachtjagd: Ein Kill während der Nachtjagd gibt die halbe Ulti-Abklingzeit zurück."
+	ph4.rarity = "Epic"
+	ph4.pool = "Offensive"
+	ph4.color = Color(0.45, 0.45, 0.60)
+	ph4.hero_id = "phantom"
+	ph4.ability_evolution = "phantom_hunt_blood"
+	_register(ph4)
+
 	var fa28 = CardData.new()
 	fa28.id = "phantom_lange_schatten"
+	fa28.version = 2
 	fa28.title = "Lange Schatten"
-	fa28.description = "Phantom – Schattensprung: +50% Unverwundbarkeitsdauer, -10% Fähigkeits-Abklingzeit."
+	fa28.description = "Phantom – Köder: Köder und Unsichtbarkeit halten 50% länger, -10% Fähigkeits-Abklingzeit."
 	fa28.rarity = "Uncommon"
-	fa28.pool = "Offensive"
+	fa28.pool = "Defensive"
 	fa28.color = Color(0.45, 0.45, 0.60)
 	fa28.hero_id = "phantom"
-	fa28.ability_duration_mult = 1.50
-	fa28.ability_cooldown_mult = 0.90
+	fa28.ability_duration_mult = 1.5
+	fa28.ability_cooldown_mult = 0.9
 	_register(fa28)
+
+	var gu1 = CardData.new()
+	gu1.id = "ulti_akku"
+	gu1.title = "Ulti-Akku"
+	gu1.description = "-15% Ulti-Abklingzeit."
+	gu1.rarity = "Uncommon"
+	gu1.pool = "Offensive"
+	gu1.color = Color(1.0, 0.75, 0.3)
+	gu1.required_mechanic = "ult"
+	gu1.ult_cooldown_mult = 0.85
+	_register(gu1)
 
 	# --- Druide: Wurzelwall ---
 	var dr1 = CardData.new()
@@ -2902,6 +3033,8 @@ func _register(card: CardData) -> void:
 		card.required_mechanic = _infer_required_mechanic(card)
 	if card.sub_tags.is_empty():
 		card.sub_tags = _infer_sub_tags(card)
+	if card.attack_type.is_empty():
+		card.attack_type = _infer_attack_type(card)
 	# Ausbaukarten bleiben im selben Pool wie ihre Grundkarte.
 	if not card.parent_card_id.is_empty():
 		var parent: CardData = cards_by_id.get(card.parent_card_id, null)
@@ -2918,6 +3051,8 @@ func _infer_required_mechanic(card: CardData) -> String:
 		return "dash"
 	if card.ability_cooldown_mult < 1.0:
 		return "ability"
+	if card.ult_cooldown_mult < 1.0 or card.ult_duration_mult > 1.0:
+		return "ult"
 	if (card.shield_regen_mult > 1.0 or card.shield_regen_delay_add < 0.0) and card.shield_max_add <= 0:
 		return "shield"
 	if card.poison_damage_mult > 1.0 and card.poison_stacks_add <= 0 \
@@ -2927,9 +3062,46 @@ func _infer_required_mechanic(card: CardData) -> String:
 		return "tower"
 	return ""
 
+# Für welche Angriffsart taugt die Karte? Nahkampfwerte nützen nur
+# Nahkämpfern. Werte, die nur an Kugeln hängen (Munition, Nachladen,
+# Abpraller, Zielsuche, Explosion, Mehrfachschuss, Durchschlag, Flugbahn),
+# nützen nur Fernkämpfern. Schaden, Feuerrate, Rückstoß, Lebensraub und die
+# Elementkarten wirken bei Nahkämpfern auf die Schläge (Player.apply_stats)
+# und bleiben deshalb für beide. Klassenkarten folgen ihrem Helden.
+func _infer_attack_type(card: CardData) -> String:
+	if not card.hero_id.is_empty():
+		return ""
+	if card.pool == "Nahkampf" or has_melee_values(card):
+		return "melee"
+	if has_projectile_only_values(card):
+		return "ranged"
+	return ""
+
+func has_melee_values(card: CardData) -> bool:
+	return card.melee_damage_mult != 1.0 or card.melee_range_add != 0.0 or card.melee_cooldown_mult != 1.0 \
+		or card.melee_knockback_mult != 1.0 or card.melee_arc_add != 0.0 or card.melee_freeze_add != 0.0 \
+		or card.melee_poison_stacks_add != 0 or card.melee_stun_add != 0.0 or card.melee_burn_stacks_add != 0 \
+		or card.melee_lifesteal_add != 0.0 or card.melee_wall_stun_add != 0.0 \
+		or card.melee_execute_bonus_add != 0.0 or card.melee_chain_lightning or card.melee_echo or card.melee_parry
+
+func has_projectile_only_values(card: CardData) -> bool:
+	return card.bullet_speed_mult != 1.0 or card.bullet_size_mult != 1.0 or card.projectile_gravity_mult != 1.0 \
+		or card.max_ammo_add != 0 or card.reload_speed_mult != 1.0 or card.bounces_add != 0 \
+		or card.homing_strength_add != 0.0 or card.explosion_radius_add != 0.0 or card.multishot_add != 0 \
+		or card.spread_angle_deg != 0.0 or card.piercing_add != 0 or card.border_bounce or card.bounce_split \
+		or card.self_damage_reduction_add != 0.0 or card.cluster_bomblets or card.poison_impact_cloud \
+		or card.frost_nova or card.lightning_zone or card.fire_impact_zone or card.id == "ricochet_frenzy"
+
+# Passt die Karte zur Angriffsart des Helden?
+func is_card_attack_type_allowed(card: CardData, hero_id: String) -> bool:
+	if card == null or card.attack_type.is_empty() or hero_id.is_empty():
+		return true
+	var wanted := "melee" if Global.is_melee_hero(hero_id) else "ranged"
+	return card.attack_type == wanted
+
 # Helden, deren Grundfähigkeit keinen Schaden macht: Allgemeine
 # Fähigkeitsschaden-Karten erscheinen erst mit dieser Evolutionskarte im Deck.
-const ABILITY_DAMAGE_UNLOCK_CARDS: Dictionary = {"nova": "nova_implosion"}
+const ABILITY_DAMAGE_UNLOCK_CARDS: Dictionary = {"nova": "nova_implosion", "phantom": "phantom_sprengkoeder"}
 
 func is_ability_damage_locked(card: CardData, hero_id: String, owned_ids: Array = []) -> bool:
 	if card == null or not card.hero_id.is_empty() or card.ability_damage_mult <= 1.0:
@@ -2944,6 +3116,8 @@ func is_card_available_for_player(card: CardData, hero_id: String, owned_ids: Ar
 	if is_ability_damage_locked(card, hero_id, owned_ids):
 		return false
 	if not is_card_pool_enabled(card):
+		return false
+	if not is_card_attack_type_allowed(card, hero_id):
 		return false
 	if is_powerup_card_locked(card):
 		return false
@@ -3002,12 +3176,19 @@ func _player_shield_total(hero_id: String, owned_ids: Array) -> int:
 # sind immer verfügbar, die Bedingung wird deshalb auch nicht angezeigt.
 const ALWAYS_AVAILABLE_MECHANICS: Array[String] = ["dash", "ability", "block", "jump"]
 
+# Hat der Held schon eine Ulti (Taste E)? Karten für die Ulti erscheinen nur dann.
+func _hero_has_ult(hero_id: String) -> bool:
+	var hero: HeroData = Global.heroes.get(hero_id, null)
+	return hero != null and hero.has_ult()
+
 # Held, der eine Mechanik schon mitbringt (ohne passende Karte).
 const HERO_MECHANICS := {"poison": "spore"}
 
 func _player_has_mechanic(mechanic: String, hero_id: String, owned_ids: Array) -> bool:
 	if ALWAYS_AVAILABLE_MECHANICS.has(mechanic):
 		return true
+	if mechanic == "ult":
+		return _hero_has_ult(hero_id)
 	if mechanic == "shield":
 		# Schild-Verbesserungen erst ab SHIELD_UPGRADE_MIN Gesamtschild
 		# (Held + Karten), damit sie nicht für Mini-Schilde auftauchen.
