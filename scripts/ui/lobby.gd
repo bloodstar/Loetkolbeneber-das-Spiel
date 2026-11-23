@@ -27,7 +27,7 @@ const POWERUP_PREVIEW_SIZE: Vector2 = Vector2(200, 92)
 @onready var footer_hint: Label = $Panel/Margin/VBox/Footer/FooterHint
 
 # Heldenslots (dynamisch für 1..6 aufgebaut)
-@onready var slot_list: VBoxContainer = $Panel/Margin/VBox/Tabs/Heroes/HeroesScroll/SlotList
+var slot_list: HFlowContainer = null
 
 # Die Inhalte von "Charakter", "Regeln", "Karten" und "Modifier" werden im
 # Skript aufgebaut, damit die Lobby auch bei kleineren Fenstern flexibel bleibt.
@@ -178,7 +178,7 @@ var _updating_character_ui: bool = false
 var _character_slot: int = 1
 var _character_slot_signature: String = ""
 
-# slot_index -> { section, title, hero_icon, kind, ready, grid }
+# slot_index -> { section, style, title, hero_icon, hero_label, kind, ready }
 var slot_nodes: Dictionary = {}
 var _hero_icon_cache: Dictionary = {}
 
@@ -207,6 +207,8 @@ func _ready() -> void:
 	Global.lobby_loadouts_changed.connect(_on_lobby_loadouts_changed)
 	Global.lobby_last_loadout_saved.connect(_on_last_loadout_saved)
 	Global.pig_appearance_changed.connect(_on_pig_appearance_changed)
+	Global.pig_appearance_changed.connect(_on_pig_parts_or_look_changed)
+	Global.pig_parts_changed.connect(_on_pig_parts_or_look_changed)
 	Global.network_status_changed.connect(_refresh_network_status)
 	NetworkManager.slot_assigned.connect(_on_slot_assigned)
 	NetworkManager.ping_updated.connect(_refresh_network_status)
@@ -305,69 +307,739 @@ func _make_status_style(bg_color: Color, border_color: Color) -> StyleBoxFlat:
 	style.content_margin_bottom = 6.0
 	return style
 
-# --- Heldenslots ---
+# --- Heldenauswahl ---
+#
+# Aufbau des Helden-Reiters:
+#   oben    Slot-Leiste: ein kompakter Chip pro Spieler-Slot (Held, Bot/Mensch,
+#           Bereit). Ein Klick auf einen Chip wählt den Slot, der unten
+#           bearbeitet wird.
+#   links   Großansicht des Helden im gewählten Slot: Vorschau-Eber, Name,
+#           Rolle, Werte-Balken und das komplette Kit (Passiv, Angriff,
+#           Fähigkeit, Dash, Ulti).
+#   rechts  Raster aus Helden-Icons. Klick wählt, Hover zeigt den Helden
+#           probeweise in der Großansicht. Das Raster bricht von selbst um,
+#           neue Helden brauchen nur einen Eintrag in HERO_IDS.
+
+# Kachelgröße im Helden-Raster (Icon + Name).
+const HERO_TILE_SIZE: Vector2 = Vector2(112, 122)
+const HERO_TILE_ICON: float = 66.0
+const HERO_TILE_GAP: int = 8
+# Vorschau-Eber in der Großansicht.
+const SHOWCASE_PREVIEW_SIZE: Vector2 = Vector2(330, 320)
+const SHOWCASE_PIG_SCALE: float = 5.8
+# Voxel-Eber (kommt mit dem Voxel-Umbau). Solange es die Skripte noch nicht
+# gibt, bleibt die Vorschau beim 2D-Eber; danach schaltet sie von selbst um.
+const VOXEL_SPRITE_SCRIPT_PATH: String = "res://scripts/voxel/voxel_sprite.gd"
+const VOXEL_BOAR_SCRIPT_PATH: String = "res://scripts/voxel/voxel_boar.gd"
+
+# Slot, dessen Held gerade groß angezeigt und im Raster bearbeitet wird.
+var _hero_edit_slot: int = 1
+# Held unter der Maus im Raster ("" = keiner); wird nur angezeigt, nicht gewählt.
+var _hero_hover_id: String = ""
+var hero_grid: GridContainer = null
+var hero_picker_heading: Label = null
+var hero_picker_hint: Label = null
+# hero_id -> { button, name, slots, style_normal, style_hover, style_selected }
+var hero_tiles: Dictionary = {}
+var showcase_panel: PanelContainer = null
+var showcase_style: StyleBoxFlat = null
+var showcase_name: Label = null
+var showcase_role: Label = null
+var showcase_tag: Label = null
+var showcase_frame_style: StyleBoxFlat = null
+var showcase_icon: TextureRect = null
+var showcase_pig: PigModular = null
+var showcase_voxel: Node = null
+var showcase_wand: MagicWand = null
+var showcase_wand_pivot: Node2D = null
+var showcase_slot_label: Label = null
+var showcase_desc: Label = null
+var showcase_kit: VBoxContainer = null
+# Werte-Balken: Schlüssel -> { bar, value }
+var showcase_stats: Dictionary = {}
+var _showcase_signature: String = ""
 
 func _build_slot_list() -> void:
-	for child in slot_list.get_children():
-		slot_list.remove_child(child)
-		child.queue_free()
+	var heroes_tab: VBoxContainer = $Panel/Margin/VBox/Tabs/Heroes
+	_clear_children(heroes_tab)
 	slot_nodes.clear()
+	hero_tiles.clear()
+	showcase_stats.clear()
+	_showcase_signature = ""
+	heroes_tab.add_theme_constant_override("separation", 10)
 
+	slot_list = HFlowContainer.new()
+	slot_list.add_theme_constant_override("h_separation", 8)
+	slot_list.add_theme_constant_override("v_separation", 8)
+	heroes_tab.add_child(slot_list)
 	for i in range(1, Global.MAX_PLAYERS + 1):
-		var section := VBoxContainer.new()
-		section.add_theme_constant_override("separation", 3)
-		slot_list.add_child(section)
+		_build_slot_chip(i)
 
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 12)
-		section.add_child(row)
+	var main_row := HBoxContainer.new()
+	main_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	main_row.add_theme_constant_override("separation", 12)
+	heroes_tab.add_child(main_row)
+	_build_showcase(main_row)
+	_build_hero_picker(main_row)
+	_hero_edit_slot = _default_hero_edit_slot()
 
-		var hero_icon := TextureRect.new()
-		hero_icon.custom_minimum_size = Vector2(28, 28)
-		hero_icon.texture = _get_hero_icon(Global.get_player_hero_id(i))
-		hero_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		hero_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		hero_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		row.add_child(hero_icon)
+func _build_slot_chip(slot: int) -> void:
+	var chip := PanelContainer.new()
+	chip.custom_minimum_size = Vector2(340, 0)
+	chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	chip.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	chip.tooltip_text = "Slot %d bearbeiten" % slot
+	var style := StyleBoxFlat.new()
+	style.bg_color = UiTheme.PLATE_SOLID
+	style.set_border_width_all(2)
+	style.border_color = Color(0.22, 0.3, 0.38, 0.8)
+	style.set_corner_radius_all(8)
+	style.content_margin_left = 8.0
+	style.content_margin_right = 10.0
+	style.content_margin_top = 5.0
+	style.content_margin_bottom = 5.0
+	chip.add_theme_stylebox_override("panel", style)
+	chip.gui_input.connect(_on_slot_chip_input.bind(slot))
+	slot_list.add_child(chip)
 
-		var title := Label.new()
-		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		title.add_theme_font_size_override("font_size", UiTheme.FS_M)
-		row.add_child(title)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(row)
 
-		var kind := OptionButton.new()
-		kind.add_item("Bot", 0)
-		kind.add_item("Mensch", 1)
-		kind.item_selected.connect(_on_kind_selected.bind(i))
-		row.add_child(kind)
+	var hero_icon := TextureRect.new()
+	hero_icon.custom_minimum_size = Vector2(40, 40)
+	hero_icon.texture = _get_hero_icon(Global.get_player_hero_id(slot))
+	hero_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	hero_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	hero_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(hero_icon)
 
-		# Reine Statusanzeige: Die Bereitschaft wird unten neben "Kampf
-		# starten" gesetzt. Der CheckBox-Hintergrund wird bei Bereitschaft grün.
-		var ready := CheckBox.new()
-		ready.text = "Bereit"
-		ready.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		ready.focus_mode = Control.FOCUS_NONE
-		ready.tooltip_text = "Anzeige: Bereitschaft dieses Slots"
-		row.add_child(ready)
+	var text_col := VBoxContainer.new()
+	text_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_col.alignment = BoxContainer.ALIGNMENT_CENTER
+	text_col.custom_minimum_size = Vector2(120, 0)
+	text_col.add_theme_constant_override("separation", 0)
+	text_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(text_col)
 
-		var grid := HBoxContainer.new()
-		grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		grid.add_theme_constant_override("separation", 6)
-		section.add_child(grid)
-		for hero_id in HERO_IDS:
-			var hero: HeroData = Global.get_hero(hero_id)
-			var btn := _create_hero_button(hero)
-			btn.pressed.connect(_select_hero.bind(i, hero.id))
-			grid.add_child(btn)
+	var title := Label.new()
+	title.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	title.clip_text = true
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	text_col.add_child(title)
 
-		slot_nodes[i] = {
-			"section": section,
-			"title": title,
-			"hero_icon": hero_icon,
-			"kind": kind,
-			"ready": ready,
-			"grid": grid,
-		}
+	var hero_label := Label.new()
+	hero_label.add_theme_font_override("font", UiTheme.FONT_BOLD)
+	hero_label.add_theme_font_size_override("font_size", UiTheme.FS_L)
+	hero_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	text_col.add_child(hero_label)
+
+	var kind := OptionButton.new()
+	kind.add_item("Bot", 0)
+	kind.add_item("Mensch", 1)
+	kind.item_selected.connect(_on_kind_selected.bind(slot))
+	row.add_child(kind)
+
+	# Reine Statusanzeige: Die Bereitschaft wird unten neben "Kampf
+	# starten" gesetzt. Der CheckBox-Hintergrund wird bei Bereitschaft grün.
+	var ready := CheckBox.new()
+	ready.text = "Bereit"
+	ready.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ready.focus_mode = Control.FOCUS_NONE
+	ready.tooltip_text = "Anzeige: Bereitschaft dieses Slots"
+	row.add_child(ready)
+
+	slot_nodes[slot] = {
+		"section": chip,
+		"style": style,
+		"title": title,
+		"hero_icon": hero_icon,
+		"hero_label": hero_label,
+		"kind": kind,
+		"ready": ready,
+	}
+
+func _build_showcase(parent: Control) -> void:
+	showcase_panel = PanelContainer.new()
+	showcase_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	showcase_panel.size_flags_stretch_ratio = 1.6
+	showcase_style = StyleBoxFlat.new()
+	showcase_style.bg_color = Color(0.04, 0.06, 0.09, 0.98)
+	showcase_style.set_border_width_all(2)
+	showcase_style.border_color = UiTheme.GOLD
+	showcase_style.set_corner_radius_all(14)
+	showcase_style.content_margin_left = 18.0
+	showcase_style.content_margin_right = 18.0
+	showcase_style.content_margin_top = 14.0
+	showcase_style.content_margin_bottom = 14.0
+	showcase_panel.add_theme_stylebox_override("panel", showcase_style)
+	parent.add_child(showcase_panel)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 20)
+	showcase_panel.add_child(row)
+
+	# Linke Spalte: Name, Vorschau, Werte.
+	var left := VBoxContainer.new()
+	left.custom_minimum_size = Vector2(SHOWCASE_PREVIEW_SIZE.x, 0)
+	left.add_theme_constant_override("separation", 6)
+	row.add_child(left)
+
+	showcase_tag = Label.new()
+	showcase_tag.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	showcase_tag.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	left.add_child(showcase_tag)
+
+	showcase_name = Label.new()
+	showcase_name.add_theme_font_override("font", UiTheme.FONT_DISPLAY)
+	showcase_name.add_theme_font_size_override("font_size", UiTheme.FS_H1)
+	left.add_child(showcase_name)
+
+	showcase_role = Label.new()
+	showcase_role.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	showcase_role.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
+	left.add_child(showcase_role)
+
+	var frame := PanelContainer.new()
+	frame.custom_minimum_size = SHOWCASE_PREVIEW_SIZE
+	showcase_frame_style = StyleBoxFlat.new()
+	showcase_frame_style.bg_color = Color(0.03, 0.045, 0.07, 1.0)
+	showcase_frame_style.set_border_width_all(1)
+	showcase_frame_style.border_color = Color(0.28, 0.38, 0.52, 0.9)
+	showcase_frame_style.set_corner_radius_all(12)
+	frame.add_theme_stylebox_override("panel", showcase_frame_style)
+	left.add_child(frame)
+
+	var canvas := Control.new()
+	canvas.custom_minimum_size = SHOWCASE_PREVIEW_SIZE
+	canvas.clip_contents = true
+	canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_child(canvas)
+
+	# Fußpunkt des Ebers: mittig, etwas unter der Mitte.
+	var foot := Vector2(SHOWCASE_PREVIEW_SIZE.x * 0.5, SHOWCASE_PREVIEW_SIZE.y * 0.66)
+	showcase_pig = PigModular.new()
+	showcase_pig.position = foot
+	showcase_pig.scale = Vector2.ONE * SHOWCASE_PIG_SCALE
+	showcase_pig.animate = true
+	showcase_pig.follow_parent_motion = false
+	canvas.add_child(showcase_pig)
+	showcase_voxel = _attach_voxel_preview(showcase_pig)
+
+	showcase_wand_pivot = Node2D.new()
+	showcase_wand_pivot.position = foot
+	showcase_wand_pivot.scale = Vector2.ONE * SHOWCASE_PIG_SCALE
+	showcase_wand_pivot.rotation = -0.24
+	# Beim Voxel-Eber steckt der Lötkolben schon im Arm.
+	showcase_wand_pivot.visible = showcase_voxel == null
+	canvas.add_child(showcase_wand_pivot)
+	showcase_wand = MagicWand.new()
+	showcase_wand_pivot.add_child(showcase_wand)
+
+	showcase_icon = TextureRect.new()
+	showcase_icon.position = Vector2(12, 12)
+	showcase_icon.size = Vector2(48, 48)
+	showcase_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	showcase_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	showcase_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	canvas.add_child(showcase_icon)
+
+	showcase_slot_label = Label.new()
+	showcase_slot_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	showcase_slot_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	showcase_slot_label.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
+	left.add_child(showcase_slot_label)
+
+	for entry in [["hp", "LEBEN"], ["speed", "TEMPO"], ["ammo", "MUNITION"], ["rate", "FEUERRATE"]]:
+		_add_showcase_stat(left, str(entry[0]), str(entry[1]))
+
+	# Rechte Spalte: Beschreibung und Kit, scrollbar falls das Fenster klein ist.
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	row.add_child(scroll)
+
+	var kit_col := VBoxContainer.new()
+	kit_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	kit_col.add_theme_constant_override("separation", 10)
+	scroll.add_child(kit_col)
+
+	showcase_desc = Label.new()
+	showcase_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	showcase_desc.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	showcase_desc.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
+	kit_col.add_child(showcase_desc)
+
+	showcase_kit = VBoxContainer.new()
+	showcase_kit.add_theme_constant_override("separation", 10)
+	kit_col.add_child(showcase_kit)
+
+func _add_showcase_stat(parent: Control, key: String, caption: String) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	parent.add_child(row)
+	var label := Label.new()
+	label.text = caption
+	label.custom_minimum_size = Vector2(86, 0)
+	label.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	row.add_child(label)
+	var bar := ProgressBar.new()
+	bar.show_percentage = false
+	bar.min_value = 0.0
+	bar.max_value = 1.0
+	bar.custom_minimum_size = Vector2(0, 10)
+	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0.1, 0.13, 0.18, 1.0)
+	bg.set_corner_radius_all(4)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = UiTheme.CYAN
+	fill.set_corner_radius_all(4)
+	bar.add_theme_stylebox_override("background", bg)
+	bar.add_theme_stylebox_override("fill", fill)
+	row.add_child(bar)
+	var value := Label.new()
+	value.custom_minimum_size = Vector2(54, 0)
+	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	value.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	value.add_theme_color_override("font_color", UiTheme.TEXT)
+	row.add_child(value)
+	showcase_stats[key] = {"bar": bar, "value": value, "fill": fill}
+
+func _build_hero_picker(parent: Control) -> void:
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.size_flags_stretch_ratio = 1.0
+	# Mindestens drei Spalten, damit das Raster nicht zur Liste wird.
+	panel.custom_minimum_size = Vector2(3 * HERO_TILE_SIZE.x + 2 * HERO_TILE_GAP + 32, 0)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.06, 0.09, 0.98)
+	style.set_border_width_all(1)
+	style.border_color = Color(0.22, 0.3, 0.38, 0.9)
+	style.set_corner_radius_all(14)
+	style.content_margin_left = 14.0
+	style.content_margin_right = 14.0
+	style.content_margin_top = 14.0
+	style.content_margin_bottom = 14.0
+	panel.add_theme_stylebox_override("panel", style)
+	parent.add_child(panel)
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 8)
+	panel.add_child(col)
+
+	hero_picker_heading = Label.new()
+	hero_picker_heading.add_theme_font_override("font", UiTheme.FONT_BOLD)
+	hero_picker_heading.add_theme_font_size_override("font_size", UiTheme.FS_L)
+	hero_picker_heading.add_theme_color_override("font_color", UiTheme.GOLD)
+	col.add_child(hero_picker_heading)
+
+	hero_picker_hint = Label.new()
+	hero_picker_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hero_picker_hint.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	hero_picker_hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	col.add_child(hero_picker_hint)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	col.add_child(scroll)
+
+	var grid_center := CenterContainer.new()
+	grid_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid_center.use_top_left = false
+	scroll.add_child(grid_center)
+
+	hero_grid = GridContainer.new()
+	hero_grid.add_theme_constant_override("h_separation", HERO_TILE_GAP)
+	hero_grid.add_theme_constant_override("v_separation", HERO_TILE_GAP)
+	hero_grid.columns = 4
+	grid_center.add_child(hero_grid)
+	# Spaltenzahl folgt der verfügbaren Breite.
+	scroll.resized.connect(_update_hero_grid_columns.bind(scroll))
+
+	for hero_id in HERO_IDS:
+		var hero: HeroData = Global.get_hero(hero_id)
+		if hero == null:
+			continue
+		hero_grid.add_child(_create_hero_tile(hero))
+
+func _update_hero_grid_columns(scroll: ScrollContainer) -> void:
+	if hero_grid == null:
+		return
+	var usable := scroll.size.x - 12.0
+	var cols := int(floor((usable + HERO_TILE_GAP) / (HERO_TILE_SIZE.x + HERO_TILE_GAP)))
+	hero_grid.columns = clampi(cols, 2, 8)
+
+func _make_tile_style(bg: Color, border: Color, width: int) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg
+	style.border_color = border
+	style.set_border_width_all(width)
+	style.set_corner_radius_all(10)
+	return style
+
+func _create_hero_tile(hero: HeroData) -> Button:
+	var btn := Button.new()
+	btn.custom_minimum_size = HERO_TILE_SIZE
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.set_meta("hero_id", hero.id)
+	btn.tooltip_text = _hero_tooltip(hero)
+	var tint := hero.color_tint
+	var style_normal := _make_tile_style(Color(0.07, 0.09, 0.13, 1.0), Color(tint.r, tint.g, tint.b, 0.25), 1)
+	var style_hover := _make_tile_style(Color(tint.r * 0.25, tint.g * 0.25, tint.b * 0.25, 1.0), Color(tint.r, tint.g, tint.b, 0.8), 2)
+	var style_selected := _make_tile_style(Color(tint.r * 0.32, tint.g * 0.32, tint.b * 0.32, 1.0), UiTheme.GOLD, 3)
+	for state in ["normal", "pressed", "disabled", "focus"]:
+		btn.add_theme_stylebox_override(state, style_normal)
+	btn.add_theme_stylebox_override("hover", style_hover)
+
+	var content := VBoxContainer.new()
+	content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	content.offset_top = 8
+	content.offset_bottom = -6
+	content.alignment = BoxContainer.ALIGNMENT_CENTER
+	content.add_theme_constant_override("separation", 4)
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(content)
+
+	var icon := TextureRect.new()
+	icon.texture = _get_hero_icon(hero.id)
+	icon.custom_minimum_size = Vector2(0, HERO_TILE_ICON)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(icon)
+
+	var name_label := Label.new()
+	name_label.text = hero.name
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name_label.clip_text = true
+	name_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	name_label.add_theme_color_override("font_color", UiTheme.TEXT)
+	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(name_label)
+
+	# Kleine Slot-Nummern oben rechts: wer diesen Helden außerdem spielt.
+	var slots_label := Label.new()
+	slots_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	slots_label.offset_left = -60
+	slots_label.offset_right = -6
+	slots_label.offset_top = 3
+	slots_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	slots_label.add_theme_font_size_override("font_size", UiTheme.FS_XXS)
+	slots_label.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
+	slots_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(slots_label)
+
+	btn.pressed.connect(_on_hero_tile_pressed.bind(hero.id))
+	btn.mouse_entered.connect(_on_hero_tile_hover.bind(hero.id, true))
+	btn.mouse_exited.connect(_on_hero_tile_hover.bind(hero.id, false))
+	hero_tiles[hero.id] = {
+		"button": btn,
+		"name": name_label,
+		"slots": slots_label,
+		"style_normal": style_normal,
+		"style_hover": style_hover,
+		"style_selected": style_selected,
+	}
+	return btn
+
+# Voxel-Eber an ein 2D-Vorschau-Schwein hängen, sofern der Voxel-Umbau im
+# Projekt ist. Gibt den VoxelSprite zurück oder null.
+func _attach_voxel_preview(pig: PigModular) -> Node:
+	if not ResourceLoader.exists(VOXEL_SPRITE_SCRIPT_PATH) or not ResourceLoader.exists(VOXEL_BOAR_SCRIPT_PATH):
+		return null
+	if not ("voxel_mode" in pig):
+		return null
+	var script := load(VOXEL_SPRITE_SCRIPT_PATH) as Script
+	if script == null:
+		return null
+	var sprite: Node = script.new()
+	pig.set("voxel_mode", true)
+	if "px_per_unit" in sprite:
+		sprite.set("px_per_unit", 6.0)
+	pig.add_child(sprite)
+	return sprite
+
+func _default_hero_edit_slot() -> int:
+	if Global.network_mode and not Global.is_local_host():
+		var local := Global.local_player_index
+		if local >= 1 and local <= Global.player_count:
+			return local
+	return 1
+
+func _on_slot_chip_input(event: InputEvent, slot: int) -> void:
+	var mb := event as InputEventMouseButton
+	if mb == null or not mb.pressed or mb.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if slot == _hero_edit_slot:
+		return
+	SoundManager.play_sound("click")
+	_hero_edit_slot = slot
+	_hero_hover_id = ""
+	_refresh_hero_controls()
+
+func _on_hero_tile_pressed(hero_id: String) -> void:
+	_select_hero(_hero_edit_slot, hero_id)
+
+func _on_hero_tile_hover(hero_id: String, entered: bool) -> void:
+	if entered:
+		_hero_hover_id = hero_id
+	elif _hero_hover_id == hero_id:
+		_hero_hover_id = ""
+	_refresh_showcase()
+
+func _refresh_hero_highlights() -> void:
+	for i in range(1, Global.MAX_PLAYERS + 1):
+		if not slot_nodes.has(i):
+			continue
+		var node: Dictionary = slot_nodes[i]
+		var hero := Global.get_hero(Global.get_player_hero_id(i))
+		var hero_label: Label = node["hero_label"]
+		if hero != null:
+			hero_label.text = hero.name.to_upper()
+			hero_label.add_theme_color_override("font_color", hero.color_tint.lerp(Color.WHITE, 0.2))
+		var style: StyleBoxFlat = node["style"]
+		var editing := i == _hero_edit_slot
+		style.border_color = UiTheme.GOLD if editing else Color(0.22, 0.3, 0.38, 0.8)
+		style.bg_color = Color(0.09, 0.1, 0.08, 1.0) if editing else UiTheme.PLATE_SOLID
+
+	var selected_id := Global.get_player_hero_id(_hero_edit_slot)
+	var can := Global.can_choose_hero(_hero_edit_slot)
+	for hero_id in hero_tiles.keys():
+		var tile: Dictionary = hero_tiles[hero_id]
+		var btn: Button = tile["button"]
+		var is_selected: bool = hero_id == selected_id
+		var base: StyleBoxFlat = tile["style_selected"] if is_selected else tile["style_normal"]
+		for state in ["normal", "pressed", "disabled", "focus"]:
+			btn.add_theme_stylebox_override(state, base)
+		btn.add_theme_stylebox_override("hover", tile["style_selected"] if is_selected else tile["style_hover"])
+		if is_selected:
+			btn.modulate = Color(1, 1, 1, 1)
+		else:
+			btn.modulate = Color(1, 1, 1, 0.5 if not can else 0.92)
+		# Andere Slots mit diesem Helden.
+		var others: Array[String] = []
+		for i in range(1, Global.player_count + 1):
+			if i != _hero_edit_slot and Global.get_player_hero_id(i) == hero_id:
+				others.append("P%d" % i)
+		var slots_label: Label = tile["slots"]
+		slots_label.text = " ".join(others)
+	_refresh_showcase()
+
+func _refresh_slot_visibility() -> void:
+	for i in range(1, Global.MAX_PLAYERS + 1):
+		if not slot_nodes.has(i):
+			continue
+		var section: Control = slot_nodes[i]["section"]
+		section.visible = i <= Global.player_count
+	if _hero_edit_slot > Global.player_count or _hero_edit_slot < 1:
+		_hero_edit_slot = _default_hero_edit_slot()
+
+func _refresh_hero_controls() -> void:
+	var can := Global.can_choose_hero(_hero_edit_slot)
+	for hero_id in hero_tiles.keys():
+		var btn: Button = hero_tiles[hero_id]["button"]
+		btn.disabled = not can
+		# Auch gesperrte Kacheln zeigen beim Hovern den Helden an.
+		btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	if hero_picker_heading != null:
+		hero_picker_heading.text = "HELD WÄHLEN  ·  %s" % _slot_short_name(_hero_edit_slot)
+	if hero_picker_hint != null:
+		if can:
+			hero_picker_hint.text = "Klick wählt, Hover zeigt den Helden links an. Oben einen anderen Slot anklicken, um dessen Held zu ändern."
+		else:
+			hero_picker_hint.text = "Diesen Slot kannst du nur ansehen. Wähle oben deinen eigenen Slot."
+	_refresh_hero_highlights()
+
+func _refresh_hero_stats_text() -> void:
+	for hero_id in hero_tiles.keys():
+		var hero: HeroData = Global.get_hero(hero_id)
+		if hero == null:
+			continue
+		var btn: Button = hero_tiles[hero_id]["button"]
+		btn.tooltip_text = _hero_tooltip(hero)
+	_showcase_signature = ""
+	_refresh_showcase()
+
+func _slot_short_name(slot: int) -> String:
+	var custom := Global.get_custom_player_name(slot)
+	var base := ("SPIELER %d" % slot) if not Global.is_bot_slot(slot) else ("BOT %d" % slot)
+	if Global.network_mode and slot == Global.local_player_index and not Global.is_spectator:
+		base += " (DU)"
+	return base if custom.is_empty() else "%s · %s" % [base, custom.to_upper()]
+
+# Größte Werte aller Helden, damit die Balken vergleichbar sind.
+func _hero_stat_maxima() -> Dictionary:
+	var result := {"hp": 1.0, "speed": 1.0, "ammo": 1.0, "rate": 0.01}
+	for hero_id in HERO_IDS:
+		var hero: HeroData = Global.get_hero(hero_id)
+		if hero == null:
+			continue
+		result["hp"] = maxf(float(result["hp"]), float(Global.get_effective_base_hp(hero)))
+		result["speed"] = maxf(float(result["speed"]), hero.base_speed)
+		result["ammo"] = maxf(float(result["ammo"]), float(hero.base_ammo))
+		result["rate"] = maxf(float(result["rate"]), 1.0 / maxf(0.01, hero.base_fire_rate_cooldown))
+	return result
+
+func _set_showcase_stat(key: String, value: float, maximum: float, text: String, color: Color) -> void:
+	if not showcase_stats.has(key):
+		return
+	var entry: Dictionary = showcase_stats[key]
+	var bar: ProgressBar = entry["bar"]
+	bar.value = clampf(value / maxf(0.001, maximum), 0.0, 1.0)
+	var value_label: Label = entry["value"]
+	value_label.text = text
+	var fill: StyleBoxFlat = entry["fill"]
+	fill.bg_color = color
+
+func _refresh_showcase() -> void:
+	if showcase_name == null:
+		return
+	var slot := clampi(_hero_edit_slot, 1, Global.MAX_PLAYERS)
+	var selected_id := Global.get_player_hero_id(slot)
+	var hero_id := _hero_hover_id if not _hero_hover_id.is_empty() else selected_id
+	var hero: HeroData = Global.get_hero(hero_id)
+	if hero == null:
+		return
+	var look := Global.get_pig_appearance(slot)
+	var parts := Global.get_pig_parts(slot)
+	var signature := "%d|%s|%s|%s|%s|%s" % [
+		slot, hero_id, selected_id, str(look), str(parts), str(Global.base_hp_percent) + str(Global.base_damage),
+	]
+	if signature == _showcase_signature:
+		return
+	_showcase_signature = signature
+
+	var tint := hero.color_tint
+	var previewing := hero_id != selected_id
+	showcase_tag.text = "VORSCHAU" if previewing else "AKTIVER HELD  ·  %s" % _slot_short_name(slot)
+	showcase_tag.add_theme_color_override("font_color", UiTheme.INFO if previewing else UiTheme.TEXT_MUTED)
+	showcase_name.text = hero.name.to_upper()
+	showcase_name.add_theme_color_override("font_color", tint.lerp(Color.WHITE, 0.25))
+	var attack_kind := "Nahkampf" if hero.is_melee() else "Fernkampf"
+	showcase_role.text = "%s  ·  %s" % [attack_kind, hero.role]
+	showcase_style.border_color = Color(tint.r, tint.g, tint.b, 0.85)
+	showcase_frame_style.bg_color = Color(tint.r * 0.12, tint.g * 0.12, tint.b * 0.12, 1.0).lerp(Color(0.03, 0.045, 0.07, 1.0), 0.4)
+	showcase_frame_style.border_color = Color(tint.r, tint.g, tint.b, 0.45)
+	showcase_icon.texture = _get_hero_icon(hero.id)
+
+	var team_tint := _character_team_tint(slot)
+	showcase_pig.setup(look["fur"], look["eyes"], look["pants"])
+	showcase_pig.set_outfit(hero.id)
+	showcase_pig.set_team_color(team_tint)
+	showcase_pig.set_tusk_shape(str(look.get("tusk_shape", "small")))
+	showcase_pig.apply_parts(parts)
+	if showcase_voxel != null and showcase_voxel.has_method("build_spec"):
+		var boar_script := load(VOXEL_BOAR_SCRIPT_PATH) as Script
+		if boar_script != null:
+			var vspec: Dictionary = boar_script.call("spec_from_look", look, parts)
+			vspec["outfit"] = hero.id
+			if team_tint.a > 0.0:
+				vspec["accent"] = team_tint
+			showcase_voxel.call("build_spec", vspec)
+	showcase_wand.setup(look["wand_tip_shape"], look["wand_tip_color"])
+	showcase_wand.set_grip_color(team_tint)
+	var player_name := Global.get_custom_player_name(slot)
+	showcase_slot_label.text = player_name if not player_name.is_empty() else ""
+	showcase_slot_label.visible = not player_name.is_empty()
+
+	var maxima := _hero_stat_maxima()
+	var hp := float(Global.get_effective_base_hp(hero))
+	var hp_text := "%d" % int(hp)
+	if hero.base_shield > 0:
+		hp_text += " +%d" % hero.base_shield
+	var stat_color := tint.lerp(UiTheme.CYAN, 0.35)
+	_set_showcase_stat("hp", hp, float(maxima["hp"]), hp_text, stat_color)
+	_set_showcase_stat("speed", hero.base_speed, float(maxima["speed"]), "%d" % int(hero.base_speed), stat_color)
+	_set_showcase_stat("ammo", float(hero.base_ammo), float(maxima["ammo"]), "%d" % hero.base_ammo, stat_color)
+	var rate := 1.0 / maxf(0.01, hero.base_fire_rate_cooldown)
+	_set_showcase_stat("rate", rate, float(maxima["rate"]), "%.1f/s" % rate, stat_color)
+	# Munition und Feuerrate gelten nur für Fernkämpfer.
+	for key in ["ammo", "rate"]:
+		var bar: ProgressBar = showcase_stats[key]["bar"]
+		bar.get_parent().visible = not hero.is_melee()
+
+	showcase_desc.text = hero.description
+	_clear_children(showcase_kit)
+	if not hero.passive_desc.is_empty():
+		_add_kit_entry("PASSIV", "", "", hero.passive_desc, tint)
+	_add_kit_entry("ANGRIFF", "LMB", "", Global.get_hero_attack_text(hero), tint)
+	if not hero.ability_name.is_empty():
+		_add_kit_entry("FÄHIGKEIT", "RMB", "%s  ·  %ss" % [hero.ability_name, _fmt_seconds(hero.ability_cooldown)],
+			Global.get_hero_ability_details(hero), tint)
+	var dash_label := hero.dash_name if not hero.dash_name.is_empty() else "Dash"
+	if hero.dash_charges > 1:
+		dash_label += "  ·  %d Ladungen" % hero.dash_charges
+	_add_kit_entry("DASH", "SHIFT", dash_label, Global.get_hero_dash_details(hero), tint)
+	if hero.has_ult():
+		_add_kit_entry("ULTI", "E", "%s  ·  %ss" % [hero.ult_name, _fmt_seconds(hero.ult_cooldown)],
+			Global.get_hero_ult_details(hero), tint)
+
+func _fmt_seconds(value: float) -> String:
+	if is_equal_approx(value, round(value)):
+		return "%d" % int(round(value))
+	return "%.1f" % value
+
+func _add_kit_entry(kind: String, key: String, title: String, desc: String, tint: Color) -> void:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	showcase_kit.add_child(box)
+
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	box.add_child(head)
+
+	var kind_label := Label.new()
+	kind_label.text = kind
+	kind_label.add_theme_font_override("font", UiTheme.FONT_BOLD)
+	kind_label.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	kind_label.add_theme_color_override("font_color", tint.lerp(Color.WHITE, 0.35))
+	head.add_child(kind_label)
+
+	if not key.is_empty():
+		var badge := PanelContainer.new()
+		var badge_style := StyleBoxFlat.new()
+		badge_style.bg_color = Color(0.12, 0.15, 0.2, 1.0)
+		badge_style.border_color = Color(0.4, 0.48, 0.58, 1.0)
+		badge_style.set_border_width_all(1)
+		badge_style.set_corner_radius_all(4)
+		badge_style.content_margin_left = 5.0
+		badge_style.content_margin_right = 5.0
+		badge.add_theme_stylebox_override("panel", badge_style)
+		badge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		head.add_child(badge)
+		var key_label := Label.new()
+		key_label.text = key
+		key_label.add_theme_font_size_override("font_size", UiTheme.FS_XXS)
+		key_label.add_theme_color_override("font_color", UiTheme.TEXT)
+		badge.add_child(key_label)
+
+	if not title.is_empty():
+		var title_label := Label.new()
+		title_label.text = title
+		title_label.add_theme_font_override("font", UiTheme.FONT_BOLD)
+		title_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
+		title_label.add_theme_color_override("font_color", UiTheme.TEXT)
+		head.add_child(title_label)
+
+	var desc_label := Label.new()
+	desc_label.text = desc
+	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	desc_label.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
+	box.add_child(desc_label)
+
+func _on_pig_parts_or_look_changed(_slot: int = 0) -> void:
+	_showcase_signature = ""
+	_refresh_showcase()
+
 
 func _get_hero_icon(hero_id: String) -> Texture2D:
 	if _hero_icon_cache.has(hero_id):
@@ -394,48 +1066,6 @@ func _hero_tooltip(hero: HeroData) -> String:
 		Global.get_hero_ability_details(hero), Global.get_hero_kit_text(hero) + "\n" + hero.description,
 	]
 
-func _create_hero_button(hero: HeroData) -> Button:
-	var btn := Button.new()
-	btn.custom_minimum_size = Vector2(130, 104)
-	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	btn.set_meta("hero_id", hero.id)
-	btn.tooltip_text = _hero_tooltip(hero)
-
-	var margin := MarginContainer.new()
-	btn.add_child(margin)
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	margin.add_theme_constant_override("margin_left", 4)
-	margin.add_theme_constant_override("margin_right", 4)
-	margin.add_theme_constant_override("margin_top", 3)
-	margin.add_theme_constant_override("margin_bottom", 3)
-
-	var content := VBoxContainer.new()
-	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	content.add_theme_constant_override("separation", 1)
-	margin.add_child(content)
-
-	var icon := TextureRect.new()
-	icon.texture = _get_hero_icon(hero.id)
-	icon.custom_minimum_size = Vector2(0, 38)
-	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	content.add_child(icon)
-
-	var label := Label.new()
-	label.name = "StatsLabel"
-	label.text = _hero_button_text(hero)
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	label.add_theme_font_size_override("font_size", UiTheme.FS_XS)
-	label.add_theme_color_override("font_color", UiTheme.TEXT)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	content.add_child(label)
-	btn.set_meta("stats_label", label)
-	return btn
-
 func _select_hero(slot: int, hero_id: String) -> void:
 	if not Global.can_choose_hero(slot):
 		return
@@ -452,24 +1082,6 @@ func _select_hero(slot: int, hero_id: String) -> void:
 			NetworkManager.sync_lobby()
 		else:
 			NetworkManager.request_hero(hero_id)
-
-func _refresh_hero_highlights() -> void:
-	for i in range(1, Global.MAX_PLAYERS + 1):
-		if not slot_nodes.has(i):
-			continue
-		_highlight_grid(slot_nodes[i]["grid"], Global.get_player_hero_id(i))
-
-func _highlight_grid(grid: HBoxContainer, hero_id: String) -> void:
-	for child in grid.get_children():
-		var btn := child as Button
-		if btn == null:
-			continue
-		var is_selected: bool = btn.get_meta("hero_id", "") == hero_id
-		var alpha := 0.45 if btn.disabled else 0.75
-		if is_selected:
-			btn.modulate = Color(1.0, 1.0, 0.8, 0.55 if btn.disabled else 1.0)
-		else:
-			btn.modulate = Color(1.0, 1.0, 1.0, alpha)
 
 func _on_kind_selected(item: int, slot: int) -> void:
 	if not Global.is_local_host():
@@ -593,13 +1205,6 @@ func _on_slot_assigned(slot: int) -> void:
 			str(look["tusk_shape"])
 		)
 
-func _refresh_slot_visibility() -> void:
-	for i in range(1, Global.MAX_PLAYERS + 1):
-		if not slot_nodes.has(i):
-			continue
-		var section: VBoxContainer = slot_nodes[i]["section"]
-		section.visible = i <= Global.player_count
-
 func _refresh_ready_checks() -> void:
 	for i in range(1, Global.MAX_PLAYERS + 1):
 		if not slot_nodes.has(i):
@@ -626,36 +1231,6 @@ func _refresh_kind_options() -> void:
 		opt.visible = i >= 2 and i <= Global.player_count
 		opt.selected = 0 if Global.is_bot_slot(i) else 1
 		opt.disabled = not Global.is_local_host() or Global.is_bot_test_active()
-
-func _refresh_hero_controls() -> void:
-	for i in range(1, Global.MAX_PLAYERS + 1):
-		if not slot_nodes.has(i):
-			continue
-		var can := Global.can_choose_hero(i)
-		var grid: HBoxContainer = slot_nodes[i]["grid"]
-		for child in grid.get_children():
-			child.disabled = not can
-	# Nach dem Setzen des Disabled-Status die Icons/Labels passend abdunkeln.
-	_refresh_hero_highlights()
-
-func _refresh_hero_stats_text() -> void:
-	for i in range(1, Global.MAX_PLAYERS + 1):
-		if not slot_nodes.has(i):
-			continue
-		var grid: HBoxContainer = slot_nodes[i]["grid"]
-		for child in grid.get_children():
-			var btn := child as Button
-			if btn == null:
-				continue
-			var hero: HeroData = Global.get_hero(str(btn.get_meta("hero_id", "")))
-			if hero == null:
-				continue
-			var stats_label := btn.get_meta("stats_label", null) as Label
-			if stats_label != null:
-				stats_label.text = _hero_button_text(hero)
-			else:
-				btn.text = _hero_button_text(hero)
-			btn.tooltip_text = _hero_tooltip(hero)
 
 # --- Charakteranpassung ---
 
@@ -1561,14 +2136,13 @@ func _update_titles() -> void:
 		if Global.is_team_mode():
 			team_prefix = "[%s] " % Global.get_team_name(Global.get_team_for_slot(i))
 		if i == 1 and Global.is_bot_test_active():
-			title.text = team_prefix + "SPIELER 1 / BOT (BOT-TEST)%s" % (" — HELD WÄHLEN" if not Global.bot_test_random_loadouts else " — HELD ZUFÄLLIG")
+			title.text = team_prefix + "SPIELER 1 / BOT (BOT-TEST)%s" % ("" if not Global.bot_test_random_loadouts else " — HELD ZUFÄLLIG")
 			title.add_theme_color_override("font_color", Color(0.55, 1.0, 0.6, 1.0))
 		elif i == 1:
-			title.text = team_prefix + ("SPIELER 1 (HOST)%s — HELD WÄHLEN" if Global.network_mode else "SPIELER 1%s — HELD WÄHLEN") % _slot_name_suffix(1)
+			title.text = team_prefix + ("SPIELER 1 (HOST)%s" if Global.network_mode else "SPIELER 1%s") % _slot_name_suffix(1)
 			title.add_theme_color_override("font_color", Color(1.0, 0.6, 0.2, 1.0))
 		elif Global.is_bot_slot(i):
-			var bot_suffix := " — HELD WÄHLEN" if Global.can_choose_hero(i) else ""
-			title.text = team_prefix + "SLOT %d / BOT%s" % [i, bot_suffix]
+			title.text = team_prefix + "SLOT %d / BOT" % i
 			title.add_theme_color_override("font_color", Color(0.65, 0.7, 0.8, 1.0))
 		elif Global.network_mode:
 			var you := " (DU)" if i == Global.local_player_index else ""
@@ -1576,7 +2150,7 @@ func _update_titles() -> void:
 			title.text = team_prefix + "SLOT %d / MENSCH%s%s — %s" % [i, _slot_name_suffix(i), you, state]
 			title.add_theme_color_override("font_color", Color(0.35, 0.75, 1.0, 1.0))
 		else:
-			title.text = team_prefix + "SPIELER %d%s — HELD WÄHLEN" % [i, _slot_name_suffix(i)]
+			title.text = team_prefix + "SPIELER %d%s" % [i, _slot_name_suffix(i)]
 			title.add_theme_color_override("font_color", Color(0.35, 0.75, 1.0, 1.0))
 
 # --- Regeln-Tab ---
