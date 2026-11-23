@@ -19,6 +19,7 @@ var _window_option: OptionButton = null
 var _volume_sliders: Dictionary = {}
 var _volume_labels: Dictionary = {}
 var _pack_option: OptionButton = null
+var _cast_mode_option: OptionButton = null
 var _binding_buttons: Dictionary = {}
 var _status_label: Label = null
 var _back_btn: Button = null
@@ -291,6 +292,20 @@ func _play_pack_demo() -> void:
 
 func _build_controls_tab() -> Control:
 	var page := _tab_page("Steuerung")
+	# Zielen von Schwarzem Loch, Wurzelwall, Blink und Schattensprung.
+	var cast_row := _row(page, "Fähigkeit zielen")
+	_cast_mode_option = OptionButton.new()
+	_cast_mode_option.custom_minimum_size = Vector2(420, 44)
+	_cast_mode_option.add_theme_font_size_override("font_size", UiTheme.FS_L)
+	_cast_mode_option.tooltip_text = "Halten: Taste halten zeigt die Zielvorschau, Loslassen zaubert, Esc bricht ab.\nSofort: Tastendruck zaubert direkt am Mauszeiger."
+	for i in range(GameSettings.ABILITY_CAST_MODES.size()):
+		var cast_mode: String = GameSettings.ABILITY_CAST_MODES[i]
+		_cast_mode_option.add_item(str(GameSettings.ABILITY_CAST_MODE_LABELS[cast_mode]), i)
+	_cast_mode_option.item_selected.connect(func(index: int):
+		SoundManager.play_sound("click")
+		GameSettings.set_ability_cast_mode(GameSettings.ABILITY_CAST_MODES[index])
+	)
+	cast_row.add_child(_cast_mode_option)
 	var hint := Label.new()
 	hint.text = "Feld anklicken, dann neue Taste oder Maustaste drücken. Esc bricht ab."
 	hint.add_theme_font_size_override("font_size", UiTheme.FS_M)
@@ -365,6 +380,8 @@ func _refresh() -> void:
 		for i in range(mini(pack_list.size(), _pack_option.item_count)):
 			if str(pack_list[i]["id"]) == GameSettings.sound_pack:
 				_pack_option.select(i)
+	if _cast_mode_option != null:
+		_cast_mode_option.select(maxi(0, GameSettings.ABILITY_CAST_MODES.find(GameSettings.ability_cast_mode)))
 	for key in _volume_sliders.keys():
 		var slider: HSlider = _volume_sliders[key]
 		var value := roundf(GameSettings.get_volume(key) * 100.0)

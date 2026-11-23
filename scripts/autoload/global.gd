@@ -782,7 +782,7 @@ func get_hero_ability_details(hero: HeroData) -> String:
 				int(Player.ROCKET_IMPACT_RADIUS), int(Player.ROCKET_IMPACT_DAMAGE),
 			]
 		"volt":
-			return "Teleport %d px in Zielrichtung. Schockwelle am Ziel: Radius %d px, %d Schaden und verlangsamt Gegner %.1f s lang um %d%%." % [
+			return "Teleport zum Zielpunkt, höchstens %d px weit. Schockwelle am Ziel: Radius %d px, %d Schaden und verlangsamt Gegner %.1f s lang um %d%%." % [
 				int(Player.FLASH_BLINK_DISTANCE), int(Player.FLASH_BLINK_RADIUS),
 				int(Player.FLASH_BLINK_DAMAGE), Player.FLASH_BLINK_FREEZE,
 				int(round((1.0 - Player.FREEZE_SPEED_MULT) * 100.0)),
@@ -794,7 +794,7 @@ func get_hero_ability_details(hero: HeroData) -> String:
 				int(Player.SPORE_CLOUD_DPS * Player.SPORE_CLOUD_DURATION),
 			]
 		"nova":
-			return "Gravitationskern %d px vor dir, %.1f s aktiv. Zieht alle Gegner im Radius %d px stark in die Mitte, hält sie im Kern fest und schwächt ihre Laufkontrolle. Macht selbst keinen Schaden." % [
+			return "Gravitationskern am Zielpunkt, höchstens %d px entfernt, %.1f s aktiv. Zieht alle Gegner im Radius %d px stark in die Mitte, hält sie im Kern fest und schwächt ihre Laufkontrolle. Macht selbst keinen Schaden." % [
 				int(Player.SINGULARITY_DISTANCE), Player.SINGULARITY_DURATION,
 				int(Player.SINGULARITY_PULL_RADIUS),
 			]
@@ -814,15 +814,15 @@ func get_hero_ability_details(hero: HeroData) -> String:
 				int(round(Player.HEAL_FIELD_TICK_SHIELD / Player.HEAL_FIELD_TICK_INTERVAL)),
 			]
 		"phantom":
-			return "Teleport %d px in Zielrichtung, danach %.1f s unverwundbar. Am Ziel: Radius %d px, %d Schaden (%d%% des Schussschadens) mit Rückstoß." % [
+			return "Teleport zum Zielpunkt, höchstens %d px weit, danach %.1f s unverwundbar. Am Ziel: Radius %d px, %d Schaden (%d%% des Schussschadens) mit Rückstoß." % [
 				int(Player.SHADOW_STEP_DISTANCE), Player.SHADOW_STEP_INVULN,
 				int(Player.SHADOW_STEP_RADIUS),
 				int(round(base_damage * Player.SHADOW_STEP_DAMAGE_MULT)),
 				int(round(Player.SHADOW_STEP_DAMAGE_MULT * 100.0)),
 			]
 		"druid":
-			return "Rankenwand %d px vor dir, quer zur Zielrichtung: %d px lang, %.0f s lang, %d HP. Hält Bewegung und Kugeln aller Spieler auf, man kann darauf stehen. Zielst du eher waagerecht, steht sie senkrecht auf dem Boden. Höchstens %d Wand gleichzeitig, die älteste zerfällt." % [
-				int(Player.DRUID_WALL_DISTANCE), int(Player.DRUID_WALL_LENGTH),
+			return "Rankenwand am Zielpunkt, höchstens %d px entfernt. Die breite Seite zeigt immer zu dir: %d px lang, %.0f s lang, %d HP. Hält Bewegung und Kugeln aller Spieler auf, man kann darauf stehen. Höchstens %d Wand gleichzeitig, die älteste zerfällt." % [
+				int(Player.DRUID_WALL_RANGE), int(Player.DRUID_WALL_LENGTH),
 				Player.DRUID_WALL_DURATION, int(Player.DRUID_WALL_HP),
 				Player.DRUID_WALL_MAX_ACTIVE,
 			]

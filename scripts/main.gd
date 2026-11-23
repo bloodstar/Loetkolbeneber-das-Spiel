@@ -63,6 +63,8 @@ var pending_jump: bool = false
 var pending_jump_release: bool = false
 var pending_dash: bool = false
 var pending_ability: bool = false
+# Gezielter Punkt der Fähigkeit (Vector2) oder null, geht mit an den Host.
+var pending_ability_target = null
 var pending_block: bool = false
 var pending_reload: bool = false
 var pending_melee: bool = false
@@ -245,6 +247,9 @@ func _input(event: InputEvent) -> void:
 			and Global.current_state == Global.GameState.PLAYING \
 			and not main_menu.visible and not options_menu.is_open():
 		get_viewport().set_input_as_handled()
+		# Läuft gerade eine Zielvorschau, bricht Esc nur diese ab.
+		if _cancel_ability_aim():
+			return
 		_open_ingame_options()
 		return
 	# Die Bot-Steuerung wird ausschließlich in der Lobby gewählt. Während einer
@@ -1302,8 +1307,15 @@ func _process_network_client(delta: float) -> void:
 		pending_block = true
 	if Input.is_action_just_pressed("p1_reload"):
 		pending_reload = true
-	if Input.is_action_just_pressed("p1_ability"):
+	if local and is_instance_valid(local) and local.has_targeted_ability():
+		# Zielen läuft lokal (Vorschau), der Host bekommt nur den Zielpunkt.
+		var cast_point = local.tick_ability_aim(true)
+		if cast_point is Vector2:
+			pending_ability = true
+			pending_ability_target = cast_point
+	elif Input.is_action_just_pressed("p1_ability"):
 		pending_ability = true
+		pending_ability_target = null
 	if Input.is_action_just_pressed("p1_melee"):
 		pending_melee = true
 	if Input.is_action_just_pressed("p1_down"):
@@ -1337,6 +1349,7 @@ func _process_network_client(delta: float) -> void:
 		"jump_release": pending_jump_release,
 		"dash": pending_dash,
 		"ability": pending_ability,
+		"ability_target": pending_ability_target if pending_ability else null,
 		"block": pending_block,
 		"reload": pending_reload,
 		"melee": pending_melee,
@@ -1346,10 +1359,20 @@ func _process_network_client(delta: float) -> void:
 	pending_jump_release = false
 	pending_dash = false
 	pending_ability = false
+	pending_ability_target = null
 	pending_block = false
 	pending_reload = false
 	pending_melee = false
 	pending_drop = false
+
+# Bricht die Zielvorschau des lokalen Spielers ab. true = es lief eine.
+func _cancel_ability_aim() -> bool:
+	var cancelled := false
+	for p in get_tree().get_nodes_in_group("player"):
+		if p is Player and p.ability_aiming:
+			p.cancel_ability_aim()
+			cancelled = true
+	return cancelled
 
 # Verhindert Schussgeräusche, während der lokale Spieler nachlädt oder kein
 # Magazin mehr hat.

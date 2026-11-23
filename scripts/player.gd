@@ -135,6 +135,25 @@ const DRUID_WALL_HP: float = 150.0
 const DRUID_WALL_MAX_ACTIVE: int = 1
 # Seitenansicht: Sucht so weit unter der Wand nach Boden, um sie daraufzustellen.
 const DRUID_WALL_FLOOR_SNAP: float = 90.0
+# Gezielt platziert (Maus): größte und kleinste Entfernung zum Druiden. Die
+# Reichweite skaliert mit ability_range_mult. Eine fast senkrechte Wand rückt
+# in der Seitenansicht höchstens so weit nach unten auf den Boden.
+const DRUID_WALL_RANGE: float = 240.0
+const DRUID_WALL_MIN_DISTANCE: float = 34.0
+const DRUID_WALL_TARGET_SNAP: float = 40.0
+# Helden, deren Fähigkeit an einem Zielpunkt landet. Mit der Maus wird der
+# Punkt gezielt (siehe tick_ability_aim), Bots und Tastatur-Spieler nutzen
+# weiter die feste Entfernung in Zielrichtung.
+const TARGETED_ABILITY_HEROES: Array[String] = ["nova", "druid", "volt", "phantom", "ignis"]
+# Liegt ein Zielpunkt in festem Gelände, rückt er in diesen Schritten zum
+# Spieler zurück (Sofort-Modus und Host-Prüfung).
+const ABILITY_TARGET_PULLBACK_STEP: float = 8.0
+# Liegt das Ziel in festem Gelände, sucht die Fähigkeit in Ringen um den
+# Zeiger die nächste freie Stelle (Abstand der Ringe, größter Suchradius,
+# Prüfpunkte pro Ring).
+const ABILITY_TARGET_SEARCH_STEP: float = 10.0
+const ABILITY_TARGET_SEARCH_RADIUS: float = 180.0
+const ABILITY_TARGET_SEARCH_DIRS: int = 16
 # Druiden-Passiv "Wurzelkraft": Lebensregeneration pro Sekunde.
 const DRUID_PASSIVE_REGEN: float = 2.0
 # Druiden-Evolutionen (Karten, nicht Teil der Grundfähigkeit).
@@ -340,6 +359,11 @@ var ability_radius_mult: float = 1.0
 var ability_duration_mult: float = 1.0
 var ability_range_mult: float = 1.0
 var ability_evolutions: Array[String] = []
+# Zielvorschau (Taste halten) und Zielpunkt des laufenden use_ability()-Aufrufs.
+var ability_aiming: bool = false
+var _ability_aim_preview: AbilityAimPreview = null
+var _cast_target: Vector2 = Vector2.ZERO
+var _cast_has_target: bool = false
 var heal_field_pos: Vector2 = Vector2.ZERO       # Bastion: Ort des Heilfelds
 var blade_echo_timer: float = 0.0                # Klinge: verzögerter Echowirbel
 var druid_max_walls: int = 1                     # Druide: gleichzeitige Wände
@@ -516,6 +540,8 @@ var remote_input: Dictionary = {
 	"melee": false,
 	"drop": false,
 	"aim": Vector2.RIGHT,
+	# Zielpunkt der Fähigkeit (Vector2) oder null für die feste Entfernung.
+	"ability_target": null,
 }
 # Einweg-Stege, durch die die Figur gerade hindurchfällt (Kollisionsausnahme).
 var _drop_through_bodies: Array = []
@@ -1154,8 +1180,12 @@ func _handle_player_input(_delta: float) -> void:
 		melee_attack()
 
 	# KlassenfÃƒÂ¤higkeit (Rechtsklick / E / F).
-	var ability_pressed = Input.is_action_just_pressed(_act("ability"))
-	if ability_pressed:
+	if player_index == 1 and has_targeted_ability():
+		# Mausspieler zielen Schwarzes Loch, Wurzelwall und Teleports.
+		var cast_point = tick_ability_aim(true)
+		if cast_point is Vector2:
+			use_ability(cast_point)
+	elif Input.is_action_just_pressed(_act("ability")):
 		use_ability()
 
 # --- Netzwerk-Eingabe / Replikation ---
@@ -1175,6 +1205,8 @@ func set_remote_input(data: Dictionary) -> void:
 		remote_input.dash = true
 	if bool(data.get("ability", false)):
 		remote_input.ability = true
+		var target_value = data.get("ability_target", null)
+		remote_input.ability_target = target_value if target_value is Vector2 else null
 	if bool(data.get("block", false)):
 		remote_input.block = true
 	if bool(data.get("reload", false)):
@@ -1270,7 +1302,8 @@ func _handle_remote_input(_delta: float) -> void:
 
 	if remote_input.ability:
 		remote_input.ability = false
-		use_ability()
+		use_ability(remote_input.ability_target)
+		remote_input.ability_target = null
 
 # Wird auf dem Client pro Snapshot aufgerufen. Es wird keine Physik simuliert.
 func apply_network_state(data: Dictionary) -> void:
@@ -1674,11 +1707,19 @@ func manual_reload() -> void:
 		return
 	start_reload()
 
-func use_ability() -> void:
+# target: gezielter Punkt (Vector2) vom Mausspieler oder vom Client. Ohne
+# Ziel (Bots, Tastatur) landet die Fähigkeit in fester Entfernung in
+# Zielrichtung. Der Punkt wird hier noch einmal auf Reichweite und freies
+# Gelände geprüft, der Host vertraut also keiner Client-Position.
+func use_ability(target = null) -> void:
 	if not control_enabled or stun_timer > 0.0:
 		return
 	if ability_timer > 0.0:
 		return
+	_cast_has_target = false
+	if target is Vector2 and has_targeted_ability():
+		_cast_target = _resolve_cast_point(target)
+		_cast_has_target = true
 	ability_timer = ability_max_cooldown
 	emit_signal("ability_cooldown_updated", ability_timer, ability_max_cooldown)
 	
@@ -1691,6 +1732,9 @@ func use_ability() -> void:
 			is_invulnerable = true
 			leap_timer = ROCKET_LEAP_DURATION * ability_range_mult
 			leap_dir = aim_direction.normalized()
+			# Gezielt: Flugrichtung zum Zielpunkt (die Weite bleibt fest).
+			if _cast_has_target and _cast_target.distance_squared_to(global_position) > 16.0:
+				leap_dir = (_cast_target - global_position).normalized()
 			if leap_dir.length_squared() < 0.1:
 				leap_dir = Vector2.UP
 		"volt":
@@ -2239,7 +2283,7 @@ func _trigger_rocket_impact() -> void:
 
 func _perform_flash_blink() -> void:
 	var start_pos = global_position
-	var target_pos = _free_teleport_target(start_pos, _clamp_to_map(global_position + (aim_direction.normalized() * FLASH_BLINK_DISTANCE * ability_range_mult)))
+	var target_pos = _free_teleport_target(start_pos, _teleport_cast_point(FLASH_BLINK_DISTANCE))
 	var radius := FLASH_BLINK_RADIUS * ability_radius_mult
 
 	_fx("zap", NetFx.with_sound(NetFx.zap_args(start_pos, target_pos, Color(1.0, 1.0, 0.3, 0.9),
@@ -2338,17 +2382,23 @@ func _opponents_within(pos: Vector2, radius: float) -> Array:
 # --- Nova: SingularitÃƒÂ¤t ---
 func _spawn_singularity() -> void:
 	_fx("sound", {"snd": ["explosion", 0.2, 2.0]})
-	var aim := aim_direction.normalized()
-	var center := _clamp_to_map(global_position + aim * SINGULARITY_DISTANCE * ability_range_mult)
-	# Evolution "Doppelstern": zwei Singularitäten nebeneinander statt einer.
-	if _has_ability_evolution("nova_binary"):
-		var side := aim.orthogonal()
-		if side.length_squared() < 0.01:
-			side = Vector2.RIGHT
-		_add_gravity_well(_clamp_to_map(center + side * NOVA_BINARY_OFFSET))
-		_add_gravity_well(_clamp_to_map(center - side * NOVA_BINARY_OFFSET))
-	else:
+	var point := _cast_target if _cast_has_target \
+		else _clamp_to_map(global_position + aim_direction.normalized() * SINGULARITY_DISTANCE * ability_range_mult)
+	for center in _singularity_centers(point):
 		_add_gravity_well(center)
+
+# Mittelpunkte der Singularität für einen Zielpunkt. Evolution "Doppelstern":
+# zwei Kerne nebeneinander, quer zur Linie Nova → Ziel.
+func _singularity_centers(point: Vector2) -> Array:
+	if not _has_ability_evolution("nova_binary"):
+		return [point]
+	var dir := point - global_position
+	if dir.length_squared() < 16.0:
+		dir = aim_direction
+	var side := dir.normalized().orthogonal()
+	if side.length_squared() < 0.01:
+		side = Vector2.RIGHT
+	return [_clamp_to_map(point + side * NOVA_BINARY_OFFSET), _clamp_to_map(point - side * NOVA_BINARY_OFFSET)]
 
 func _add_gravity_well(center: Vector2) -> void:
 	var duration := SINGULARITY_DURATION * ability_duration_mult
@@ -2414,7 +2464,7 @@ func _deploy_heal_field() -> void:
 # --- Phantom: Schattensprung ---
 func _shadow_step() -> void:
 	var start := global_position
-	var target := _free_teleport_target(start, _clamp_to_map(global_position + aim_direction.normalized() * SHADOW_STEP_DISTANCE * ability_range_mult))
+	var target := _free_teleport_target(start, _teleport_cast_point(SHADOW_STEP_DISTANCE))
 	var radius := SHADOW_STEP_RADIUS * ability_radius_mult
 	_fx("zap", NetFx.with_sound(NetFx.zap_args(start, target, Color(0.45, 0.45, 0.65, 0.7),
 		6.0, 0.25), "teleport", 0.06, -1.0))
@@ -2446,26 +2496,22 @@ func _shadow_step() -> void:
 func _place_druid_wall() -> void:
 	if is_replica or get_parent() == null:
 		return
-	var aim := aim_direction.normalized()
-	if aim.length_squared() < 0.1:
-		aim = Vector2.LEFT if sprite.flip_h else Vector2.RIGHT
-	var wall_len := DRUID_WALL_LENGTH * ability_radius_mult
-	var thick := DRUID_WALL_THICKNESS
-	var center := global_position + aim * (DRUID_WALL_DISTANCE + thick * 0.5)
-	# Lokale x-Achse der Wand quer zur Zielrichtung.
-	var rot := aim.angle() + PI * 0.5
-	if not ArenaMode.active and absf(aim.x) > 0.7:
-		# Eher waagerecht gezielt: senkrechte Wand, auf den Boden gestellt.
-		rot = PI * 0.5
-		center.y = global_position.y
-		var space := get_world_2d().direct_space_state
-		var from := center + Vector2(0.0, -wall_len * 0.25)
-		var query := PhysicsRayQueryParameters2D.create(from, center + Vector2(0.0, wall_len * 0.5 + DRUID_WALL_FLOOR_SNAP), 1)
-		query.exclude = [get_rid()]
-		var hit := space.intersect_ray(query)
-		if not hit.is_empty() and not (hit.get("collider") is DruidWall):
-			center.y = (hit["position"] as Vector2).y - wall_len * 0.5
-	center = _clamp_to_map(center)
+	var placement: Dictionary
+	if _cast_has_target:
+		placement = _druid_wall_placement(_cast_target, true)
+	else:
+		# Bots/Tastatur: feste Entfernung. Eher waagerecht gezielt steht die
+		# Wand wie bisher genau senkrecht.
+		var aim := aim_direction.normalized()
+		if aim.length_squared() < 0.1:
+			aim = Vector2.LEFT if sprite.flip_h else Vector2.RIGHT
+		if not ArenaMode.active and absf(aim.x) > 0.7:
+			aim = Vector2(signf(aim.x), 0.0)
+		placement = _druid_wall_placement(global_position + aim * (DRUID_WALL_DISTANCE + DRUID_WALL_THICKNESS * 0.5), false)
+	var wall_len: float = placement["len"]
+	var thick: float = placement["thick"]
+	var center: Vector2 = placement["pos"]
+	var rot: float = placement["rot"]
 	var own: Array = []
 	for w in get_tree().get_nodes_in_group("druid_wall"):
 		if is_instance_valid(w) and not w.is_queued_for_deletion() and w.owner_player == self:
@@ -2488,6 +2534,258 @@ func _place_druid_wall() -> void:
 	wall.push_out_players()
 	_fx("ring", NetFx.with_sound(NetFx.ring_args(center, Color(0.45, 0.8, 0.3, 0.8),
 		1.0, wall_len / 14.0, 0.2, 0.3), "poison", 0.15, -2.0))
+
+# Lage der Wand für einen Zielpunkt: Die breite Seite zeigt immer zum Druiden,
+# die Wand steht also quer zur Linie Druide → Zielpunkt. Dieselbe Rechnung
+# nutzt die Zielvorschau, damit die Wand genau dort erscheint.
+func _druid_wall_placement(point: Vector2, targeted: bool) -> Dictionary:
+	var wall_len := DRUID_WALL_LENGTH * ability_radius_mult
+	var thick := DRUID_WALL_THICKNESS
+	var dir := point - global_position
+	var dist := dir.length()
+	var aim := dir / dist if dist > 4.0 else aim_direction.normalized()
+	if aim.length_squared() < 0.1:
+		aim = Vector2.LEFT if sprite.flip_h else Vector2.RIGHT
+	var center := global_position + aim * maxf(dist, DRUID_WALL_MIN_DISTANCE)
+	# Lokale x-Achse der Wand quer zur Zielrichtung.
+	var rot := aim.angle() + PI * 0.5
+	if not ArenaMode.active:
+		# Seitenansicht: Eine eher senkrechte Wand rutscht entlang ihrer
+		# Achse aus dem Boden heraus bzw. stellt sich auf nahen Boden.
+		var axis := Vector2.RIGHT.rotated(rot)
+		if axis.y < 0.0:
+			axis = -axis
+		if axis.y > 0.7:
+			var snap := DRUID_WALL_TARGET_SNAP if targeted else DRUID_WALL_FLOOR_SNAP
+			var space := get_world_2d().direct_space_state
+			var query := PhysicsRayQueryParameters2D.create(
+				center - axis * wall_len * 0.25, center + axis * (wall_len * 0.5 + snap), 1)
+			query.exclude = [get_rid()]
+			var hit := space.intersect_ray(query)
+			if not hit.is_empty() and not (hit.get("collider") is DruidWall):
+				center = (hit["position"] as Vector2) - axis * wall_len * 0.5
+	center = _clamp_to_map(center)
+	return {"pos": center, "rot": rot, "len": wall_len, "thick": thick}
+
+# ============================================================
+# Zielbare Fähigkeiten: Zielpunkt, Prüfung und Vorschau
+# ============================================================
+
+func has_targeted_ability() -> bool:
+	return TARGETED_ABILITY_HEROES.has(Global.get_player_hero_id(player_index))
+
+# Größte Entfernung des Zielpunkts zum Spieler.
+func ability_target_range() -> float:
+	match Global.get_player_hero_id(player_index):
+		"nova":
+			return SINGULARITY_DISTANCE * ability_range_mult
+		"druid":
+			return DRUID_WALL_RANGE * ability_range_mult
+		"volt":
+			return FLASH_BLINK_DISTANCE * ability_range_mult
+		"phantom":
+			return SHADOW_STEP_DISTANCE * ability_range_mult
+		"ignis":
+			return ROCKET_LEAP_SPEED * ROCKET_LEAP_DURATION * ability_range_mult
+	return 0.0
+
+# Klemmt einen Punkt (Mauszeiger) auf Reichweite und Kartenbereich.
+func _clamp_ability_point(raw: Vector2) -> Vector2:
+	var offset := raw - global_position
+	var max_range := ability_target_range()
+	if offset.length() > max_range:
+		offset = offset.normalized() * max_range
+	return _clamp_to_map(global_position + offset)
+
+# Beschreibt, was die Fähigkeit an diesem Punkt tun würde. "point" ist der
+# geklemmte Zielpunkt (geht an use_ability bzw. den Host), "pos" die Stelle,
+# an der die Wirkung erscheint, "valid" sagt, ob dort Platz ist. Die übrigen
+# Felder zeichnet AbilityAimPreview.
+func ability_target_info(raw: Vector2) -> Dictionary:
+	var cursor := _clamp_ability_point(raw)
+	var info := _target_info_at(cursor)
+	if bool(info["valid"]):
+		return info
+	# Ziel im Gelände: an die nächste erlaubte Stelle ausweichen.
+	var moved := _nearest_valid_target(cursor)
+	if moved.is_empty():
+		return info
+	moved["cursor"] = cursor
+	return moved
+
+# Sucht in Ringen um den Punkt die nächste Stelle, an der die Fähigkeit Platz
+# hat (innerhalb der Reichweite). Notfalls rückt sie Richtung Spieler zurück.
+func _nearest_valid_target(cursor: Vector2) -> Dictionary:
+	var ring := ABILITY_TARGET_SEARCH_STEP
+	while ring <= ABILITY_TARGET_SEARCH_RADIUS:
+		var best: Dictionary = {}
+		var best_dist := INF
+		for i in range(ABILITY_TARGET_SEARCH_DIRS):
+			var candidate := _clamp_ability_point(cursor + Vector2.RIGHT.rotated(TAU * float(i) / float(ABILITY_TARGET_SEARCH_DIRS)) * ring)
+			var d := candidate.distance_squared_to(cursor)
+			if d >= best_dist:
+				continue
+			var info := _target_info_at(candidate)
+			if bool(info["valid"]):
+				best = info
+				best_dist = d
+		if not best.is_empty():
+			return best
+		ring += ABILITY_TARGET_SEARCH_STEP
+	var steps := maxi(1, int(ceil(global_position.distance_to(cursor) / ABILITY_TARGET_PULLBACK_STEP)))
+	for i in range(1, steps + 1):
+		var info := _target_info_at(cursor.lerp(global_position, float(i) / float(steps)))
+		if bool(info["valid"]):
+			return info
+	return {}
+
+# Wirkung der Fähigkeit genau an diesem (bereits geklemmten) Punkt.
+func _target_info_at(point: Vector2) -> Dictionary:
+	match Global.get_player_hero_id(player_index):
+		"nova":
+			var centers := _singularity_centers(point)
+			var valid := true
+			for c in centers:
+				if _ability_point_blocked(c):
+					valid = false
+			return {
+				"kind": "circle", "point": point, "pos": point, "points": centers, "valid": valid,
+				"radius": 60.0 * ability_radius_mult,
+				"outer": SINGULARITY_PULL_RADIUS * ability_radius_mult,
+			}
+		"druid":
+			var info := _druid_wall_placement(point, true)
+			info["kind"] = "wall"
+			info["point"] = point
+			info["valid"] = not _druid_wall_blocked(info)
+			return info
+		"volt":
+			return {
+				"kind": "blink", "point": point, "valid": true,
+				"pos": _free_teleport_target(global_position, point),
+				"radius": FLASH_BLINK_RADIUS * ability_radius_mult,
+			}
+		"phantom":
+			return {
+				"kind": "blink", "point": point, "valid": true,
+				"pos": _free_teleport_target(global_position, point),
+				"radius": SHADOW_STEP_RADIUS * ability_radius_mult,
+			}
+		"ignis":
+			# Raketensprung: nur die Richtung zählt. Die Vorschau zeigt die
+			# Flugbahn bis zur vollen Weite oder bis zum ersten Hindernis.
+			var dir := point - global_position
+			if dir.length_squared() < 16.0:
+				dir = aim_direction
+			dir = dir.normalized()
+			var end := global_position + dir * ability_target_range()
+			var query := PhysicsRayQueryParameters2D.create(global_position, end, 1)
+			query.exclude = [get_rid()]
+			var hit := get_world_2d().direct_space_state.intersect_ray(query)
+			if not hit.is_empty():
+				end = hit["position"]
+			return {
+				"kind": "leap", "point": point, "pos": end, "valid": true,
+				"radius": ROCKET_IMPACT_RADIUS * ability_radius_mult,
+			}
+	return {"kind": "", "point": point, "pos": point, "valid": true}
+
+# Steckt der Punkt in festem Gelände? Einweg-Stege und Wurzelwälle zählen nicht.
+func _ability_point_blocked(pos: Vector2) -> bool:
+	var query := PhysicsPointQueryParameters2D.new()
+	query.position = pos
+	query.collision_mask = 1
+	query.exclude = [get_rid()]
+	for hit in get_world_2d().direct_space_state.intersect_point(query, 8):
+		var collider = hit.get("collider")
+		if collider is DruidWall:
+			continue
+		if collider is Node and (collider as Node).is_in_group("one_way_platform"):
+			continue
+		return true
+	return false
+
+# Überlappt der Wurzelwall festes Gelände? Geprüft wird die ganze Wand, etwas
+# schmaler und kürzer, damit sie dicht an Böden und Wände passt.
+func _druid_wall_blocked(info: Dictionary) -> bool:
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(maxf(4.0, float(info["len"]) - 12.0), maxf(4.0, float(info["thick"]) - 8.0))
+	var query := PhysicsShapeQueryParameters2D.new()
+	query.shape = rect
+	query.transform = Transform2D(float(info["rot"]), info["pos"])
+	query.collision_mask = 1
+	query.exclude = [get_rid()]
+	for hit in get_world_2d().direct_space_state.intersect_shape(query, 8):
+		var collider = hit.get("collider")
+		if collider is DruidWall:
+			continue
+		if collider is Node and (collider as Node).is_in_group("one_way_platform"):
+			continue
+		return true
+	return false
+
+# Zielpunkt für den Wurf: auf Reichweite geklemmt und, falls er in einer Wand
+# liegt, an die nächste freie Stelle verschoben (wie in der Vorschau).
+func _resolve_cast_point(raw: Vector2) -> Vector2:
+	var info := ability_target_info(raw)
+	if bool(info["valid"]):
+		return info["point"]
+	return global_position
+
+# Wunschziel für Blink und Schattensprung (vor der Geländeprüfung).
+func _teleport_cast_point(base_distance: float) -> Vector2:
+	if _cast_has_target:
+		return _cast_target
+	return _clamp_to_map(global_position + aim_direction.normalized() * base_distance * ability_range_mult)
+
+# Eingabe des Mausspielers, einmal pro Tick (offline/Host in der Physik, auf
+# dem Client aus main.gd). Liefert den Zielpunkt, sobald gezaubert werden
+# soll, sonst null.
+# Modus "hold": Taste halten zeigt die Vorschau, Loslassen zaubert, Esc oder
+# Rechtsklick (falls die Fähigkeit nicht selbst auf Rechtsklick liegt) bricht
+# ab. Modus "instant": Tastendruck zaubert sofort am Mauszeiger.
+func tick_ability_aim(can_act: bool) -> Variant:
+	var action := "p1_ability"
+	var can_cast := can_act and ability_timer <= 0.0 and current_health > 0.0
+	var mouse := get_global_mouse_position()
+	if GameSettings.ability_cast_mode == "instant":
+		cancel_ability_aim()
+		if can_cast and Input.is_action_just_pressed(action):
+			return mouse
+		return null
+	if not ability_aiming:
+		if not (can_cast and Input.is_action_just_pressed(action)):
+			return null
+		ability_aiming = true
+	if not can_cast or _ability_aim_cancel_pressed(action):
+		cancel_ability_aim()
+		return null
+	var info := ability_target_info(mouse)
+	if not Input.is_action_pressed(action):
+		cancel_ability_aim()
+		# Liegt der Zeiger im Gelände, ist "point" schon die nächste freie Stelle.
+		return info["point"]
+	if _ability_aim_preview == null:
+		_ability_aim_preview = AbilityAimPreview.new()
+		_ability_aim_preview.player = self
+		add_child(_ability_aim_preview)
+	_ability_aim_preview.show_info(global_position, ability_target_range(), info)
+	return null
+
+func cancel_ability_aim() -> void:
+	ability_aiming = false
+	if _ability_aim_preview != null:
+		_ability_aim_preview.hide_preview()
+
+# Rechtsklick bricht nur ab, wenn die Fähigkeit nicht selbst darauf liegt
+# (Standardbelegung). Esc fängt main.gd ab und ruft cancel_ability_aim().
+func _ability_aim_cancel_pressed(action: String) -> bool:
+	if not Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+		return false
+	for event in InputMap.action_get_events(action):
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
+			return false
+	return true
 
 # Evolution "Elementarwand": Gegner, die die Wand berühren, bekommen die
 # Elementeffekte der eigenen Waffe ab (Gift, Feuer, Frost, Blitz). Ohne
