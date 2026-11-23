@@ -1223,9 +1223,14 @@ Boden und seitlich Felswände. Rampen führen ohne Sprung hinauf, ihre
 höheren Teile kann man von der Seite nicht betreten. Unter Holzstegen
 läuft man durch, oben läuft man darüber. Wer von einer Kante läuft,
 fällt herunter.</li>
-<li><strong>Maps:</strong> zufällig eine von acht Arenen. Kompakt:
-<em>Burghof</em>, <em>Kistenlager</em>, <em>Ruinen</em>. Groß und offen
-(etwa die vierfache Fläche): <em>Weite Steppe</em>, <em>Marktplatz</em>,
+<li><strong>Maps:</strong> zufällig eine von zwölf Arenen.
+Autoscroll-Strecken (siehe Autoscroll unten): <em>Rennstrecke</em>
+(Insel, Slalom, drei Spuren) und <em>Bergrennen</em> (Hügel mit Rampen,
+Turmbrücke, Felsbuckel-Slalom). Dazu <em>Hafen</em> (Holzstege zwischen
+sechs Türmen, Kistenstapel) und <em>Festung</em> (Wehrgang mit Toren und
+Rampen, Bergfried mit Stegen zu den Mauern). Kompakt: <em>Burghof</em>,
+<em>Kistenlager</em>, <em>Ruinen</em>. Groß und offen (etwa die
+vierfache Fläche): <em>Weite Steppe</em>, <em>Marktplatz</em>,
 <em>Canyon</em>, <em>Hochplateau</em> (große Erhöhung in der Mitte mit
 vier Rampen, erhöhte Randplattform), <em>Stegwerk</em> (fünf Türme mit
 Holzstegen). Wände gibt es gerade und schräg, Boden und Mauern haben
@@ -2289,10 +2294,71 @@ Gipfel-Arena</td>
 <td style="text-align: left;">Feder, Aufzug, Wolkenfähre,
 Gipfelportal</td>
 </tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Turbotrasse</strong></td>
+<td style="text-align: left;">Autoscroll</td>
+<td style="text-align: left;">Das Bild fährt von selbst nach rechts.
+Kurze Abzweigungen laufen wieder zusammen: Steg über zwei Gruben oder
+unten durch, Tunnel unter der Decke oder obendrüber, Trittsteine oder
+Fähre über die große Grube. Turbo- und Umkehrfelder</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Asteroidenfeld</strong></td>
+<td style="text-align: left;">Weltraum</td>
+<td style="text-align: left;">Schwerelos zwischen schwebenden Stationen.
+Asteroiden treiben durchs Bild, kleine mit goldenem Kern enthalten
+Powerups, Weltraumquallen jagen die Spieler</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Kometenjagd</strong></td>
+<td style="text-align: left;">Weltraum, Autoscroll</td>
+<td style="text-align: left;">Schwerelose Autoscroll-Strecke durch einen
+Asteroidengürtel, Stationswände teilen die Bahn kurz in Spuren.
+Asteroiden kommen von vorn</td>
+</tr>
 </tbody>
 </table>
 <p>Auf Scroll-Maps folgt die Kamera dir. Gegner außerhalb des Bildes
 zeigen Pfeile am Rand.</p>
+<h3 id="autoscroll">Autoscroll</h3>
+<p>Auf Autoscroll-Maps (Seitenansicht und die Arena-Karte
+<em>Rennstrecke</em>) fährt ein Bildfenster von etwa 40 Kacheln Breite
+zwei Sekunden nach dem Countdown von selbst los, alle müssen
+mithalten.</p>
+<ul>
+<li><strong>Rote Wand hinten:</strong> schiebt nach vorn und macht 30
+Schaden pro Sekunde. Wer weit dahinter hängt oder dort gegen eine Wand
+gedrückt wird, wird zerquetscht (95 pro Sekunde).</li>
+<li><strong>Vordere Kante</strong> (gestrichelt): bremst nur, weiter
+vorlaufen geht nicht.</li>
+<li><strong>Turbofeld</strong> (orange, Doppelpfeile): Das Bild fährt 5
+s lang 1,8-mal so schnell.</li>
+<li><strong>Umkehrfeld</strong> (lila, Gegenpfeile): Die Fahrtrichtung
+dreht sich um, die rote Wand ist dann auf der anderen Seite.</li>
+<li>Felder lösen aus, sobald jemand sie berührt, und laden 9 s nach
+(Balken unter dem Feld). Am Kartenende dreht die Strecke von selbst um.
+Im Sudden Death fährt sie 35 % schneller.</li>
+</ul>
+<h3 id="weltraum">Weltraum</h3>
+<ul>
+<li><strong>Schwerelos:</strong> <code>W</code> <code>A</code>
+<code>S</code> <code>D</code> (bzw. Pfeiltasten) sind Düsen in alle
+Richtungen, man treibt weiter, bis man gegensteuert oder anstößt.
+<code>Leertaste</code> ist ein Schubstoß in Steuerrichtung (ohne
+Richtung: zur Maus). Schübe laden bei Kontakt mit einer Fläche sofort,
+sonst alle 1,1 s einer; Anzahl wie Sprünge (Luftsprung-Karten geben
+mehr). Dash geht in Steuerrichtung. Kugeln fliegen geradeaus, Kisten und
+Fässer schweben.</li>
+<li><strong>Asteroiden</strong> in drei Größen treiben durchs Bild und
+machen beim Aufprall Schaden je nach Größe und Tempo. Schüsse und
+Explosionen zerlegen sie: groß in zwei mittlere, mittel in zwei kleine.
+Kleine mit <strong>goldenem Kern</strong> lassen ein Powerup fallen.
+Neue kommen vom Rand herein (auf Autoscroll-Strecken von vorn).</li>
+<li><strong>Weltraumquallen</strong> (90 LP) treiben auf den nächsten
+Spieler zu, laden sichtbar auf (rot, zitternd) und schießen dann auf ihn
+zu. Berührung 13 Schaden, beim Vorstoß 22. Beim Tod lassen sie oft ein
+Powerup fallen.</li>
+</ul>
 <h3 id="spielfeld">Spielfeld</h3>
 <ul>
 <li><strong>Gummiwand</strong>: Um die Karte liegt ein Rahmen mit

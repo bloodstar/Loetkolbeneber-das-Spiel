@@ -36,6 +36,12 @@ static func navigate(ai: AIController, delta: float) -> void:
 		if p.global_position.distance_to(center) > float(zone["radius"]) - ZONE_SAFE_MARGIN:
 			goal = center
 			mode = "zone"
+	# Autoscroll-Rennstrecke: zu weit hinten im Fenster -> nach vorn.
+	var scroll := AutoScroll.current
+	if mode == "fight" and scroll != null and is_instance_valid(scroll) and scroll.running \
+			and scroll.relative_x(p.global_position.x) < -scroll.window_w * 0.1:
+		goal = Vector2(scroll.center_x + scroll.dir * scroll.window_w * 0.2, p.global_position.y)
+		mode = "zone"
 
 	var to_goal := goal - p.global_position
 	var dist := to_goal.length()

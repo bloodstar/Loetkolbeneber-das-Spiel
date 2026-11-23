@@ -103,8 +103,8 @@ func _handle_aim(delta: float) -> void:
 # geschätzt und einmal nachgerechnet, weil der höhere Zielpunkt weiter weg liegt.
 func _drop_compensated_aim_point(goal: Vector2) -> Vector2:
 	var aim_point: Vector2 = goal
-	if ArenaMode.active:
-		return aim_point # Kugeln fliegen in der Arena flach
+	if ArenaMode.active or LevelGenerator.zero_g:
+		return aim_point # Kugeln fliegen in der Arena und im All flach
 	var speed: float = maxf(player.bullet_speed, 1.0)
 	var gravity: float = Bullet.BULLET_GRAVITY * maxf(0.0, player.projectile_gravity_mult)
 	if gravity <= 0.0:
@@ -159,10 +159,16 @@ func _handle_navigation(_delta: float) -> void:
 	if ArenaMode.active:
 		ArenaBot.navigate(self, _delta)
 		return
+	# Weltraum: frei schweben, Asteroiden und Monstern ausweichen.
+	if LevelGenerator.zero_g:
+		_handle_space_navigation(_delta)
+		return
 
 	if _handle_lava_escape(_delta):
 		return
 	if _handle_zone_escape():
+		return
+	if _handle_autoscroll():
 		return
 
 	var diff = target_pos() - player.global_position
@@ -300,6 +306,93 @@ func _handle_zone_escape() -> bool:
 		player.jump()
 		jump_cooldown = 0.45
 	return true
+
+# --- Autoscroll & Weltraum ---------------------------------------------------
+
+const SCROLL_BEHIND_FRACTION: float = 0.12
+const SPACE_PREFERRED_MIN: float = 220.0
+const SPACE_PREFERRED_MAX: float = 430.0
+const SPACE_HAZARD_RANGE: float = 150.0
+const SPACE_EDGE_MARGIN: float = 130.0
+
+## Autoscroll: Liegt der Bot zu weit hinten im Fenster, läuft er nach vorn
+## und springt über Gruben und Wände, statt dem Gegner zu folgen.
+func _handle_autoscroll() -> bool:
+	var s := AutoScroll.current
+	if s == null or not is_instance_valid(s) or not s.running:
+		return false
+	if s.relative_x(player.global_position.x) > -s.window_w * SCROLL_BEHIND_FRACTION:
+		return false
+	var speed := player.move_speed
+	var move_input := _avoid_ground_hazards(s.dir)
+	player.velocity.x = move_toward(player.velocity.x, move_input * speed, speed * 0.25)
+	if jump_cooldown <= 0.0 and player.is_on_floor() and (player.is_on_wall() or _gap_ahead(s.dir)):
+		player.jump()
+		jump_cooldown = 0.35
+	elif jump_cooldown <= 0.0 and player.is_on_wall():
+		player.jump()
+		jump_cooldown = 0.35
+	return true
+
+## Kein Boden kurz vor dem Bot (Grube).
+func _gap_ahead(facing: float) -> bool:
+	var space := player.get_world_2d().direct_space_state
+	var from := player.global_position + Vector2(facing * 46.0, 0.0)
+	var query := PhysicsRayQueryParameters2D.create(from, from + Vector2(0.0, 140.0), 1)
+	query.exclude = [player.get_rid()]
+	return space.intersect_ray(query).is_empty()
+
+## Bots in Schwerelosigkeit: Abstand zum Ziel halten, seitlich kreisen,
+## Asteroiden, Monstern und dem Kartenrand ausweichen. Schubstoß bei
+## naher Gefahr.
+func _handle_space_navigation(delta: float) -> void:
+	var pos := player.global_position
+	var to_target := target.global_position - pos
+	var dist := to_target.length()
+	var strafe := 1.0 if int(Time.get_ticks_msec() / 1700 + player.player_index) % 2 == 0 else -1.0
+	var dir := Vector2.ZERO
+	if dist > SPACE_PREFERRED_MAX:
+		dir = to_target.normalized()
+	elif dist < SPACE_PREFERRED_MIN or player.current_health < player.max_health * 0.35:
+		dir = -to_target.normalized() + to_target.orthogonal().normalized() * strafe * 0.5
+	else:
+		dir = to_target.orthogonal().normalized() * strafe + to_target.normalized() * 0.1
+	var s := AutoScroll.current
+	if s != null and is_instance_valid(s) and s.running:
+		var rel := s.relative_x(pos.x)
+		if rel < -s.window_w * SCROLL_BEHIND_FRACTION:
+			dir = Vector2(s.dir, 0.0) * 1.5 + dir * 0.3
+		elif rel > s.window_w * 0.3:
+			dir += Vector2(-s.dir, 0.0)
+	var danger := 0.0
+	for node in get_tree().get_nodes_in_group("space_hazard"):
+		var hazard := node as Node2D
+		if hazard == null or not is_instance_valid(hazard):
+			continue
+		var away := pos - hazard.global_position
+		var reach := SPACE_HAZARD_RANGE + float(hazard.get("hazard_radius") if hazard.get("hazard_radius") != null else 30.0)
+		var d := away.length()
+		if d < reach and d > 0.01:
+			var w := 1.0 - d / reach
+			dir += away / d * w * 2.2
+			danger = maxf(danger, w)
+	var map_px := Vector2(float(LevelGenerator.map_w), float(LevelGenerator.map_h)) * LevelGenerator.TILE_SIZE
+	if pos.x < SPACE_EDGE_MARGIN:
+		dir.x += 1.5
+	elif pos.x > map_px.x - SPACE_EDGE_MARGIN:
+		dir.x -= 1.5
+	if pos.y < SPACE_EDGE_MARGIN:
+		dir.y += 1.5
+	elif pos.y > map_px.y - SPACE_EDGE_MARGIN:
+		dir.y -= 1.5
+	if player.is_on_wall() or player.is_on_floor() or player.is_on_ceiling():
+		dir += player.get_wall_normal() * 0.5 if player.is_on_wall() else Vector2.ZERO
+	dir = dir.normalized() if dir.length() > 0.01 else Vector2.ZERO
+	SpaceMotion.apply_thrust(player, dir, delta)
+	if jump_cooldown <= 0.0 and danger > 0.55 and player.jumps_remaining > 0:
+		player.velocity = player.velocity.move_toward(dir * player.move_speed, player.move_speed)
+		player.jump()
+		jump_cooldown = 0.9
 
 # Sucht den nächsten Bodenstachel in Laufrichtung. Die KI springt rechtzeitig
 # darüber; falls das nicht mehr möglich ist, weicht sie zurück.

@@ -1488,6 +1488,8 @@ func _physics_process(delta: float) -> void:
 	# Gravity & Movement
 	if ArenaMode.active:
 		ArenaMotion.vertical_step(self, delta)
+	elif LevelGenerator.zero_g:
+		SpaceMotion.step(self, delta)
 	elif not is_on_floor():
 		var grav := GRAVITY * gravity_mult
 		# Wall sliding
@@ -1544,6 +1546,14 @@ func _physics_process(delta: float) -> void:
 		wand.set_flip_v(false)
 		sprite.flip_h = false
 
+## Düsen-Eingabe für den Schubstoß (lokal: Tasten, online/Bot: letzte Eingabe).
+func _space_input() -> Vector2:
+	if is_remote and not is_bot:
+		return Vector2(float(remote_input.move_x), float(remote_input.move_y))
+	if is_bot:
+		return velocity.normalized()
+	return ArenaMotion.input_vector(self)
+
 func _act(suffix: String) -> String:
 	return "p1_" + suffix if player_index == 1 else "p2_" + suffix
 
@@ -1587,6 +1597,9 @@ func _apply_disabled_input() -> void:
 	if ArenaMode.active:
 		ArenaMotion.apply_planar(self, Vector2.ZERO)
 		return
+	if LevelGenerator.zero_g:
+		SpaceMotion.apply_thrust(self, Vector2.ZERO, get_physics_process_delta_time())
+		return
 	_apply_horizontal_movement(0.0)
 
 func _handle_player_input(_delta: float) -> void:
@@ -1595,6 +1608,8 @@ func _handle_player_input(_delta: float) -> void:
 	var input_x = Input.get_axis(_act("left"), _act("right"))
 	if ArenaMode.active:
 		ArenaMotion.apply_planar(self, ArenaMotion.input_vector(self))
+	elif LevelGenerator.zero_g:
+		SpaceMotion.apply_thrust(self, ArenaMotion.input_vector(self), _delta)
 	else:
 		_apply_horizontal_movement(input_x)
 	
@@ -1610,7 +1625,7 @@ func _handle_player_input(_delta: float) -> void:
 	if Input.is_action_just_released(_act("jump")):
 		if ArenaMode.active:
 			ArenaMotion.cut_jump(self)
-		elif velocity.y < 0:
+		elif velocity.y < 0 and not LevelGenerator.zero_g:
 			velocity.y *= 0.5
 	
 	# Aim
@@ -1731,6 +1746,8 @@ func apply_trampoline_bounce(force: float) -> void:
 func _handle_remote_input(_delta: float) -> void:
 	if ArenaMode.active:
 		ArenaMotion.apply_planar(self, Vector2(remote_input.move_x, remote_input.move_y))
+	elif LevelGenerator.zero_g:
+		SpaceMotion.apply_thrust(self, Vector2(remote_input.move_x, remote_input.move_y), _delta)
 	else:
 		_apply_horizontal_movement(remote_input.move_x)
 	
@@ -1742,7 +1759,7 @@ func _handle_remote_input(_delta: float) -> void:
 		remote_input.jump_release = false
 		if ArenaMode.active:
 			ArenaMotion.cut_jump(self)
-		elif velocity.y < 0.0:
+		elif velocity.y < 0.0 and not LevelGenerator.zero_g:
 			velocity.y *= 0.5
 
 	if remote_input.drop:
@@ -1910,6 +1927,9 @@ func jump() -> void:
 	if ArenaMode.active:
 		ArenaMotion.jump(self)
 		return
+	if LevelGenerator.zero_g:
+		SpaceMotion.boost(self, _space_input())
+		return
 	if is_on_floor():
 		velocity.y = jump_force
 		_fx("sound", {"snd": ["jump", 0.08, 0.0], "x": player_index})
@@ -1973,7 +1993,10 @@ func dash() -> void:
 		dash_cooldown_timer = dash_cooldown
 
 	# Dash in Lauf- oder Zielrichtung.
-	if ArenaMode.active and velocity.length() > 20.0:
+	if LevelGenerator.zero_g:
+		var space_in := _space_input()
+		dash_dir = space_in.normalized() if space_in.length() > 0.2 else aim_direction.normalized()
+	elif ArenaMode.active and velocity.length() > 20.0:
 		dash_dir = velocity.normalized()
 	elif not ArenaMode.active and velocity.x != 0:
 		dash_dir = Vector2(signf(velocity.x), 0.0)

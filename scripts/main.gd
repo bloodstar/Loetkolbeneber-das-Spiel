@@ -411,6 +411,9 @@ func _update_arena_view() -> void:
 func _leave_arena() -> void:
 	_teardown_horde()
 	ArenaBuilder.deactivate(level_generator)
+	if LevelGenerator.zero_g:
+		LevelGenerator.zero_g = false
+		ArenaBuilder.set_world_gravity(level_generator, true)
 	_update_arena_view()
 	ArenaMaps.test_map_id = ""
 	SideLevels.test_map_id = ""
@@ -686,6 +689,7 @@ func _end_round_countdown() -> void:
 		RoundStats.mark_fight_started()
 		if not rising_lava.is_empty():
 			rising_lava_wait = float(rising_lava.get("delay", 4.0))
+		level_generator.start_auto_scroll()
 
 	var hide_timer := get_tree().create_timer(0.8)
 	hide_timer.timeout.connect(_hide_countdown_after_start)
@@ -781,6 +785,8 @@ func _start_sudden_death() -> void:
 	if not rising_lava_active:
 		lava_y_pos = (LevelGenerator.map_h * level_generator.TILE_SIZE)
 	sudden_death_lava_stop_y = _compute_sudden_death_lava_stop_y()
+	if level_generator.auto_scroll != null and is_instance_valid(level_generator.auto_scroll):
+		level_generator.auto_scroll.sudden = true
 	_update_lava_overlay()
 	hud.set_sudden_death(true)
 	SoundManager.play_sound("sudden_death", 0.0, 0.0)
@@ -1560,6 +1566,7 @@ func _send_snapshot() -> void:
 		"sudden": is_sudden_death,
 		"lava": lava_y_pos,
 		"lava_rising": rising_lava_active,
+		"scroll": level_generator.get_auto_scroll_snapshot(),
 		"modifiers": modifier_manager.get_network_snapshot() if modifier_manager != null else {},
 		"horde": horde_director.get_network_state() if horde_director != null and is_instance_valid(horde_director) else {},
 	})
@@ -1689,6 +1696,9 @@ func _on_network_snapshot(data: Dictionary) -> void:
 	var statics = data.get("statics", {})
 	if statics is Dictionary:
 		level_generator.apply_static_object_snapshot(statics)
+	var scroll_data = data.get("scroll", {})
+	if scroll_data is Dictionary:
+		level_generator.apply_auto_scroll_snapshot(scroll_data)
 	var mod_data = data.get("modifiers", {})
 	if modifier_manager != null and mod_data is Dictionary:
 		modifier_manager.apply_network_snapshot(mod_data)

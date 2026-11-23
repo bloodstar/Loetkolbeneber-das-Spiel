@@ -13,6 +13,9 @@ const MAP_HEIGHT: int = 25
 # Generator abfragen können.
 static var map_w: int = MAP_WIDTH
 static var map_h: int = MAP_HEIGHT
+## Weltraum-Maps (Profil "zero_g"): keine Schwerkraft für Spieler, Kugeln
+## und Physikobjekte, Düsensteuerung in alle Richtungen (SpaceMotion).
+static var zero_g: bool = false
 const RUBBER_BAND: float = 320.0
 # Abstand der Spawn-Mitte über der Standfläche. Der Player-Körper reicht etwa
 # 12 px unter seinen Ursprung, sodass die Figur knapp über der Fläche startet
@@ -439,6 +442,100 @@ const MAP_PROFILES: Dictionary = {
 		"crate_stacks": 2,
 		"crate_powerup_chance": 0.6,
 		"powerups": 3,
+	},
+	# --- Autoscroll- und Weltraum-Karten ------------------------------------
+	"turbotrasse": {
+		# Autoscroll-Strecke: Das Bild fährt nach rechts, die rote Wand hinten
+		# schiebt und verbrennt, wer zurückfällt. Kurze Abzweigungen (Steg
+		# über Gruben, Tunnel unter der Decke, Trittsteine oder Fähre) laufen
+		# wieder zusammen. Am Ende dreht die Strecke von selbst um.
+		"archetype": "layout",
+		"theme": "neon",
+		"backdrop_variant": "foundry",
+		"width": 150,
+		"autoscroll": {"speed": 75.0, "delay": 2.0, "window": 40},
+		"ground_top": [113, 114, 115, 132, 133, 134],
+		"ground_bottom": [132, 133, 134, 113, 114, 115],
+		"platform": [111, 112, 113, 114, 115, 132, 133, 134],
+		"destructible": [12, 13, 14, 15],
+		"strong_vine": [],
+		"weak_vine": [],
+		"decoration": [150, 151, 152, 157, 158, 159],
+		"ice": [],
+		"accent": Color(1.0, 0.55, 0.2, 1.0),
+		"ice_patches": 0,
+		"speed_boosters": 2,
+		"vines": false,
+		"destructibles": 0,
+		"random_platforms": 0,
+		"barrels": 2,
+		"tnt_barrels": 1,
+		"crate_stacks": 3,
+		"crate_powerup_chance": 0.6,
+		"powerups": 3,
+	},
+	"asteroidenfeld": {
+		# Schwerelos: Düsen in alle Richtungen, Schubstoß auf Springen.
+		# Asteroiden treiben durchs Bild, kleine mit leuchtendem Kern
+		# enthalten Powerups, Weltraumquallen jagen die Spieler.
+		"archetype": "layout",
+		"theme": "neon",
+		"backdrop_variant": "space",
+		"width": 54,
+		"height": 30,
+		"no_ground": true,
+		"zero_g": true,
+		"space": {"asteroids": 10, "big": 0.3, "loot": 0.5, "monsters": 2, "monster_delay": 8.0, "drift": [40, 110]},
+		"ground_top": [113, 114, 115, 132, 133, 134],
+		"ground_bottom": [132, 133, 134, 113, 114, 115],
+		"platform": [111, 112, 113, 114, 115, 132, 133, 134],
+		"destructible": [12, 13, 14, 15],
+		"strong_vine": [],
+		"weak_vine": [],
+		"decoration": [150, 151, 152, 157, 158, 159],
+		"ice": [],
+		"accent": Color(0.70, 0.45, 1.0, 1.0),
+		"ice_patches": 0,
+		"vines": false,
+		"destructibles": 0,
+		"random_platforms": 0,
+		"barrels": 0,
+		"tnt_barrels": 1,
+		"crate_stacks": 1,
+		"crate_powerup_chance": 0.5,
+		"powerups": 1,
+	},
+	"kometenjagd": {
+		# Schwerelose Autoscroll-Strecke: Das Fenster fliegt durch einen
+		# Asteroidengürtel, Stationswände teilen die Bahn kurz in Spuren.
+		# Asteroiden kommen von vorn entgegen.
+		"archetype": "layout",
+		"theme": "neon",
+		"backdrop_variant": "space",
+		"width": 140,
+		"height": 28,
+		"no_ground": true,
+		"zero_g": true,
+		"autoscroll": {"speed": 80.0, "delay": 2.0, "window": 40},
+		"space": {"asteroids": 12, "big": 0.25, "loot": 0.5, "monsters": 2, "monster_delay": 9.0, "drift": [50, 130]},
+		"ground_top": [113, 114, 115, 132, 133, 134],
+		"ground_bottom": [132, 133, 134, 113, 114, 115],
+		"platform": [111, 112, 113, 114, 115, 132, 133, 134],
+		"destructible": [12, 13, 14, 15],
+		"strong_vine": [],
+		"weak_vine": [],
+		"decoration": [150, 151, 152, 157, 158, 159],
+		"ice": [],
+		"accent": Color(0.40, 0.85, 1.0, 1.0),
+		"ice_patches": 0,
+		"vines": false,
+		"destructibles": 0,
+		"random_platforms": 0,
+		"barrels": 0,
+		"tnt_barrels": 1,
+		"crate_stacks": 1,
+		"crate_powerup_chance": 0.5,
+		"powerups": 1,
 	},
 	"himmelsleiter": {
 		# Zweites vertikales Level: ein Aufstieg durch die Wolken mit Feder,
@@ -917,6 +1014,12 @@ var _crate_drops_spawned: int = 0
 var active_level_modifiers: Array[String] = []
 # Seitenflächen aller festen Blöcke (räumliche Tiefe), siehe LevelDepth.
 var level_depth: LevelDepth = null
+# Autoscroll-Strecke (Profil/Arena-Karte "autoscroll") und Weltraum-Regie.
+var auto_scroll: AutoScroll = null
+var space_director: SpaceDirector = null
+# Spawn-Spalten der Autoscroll-Strecke (Startfenster), sonst -1.
+var _spawn_col_min: int = -1
+var _spawn_col_max: int = -1
 
 func _ready() -> void:
 	_load_textures()
@@ -1005,6 +1108,12 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 		child.queue_free()
 	
 	level_depth = null
+	auto_scroll = null
+	AutoScroll.current = null
+	space_director = null
+	_spawn_col_min = -1
+	_spawn_col_max = -1
+	zero_g = false
 	_solid_cells.clear()
 	_special_cells.clear()
 	_object_cells.clear()
@@ -1041,12 +1150,16 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 	# Arena-Modus (Draufsicht): eigener Aufbau aus ArenaMaps, ohne 2D-Grafik.
 	if ArenaMaps.is_arena_map(resolved_map):
 		ArenaBuilder.build(self, resolved_map, level_seed)
+		var arena_data := ArenaMaps.get_map(resolved_map)
+		_setup_auto_scroll(arena_data.get("autoscroll", {}), arena_data.get("scroll_fields", []))
 		return
 	ArenaBuilder.deactivate(self)
 	_apply_tileset(resolved_map)
 	var profile: Dictionary = SideLevels.profile(current_map_id)
 	map_w = int(profile.get("width", MAP_WIDTH))
 	map_h = int(profile.get("height", MAP_HEIGHT))
+	zero_g = bool(profile.get("zero_g", false))
+	ArenaBuilder.set_world_gravity(self, not zero_g)
 	_build_theme_backdrop(level_seed)
 	
 	# 1. Boden: obere Grasschicht + Erde. Keine Seiten- oder Deckenwände –
@@ -1056,6 +1169,9 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 	var layout: Dictionary = SideLevels.layout(current_map_id)
 	for gap in layout.get("ground_gaps", []):
 		_cut_ground(int(gap[0]), int(gap[1]))
+	# Weltraum: kein Boden, nur schwebende Stationen aus dem Bauplan.
+	if bool(profile.get("no_ground", false)):
+		_cut_ground(0, map_w - 1)
 	var segment_start := -1
 	for x in range(map_w + 1):
 		var is_gap := x >= map_w or _ground_gap_columns.has(x)
@@ -1072,6 +1188,8 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 		_generate_crate_fortress_arena()
 	else:
 		_build_layout(layout)
+	# 2b. Autoscroll-Strecke: Fenster, Effektfelder und Spawn-Bereich.
+	_setup_auto_scroll(profile.get("autoscroll", {}), layout.get("scroll_fields", []))
 	
 	# 3. Zusätzliche, gespiegelte Plattformen für mehr Varianz
 	_add_random_platforms(int(profile.get("random_platforms", 3)))
@@ -1106,6 +1224,53 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 		_build_rubber_boundary()
 	if level_depth != null:
 		level_depth.bake()
+
+	# 9. Weltraum: Asteroiden und Monster (Host simuliert, Clients folgen).
+	var space_cfg: Dictionary = profile.get("space", {})
+	if not space_cfg.is_empty():
+		space_director = SpaceDirector.new()
+		space_director.name = "SpaceDirector"
+		space_director.setup(self, space_cfg, level_seed)
+		add_child(space_director)
+
+## Legt die Autoscroll-Strecke an (cfg leer = keine). Begrenzt die Spawns auf
+## das Startfenster.
+func _setup_auto_scroll(cfg: Dictionary, field_entries: Array) -> void:
+	if cfg.is_empty():
+		return
+	auto_scroll = AutoScroll.new()
+	auto_scroll.name = "AutoScroll"
+	auto_scroll.is_replica = Global.network_mode and not Global.is_local_host()
+	auto_scroll.setup(cfg, field_entries, Vector2(float(map_w), float(map_h)) * TILE_SIZE, TILE_SIZE)
+	add_child(auto_scroll)
+	# Felder frei halten: keine Kisten, Fässer oder Powerups darauf.
+	for f in auto_scroll.fields:
+		var r: Rect2 = f["rect"]
+		_reserve_rect(int(r.position.x / TILE_SIZE) - 1, int(r.end.x / TILE_SIZE),
+			int(r.position.y / TILE_SIZE), int(r.end.y / TILE_SIZE) - 1)
+	var lo := auto_scroll.left_edge() / TILE_SIZE
+	var hi := auto_scroll.right_edge() / TILE_SIZE
+	# Hinten etwas mehr Luft als vorn, damit niemand direkt an der Kante startet.
+	if auto_scroll.dir > 0.0:
+		_spawn_col_min = int(ceil(lo + 4.0))
+		_spawn_col_max = int(floor(hi - 8.0))
+	else:
+		_spawn_col_min = int(ceil(lo + 8.0))
+		_spawn_col_max = int(floor(hi - 4.0))
+
+func start_auto_scroll() -> void:
+	if auto_scroll != null and is_instance_valid(auto_scroll):
+		auto_scroll.start()
+
+func get_auto_scroll_snapshot() -> Dictionary:
+	if auto_scroll == null or not is_instance_valid(auto_scroll):
+		return {}
+	return auto_scroll.get_network_state()
+
+func apply_auto_scroll_snapshot(data: Dictionary) -> void:
+	if data.is_empty() or auto_scroll == null or not is_instance_valid(auto_scroll):
+		return
+	auto_scroll.apply_network_state(data)
 
 func get_map_width() -> int:
 	return map_w
@@ -1246,6 +1411,8 @@ func _is_spawn_surface_clear(cell: Vector2i) -> bool:
 	if cell.y < 2 or cell.y >= map_h - 1:
 		return false
 	if cell.y < int(SideLevels.profile(current_map_id).get("spawn_min_row", 0)):
+		return false
+	if _spawn_col_min >= 0 and (cell.x < _spawn_col_min or cell.x > _spawn_col_max):
 		return false
 	if not _solid_cells.has(cell):
 		return false
@@ -1562,6 +1729,52 @@ const LAYOUTS: Dictionary = {
 		"movers": [
 			[36, 47, 3, 0, -12, 7.0, 0.0],
 			[16, 32, 4, 8, 0, 7.0, 0.0],
+		],
+	},
+	"turbotrasse": {
+		# 150 Kacheln, Boden auf Reihe 23. Abschnitte:
+		#   0-37    Start (Spawns nur im Startfenster), Turbo am Boden (x 34)
+		#   38-62   Abzweigung A: Steg (Reihe 17) über zwei Gruben, auf dem
+		#           Steg ein Umkehrfeld; unten Gruben und Stachel
+		#   63-80   Treppenpyramide, darüber Plattform mit Umkehrfeld
+		#   78-102  Abzweigung B: Tunnel unter der Decke (Turbo im Tunnel)
+		#           oder oben über die Decke mit zwei Plattformen
+		#   103-122 Abzweigung C: große Grube, Trittsteine (Umkehrfeld) oder Fähre
+		#   123-149 Ziel, Turbo auf der hohen Plattform
+		"mirror": false,
+		"ground_gaps": [[43, 46], [52, 55], [108, 114]],
+		"platforms": [[5, 9, 20], [25, 29, 20], [38, 41, 20], [42, 56, 17], [57, 60, 20],
+			[67, 71, 16], [83, 100, 19], [86, 90, 16], [94, 98, 16],
+			[104, 107, 20], [110, 113, 17], [116, 119, 20],
+			[126, 131, 20], [134, 138, 17], [141, 146, 20]],
+		"oneway": [[13, 19, 17], [78, 81, 20]],
+		"stairs": [[63, 66, 1, 4], [72, 75, 4, 1]],
+		"mystery": [[27, 16], [88, 12], [143, 16]],
+		"spikes": [[49, 22], [124, 22]],
+		"reserve": [[83, 100, 20, 22], [42, 56, 14, 16]],
+		"movers": [[108, 22, 3, 4, 0, 4.0, 0.0]],
+		"scroll_fields": [
+			[34, 21, 2, "turbo"], [48, 14, 3, "reverse"], [69, 13, 3, "reverse"],
+			[91, 20, 3, "turbo"], [111, 14, 3, "reverse"], [136, 14, 3, "turbo"],
+		],
+	},
+	"asteroidenfeld": {
+		# Schwebende Stationen (gespiegelt), dazwischen freier Raum.
+		"mirror": true,
+		"platforms": [[5, 10, 8], [4, 9, 23], [16, 20, 15], [24, 29, 6], [24, 29, 25]],
+		"oneway": [[11, 14, 19]],
+		"mystery": [[26, 2]],
+	},
+	"kometenjagd": {
+		# Start mit Stationen im ersten Fenster, danach Stationswände, die die
+		# Bahn kurz in Spuren teilen (oben/unten, Tor, Korridor, Pfeiler).
+		"mirror": false,
+		"platforms": [[6, 11, 10], [6, 11, 20], [18, 24, 15], [28, 32, 7], [28, 32, 23]],
+		"walls": [[45, 58, 12, 15], [75, 77, 0, 9], [75, 77, 19, 27],
+			[95, 110, 6, 8], [95, 110, 20, 22], [125, 127, 8, 20]],
+		"scroll_fields": [
+			[52, 3, 6, "turbo"], [52, 18, 6, "reverse"],
+			[102, 1, 4, "reverse"], [102, 23, 4, "turbo"],
 		],
 	},
 	"gletscherpass": {
@@ -3583,6 +3796,13 @@ func _instantiate_moving_object_from_snapshot(data: Dictionary) -> Node:
 			obj = RollingBall.new()
 			obj.set("ball_material", str(data.get("mat", "wood")))
 			obj.set("ball_size", float(data.get("size", 1.0)))
+		"asteroid":
+			obj = Asteroid.new()
+			obj.set("size_class", int(data.get("size", 2)))
+			obj.set("loot", bool(data.get("loot", false)))
+			obj.set("shape_seed", int(data.get("seed", 1)))
+		"space_monster":
+			obj = SpaceMonster.new()
 		_:
 			return null
 	obj.set("is_replica", true)
@@ -3941,6 +4161,52 @@ func spawn_ball(world_position: Vector2, ball_mat: String, size: float, start_ve
 	_register_moving_object(ball)
 	add_child(ball)
 	return ball
+
+## Weltraum: Asteroid als Map-Objekt mit Netzwerk-ID (nur Host zur Laufzeit).
+func spawn_asteroid(world_position: Vector2, size_class: int, velocity: Vector2, loot: bool) -> Asteroid:
+	var a := Asteroid.new()
+	a.size_class = clampi(size_class, 1, 3)
+	a.loot = loot
+	a.shape_seed = randi() % 100000 + 1
+	a.position = world_position
+	a.linear_velocity = velocity
+	a.angular_velocity = randf_range(-1.2, 1.2) / float(a.size_class)
+	a.asteroid_broken.connect(_on_asteroid_broken)
+	_register_moving_object(a)
+	add_child(a)
+	return a
+
+func spawn_space_monster(world_position: Vector2) -> SpaceMonster:
+	var m := SpaceMonster.new()
+	m.position = world_position
+	m.monster_died.connect(_on_space_monster_died)
+	_register_moving_object(m)
+	add_child(m)
+	return m
+
+# Große Asteroiden zerfallen in zwei kleinere, kleine mit Schatz-Kern lassen
+# ein Powerup frei.
+func _on_asteroid_broken(world_position: Vector2, size_class: int, loot: bool, velocity: Vector2) -> void:
+	if size_class > 1:
+		var side := velocity.orthogonal().normalized()
+		if side == Vector2.ZERO:
+			side = Vector2.UP
+		var spread := Asteroid.SPLIT_SPEED
+		for s in [-1.0, 1.0]:
+			var child_loot := size_class == 2 and randf() < Asteroid.SPLIT_LOOT_CHANCE
+			var offset: Vector2 = side * s * Asteroid.radius_for(size_class - 1)
+			call_deferred("spawn_asteroid", world_position + offset, size_class - 1,
+				velocity * 0.7 + side * s * spread, child_loot)
+	elif loot:
+		var kind := _random_powerup_kind()
+		if not kind.is_empty():
+			call_deferred("_spawn_powerup_at", world_position, kind)
+
+func _on_space_monster_died(world_position: Vector2) -> void:
+	if randf() < SpaceMonster.POWERUP_CHANCE:
+		var kind := _random_powerup_kind()
+		if not kind.is_empty():
+			call_deferred("_spawn_powerup_at", world_position, kind)
 
 func get_ball_count() -> int:
 	var count := 0
