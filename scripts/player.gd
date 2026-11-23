@@ -122,6 +122,33 @@ const PHANTOM_HUNT_DURATION: float = 6.0
 const PHANTOM_HUNT_SPEED_MULT: float = 1.3
 const PHANTOM_HUNT_FIRST_HIT_MULT: float = 2.0
 
+# Vampire (alle Helden, deren ID mit "vampire" beginnt, siehe
+# Global.is_vampire_hero): jeder dritte Angriffstreffer an einem Gegner lässt
+# eine Blutkugel fallen (siehe BloodOrb). Fähigkeitsschaden zählt nicht mit.
+const VAMPIRE_ORB_HIT_INTERVAL: int = 3
+# Fernkampf-Vampir. Passiv "Blutdurst": eine Kugel heilt so viel, aber nur,
+# wenn er verletzt ist.
+const VAMPIRE_ORB_HEAL: float = 25.0
+# Fähigkeit "Blutexplosion": alle Kugeln in dieser Reichweite explodieren.
+const VAMPIRE_BURST_RANGE: float = 480.0
+const VAMPIRE_BURST_RADIUS: float = 80.0
+const VAMPIRE_BURST_DAMAGE: float = 25.0
+const VAMPIRE_BURST_KNOCKBACK: float = 260.0
+# Dash "Blutsturm": stürmt durch Gegner, jeder Getroffene verliert etwas
+# Leben und lässt sofort eine Blutkugel fallen.
+const VAMPIRE_DASH_HIT_RADIUS: float = 26.0
+const VAMPIRE_DASH_DAMAGE: float = 8.0
+# Ulti "Fledermausschwarm": Kugeln in Reichweite werden zu Fledermäusen
+# (siehe VampireBat). Gibt es zu wenige, kommen welche aus dem Vampir selbst.
+const VAMPIRE_ULT_RANGE: float = 600.0
+const VAMPIRE_ULT_MIN_BATS: int = 2
+const VAMPIRE_ULT_MAX_BATS: int = 8
+const VAMPIRE_BAT_HP: float = 50.0
+const VAMPIRE_BAT_DURATION: float = 7.0
+const VAMPIRE_BAT_SPEED: float = 270.0
+const VAMPIRE_BAT_DAMAGE: float = 8.0
+const VAMPIRE_BAT_BITE_INTERVAL: float = 0.7
+
 # Fähigkeits-Evolutionen aus den Klassenkarten. Die Werte gelten vor den
 # Fähigkeits-Multiplikatoren (ability_damage_mult usw.).
 const IGNIS_NAPALM_RADIUS: float = 90.0
@@ -300,6 +327,11 @@ var hunt_timer: float = 0.0
 var hunt_first_hit: bool = false
 var active_decoy: PhantomDecoy = null
 var active_orb: BallLightning = null
+# Vampire: Angriffstreffer bis zur nächsten Blutkugel und Gegner, die der
+# laufende Dash schon getroffen hat.
+var vampire_hit_count: int = 0
+var _vampire_dash_hits: Array = []
+var _vampire_dash_ghosted: Array = []
 
 # Ability
 var ability_name: String = ""
@@ -981,6 +1013,9 @@ func apply_stats() -> void:
 	stealth_flicker_timer = 0.0
 	hunt_timer = 0.0
 	hunt_first_hit = false
+	vampire_hit_count = 0
+	_vampire_dash_hits.clear()
+	_vampire_dash_ghost(false)
 	ability_damage_mult = clampf(ab_dmg_mult, 0.25, 4.0)
 	ability_radius_mult = clampf(ab_radius_mult, 0.5, 2.5)
 	ability_duration_mult = clampf(ab_duration_mult, 0.5, 3.0)
@@ -1620,6 +1655,9 @@ func dash() -> void:
 	elif hero_id == "phantom":
 		_start_stealth(dash_duration + PHANTOM_STEALTH_DASH * ability_duration_mult)
 		_dash_cut_from = global_position
+	elif Global.is_vampire_hero(hero_id):
+		_vampire_dash_hits.clear()
+		_vampire_dash_ghost(true)
 
 # Kurzlebige visuelle Effekte werden an Main gehängt. Die Gruppe erlaubt es,
 # beim Rundenstart auch diese Effekte zuverlässig zu entfernen.
@@ -1857,6 +1895,11 @@ func use_ability(target = null) -> void:
 		return
 	if ability_timer > 0.0:
 		return
+	# Blutexplosion ohne Kugeln in Reichweite: nichts passiert, kein Cooldown.
+	if Global.get_player_hero_id(player_index) == "vampire" and not is_replica \
+			and BloodOrb.free_orbs(get_tree(), global_position, VAMPIRE_BURST_RANGE * ability_range_mult).is_empty():
+		_owner_sound("bounce", 0.1, -8.0)
+		return
 	_cast_has_target = false
 	if target is Vector2 and has_targeted_ability():
 		_cast_target = _resolve_cast_point(target)
@@ -1900,6 +1943,9 @@ func use_ability(target = null) -> void:
 		"druid":
 			# Wurzelwall: Rankenwand quer zur Zielrichtung
 			_place_druid_wall()
+		"vampire":
+			# Blutexplosion: alle Blutkugeln in Reichweite explodieren
+			_vampire_blood_burst()
 
 	# Turm-Talent: Die SpezialfÃƒÂ¤higkeit platziert zusÃƒÂ¤tzlich einen Turm.
 	if tower_enabled:
@@ -2853,6 +2899,121 @@ func use_ultimate(_target = null) -> void:
 			_start_overcharge()
 		"phantom":
 			_start_hunt()
+		"vampire":
+			_vampire_bat_swarm()
+
+# ============================================================
+# Vampire: Blutkugeln, Blutexplosion, Blutsturm, Fledermausschwarm
+# ============================================================
+
+# Host/offline: Blutkugel an pos erzeugen (auch ohne Treffer, z. B. für den
+# Dash des Nahkampf-Vampirs).
+func spawn_blood_orb(pos: Vector2) -> BloodOrb:
+	if is_replica or get_parent() == null:
+		return null
+	return BloodOrb.spawn(get_parent(), pos, self, arena_z if ArenaMode.active else 0.0)
+
+# Ein Angriffstreffer eines Vampirs an einem Gegner (aus take_damage).
+func register_vampire_hit(target: Node2D) -> void:
+	if is_replica or not is_instance_valid(target):
+		return
+	vampire_hit_count += 1
+	if vampire_hit_count >= VAMPIRE_ORB_HIT_INTERVAL:
+		vampire_hit_count = 0
+		spawn_blood_orb(target.global_position)
+
+# Zieht eine Blutkugel in der Nähe gerade an? Gilt nur für Vampire.
+func wants_blood_orb() -> bool:
+	if current_health <= 0.0 or is_dead:
+		return false
+	match Global.get_player_hero_id(player_index):
+		"vampire":
+			return current_health < max_health - 0.5
+	return false
+
+# Kugel berührt: true = verbraucht. Jeder Vampir hat hier seine Regel.
+func on_blood_orb_pickup(_orb: BloodOrb) -> bool:
+	if not wants_blood_orb():
+		return false
+	match Global.get_player_hero_id(player_index):
+		"vampire":
+			heal(VAMPIRE_ORB_HEAL)
+			return true
+	return false
+
+func _vampire_blood_burst() -> void:
+	if is_replica:
+		return
+	var radius := VAMPIRE_BURST_RADIUS * ability_radius_mult
+	var damage := VAMPIRE_BURST_DAMAGE * ability_damage_mult
+	var orbs := BloodOrb.free_orbs(get_tree(), global_position, VAMPIRE_BURST_RANGE * ability_range_mult)
+	for orb in orbs:
+		var pos: Vector2 = orb.take()
+		_fx("ring", NetFx.ring_args(pos, Color(0.85, 0.05, 0.12, 0.9), 0.6, radius / 8.0, 0.22, 0.28))
+		Seesaw.blast_all(get_tree(), pos, radius, 0.7)
+		for p in _opponents_within(pos, radius):
+			var dir: Vector2 = p.global_position - pos
+			if dir.length_squared() < 1.0:
+				dir = Vector2.UP
+			_ability_hit(p, damage, dir.normalized() * VAMPIRE_BURST_KNOCKBACK)
+	_fx("sound", {"snd": ["explosion", 0.25, -1.0 if orbs.size() > 1 else -4.0]})
+
+# Vampir-Dashs stürmen durch andere Eber hindurch: für die Dauer des Dashs
+# keine Kollision mit Spielern.
+func _vampire_dash_ghost(enable: bool) -> void:
+	if not enable:
+		for body in _vampire_dash_ghosted:
+			if is_instance_valid(body):
+				remove_collision_exception_with(body)
+		_vampire_dash_ghosted.clear()
+		return
+	for node in get_tree().get_nodes_in_group("player"):
+		if node != self and node is PhysicsBody2D and not _vampire_dash_ghosted.has(node):
+			add_collision_exception_with(node)
+			_vampire_dash_ghosted.append(node)
+
+# Blutsturm: jeder Gegner, den der Dash berührt, einmal pro Dash.
+func _vampire_dash_tick() -> void:
+	for p in _opponents_within(global_position, VAMPIRE_DASH_HIT_RADIUS):
+		if _vampire_dash_hits.has(p):
+			continue
+		_vampire_dash_hits.append(p)
+		_ability_hit(p, VAMPIRE_DASH_DAMAGE * ability_damage_mult, dash_dir * 120.0)
+		spawn_blood_orb(p.global_position)
+		_fx("ring", NetFx.with_sound(NetFx.ring_args(p.global_position,
+			Color(0.85, 0.05, 0.15, 0.85), 0.4, 2.2, 0.18, 0.2), "hit", 0.2, -2.0))
+
+func _vampire_bat_swarm() -> void:
+	if is_replica or get_parent() == null:
+		return
+	var orbs := BloodOrb.free_orbs(get_tree(), global_position, VAMPIRE_ULT_RANGE)
+	orbs.sort_custom(func(a, b): return a.global_position.distance_squared_to(global_position) \
+		< b.global_position.distance_squared_to(global_position))
+	var spots: Array = []
+	for orb in orbs:
+		if spots.size() >= VAMPIRE_ULT_MAX_BATS:
+			break
+		spots.append(orb.take())
+	while spots.size() < VAMPIRE_ULT_MIN_BATS:
+		spots.append(global_position + Vector2(randf_range(-14.0, 14.0), -20.0 - randf() * 10.0))
+	for pos in spots:
+		var bat := VampireBat.new()
+		bat.owner_player = self
+		bat.owner_index = player_index
+		bat.team_id = team_id
+		bat.max_hp = VAMPIRE_BAT_HP * ability_damage_mult
+		bat.hp = bat.max_hp
+		bat.duration = VAMPIRE_BAT_DURATION * ult_duration_mult
+		bat.speed = VAMPIRE_BAT_SPEED
+		bat.bite_damage = VAMPIRE_BAT_DAMAGE * ability_damage_mult
+		bat.bite_interval = VAMPIRE_BAT_BITE_INTERVAL
+		if ArenaMode.active:
+			bat.arena_z = arena_z
+		bat.position = pos
+		get_parent().add_child(bat)
+		bat.global_position = pos
+		_fx("ring", NetFx.ring_args(pos, Color(0.4, 0.05, 0.3, 0.85), 0.4, 2.6, 0.2, 0.25))
+	_fx("sound", {"snd": ["teleport", 0.15, 0.0]})
 
 # --- Druide: Wurzelwall ---
 func _place_druid_wall() -> void:
@@ -3311,6 +3472,11 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null
 	
 	current_health -= mitigated_amount
 	apply_knockback(knockback)
+
+	# Vampire: jeder dritte Angriffstreffer lässt eine Blutkugel fallen.
+	if effective_damage > 0.0 and damage_source_index > 0 and not source.dealing_ability_damage \
+			and Global.is_vampire_hero(Global.get_player_hero_id(damage_source_index)):
+		source.register_vampire_hit(self)
 
 	if effective_damage > 0.0:
 		Global.add_match_stat(player_index, "damage_taken", effective_damage)
@@ -3933,6 +4099,7 @@ func interrupt_rush() -> void:
 		is_dashing = false
 		dash_timer = 0.0
 		is_invulnerable = _has_temporary_invulnerability()
+		_vampire_dash_ghost(false)
 	if is_leaping:
 		is_leaping = false
 		leap_timer = 0.0
@@ -3990,7 +4157,10 @@ func _handle_timers(delta: float) -> void:
 	
 	if is_dashing:
 		dash_timer -= delta
-		if Global.get_player_hero_id(player_index) == "ignis":
+		var hero_dash_id: String = Global.get_player_hero_id(player_index)
+		if hero_dash_id == "vampire" and not is_replica:
+			_vampire_dash_tick()
+		if hero_dash_id == "ignis":
 			afterburner_timer -= delta
 			if afterburner_timer <= 0.0:
 				afterburner_timer = AFTERBURNER_ZONE_INTERVAL
@@ -4002,6 +4172,7 @@ func _handle_timers(delta: float) -> void:
 		if dash_timer <= 0.0:
 			is_dashing = false
 			is_invulnerable = _has_temporary_invulnerability()
+			_vampire_dash_ghost(false)
 			if not is_replica:
 				_dash_cut()
 	

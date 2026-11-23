@@ -188,6 +188,12 @@ func _build_outfit() -> void:
 			_box(Vector3(19.8, 3, 21.8), Vector3(0, 15.2, 0), cloth, _head)
 			_box(Vector3(8, 2.4, 3), Vector3(-13, 15.0, 3), cloth, _head)
 			_box(Vector3(8, 2.4, 3), Vector3(-15, 12.5, -2), cloth.lightened(0.1), _head)
+		"vampire":
+			# Zylinder mit rotem Band
+			var felt := accent if Global.is_team_mode() else Color(0.1, 0.08, 0.12)
+			_box(Vector3(24, 2, 26), Vector3(0, top + 0.8, 0), felt, _head)
+			_box(Vector3(14, 12, 16), Vector3(-1, top + 7.5, 0), felt, _head)
+			_box(Vector3(14.6, 3, 16.6), Vector3(-1, top + 3.2, 0), Color(0.74, 0.06, 0.14), _head)
 
 func _box(size: Vector3, pos: Vector3, color: Color, parent: Node3D, emission: Color = Color(0, 0, 0, 0), energy: float = 0.0) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
