@@ -894,6 +894,41 @@ func _setup_heroes() -> void:
 	vamp_melee.ability_version = 1
 	heroes["vampire_melee"] = vamp_melee
 
+	# 9. Zeitschläger – Zeitmagier mit Uhrenpendel
+	var zeit = HeroData.new()
+	zeit.id = "zeitschlaeger"
+	zeit.name = "Zeitschläger"
+	zeit.role = "Chrono Brawler"
+	zeit.description = "Schwingt ein Uhrenpendel und biegt die Zeit um sich herum."
+	zeit.passive_desc = "Taktschlag: Jeder %d. Pendeltreffer an einem Gegner verlangsamt ihn %.1f s lang um %d %%." % [
+		Player.ZEIT_PASSIVE_HIT_INTERVAL, Player.ZEIT_PASSIVE_SLOW_DURATION,
+		int(round(Player.ZEIT_PASSIVE_SLOW * 100.0)),
+	]
+	zeit.ability_name = "Zeitblase"
+	zeit.ability_desc = "Eine Kuppel, in der Gegner und ihre Kugeln stark verlangsamt sind!"
+	zeit.ability_cooldown = 10.0
+	zeit.attack_type = "melee"
+	zeit.melee_weapon = "flail"
+	zeit.melee_damage_mult = 1.0
+	zeit.melee_cooldown_mult = 0.85
+	zeit.dash_name = "Rückspul"
+	zeit.dash_desc = "Springt an die Stelle von vor 2 s zurück und holt den Schaden dieser Zeit als Leben zurück."
+	zeit.ult_name = "Zeitstopp"
+	zeit.ult_desc = "Alles außer dir friert ein. Deine Treffer stauen sich und schlagen danach gesammelt ein!"
+	zeit.ult_cooldown = 32.0
+	zeit.base_hp = 120
+	zeit.base_shield = 10
+	zeit.base_speed = 300.0
+	zeit.base_jump_force = -505.0
+	zeit.base_ammo = 3
+	zeit.base_fire_rate_cooldown = 0.24
+	zeit.base_reload_time = 1.2
+	zeit.color_tint = Color(0.86, 0.68, 0.30)
+	zeit.sprite_tile_name = "tile_0006.png"
+	zeit.version = 1
+	zeit.ability_version = 1
+	heroes["zeitschlaeger"] = zeit
+
 func get_hero(id: String) -> HeroData:
 	return heroes.get(id, heroes["ignis"])
 
@@ -953,6 +988,11 @@ func get_hero_ability_details(hero: HeroData) -> String:
 				int(Player.VAMP_MELEE_BURST_DAMAGE_PER_SHIELD), int(Player.VAMP_MELEE_BURST_RADIUS),
 				int(round(Player.VAMP_MELEE_SHIELD_CAP * 100.0)),
 				int(round(hero.base_hp * Player.VAMP_MELEE_SHIELD_CAP * Player.VAMP_MELEE_BURST_DAMAGE_PER_SHIELD)),
+			]
+		"zeitschlaeger":
+			return "Zeitkuppel an deiner Position: Radius %d px, %.0f s lang. Gegner darin laufen %d %% langsamer, gegnerische Kugeln fliegen nur mit %d %% Tempo. Du selbst bewegst dich normal." % [
+				int(Player.ZEIT_BUBBLE_RADIUS), Player.ZEIT_BUBBLE_DURATION,
+				int(round(Player.ZEIT_BUBBLE_SLOW * 100.0)), int(round(Player.ZEIT_BUBBLE_BULLET_SCALE * 100.0)),
 			]
 	return hero.ability_desc
 
@@ -1015,6 +1055,10 @@ func get_hero_ult_details(hero: HeroData) -> String:
 				int(round((Player.DRUID_BOAR_HP_MULT - 1.0) * 100.0)),
 				int(round(Player.DRUID_BOAR_MELEE_DAMAGE_MULT * 100.0)), int(Player.DRUID_BOAR_CHARGE_DAMAGE),
 			]
+		"zeitschlaeger":
+			return "%.0f s lang frieren alle Gegner und ihre Kugeln ein, auch ihre Abklingzeiten stehen. Deine Treffer an eingefrorenen Gegnern stauen sich (%d %% Schaden) und schlagen am Ende gesammelt mit Rückstoß ein." % [
+				Player.ZEIT_STOP_DURATION, int(round(Player.ZEIT_STOP_DAMAGE_MULT * 100.0)),
+			]
 	return hero.ult_desc
 
 # Ausführlicher Text zum Helden-Dash (Shift).
@@ -1046,6 +1090,10 @@ func get_hero_dash_details(hero: HeroData) -> String:
 			return "Dash in Laufrichtung, kurz unverwundbar und durch Gegner hindurch. Jeder Getroffene nimmt %d Schaden und lässt sofort eine Blutkugel fallen." % int(Player.VAMPIRE_DASH_DAMAGE)
 		"vampire_melee":
 			return "Legt an der Startstelle eine Blutkugel ab und stürmt %d %% weiter als ein normaler Dash, kurz unverwundbar und durch Gegner hindurch." % int(round(Player.VAMP_MELEE_DASH_DURATION_MULT * 100.0))
+		"zeitschlaeger":
+			return "Springt an die Stelle von vor %.0f s zurück (ein Nachbild zeigt sie dir) und bekommt %d %% des Schadens aus dieser Zeit als Leben zurück. %.0f s Abklingzeit." % [
+				Player.ZEIT_REWIND_SECONDS, int(round(Player.ZEIT_REWIND_HEAL_SHARE * 100.0)), Player.ZEIT_REWIND_COOLDOWN,
+			]
 	return "Dash in Laufrichtung, kurz unverwundbar."
 
 # Zeile zum Hauptangriff (Linksklick) für Menü und Tooltips.

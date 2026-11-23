@@ -94,7 +94,7 @@ Alle Tasten lassen sich unter **Optionen → Steuerung** neu belegen. Hier steht
 
 ## 🐷 Helden
 
-Es gibt **8 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am Kopf. Jeder Held ist entweder **Fernkämpfer** (Linksklick schießt) oder **Nahkämpfer** (Linksklick schlägt mit seiner festen Waffe): Klinge (Schwert), Bastion (Hammer) und Phantom (Lötkolben-Stich) sind Nahkämpfer, alle anderen schießen. Im Draft erscheinen nur Karten, die zur Angriffsart passen.
+Es gibt **9 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am Kopf. Jeder Held ist entweder **Fernkämpfer** (Linksklick schießt) oder **Nahkämpfer** (Linksklick schlägt mit seiner festen Waffe): Klinge (Schwert), Bastion (Hammer), Phantom (Lötkolben-Stich) und Zeitschläger (Uhrenpendel) sind Nahkämpfer, alle anderen schießen. Im Draft erscheinen nur Karten, die zur Angriffsart passen.
 
 **Helden-Kits:** Jeder Held hat einen eigenen Dash (`Shift`), eine Fähigkeit (Rechtsklick) und eine **Ulti** (`E`). Meteorschauer (Ignis) und Singularität (Nova) werden wie gezielte Fähigkeiten mit der Maus gezielt: `E` halten zeigt die Vorschau, Loslassen löst aus (oder sofort, je nach Option „Fähigkeit auslösen“).
 
@@ -108,6 +108,7 @@ Es gibt **8 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit
 | **Klinge** | **Durchstoß**: Dash durch Gegner hindurch, trifft jeden einmal (70 % Schwertschaden). Ein Treffer halbiert die Dash-Abklingzeit | **Klingenbumerang**: Schwert fliegt 280 px und zurück, trifft hin und zurück. Solange es fliegt, kein Hieb | **Klingensturm** (24 s): 3 s lang frei beweglicher Wirbel (145 px), alle 0,3 s Schaden, großer Schlusswirbel, schlägt Kugeln zurück |
 | **Bastion** | **Rammbock**: nicht unverwundbar, Kugeln von vorn prallen ab, Gegner werden mitgeschoben und am Ende weggestoßen | **Magnethaken**: Haken bis 380 px, betäubt den ersten Gegner kurz und zieht ihn heran | **Festung** (32 s): 5 s Kuppel (140 px), gegnerische Kugeln prallen von außen ab, innen heilen Bastion und Verbündete |
 | **Druide** | **Rankenschwung**: Ranke bis 220 px zieht den Druiden an Wände und Decken. Ohne Halt normaler Dash | **Wurzelwall** (unverändert) | **Urkeiler** (35 s): 7 s riesiger Keiler, +60 % Leben, Hammer-Nahkampf, der Dash wird zum Ansturm (schleudert weg, bricht Kisten) |
+| **Zeitschläger** | **Rückspul** (6 s Abklingzeit): springt an die Stelle von vor 2 s zurück und bekommt den Schaden aus dieser Zeit als Leben zurück. Ein blasses Nachbild zeigt dir die Stelle | **Zeitblase** (10 s): Kuppel an deiner Position (Radius 150 px, 4 s), Gegner darin 60 % langsamer, gegnerische Kugeln fliegen nur mit 25 % Tempo | **Zeitstopp** (32 s): 2 s lang frieren alle Gegner und ihre Kugeln ein. Deine Treffer an ihnen stauen sich und schlagen am Ende gesammelt ein |
 
 Klinge schlägt in Kombos: Jeder **dritte Hieb** in Folge (innerhalb 1,6 s) ist ein starker Stoß mit 160 % Schaden.
 
@@ -124,6 +125,7 @@ Die **Ulti** lädt über eine Abklingzeit, nicht über Schaden. Sie läuft über
 | **Phantom** | Shadow Assassin | 100 | 325 | 5 | **Hinterhalt**: +50 % Nahkampfschaden aus der Unsichtbarkeit oder von hinten | **Köder**: Doppelgänger läuft weiter, Phantom wird unsichtbar | Ninja-Stirnband |
 | **Druide** | Grove Warden | 105 | 295 | 10 | **Wurzelkraft**: Regeneriert ständig 2 HP/s | **Wurzelwall**: Rankenwand am Zielpunkt, breite Seite zum Druiden (108 px, 5 s, 150 HP), blockt Bewegung und Kugeln | Blätterkranz mit Geweih |
 | **Blutritter** | Blood Knight (Nahkampf-Vampir, Schwert) | 110 | 300 | 0 | **Blutschild**: Jeder 3. Treffer lässt eine Blutkugel fallen; jede Kugel gibt +25 Schild, bis 200 % der Max-HP (zweite, rote Lage auf der Lebensleiste) | **Blutbersten**: der ganze Schild explodiert, 1 Schaden pro Schildpunkt im Radius 150. Dash **Blutsturm**: legt eine Blutkugel ab, stürmt 40 % weiter und durch Gegner. Ulti **Blutruf** (24 s): bis zu 6 Kugeln im Umkreis 520 px fliegen zu ihm, treffen sie unterwegs einen Gegner: 30 Schaden und +30 HP | Hoher Dracula-Kragen mit rotem Edelstein |
+| **Zeitschläger** | Chrono Brawler | 120 | 300 | 10 | **Taktschlag**: Jeder 3. Pendeltreffer verlangsamt den Gegner 1,5 s um 30 % | **Zeitblase**: Kuppel, in der Gegner und ihre Kugeln stark verlangsamt sind | Wecker mit zwei Glocken |
 
 Die genauen Zahlen der Fähigkeiten stehen im Spiel unter **HELDEN** im Hauptmenü und im Tooltip der Heldenwahl. Sie kommen direkt aus den Konstanten in `player.gd`, stimmen also immer.
 
@@ -457,6 +459,8 @@ Eine Grundkarte (Rare) mit zwei exklusiven Evolutionen (Epic) und eine Einzelkar
 | **Bastion** (Magnethaken) | Langer Haken | Kettenschlag | Magnetfeld | – |
 | **Phantom** (Köder) | Doppelgänger | Sprengköder | Platztausch (C: Lähmendes Mal) | Lange Schatten |
 | **Blutritter** (Blutbersten) | Weites Bersten | Blutspende (heilt 30 % des Schilds) | Blutregen (Getroffene lassen Blutkugeln fallen) | Blutschneise (Dash, Epic) und Blutsog (Ulti, Epic) |
+
+**Zeitschläger** (Nahkampf mit Uhrenpendel = Flegel, 30 Schaden, Rundumschlag) hat 7 Klassenkarten und 2 Familien mit je 2 Evolutionen: **Taktgeber** (Common, +15 % Nahkampftempo, +10 % Tempo), **Schweres Pendel** (Uncommon, +30 % Nahkampfschaden, +0,5 Felder, −10 % Tempo), **Schnellladung** (Uncommon, −15 % Ulti- und −10 % Fähigkeits-Abklingzeit), **Stundenschlag** (Epic, Taktschlag schon jeden 2. Treffer, 2,5 s lang), **Ewige Sekunde** (Epic, Zeitstopp +50 % Dauer), **Zinseszins** (Epic, gestaute Treffer schlagen mit 150 % ein). Familie Zeitblase: **Große Blase** (Rare, +30 % Radius, +25 % Dauer) → A **Zerfall** (8 Schaden/s in der Blase) oder B **Eigenzeit** (+30 % Tempo in der eigenen Blase). Familie Rückspul: **Lange Erinnerung** (Rare, 1 s weiter zurück, −15 % Dash-Abklingzeit) → A **Zeitriss** (Explosion an der verlassenen Stelle, 25 Schaden) oder B **Reinigung** (entfernt Gift, Brand und Verlangsamung, +20 Schild).
 
 **Dash- und Ulti-Karten (neu):** Volt: **Dreifachblitz** (Rare, +1 Blitzschritt-Ladung, +20 % Teleportweite) mit den Evolutionen **Kettenblink** (Kettenblitz am Zielpunkt) und **Gewitterspur** (Blitzzone am Zielpunkt); **Starkstrom** (Rare, Überladung +30 % Dauer, −10 % Ulti-Abklingzeit) mit **Dauerblitz** (Blitzschritt lädt in der Überladung dreimal so schnell) und **Schockring** (Schockwelle am Ende). Phantom: **Schattenschnitt** (Epic, der Dash sticht alle Gegner auf dem Weg, 60 % Schaden) und **Blutspur** (Epic, ein Kill in der Nachtjagd gibt die halbe Ulti-Abklingzeit zurück). Für alle Helden mit Ulti: **Ulti-Akku** (Uncommon, −15 % Ulti-Abklingzeit).
 

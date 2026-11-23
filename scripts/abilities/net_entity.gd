@@ -41,4 +41,6 @@ static func create_replica(kind: String) -> Node2D:
 			return BladeBoomerang.new()
 		"hook":
 			return MagnetHook.new()
+		"tbubble":
+			return TimeBubble.new()
 	return null

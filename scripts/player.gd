@@ -50,6 +50,8 @@ const MAX_REFLECT_HEAL_PERCENT: float = 1.0
 # Vergiftete Charaktere bekommen einen dezenten Grünton und aufsteigende
 # Giftbläschen. Der Tick-Sound bleibt bewusst im Hintergrund.
 const POISON_TINT: Color = Color(0.62, 1.18, 0.68, 1.0)
+# Im Zeitstopp eingefroren: kühles Blaugrau.
+const TIME_FROZEN_TINT: Color = Color(0.62, 0.78, 1.15, 1.0)
 const POISON_TICK_VOLUME_DB: float = -10.0
 
 # Klinge: Klingensturm. Radius und Impuls bestimmen spürbar, ob die Fähigkeit
@@ -273,6 +275,38 @@ const VAMPIRE_FRENZY_HIT_INTERVAL: int = 2
 const VAMPIRE_STRONG_DASH_MULT: float = 2.0
 const VAMPIRE_KING_MIN_BATS: int = 4
 const VAMPIRE_KING_BITE_HEAL: float = 0.5
+
+# Zeitschläger. Passiv "Taktschlag": jeder dritte Pendeltreffer verlangsamt.
+const ZEIT_PASSIVE_HIT_INTERVAL: int = 3
+const ZEIT_PASSIVE_SLOW: float = 0.3
+const ZEIT_PASSIVE_SLOW_DURATION: float = 1.5
+# Fähigkeit "Zeitblase" (siehe TimeBubble): ortsfeste Kuppel.
+const ZEIT_BUBBLE_RADIUS: float = 150.0
+const ZEIT_BUBBLE_DURATION: float = 4.0
+const ZEIT_BUBBLE_SLOW: float = 0.6
+const ZEIT_BUBBLE_BULLET_SCALE: float = 0.25
+# Dash "Rückspul": zurück an die Stelle von vor ZEIT_REWIND_SECONDS, der
+# Schaden aus dieser Zeit kommt als Leben zurück.
+const ZEIT_REWIND_SECONDS: float = 2.0
+const ZEIT_REWIND_HEAL_SHARE: float = 1.0
+const ZEIT_REWIND_COOLDOWN: float = 6.0
+const ZEIT_REWIND_SAMPLE: float = 0.1
+# Ulti "Zeitstopp": alle Gegner und ihre Kugeln frieren ein. Eigene Treffer an
+# Eingefrorenen stauen sich und schlagen am Ende gesammelt ein.
+const ZEIT_STOP_DURATION: float = 2.0
+const ZEIT_STOP_DAMAGE_MULT: float = 1.0
+# Zeitschläger-Evolutionen aus Klassenkarten: Lange Erinnerung, Zeitriss,
+# Reinigung, Zerfall, Eigenzeit, Stundenschlag, Zinseszins.
+const ZEITEVO_LONG_REWIND_ADD: float = 1.0
+const ZEITEVO_RIFT_RADIUS: float = 100.0
+const ZEITEVO_RIFT_DAMAGE: float = 25.0
+const ZEITEVO_RIFT_KNOCKBACK: float = 380.0
+const ZEITEVO_CLEANSE_SHIELD: float = 20.0
+const ZEITEVO_DECAY_DPS: float = 8.0
+const ZEITEVO_HASTE_MULT: float = 1.3
+const ZEITEVO_FAST_HIT_INTERVAL: int = 2
+const ZEITEVO_FAST_SLOW_DURATION: float = 2.5
+const ZEITEVO_STOP_AMP: float = 1.5
 
 # Fähigkeits-Evolutionen aus den Klassenkarten. Die Werte gelten vor den
 # Fähigkeits-Multiplikatoren (ability_damage_mult usw.).
@@ -555,6 +589,25 @@ var wall_slam_source: Player = null
 var wall_slam_shield: float = 0.0
 # Verwesung (Spore-Ulti): keine Heilung und kein Schildaufbau.
 var heal_block_timer: float = 0.0
+# Zeitschläger: Treffer bis zum nächsten Taktschlag, Verlauf für Rückspul,
+# laufender Zeitstopp (als Verursacher) und Zeitzustände als Opfer.
+var zeit_hit_count: int = 0
+var _zeit_hist: Array = []          # [{pos, z}] alle ZEIT_REWIND_SAMPLE s, neueste zuletzt
+var _zeit_hist_timer: float = 0.0
+var _zeit_damage_log: Array = []    # [[Zeitpunkt, Schaden]] für die Rückspul-Heilung
+var _zeit_clock: float = 0.0
+var _zeit_ghost: Node2D = null
+var zeit_stop_timer: float = 0.0
+var _zeit_stop_victims: Array = []
+var time_frozen_timer: float = 0.0
+var time_frozen_by: Player = null
+var _time_frozen_damage: float = 0.0
+var _time_frozen_knockback: Vector2 = Vector2.ZERO
+var _stun_before_freeze: float = 0.0
+var time_slow_timer: float = 0.0
+var time_slow_mult: float = 1.0
+var time_haste_timer: float = 0.0
+var time_haste_mult: float = 1.0
 
 # Ability
 var ability_name: String = ""
@@ -1232,7 +1285,8 @@ func apply_stats() -> void:
 	fire_rate_cooldown = maxf(0.08, hero.base_fire_rate_cooldown * fr_mult)
 	max_ammo = maxi(1, hero.base_ammo + ammo_add)
 	current_ammo = max_ammo
-	dash_cooldown = maxf(0.5, 1.8 * dash_cd_mult)
+	var base_dash_cd := ZEIT_REWIND_COOLDOWN if hero.id == "zeitschlaeger" else 1.8
+	dash_cooldown = maxf(0.5, base_dash_cd * dash_cd_mult)
 	dash_charges_max = clampi(hero.dash_charges + dash_charges_add, 1, 4)
 	dash_charges = dash_charges_max
 	dash_cooldown_timer = 0.0
@@ -1256,6 +1310,7 @@ func apply_stats() -> void:
 	vampire_hit_count = 0
 	_vampire_dash_hits.clear()
 	_vampire_dash_ghost(false)
+	_reset_time_state()
 	ability_damage_mult = clampf(ab_dmg_mult, 0.25, 4.0)
 	ability_radius_mult = clampf(ab_radius_mult, 0.5, 2.5)
 	ability_duration_mult = clampf(ab_duration_mult, 0.5, 3.0)
@@ -1366,6 +1421,10 @@ func apply_stats() -> void:
 	emit_signal("block_state_changed", false, 0.0, block_cooldown)
 
 func _physics_process(delta: float) -> void:
+	# Zeitstopp eines Zeitschlägers: alles steht, auch die eigenen Timer.
+	if time_frozen_timer > 0.0 and not is_replica:
+		_tick_time_frozen(delta)
+		return
 	_handle_timers(delta)
 	_update_drop_through(delta)
 	
@@ -1487,6 +1546,10 @@ func _current_ground_speed() -> float:
 		current_spd *= DRUID_BOAR_SPEED_MULT
 	if freeze_timer > 0.0:
 		current_spd *= FREEZE_SPEED_MULT
+	if time_slow_timer > 0.0:
+		current_spd *= time_slow_mult
+	if time_haste_timer > 0.0:
+		current_spd *= time_haste_mult
 	if on_deep_snow:
 		current_spd *= DEEP_SNOW_SPEED_MULT
 	return current_spd
@@ -1759,6 +1822,13 @@ func apply_network_state(data: Dictionary) -> void:
 	if (net_boar > 0.0) != (boar_timer > 0.0):
 		scale = Vector2.ONE * _body_scale * (DRUID_BOAR_SCALE if net_boar > 0.0 else 1.0)
 	boar_timer = net_boar
+	var net_frozen := float(data.get("tfrz", 0.0))
+	if (net_frozen > 0.0) != (time_frozen_timer > 0.0):
+		time_frozen_timer = net_frozen
+		_refresh_poison_visual()
+	time_frozen_timer = net_frozen
+	time_slow_timer = float(data.get("tslow", 0.0))
+	zeit_stop_timer = float(data.get("tstop", 0.0))
 	is_blocking = bool(data.get("blocking", is_blocking))
 	block_cooldown_timer = float(data.get("block_cd", block_cooldown_timer))
 	block_cooldown = float(data.get("block_cd_max", block_cooldown))
@@ -1916,6 +1986,9 @@ func dash() -> void:
 		_start_glide()
 		return
 	if hero_id == "druid" and _dash_kind == "druid" and _try_vine_swing():
+		return
+	if hero_id == "zeitschlaeger":
+		_zeit_rewind()
 		return
 
 	is_dashing = true
@@ -2251,6 +2324,9 @@ func use_ability(target = null) -> void:
 			if not _vamp_melee_burst():
 				ability_timer = 0.0
 				emit_signal("ability_cooldown_updated", 0.0, ability_max_cooldown)
+		"zeitschlaeger":
+			# Zeitblase: Kuppel, in der Gegner und Kugeln langsam werden
+			_spawn_time_bubble()
 
 	# Turm-Talent: Die SpezialfÃƒÂ¤higkeit platziert zusÃƒÂ¤tzlich einen Turm.
 	if tower_enabled:
@@ -2367,6 +2443,8 @@ func _melee_strike(dir: Vector2, power: float) -> void:
 				p.apply_burn(melee_burn_stacks, burn_damage_per_tick)
 			if melee_stun > 0.0:
 				p.apply_stun(melee_stun)
+		if (landed or p.is_time_frozen()) and Global.get_player_hero_id(player_index) == "zeitschlaeger":
+			_zeit_register_hit(p)
 		_spawn_blade_hit_spark(p.global_position)
 	if not targets.is_empty():
 		chain_hit_timer = 0.0
@@ -4112,6 +4190,8 @@ func use_ultimate(target = null) -> void:
 			_raise_fortress()
 		"druid":
 			_start_boar()
+		"zeitschlaeger":
+			_start_time_stop()
 
 # ============================================================
 # Vampire: Blutkugeln, Blutexplosion, Blutsturm, Fledermausschwarm
@@ -4241,6 +4321,263 @@ func _vampire_bat_swarm() -> void:
 		bat.global_position = pos
 		_fx("ring", NetFx.ring_args(pos, Color(0.4, 0.05, 0.3, 0.85), 0.4, 2.6, 0.2, 0.25))
 	_fx("sound", {"snd": ["teleport", 0.15, 0.0]})
+
+# ============================================================
+# Zeitschläger: Taktschlag, Zeitblase, Rückspul, Zeitstopp
+# ============================================================
+
+func _reset_time_state() -> void:
+	zeit_hit_count = 0
+	_zeit_hist.clear()
+	_zeit_hist_timer = 0.0
+	_zeit_damage_log.clear()
+	_end_time_stop(false)
+	time_frozen_timer = 0.0
+	time_frozen_by = null
+	_time_frozen_damage = 0.0
+	_time_frozen_knockback = Vector2.ZERO
+	time_slow_timer = 0.0
+	time_slow_mult = 1.0
+	time_haste_timer = 0.0
+	time_haste_mult = 1.0
+
+func is_time_stopping() -> bool:
+	return zeit_stop_timer > 0.0
+
+func is_time_frozen() -> bool:
+	return time_frozen_timer > 0.0
+
+# Verlangsamung durch Taktschlag oder Zeitblase; die stärkste gilt.
+func apply_time_slow(mult: float, duration: float) -> void:
+	if time_slow_timer <= 0.0 or mult < time_slow_mult:
+		time_slow_mult = clampf(mult, 0.05, 1.0)
+	time_slow_timer = maxf(time_slow_timer, duration)
+
+func apply_time_haste(mult: float, duration: float) -> void:
+	time_haste_mult = maxf(1.0, mult)
+	time_haste_timer = maxf(time_haste_timer, duration)
+
+func _zeit_rewind_window() -> float:
+	var window := ZEIT_REWIND_SECONDS
+	if _has_ability_evolution("zeit_rewind_long"):
+		window += ZEITEVO_LONG_REWIND_ADD
+	return window
+
+# Verlauf für Rückspul. Läuft auf jedem Rechner, damit auch ein Client sein
+# Nachbild sieht; zurückgesprungen wird nur dort, wo simuliert wird.
+func _zeit_track(delta: float) -> void:
+	if Global.get_player_hero_id(player_index) != "zeitschlaeger":
+		return
+	_zeit_clock += delta
+	_zeit_hist_timer -= delta
+	if _zeit_hist_timer <= 0.0:
+		_zeit_hist_timer = ZEIT_REWIND_SAMPLE
+		_zeit_hist.append({"pos": global_position, "z": arena_z})
+		var keep := int(ceil(_zeit_rewind_window() / ZEIT_REWIND_SAMPLE)) + 1
+		while _zeit_hist.size() > keep:
+			_zeit_hist.pop_front()
+	var window := _zeit_rewind_window()
+	while not _zeit_damage_log.is_empty() and _zeit_clock - float(_zeit_damage_log[0][0]) > window:
+		_zeit_damage_log.pop_front()
+	_update_zeit_ghost()
+
+# Leben, das Rückspul jetzt zurückgeben würde.
+func zeit_rewind_heal_amount() -> float:
+	var total := 0.0
+	for entry in _zeit_damage_log:
+		total += float(entry[1])
+	return total * ZEIT_REWIND_HEAL_SHARE
+
+func zeit_rewind_point() -> Vector2:
+	if _zeit_hist.is_empty():
+		return global_position
+	return _zeit_hist[0]["pos"]
+
+# Blasses Nachbild an der Rückspul-Stelle, nur für den Spieler selbst.
+func _update_zeit_ghost() -> void:
+	var show := _is_local_human() and current_health > 0.0 and not _zeit_hist.is_empty() \
+		and dash_charges > 0 and zeit_rewind_point().distance_to(global_position) > 24.0
+	if not show:
+		if is_instance_valid(_zeit_ghost):
+			_zeit_ghost.visible = false
+		return
+	if not is_instance_valid(_zeit_ghost):
+		var ghost := PigModular.new()
+		ghost.setup(sprite.fur_color, sprite.eye_color, sprite.pants_color)
+		if sprite is PigModular:
+			ghost.apply_parts((sprite as PigModular).get_parts())
+		ghost.set_outfit(sprite.outfit_id)
+		ghost.set_team_color(sprite.team_color)
+		ghost.set_tusk_shape(sprite.tusk_shape)
+		ghost.animate = false
+		ghost.follow_parent_motion = false
+		ghost.modulate = Color(0.7, 0.85, 1.0, 0.28)
+		ghost.z_index = -1
+		_add_round_effect(ghost)
+		_zeit_ghost = ghost
+	_zeit_ghost.visible = true
+	_zeit_ghost.scale = sprite.scale * scale
+	_zeit_ghost.flip_h = sprite.flip_h
+	_zeit_ghost.global_position = zeit_rewind_point() + (sprite.global_position - global_position)
+
+func _zeit_rewind() -> void:
+	if is_replica:
+		return
+	var start := global_position
+	var target := zeit_rewind_point()
+	var z_target: float = _zeit_hist[0]["z"] if not _zeit_hist.is_empty() else arena_z
+	var healed := zeit_rewind_heal_amount()
+	var gold := Color(1.0, 0.82, 0.38, 0.9)
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(start, gold, 0.5, 4.0, 0.22, 0.3), "teleport", 0.1, -1.0))
+	if _has_ability_evolution("zeit_rewind_rift"):
+		_zeit_rift(start)
+	global_position = target
+	if ArenaMode.active:
+		arena_z = z_target
+	velocity = Vector2.ZERO
+	is_invulnerable = true
+	ability_invuln_timer = maxf(ability_invuln_timer, VOLT_DASH_INVULN)
+	_fx("ring", NetFx.ring_args(target, Color(0.6, 0.85, 1.0, 0.9), 0.3, 3.0, 0.2, 0.3))
+	if healed > 0.0:
+		heal(healed)
+	if _has_ability_evolution("zeit_rewind_cleanse"):
+		poison_ticks_left = 0
+		burn_ticks_left = 0
+		freeze_timer = 0.0
+		time_slow_timer = 0.0
+		_refresh_poison_visual()
+		current_shield = minf(max_shield + ZEITEVO_CLEANSE_SHIELD, current_shield + ZEITEVO_CLEANSE_SHIELD)
+		emit_signal("health_changed", current_health, max_health, current_shield, max_shield)
+	# Der Verlauf beginnt neu, sonst springt der nächste Rückspul in dieselbe Zeit.
+	_zeit_hist.clear()
+	_zeit_hist_timer = 0.0
+	_zeit_damage_log.clear()
+
+# Evolution "Zeitriss": Explosion an der verlassenen Stelle.
+func _zeit_rift(pos: Vector2) -> void:
+	var radius := ZEITEVO_RIFT_RADIUS * ability_radius_mult
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(pos, Color(0.6, 0.85, 1.0, 0.9), 0.8, radius / 8.0, 0.25, 0.3), "explosion", 0.2, -3.0))
+	Seesaw.blast_all(get_tree(), pos, radius, 0.6)
+	for p in _opponents_within(pos, radius):
+		var dir: Vector2 = p.global_position - pos
+		if dir.length_squared() < 1.0:
+			dir = Vector2.UP
+		_ability_hit(p, ZEITEVO_RIFT_DAMAGE * ability_damage_mult, dir.normalized() * ZEITEVO_RIFT_KNOCKBACK)
+
+func _spawn_time_bubble() -> void:
+	if is_replica or get_parent() == null:
+		return
+	var bubble := TimeBubble.new()
+	bubble.owner_player = self
+	bubble.team_id = team_id
+	bubble.radius = ZEIT_BUBBLE_RADIUS * ability_radius_mult
+	bubble.duration = ZEIT_BUBBLE_DURATION * ability_duration_mult
+	bubble.slow = ZEIT_BUBBLE_SLOW
+	bubble.bullet_scale = ZEIT_BUBBLE_BULLET_SCALE
+	if _has_ability_evolution("zeit_bubble_decay"):
+		bubble.decay_dps = ZEITEVO_DECAY_DPS * ability_damage_mult
+	if _has_ability_evolution("zeit_bubble_haste"):
+		bubble.haste_mult = ZEITEVO_HASTE_MULT
+	if ArenaMode.active:
+		bubble.arena_z = arena_z
+	bubble.position = global_position
+	get_parent().add_child(bubble)
+	bubble.global_position = global_position
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(global_position, Color(1.0, 0.82, 0.38, 0.8),
+		0.5, bubble.radius / 8.0, 0.25, 0.35), "teleport", 0.2, -4.0))
+
+# Taktschlag: aus _melee_strike für jeden Treffer, der angekommen ist.
+func _zeit_register_hit(target: Player) -> void:
+	var fast := _has_ability_evolution("zeit_passive_fast")
+	var interval := ZEITEVO_FAST_HIT_INTERVAL if fast else ZEIT_PASSIVE_HIT_INTERVAL
+	zeit_hit_count += 1
+	if zeit_hit_count < interval:
+		return
+	zeit_hit_count = 0
+	var duration := ZEITEVO_FAST_SLOW_DURATION if fast else ZEIT_PASSIVE_SLOW_DURATION
+	target.apply_time_slow(1.0 - ZEIT_PASSIVE_SLOW, duration)
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(target.global_position, Color(1.0, 0.82, 0.38, 0.85),
+		0.4, 3.2, 0.2, 0.25), "bounce", 0.1, -4.0))
+
+func _start_time_stop() -> void:
+	if is_replica:
+		return
+	var duration := ZEIT_STOP_DURATION * ult_duration_mult
+	zeit_stop_timer = duration
+	TimeBubble.register_stopper(self)
+	_zeit_stop_victims.clear()
+	for node in get_tree().get_nodes_in_group("player"):
+		var p := node as Player
+		if p == null or p == self or not is_instance_valid(p) or p.current_health <= 0.0 or p.team_id == team_id:
+			continue
+		p.begin_time_freeze(self, duration)
+		_zeit_stop_victims.append(p)
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(global_position, Color(0.75, 0.9, 1.0, 0.9),
+		1.0, 60.0, 0.5, 0.6), "shield", 0.0, 2.0))
+	Global.shake_camera(0.25)
+
+# Ende des Zeitstopps beim Verursacher (Ablauf, Tod oder Rundenwechsel).
+func _end_time_stop(release: bool = true) -> void:
+	if zeit_stop_timer <= 0.0 and _zeit_stop_victims.is_empty():
+		TimeBubble.unregister_stopper(self)
+		return
+	zeit_stop_timer = 0.0
+	TimeBubble.unregister_stopper(self)
+	for p in _zeit_stop_victims:
+		if is_instance_valid(p) and p.time_frozen_by == self:
+			if release:
+				p.release_time_freeze()
+			else:
+				p.time_frozen_timer = 0.0
+				p.time_frozen_by = null
+				p._time_frozen_damage = 0.0
+				p.stun_timer = p._stun_before_freeze
+	_zeit_stop_victims.clear()
+
+func begin_time_freeze(by: Player, duration: float) -> void:
+	interrupt_rush()
+	if is_blocking:
+		_end_block()
+	time_frozen_by = by
+	if time_frozen_timer <= 0.0:
+		_stun_before_freeze = stun_timer
+	time_frozen_timer = duration
+	# Betäubung sperrt alle Eingaben und Bots; danach gilt die alte wieder.
+	stun_timer = maxf(stun_timer, duration)
+	_time_frozen_damage = 0.0
+	_time_frozen_knockback = Vector2.ZERO
+	velocity = Vector2.ZERO
+	_refresh_poison_visual()
+
+func _tick_time_frozen(delta: float) -> void:
+	velocity = Vector2.ZERO
+	time_frozen_timer -= delta
+	if time_frozen_timer <= 0.0 or not is_instance_valid(time_frozen_by):
+		release_time_freeze()
+
+# Die gestauten Treffer schlagen gesammelt ein.
+func release_time_freeze() -> void:
+	var by := time_frozen_by
+	var stored := _time_frozen_damage
+	var kb := _time_frozen_knockback
+	var was_frozen := time_frozen_timer > 0.0 or by != null
+	time_frozen_timer = 0.0
+	time_frozen_by = null
+	_time_frozen_damage = 0.0
+	_time_frozen_knockback = Vector2.ZERO
+	if was_frozen:
+		stun_timer = _stun_before_freeze
+		_stun_before_freeze = 0.0
+	_refresh_poison_visual()
+	if stored <= 0.0 or current_health <= 0.0:
+		return
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(global_position, Color(1.0, 0.82, 0.38, 0.95),
+		0.8, clampf(stored / 6.0, 3.0, 14.0), 0.3, 0.35), "explosion", 0.15, 0.0))
+	take_damage(stored, kb, by if is_instance_valid(by) else null)
+
+# Gestauter Schaden, den ein Eingefrorener gerade gesammelt hat.
+func get_time_frozen_damage() -> float:
+	return _time_frozen_damage
 
 # --- Druide: Wurzelwall ---
 func _place_druid_wall() -> void:
@@ -4732,6 +5069,15 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null
 		amount *= FRIENDLY_FIRE_DAMAGE_MULT
 		# Gummipuffer-Karte: eigener Schaden zusätzlich verringert.
 		amount *= 1.0 - clampf(self_damage_reduction, 0.0, MAX_SELF_DAMAGE_REDUCTION)
+	# Zeitstopp: Treffer des Zeitschlägers stauen sich bis zum Ende.
+	if time_frozen_timer > 0.0 and is_instance_valid(source) and source == time_frozen_by:
+		var stop_mult := ZEIT_STOP_DAMAGE_MULT
+		if source._has_ability_evolution("zeit_stop_amp"):
+			stop_mult *= ZEITEVO_STOP_AMP
+		_time_frozen_damage += amount * stop_mult
+		_time_frozen_knockback += knockback
+		_fx("ring", NetFx.ring_args(global_position, Color(1.0, 0.82, 0.38, 0.7), 0.3, 2.0, 0.15, 0.2))
+		return
 	# Dash, Sprung und kurze FÃƒÂ¤higkeits-Unverwundbarkeit negieren Schaden komplett.
 	if is_invulnerable:
 		_fx("sound", {"snd": ["bounce", 0.2, 2.0]})
@@ -4795,6 +5141,8 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null
 
 	if effective_damage > 0.0:
 		damage_received.emit(effective_damage, source, "hit")
+		if Global.get_player_hero_id(player_index) == "zeitschlaeger":
+			_zeit_damage_log.append([_zeit_clock, effective_damage])
 		Global.add_match_stat(player_index, "damage_taken", effective_damage)
 		if damage_source_index > 0:
 			Global.add_match_stat(damage_source_index, "damage_dealt", effective_damage)
@@ -5031,6 +5379,8 @@ func _refresh_poison_visual() -> void:
 		sprite.self_modulate = _base_body_tint()
 
 func _base_body_tint() -> Color:
+	if time_frozen_timer > 0.0 and not is_dead:
+		return TIME_FROZEN_TINT
 	return POISON_TINT if is_poisoned() and not is_dead else Color.WHITE
 
 # Aktive Powerups als [Art, Farbe, Restzeit]. Die Timer kommen online per
@@ -5397,6 +5747,7 @@ func _die() -> void:
 	if is_dead:
 		return
 	is_dead = true
+	_end_time_stop()
 	_refresh_poison_visual()
 	if kamikaze:
 		_trigger_kamikaze()
@@ -5636,6 +5987,20 @@ func _handle_timers(delta: float) -> void:
 	
 	if freeze_timer > 0.0:
 		freeze_timer -= delta
+
+	if time_slow_timer > 0.0:
+		time_slow_timer -= delta
+		if time_slow_timer <= 0.0:
+			time_slow_mult = 1.0
+	if time_haste_timer > 0.0:
+		time_haste_timer -= delta
+		if time_haste_timer <= 0.0:
+			time_haste_mult = 1.0
+	if zeit_stop_timer > 0.0 and not is_replica:
+		zeit_stop_timer -= delta
+		if zeit_stop_timer <= 0.0:
+			_end_time_stop(true)
+	_zeit_track(delta)
 
 	if stun_timer > 0.0:
 		stun_timer -= delta
