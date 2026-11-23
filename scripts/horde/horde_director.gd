@@ -353,7 +353,7 @@ func _update_spawning(delta: float) -> void:
 	if boss_alive:
 		rate *= 0.5
 	_spawn_acc += rate * delta
-	var cap := HordeDefs.max_alive(run_time, player_count)
+	var cap := mini(HordeDefs.max_alive(run_time, player_count), enemy_limit())
 	var count := enemy_count()
 	while _spawn_acc >= 1.0 and count < cap:
 		var kind := HordeDefs.pick_kind(run_time, _rng)
@@ -405,9 +405,18 @@ func spawn_enemy(kind: String, pos: Vector2, riese: bool = false) -> HordeEnemy:
 	get_parent().add_child(e)
 	return e
 
+## Höchstzahl gleichzeitiger Gegner laut Grafikstufe (Optionen → Horden-Limit).
+## Online zählt die Einstellung des Hosts, weil nur er spawnt.
+func enemy_limit() -> int:
+	var lim := GameSettings.horde_enemy_limit()
+	if lim <= 0:
+		lim = HordeDefs.MAX_ENEMIES_CAP
+	return mini(HordeDefs.MAX_ENEMIES_CAP, lim)
+
 func _wolf_ring(target: Node2D) -> void:
 	var n := 14 + mini(10, int(run_time / 60.0) * 2)
 	var kind := "wolf" if run_time > 60.0 else "fuchs"
+	n = mini(n, enemy_limit() - enemy_count())
 	for i in range(n):
 		var p: Vector2 = target.global_position + Vector2.from_angle(TAU * float(i) / float(n)) * 560.0
 		var c := ArenaMode.grid.cell_of(p) if ArenaMode.grid else Vector2i.ZERO
@@ -468,7 +477,7 @@ func boss_slam(b: HordeEnemy, radius: float, dmg: float) -> void:
 			p.take_damage(dmg, (p.global_position - b.global_position).normalized() * 420.0, b)
 
 func boss_summon(b: HordeEnemy) -> void:
-	if enemy_count() >= HordeDefs.MAX_ENEMIES_CAP:
+	if enemy_count() >= enemy_limit():
 		return
 	for i in range(4):
 		var p := b.global_position + Vector2.from_angle(TAU * float(i) / 4.0 + _rng.randf()) * 70.0

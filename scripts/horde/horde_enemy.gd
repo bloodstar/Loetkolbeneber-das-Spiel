@@ -79,6 +79,8 @@ var _state_dir: Vector2 = Vector2.ZERO
 var _strafe: float = 1.0
 var _strafe_t: float = 0.0
 var _haste_t: float = 0.0
+var _time_slow_t: float = 0.0
+var _time_slow_mult: float = 1.0
 var _orbit_angle: float = 0.0
 var hit_flash: float = 0.0
 ## Für die Anzeige: Animation (Schnappen, Werfen, Heulen) kurz an.
@@ -162,6 +164,7 @@ func _physics_process(delta: float) -> void:
 	_attack_cd -= delta
 	_special_cd -= delta
 	_haste_t = maxf(0.0, _haste_t - delta)
+	_time_slow_t = maxf(0.0, _time_slow_t - delta)
 	knockback_timer = maxf(0.0, knockback_timer - delta)
 	mark_timer = maxf(0.0, mark_timer - delta)
 	_tick_status(delta)
@@ -170,7 +173,7 @@ func _physics_process(delta: float) -> void:
 	_knock = _knock.move_toward(Vector2.ZERO, 900.0 * delta)
 	var target: Node2D = director.nearest_target(global_position)
 	var move := Vector2.ZERO
-	var spd := speed * (1.35 if _haste_t > 0.0 else 1.0)
+	var spd := speed * (1.35 if _haste_t > 0.0 else 1.0) * (_time_slow_mult if _time_slow_t > 0.0 else 1.0)
 	var disabled := stun_timer > 0.0 or freeze_timer > 0.0
 	if disabled:
 		stun_timer = maxf(0.0, stun_timer - delta)
@@ -487,6 +490,19 @@ func apply_knockback(force: Vector2) -> void:
 
 func apply_slow(_mult: float, duration: float) -> void:
 	freeze_timer = maxf(freeze_timer, duration * 0.3)
+
+# Zeitschläger (Taktschlag, Zeitblase): Verlangsamung, Bosse nur halb so stark.
+func apply_time_slow(mult: float, duration: float) -> void:
+	var m := clampf(mult, 0.05, 1.0)
+	if is_boss:
+		m = lerpf(m, 1.0, 0.5)
+	if _time_slow_t <= 0.0 or m < _time_slow_mult:
+		_time_slow_mult = m
+	_time_slow_t = maxf(_time_slow_t, duration)
+
+# Zeitstopp trifft nur Eber; Horden-Gegner werden nie eingefroren.
+func is_time_frozen() -> bool:
+	return false
 
 func is_poisoned() -> bool:
 	return poison_ticks_left > 0

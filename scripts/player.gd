@@ -4616,7 +4616,7 @@ func _spawn_time_bubble() -> void:
 		0.5, bubble.radius / 8.0, 0.25, 0.35), "teleport", 0.2, -4.0))
 
 # Taktschlag: aus _melee_strike für jeden Treffer, der angekommen ist.
-func _zeit_register_hit(target: Player) -> void:
+func _zeit_register_hit(target) -> void:
 	var fast := _has_ability_evolution("zeit_passive_fast")
 	var interval := ZEITEVO_FAST_HIT_INTERVAL if fast else ZEIT_PASSIVE_HIT_INTERVAL
 	zeit_hit_count += 1
@@ -4641,6 +4641,12 @@ func _start_time_stop() -> void:
 			continue
 		p.begin_time_freeze(self, duration)
 		_zeit_stop_victims.append(p)
+	# Horden-Modus: Zeitstopp hält die Gegner an (Bosse kürzer, siehe apply_stun).
+	if HordeDirector.current != null:
+		for node in get_tree().get_nodes_in_group(HordeEnemy.GROUP):
+			var e := node as HordeEnemy
+			if e != null and not e.is_dead:
+				e.apply_stun(duration)
 	_fx("ring", NetFx.with_sound(NetFx.ring_args(global_position, Color(0.75, 0.9, 1.0, 0.9),
 		1.0, 60.0, 0.5, 0.6), "shield", 0.0, 2.0))
 	Global.shake_camera(0.25)
