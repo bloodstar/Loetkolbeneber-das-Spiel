@@ -331,8 +331,9 @@ func _physics_process(delta: float) -> void:
 	
 	# Schwerkraft: Die Flugbahn wird zum Bogen. Mörser-Karten
 	# verstärken den Fall, Präzisionskarten flachen ihn ab.
-	# In der Arena (Draufsicht) fliegen Kugeln flach, y ist dort horizontal.
-	if not ArenaMode.active:
+	# In der Arena (Draufsicht) fliegen Kugeln flach, y ist dort horizontal,
+	# im Weltraum (Schwerelosigkeit) geradeaus.
+	if not ArenaMode.active and not LevelGenerator.zero_g:
 		var gravity := BULLET_GRAVITY * maxf(0.0, projectile_gravity_mult)
 		if velocity.y < 0.0:
 			gravity *= BULLET_RISE_GRAVITY_MULT

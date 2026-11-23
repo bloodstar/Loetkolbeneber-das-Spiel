@@ -292,7 +292,7 @@ Im Tab **Regeln** unter *Spielmodus & Spielfeld* wählt der Host die **Spielart*
 - **Karten:** Alle Karten bleiben gleich. Sprungkraft, Luftsprünge und Schwerkraft wirken auf die Sprunghöhe. *Projektil-Schwerkraft* (Leichtes/Schweres Geschoss, Mörser) hat in der Arena noch keine Wirkung, Kugeln fliegen flach.
 - **Kamera:** fester Zoom, sie zoomt nicht heraus. Sie folgt dem eigenen Schwein (lokal zu zweit: beiden) und bleibt innerhalb der Karte. Gegner außerhalb des Bildes zeigt ein Randpfeil in Teamfarbe.
 - **Erhöhungen, Rampen, Stege:** Erhöhungen haben oben Boden und seitlich Felswände. Rampen führen ohne Sprung hinauf, ihre höheren Teile kann man von der Seite nicht betreten. Unter Holzstegen läuft man durch, oben läuft man darüber. Wer von einer Kante läuft, fällt herunter.
-- **Maps:** zufällig eine von acht Arenen. Kompakt: *Burghof*, *Kistenlager*, *Ruinen*. Groß und offen (etwa die vierfache Fläche): *Weite Steppe*, *Marktplatz*, *Canyon*, *Hochplateau* (große Erhöhung in der Mitte mit vier Rampen, erhöhte Randplattform), *Stegwerk* (fünf Türme mit Holzstegen). Wände gibt es gerade und schräg, Boden und Mauern haben 32×32-Pixeltexturen. Die Levelauswahl der Seitenansicht gilt hier nicht.
+- **Maps:** zufällig eine von neun Arenen. *Rennstrecke* ist eine Autoscroll-Strecke (siehe Autoscroll unten) mit Insel, Slalom und drei Spuren. Kompakt: *Burghof*, *Kistenlager*, *Ruinen*. Groß und offen (etwa die vierfache Fläche): *Weite Steppe*, *Marktplatz*, *Canyon*, *Hochplateau* (große Erhöhung in der Mitte mit vier Rampen, erhöhte Randplattform), *Stegwerk* (fünf Türme mit Holzstegen). Wände gibt es gerade und schräg, Boden und Mauern haben 32×32-Pixeltexturen. Die Levelauswahl der Seitenansicht gilt hier nicht.
 - **Karteneditor:** *Optionen → KARTENEDITOR*. Links malen, rechts radieren, Mausrad zoomt, mittlere Maustaste oder Leertaste + Ziehen verschiebt. Werkzeuge: Pinsel (B, 1×1 bis 5×5), Rechteck (R), Füllen (F), schräge Wand (W, von Ecke zu Ecke ziehen, Rechtsklick löscht). Kacheln: Boden, Deckung, Halbmauer, Mauer, Kiste, Spawn, Erhöhung 1 bis 3, Steg, Rampe (Richtung wählen; eine Reihe gleicher Pfeile endet an der Erhöhung). Symmetrie spiegelt links/rechts, oben/unten, vierfach oder um den Mittelpunkt, Rampen drehen mit. Strg+Z / Strg+Y, Strg+S speichert. Die Prüfung zeigt, ob alle Spawns erreichbar sind. Vorlagen laden eine eingebaute Arena als Kopie. Gespeichert wird unter `user://arena_maps/`. Mit *Im Zufallspool* kommt die Karte in die Arena-Auswahl, online schickt der Host sie an alle. **TESTEN** speichert und startet eine Runde auf der Karte mit den Spielern und Bots der letzten Lobby; ESC → Hauptmenü beendet den Test.
 - **Seitenansicht-Level im Editor:** Im Karteneditor führt *Zum Seitenansicht-Editor* zu den klassischen Leveln. Jedes Level lässt sich laden und ändern: Plattformen, Einweg-Stege, Kistenblöcke und Gruben waagrecht ziehen, Wände als Rechteck, Stacheln, Sprungfedern und Mystery-Blöcke anklicken, Röhrenpaare mit zwei Klicks. Mit *Objekt setzen* kommen Wippen, Kettenplattformen, Fahrplattformen, Drehbalken, Häuser, Pyramiden, Treppen, Kistenketten, Gitterzäune, Schrägen und Kugel-Objekte dazu. Ein ausgewähltes Objekt zeigt unter *Eigenschaften* alle Werte (z. B. Kettenlänge, Wippenbreite, Drehtempo und Stil, Kistengrößen); Verschieben per Ziehen, Löschen per Rechtsklick oder Entf. Gespiegelte Level zeigen die automatische Spiegelung blass. *Speichern* legt eine geänderte Fassung an, die das Spiel statt des eingebauten Bauplans nutzt; *Original* stellt ihn wieder her. *Als neues Level* legt ein eigenes Level an, das im Levels-Tab der Lobby erscheint. *Zufällige Extras* schaltet die zufälligen Zusatzplattformen, Kistenhaufen und Eisflächen des Levels ab. Gespeichert wird unter `user://side_levels/`, online schickt der Host den Bauplan vor jeder Runde an alle.
 - **Runden-Modifier:** nur Sturmwind, Mondgravitation, Schwerewelt, Mini-Chaos, Schadensrausch, Turboschweine, Luftakrobatik, Regeneration, Startschild und Zone. Die übrigen sind in der Arena vorerst aus.
@@ -520,8 +520,27 @@ Der Host wählt die Map unter **Regeln → Spielfeld**. **Zufällig** zieht pro 
 | **Gletscherpass** | Scrollt seitlich | Aufzüge im Abgrund, Eisfähre, hängende Wippe |
 | **Lavaturm** | Scrollt nach oben | Lava steigt schon ab 4 s, Gipfel-Arena |
 | **Himmelsleiter** | Scrollt nach oben | Feder, Aufzug, Wolkenfähre, Gipfelportal |
+| **Turbotrasse** | Autoscroll | Das Bild fährt von selbst nach rechts. Kurze Abzweigungen laufen wieder zusammen: Steg über zwei Gruben oder unten durch, Tunnel unter der Decke oder obendrüber, Trittsteine oder Fähre über die große Grube. Turbo- und Umkehrfelder |
+| **Asteroidenfeld** | Weltraum | Schwerelos zwischen schwebenden Stationen. Asteroiden treiben durchs Bild, kleine mit goldenem Kern enthalten Powerups, Weltraumquallen jagen die Spieler |
+| **Kometenjagd** | Weltraum, Autoscroll | Schwerelose Autoscroll-Strecke durch einen Asteroidengürtel, Stationswände teilen die Bahn kurz in Spuren. Asteroiden kommen von vorn |
 
 Auf Scroll-Maps folgt die Kamera dir. Gegner außerhalb des Bildes zeigen Pfeile am Rand.
+
+### Autoscroll
+
+Auf Autoscroll-Maps (Seitenansicht und die Arena-Karte *Rennstrecke*) fährt ein Bildfenster von etwa 40 Kacheln Breite zwei Sekunden nach dem Countdown von selbst los, alle müssen mithalten.
+
+- **Rote Wand hinten:** schiebt nach vorn und macht 30 Schaden pro Sekunde. Wer weit dahinter hängt oder dort gegen eine Wand gedrückt wird, wird zerquetscht (95 pro Sekunde).
+- **Vordere Kante** (gestrichelt): bremst nur, weiter vorlaufen geht nicht.
+- **Turbofeld** (orange, Doppelpfeile): Das Bild fährt 5 s lang 1,8-mal so schnell.
+- **Umkehrfeld** (lila, Gegenpfeile): Die Fahrtrichtung dreht sich um, die rote Wand ist dann auf der anderen Seite.
+- Felder lösen aus, sobald jemand sie berührt, und laden 9 s nach (Balken unter dem Feld). Am Kartenende dreht die Strecke von selbst um. Im Sudden Death fährt sie 35 % schneller.
+
+### Weltraum
+
+- **Schwerelos:** `W` `A` `S` `D` (bzw. Pfeiltasten) sind Düsen in alle Richtungen, man treibt weiter, bis man gegensteuert oder anstößt. `Leertaste` ist ein Schubstoß in Steuerrichtung (ohne Richtung: zur Maus). Schübe laden bei Kontakt mit einer Fläche sofort, sonst alle 1,1 s einer; Anzahl wie Sprünge (Luftsprung-Karten geben mehr). Dash geht in Steuerrichtung. Kugeln fliegen geradeaus, Kisten und Fässer schweben.
+- **Asteroiden** in drei Größen treiben durchs Bild und machen beim Aufprall Schaden je nach Größe und Tempo. Schüsse und Explosionen zerlegen sie: groß in zwei mittlere, mittel in zwei kleine. Kleine mit **goldenem Kern** lassen ein Powerup fallen. Neue kommen vom Rand herein (auf Autoscroll-Strecken von vorn).
+- **Weltraumquallen** (90 LP) treiben auf den nächsten Spieler zu, laden sichtbar auf (rot, zitternd) und schießen dann auf ihn zu. Berührung 13 Schaden, beim Vorstoß 22. Beim Tod lassen sie oft ein Powerup fallen.
 
 ### Spielfeld
 

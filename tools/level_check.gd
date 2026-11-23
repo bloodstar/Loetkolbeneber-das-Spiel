@@ -413,7 +413,8 @@ func check_current_level() -> Array[String]:
 	for n in nodes.keys():
 		# Herz-Blöcke werden von unten angesprungen, ihre Oberseite muss
 		# nicht erreichbar sein.
-		if not reached.has(n) and str(nodes[n]) != "Herz-Block":
+		# Schwerelos (Weltraum-Maps): Man fliegt überall hin.
+		if not reached.has(n) and str(nodes[n]) != "Herz-Block" and not LevelGenerator.zero_g:
 			unreached.append(n)
 			_last_unreached[n] = true
 	unreached.sort_custom(func(a, b): return a.y < b.y or (a.y == b.y and a.x < b.x))

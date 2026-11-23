@@ -221,7 +221,8 @@ func _damage_nearby_crates(blast_pos: Vector2, source: Node = null) -> void:
 	# Kettenglieder (Gruppe "chain_link") werden nur weggeschubst, Kisten und
 	# Kugeln beschädigt.
 	for crate in get_tree().get_nodes_in_group("crate") + get_tree().get_nodes_in_group("chain_link") \
-			+ get_tree().get_nodes_in_group("rolling_ball") + get_tree().get_nodes_in_group("ball_gate"):
+			+ get_tree().get_nodes_in_group("rolling_ball") + get_tree().get_nodes_in_group("ball_gate") \
+			+ get_tree().get_nodes_in_group("space_hazard"):
 		if not is_instance_valid(crate) or not crate.has_method("apply_blast"):
 			continue
 		if blast_pos.distance_to(crate.global_position) <= explosion_radius * 1.2:

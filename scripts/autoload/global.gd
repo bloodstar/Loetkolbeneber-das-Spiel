@@ -207,11 +207,12 @@ const MAP_PLAYABLE: Array[String] = [
 	"sonnentempel", "kettenwerk", "wollhaus", "eispyramiden", "serverhaus",
 	"gitterzaun", "truemmerfeld", "schrottplatz", "schneefeld", "wollmarkt",
 	"kugellawine", "kugelbahn", "kugelkette", "kugelmuehle",
+	"turbotrasse", "asteroidenfeld", "kometenjagd",
 ]
 const MAPS: Dictionary = {
 	"zufall": {
 		"name": "Zufällig",
-		"description": "Wählt pro Runde eine der siebenundzwanzig Maps.",
+		"description": "Wählt pro Runde eine der dreißig Maps.",
 	},
 	"grasarena": {
 		"name": "Grasarena",
@@ -244,6 +245,18 @@ const MAPS: Dictionary = {
 	"pilzpfad": {
 		"name": "Pilzpfad",
 		"description": "Seitlich scrollendes Jump-'n'-Run-Level mit Gruben, Treppen, Steinen und Fähre.",
+	},
+	"turbotrasse": {
+		"name": "Turbotrasse",
+		"description": "Autoscroll: Das Bild fährt mit, die rote Wand hinten verbrennt Nachzügler. Kurze Abzweigungen, Turbo- und Umkehrfelder.",
+	},
+	"asteroidenfeld": {
+		"name": "Asteroidenfeld",
+		"description": "Schwerelos im All: Düsen in alle Richtungen, treibende Asteroiden (kleine mit Powerups) und Weltraumquallen.",
+	},
+	"kometenjagd": {
+		"name": "Kometenjagd",
+		"description": "Schwerelose Autoscroll-Strecke durch einen Asteroidengürtel, Stationswände teilen die Bahn.",
 	},
 	"gletscherpass": {
 		"name": "Gletscherpass",

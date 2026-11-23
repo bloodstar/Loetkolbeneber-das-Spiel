@@ -23,6 +23,9 @@ var _motes: Array[Dictionary] = []
 # Platine: vorberechnete Leiterbahnen (Punktlisten) und Chip-Rechtecke.
 var _traces: Array[PackedVector2Array] = []
 var _chips: Array[Rect2] = []
+# Weltraum (Variante "space"): Sterne (x, y, Größe, Phase) und Nebel.
+var _stars: Array[Vector4] = []
+var _nebulae: Array[Dictionary] = []
 
 func configure(p_theme_id: String, p_variant: String, p_accent: Color, map_size: Vector2, seed_value: int) -> void:
 	theme_id = p_theme_id
@@ -38,12 +41,22 @@ func configure(p_theme_id: String, p_variant: String, p_accent: Color, map_size:
 	_build_motes(seed_value)
 	if theme_id == "platine":
 		_build_circuit(seed_value)
+	if variant == "space":
+		_build_space(seed_value)
 	set_process(true)
 
 func _build_gradient() -> void:
 	var gradient := Gradient.new()
 	gradient.offsets = PackedFloat32Array([0.0, 0.3, 0.7, 1.0])
-	match theme_id:
+	var palette := "space" if variant == "space" else theme_id
+	match palette:
+		"space":
+			gradient.colors = PackedColorArray([
+				Color(0.004, 0.004, 0.020, 1.0),
+				Color(0.016, 0.010, 0.045, 1.0),
+				Color(0.030, 0.012, 0.060, 1.0),
+				Color(0.006, 0.006, 0.025, 1.0),
+			])
 		"neon":
 			gradient.colors = PackedColorArray([
 				Color(0.015, 0.025, 0.075, 1.0),
@@ -139,6 +152,10 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _draw() -> void:
+	if variant == "space":
+		_draw_space()
+		_draw_vignette()
+		return
 	match theme_id:
 		"neon":
 			_draw_neon()
@@ -418,6 +435,47 @@ func _draw_frost() -> void:
 	for i in range(5):
 		var y := _map_rect.position.y + _map_size.y * (0.58 + 0.07 * float(i))
 		draw_line(Vector2(0.0, y), Vector2(_canvas_size.x, y + 12.0), mist, 26.0 - float(i) * 3.0, true)
+
+# --- Weltraum ----------------------------------------------------------------
+
+func _build_space(seed_value: int) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value ^ 0x5bace
+	_stars.clear()
+	var count := int(clampf(_canvas_size.x * _canvas_size.y / 9000.0, 120.0, 900.0))
+	for i in range(count):
+		_stars.append(Vector4(rng.randf() * _canvas_size.x, rng.randf() * _canvas_size.y,
+			rng.randf_range(0.6, 2.2) if rng.randf() < 0.9 else rng.randf_range(2.2, 3.4), rng.randf() * TAU))
+	_nebulae.clear()
+	var colors := [Color(0.55, 0.20, 0.85), Color(0.15, 0.55, 0.95), Color(0.95, 0.25, 0.55)]
+	var n := int(clampf(_canvas_size.x / 900.0, 2.0, 8.0))
+	for i in range(n):
+		_nebulae.append({
+			"p": Vector2(rng.randf() * _canvas_size.x, rng.randf_range(0.2, 0.8) * _canvas_size.y),
+			"r": rng.randf_range(160.0, 320.0),
+			"c": colors[i % colors.size()],
+		})
+
+func _draw_space() -> void:
+	for neb in _nebulae:
+		var c: Color = neb["c"]
+		var r := float(neb["r"])
+		var p: Vector2 = neb["p"]
+		for k in range(6):
+			var f := 1.0 - float(k) / 6.0
+			draw_circle(p + Vector2(float(k) * 14.0, -float(k) * 9.0), r * f, Color(c.r, c.g, c.b, 0.022))
+	# Ein Planet mit Ring als Landmarke.
+	var planet := Vector2(_map_rect.position.x + _map_size.x * 0.78, _map_rect.position.y + _map_size.y * 0.24)
+	draw_circle(planet, 96.0, Color(0.22, 0.12, 0.30, 0.9))
+	draw_circle(planet + Vector2(-22.0, -24.0), 70.0, Color(0.36, 0.20, 0.46, 0.55))
+	draw_arc(planet, 150.0, deg_to_rad(195.0), deg_to_rad(345.0), 40, Color(0.75, 0.55, 0.95, 0.35), 5.0, true)
+	for st in _stars:
+		var tw := 0.55 + 0.45 * sin(_time * (0.8 + st.w * 0.3) + st.w * 5.0)
+		var col := Color(0.85, 0.90, 1.0, 0.85 * tw)
+		draw_circle(Vector2(st.x, st.y), st.z, col)
+		if st.z > 2.2:
+			draw_line(Vector2(st.x - st.z * 3.0, st.y), Vector2(st.x + st.z * 3.0, st.y), Color(col.r, col.g, col.b, 0.3 * tw), 1.0)
+			draw_line(Vector2(st.x, st.y - st.z * 3.0), Vector2(st.x, st.y + st.z * 3.0), Color(col.r, col.g, col.b, 0.3 * tw), 1.0)
 
 # --- Shared ------------------------------------------------------------------
 
