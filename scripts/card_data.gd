@@ -161,6 +161,10 @@ extends Resource
 @export var ult_cooldown_mult: float = 1.0 # <1.0 = Ulti schneller wieder bereit
 @export var ult_duration_mult: float = 1.0 # Dauer der Ulti (Überladung, Nachtjagd)
 @export var dash_charges_add: int = 0 # Zusätzliche Dash-Ladungen
+@export var ult_damage_mult: float = 1.0 # Schaden bzw. Heilstärke der Ulti (zusätzlich zu ability_damage_mult)
+@export var ult_radius_mult: float = 1.0 # Wirkungsbereich der Ulti (zusätzlich zu ability_radius_mult)
+@export var ult_count_add: int = 0 # Zusätzliche Einschläge der Ulti (Ignis-Meteore)
+@export var dash_effect_mult: float = 1.0 # Stärke des Helden-Dashs (Spur, Wolke, Weite, Rammstoß)
 # Angriffsart, für die die Karte gedacht ist: "ranged", "melee" oder leer für
 # beide. Leer = wird beim Registrieren aus den Werten abgeleitet (CardDatabase).
 @export var attack_type: String = ""

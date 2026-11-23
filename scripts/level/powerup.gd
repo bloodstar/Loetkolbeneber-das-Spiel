@@ -45,6 +45,8 @@ func _ready() -> void:
 	_build_collision()
 	_build_visual()
 	body_entered.connect(_on_body_entered)
+	# Bastion-Evolution "Magnetfeld" sammelt Powerups mit dem Haken ein.
+	add_to_group("powerup_pickup")
 	if is_replica:
 		set_replica(true)
 

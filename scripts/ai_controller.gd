@@ -385,8 +385,24 @@ func _handle_combat(_delta: float) -> void:
 			player.start_block()
 
 	# Ulti: einsetzen, sobald der Gegner in sinnvoller Nähe ist.
-	if player.has_ult() and player.ult_timer <= 0.0 and dist < 450.0 and randf() < 0.05:
-		player.use_ultimate()
+	if player.has_ult() and player.ult_timer <= 0.0 and randf() < 0.05:
+		var ult_range := 450.0
+		match hero_id:
+			"klinge":
+				ult_range = 200.0
+			"spore":
+				ult_range = 260.0
+			"druid":
+				ult_range = 400.0
+			"bastion":
+				# Festung bei Druck oder wenig Leben.
+				ult_range = 420.0 if player.current_health < player.max_health * 0.6 else 220.0
+		if dist < ult_range:
+			# Meteorschauer und Singularität landen auf dem Gegner.
+			if player.has_targeted_ult() and is_instance_valid(target):
+				player.use_ultimate(target_pos())
+			else:
+				player.use_ultimate()
 
 	# Ability Usage
 	if player.ability_timer <= 0.0:
@@ -407,9 +423,17 @@ func _handle_combat(_delta: float) -> void:
 			"vampire_melee":
 				# Blutbersten erst mit genug Schild und nah am Gegner.
 				wants = player.current_shield >= 30.0 and dist < Player.VAMP_MELEE_BURST_RADIUS * 0.85
+			"nova":
+				wants = dist < 160.0
+			"spore":
+				wants = dist < 240.0
+			"klinge":
+				wants = dist < 300.0 and dist > player.get_melee_reach()
+			"bastion":
+				wants = dist < 380.0 and dist > player.get_melee_reach() * 1.3
 		if wants:
-			# Nova-Bots setzen das Schwarze Loch direkt auf den Gegner.
-			if hero_id == "nova" and is_instance_valid(target):
+			# Giftpilz-Bots werfen den Pilz direkt vor den Gegner.
+			if hero_id == "spore" and is_instance_valid(target):
 				player.use_ability(target_pos())
 			else:
 				player.use_ability()

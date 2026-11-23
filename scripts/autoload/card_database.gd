@@ -1681,6 +1681,73 @@ func _init_database() -> void:
 	fa4.ability_radius_mult = 1.10
 	_register(fa4)
 
+	# --- Ignis: Nachbrenner (Dash) und Meteorschauer (Ulti) ---
+	var ig5 = CardData.new()
+	ig5.id = "ignis_glutspur"
+	ig5.title = "Glutspur"
+	ig5.description = "Ignis – Nachbrenner: Die Feuerspur hält 60% länger, -10% Dash-Abklingzeit."
+	ig5.rarity = "Rare"
+	ig5.pool = "Bewegung"
+	ig5.color = Color(1.00, 0.40, 0.20)
+	ig5.hero_id = "ignis"
+	ig5.family_id = "ignis_dash"
+	ig5.dash_effect_mult = 1.6
+	ig5.dash_cooldown_mult = 0.9
+	_register(ig5)
+
+	var ig6 = CardData.new()
+	ig6.id = "ignis_zuendung"
+	ig6.title = "Zündung"
+	ig6.description = "Nachbrenner-Evolution: Am Ende des Dashs explodierst du (18 Schaden, Radius 95 px, Rückstoß)."
+	ig6.rarity = "Epic"
+	ig6.color = Color(1.00, 0.40, 0.20)
+	ig6.hero_id = "ignis"
+	ig6.family_id = "ignis_dash"
+	ig6.parent_card_id = "ignis_glutspur"
+	ig6.evolution_branch = "A"
+	ig6.ability_evolution = "ignis_dash_blast"
+	_register(ig6)
+
+	var ig7 = CardData.new()
+	ig7.id = "ignis_meteorregen"
+	ig7.title = "Meteorregen"
+	ig7.description = "Ignis – Meteorschauer: +2 Meteore, +15% Einschlagradius."
+	ig7.rarity = "Rare"
+	ig7.pool = "Offensive"
+	ig7.color = Color(1.00, 0.40, 0.20)
+	ig7.hero_id = "ignis"
+	ig7.family_id = "ignis_ult"
+	ig7.ult_count_add = 2
+	ig7.ult_radius_mult = 1.15
+	_register(ig7)
+
+	var ig8 = CardData.new()
+	ig8.id = "ignis_komet"
+	ig8.title = "Komet"
+	ig8.description = "Meteorschauer-Evolution: Statt einer Reihe schlägt ein einziger riesiger Komet ein (60% des Gesamtschadens, doppelter Radius, sehr starker Rückstoß)."
+	ig8.rarity = "Epic"
+	ig8.color = Color(1.00, 0.40, 0.20)
+	ig8.hero_id = "ignis"
+	ig8.family_id = "ignis_ult"
+	ig8.parent_card_id = "ignis_meteorregen"
+	ig8.evolution_branch = "A"
+	ig8.ability_evolution = "ignis_comet"
+	_register(ig8)
+
+	var ig9 = CardData.new()
+	ig9.id = "ignis_flaechenbrand"
+	ig9.title = "Flächenbrand"
+	ig9.description = "Meteorschauer-Evolution: Die Feuerflächen sind 50% größer und brennen doppelt so lange."
+	ig9.rarity = "Epic"
+	ig9.color = Color(1.00, 0.40, 0.20)
+	ig9.hero_id = "ignis"
+	ig9.family_id = "ignis_ult"
+	ig9.parent_card_id = "ignis_meteorregen"
+	ig9.evolution_branch = "B"
+	ig9.ability_evolution = "ignis_wildfire"
+	_register(ig9)
+
+
 	# --- Volt ---
 	var fa5 = CardData.new()
 	fa5.id = "volt_hochspannung"
@@ -1818,21 +1885,23 @@ func _init_database() -> void:
 	# --- Spore ---
 	var fa9 = CardData.new()
 	fa9.id = "spore_dichter_nebel"
-	fa9.title = "Dichter Nebel"
-	fa9.description = "Spore – Spore Burst: Die Giftwolke hat +40% Radius und hält 40% länger."
+	fa9.version = 2
+	fa9.title = "Pilzgarten"
+	fa9.description = "Spore – Giftpilz: +1 Pilz gleichzeitig, +30% Wolkenradius."
 	fa9.rarity = "Rare"
 	fa9.pool = "Offensive"
 	fa9.color = Color(0.40, 0.90, 0.30)
 	fa9.hero_id = "spore"
 	fa9.family_id = "spore_burst"
-	fa9.ability_radius_mult = 1.40
-	fa9.ability_duration_mult = 1.40
+	fa9.wall_count_add = 1
+	fa9.ability_radius_mult = 1.30
 	_register(fa9)
 
 	var fa10 = CardData.new()
 	fa10.id = "spore_aetzender_nebel"
+	fa10.version = 2
 	fa10.title = "Ätzender Nebel"
-	fa10.description = "Spore-Burst-Evolution: Gegner in der Wolke werden alle 0,8 s mit 3 Giftstapeln belegt, die nach dem Verlassen nachwirken. +20% Wolkenschaden."
+	fa10.description = "Giftpilz-Evolution: Gegner in der Pilzwolke werden alle 0,8 s mit 3 Giftstapeln belegt, die nach dem Verlassen nachwirken. +20% Wolkenschaden."
 	fa10.rarity = "Epic"
 	fa10.color = Color(0.40, 0.90, 0.30)
 	fa10.hero_id = "spore"
@@ -1843,24 +1912,37 @@ func _init_database() -> void:
 	fa10.ability_damage_mult = 1.20
 	_register(fa10)
 
-	var fa11 = CardData.new()
-	fa11.id = "spore_symbiose"
-	fa11.title = "Symbiose"
-	fa11.description = "Spore-Burst-Evolution: Solange du in deiner eigenen Wolke stehst, heilst du 6 HP pro Sekunde. +15% Wolkenradius."
-	fa11.rarity = "Epic"
-	fa11.color = Color(0.40, 0.90, 0.30)
-	fa11.hero_id = "spore"
-	fa11.family_id = "spore_burst"
-	fa11.parent_card_id = "spore_dichter_nebel"
-	fa11.evolution_branch = "B"
-	fa11.ability_evolution = "spore_symbiosis"
-	fa11.ability_radius_mult = 1.15
-	_register(fa11)
+	var sp5 = CardData.new()
+	sp5.id = "spore_klebsporen"
+	sp5.title = "Klebsporen"
+	sp5.description = "Giftpilz-Evolution: Gegner in der aufplatzenden Wolke kleben fest (1 s verlangsamt, kurz betäubt)."
+	sp5.rarity = "Epic"
+	sp5.color = Color(0.40, 0.90, 0.30)
+	sp5.hero_id = "spore"
+	sp5.family_id = "spore_burst"
+	sp5.parent_card_id = "spore_dichter_nebel"
+	sp5.evolution_branch = "B"
+	sp5.ability_evolution = "spore_sticky"
+	_register(sp5)
+
+	var sp6 = CardData.new()
+	sp6.id = "spore_sprungpilz"
+	sp6.title = "Sprungpilz"
+	sp6.description = "Giftpilz-Evolution: Landest du auf deinem eigenen Pilz, schleudert er dich hoch und gibt dir deine Sprünge zurück."
+	sp6.rarity = "Epic"
+	sp6.color = Color(0.40, 0.90, 0.30)
+	sp6.hero_id = "spore"
+	sp6.family_id = "spore_burst"
+	sp6.parent_card_id = "spore_dichter_nebel"
+	sp6.evolution_branch = "C"
+	sp6.ability_evolution = "spore_bounce"
+	_register(sp6)
 
 	var fa12 = CardData.new()
 	fa12.id = "spore_sporenvorrat"
+	fa12.version = 2
 	fa12.title = "Sporenvorrat"
-	fa12.description = "Spore – Spore Burst: -20% Fähigkeits-Abklingzeit, +25% Wolkenschaden."
+	fa12.description = "Spore – Giftpilz: -20% Fähigkeits-Abklingzeit, +25% Wolkenschaden."
 	fa12.rarity = "Uncommon"
 	fa12.pool = "Offensive"
 	fa12.color = Color(0.40, 0.90, 0.30)
@@ -1869,36 +1951,169 @@ func _init_database() -> void:
 	fa12.ability_damage_mult = 1.25
 	_register(fa12)
 
+	var sp7 = CardData.new()
+	sp7.id = "spore_sporenschleier"
+	sp7.title = "Sporenschleier"
+	sp7.description = "Spore – Sporenstoß: Die Dash-Wolke ist 40% größer, -15% Dash-Abklingzeit."
+	sp7.rarity = "Rare"
+	sp7.pool = "Bewegung"
+	sp7.color = Color(0.40, 0.90, 0.30)
+	sp7.hero_id = "spore"
+	sp7.family_id = "spore_dash"
+	sp7.dash_effect_mult = 1.4
+	sp7.dash_cooldown_mult = 0.85
+	_register(sp7)
+
+	var fa11 = CardData.new()
+	fa11.id = "spore_symbiose"
+	fa11.version = 2
+	fa11.title = "Symbiose"
+	fa11.description = "Sporenstoß-Evolution: Solange du in deiner Dash-Wolke stehst, heilst du 6 HP pro Sekunde."
+	fa11.rarity = "Epic"
+	fa11.color = Color(0.40, 0.90, 0.30)
+	fa11.hero_id = "spore"
+	fa11.family_id = "spore_dash"
+	fa11.parent_card_id = "spore_sporenschleier"
+	fa11.evolution_branch = "A"
+	fa11.ability_evolution = "spore_symbiosis"
+	_register(fa11)
+
+	var sp8 = CardData.new()
+	sp8.id = "spore_seuchenherd"
+	sp8.title = "Seuchenherd"
+	sp8.description = "Spore – Seuchennebel: +25% Radius, hält 25% länger."
+	sp8.rarity = "Rare"
+	sp8.pool = "Offensive"
+	sp8.color = Color(0.40, 0.90, 0.30)
+	sp8.hero_id = "spore"
+	sp8.family_id = "spore_ult"
+	sp8.ult_radius_mult = 1.25
+	sp8.ult_duration_mult = 1.25
+	_register(sp8)
+
+	var sp9 = CardData.new()
+	sp9.id = "spore_pandemie"
+	sp9.title = "Pandemie"
+	sp9.description = "Seuchennebel-Evolution: Vergiftete Gegner stecken andere Gegner in 130 px Umkreis an."
+	sp9.rarity = "Epic"
+	sp9.color = Color(0.40, 0.90, 0.30)
+	sp9.hero_id = "spore"
+	sp9.family_id = "spore_ult"
+	sp9.parent_card_id = "spore_seuchenherd"
+	sp9.evolution_branch = "A"
+	sp9.ability_evolution = "spore_pandemic"
+	_register(sp9)
+
+	var sp10 = CardData.new()
+	sp10.id = "spore_verwesung"
+	sp10.title = "Verwesung"
+	sp10.description = "Seuchennebel-Evolution: Gegner im Nebel können weder heilen noch Schild aufbauen."
+	sp10.rarity = "Epic"
+	sp10.color = Color(0.40, 0.90, 0.30)
+	sp10.hero_id = "spore"
+	sp10.family_id = "spore_ult"
+	sp10.parent_card_id = "spore_seuchenherd"
+	sp10.evolution_branch = "B"
+	sp10.ability_evolution = "spore_decay"
+	_register(sp10)
+
 	# --- Nova ---
+	var nv5 = CardData.new()
+	nv5.id = "nova_druckwelle"
+	nv5.title = "Druckwelle"
+	nv5.description = "Nova – Gravitationsstoß: +25% Kegelbreite, +20% Reichweite."
+	nv5.rarity = "Rare"
+	nv5.pool = "Offensive"
+	nv5.color = Color(0.60, 0.40, 1.00)
+	nv5.hero_id = "nova"
+	nv5.family_id = "nova_push"
+	nv5.ability_radius_mult = 1.25
+	nv5.ability_range_mult = 1.2
+	_register(nv5)
+
+	var nv6 = CardData.new()
+	nv6.id = "nova_wandschlag"
+	nv6.title = "Wandschlag"
+	nv6.description = "Gravitationsstoß-Evolution: Prallt ein weggestoßener Gegner gegen eine Wand, nimmt er 20 Schaden und ist 0,8 s betäubt."
+	nv6.rarity = "Epic"
+	nv6.color = Color(0.60, 0.40, 1.00)
+	nv6.hero_id = "nova"
+	nv6.family_id = "nova_push"
+	nv6.parent_card_id = "nova_druckwelle"
+	nv6.evolution_branch = "A"
+	nv6.ability_evolution = "nova_wallslam"
+	_register(nv6)
+
+	var nv7 = CardData.new()
+	nv7.id = "nova_umkehr"
+	nv7.title = "Umkehr"
+	nv7.description = "Gravitationsstoß-Evolution: Abgelenkte Kugeln gehören danach dir und suchen Gegner."
+	nv7.rarity = "Epic"
+	nv7.color = Color(0.60, 0.40, 1.00)
+	nv7.hero_id = "nova"
+	nv7.family_id = "nova_push"
+	nv7.parent_card_id = "nova_druckwelle"
+	nv7.evolution_branch = "B"
+	nv7.ability_evolution = "nova_reverse"
+	_register(nv7)
+
+	var nv8 = CardData.new()
+	nv8.id = "nova_schwebeflug"
+	nv8.title = "Schwebeflug"
+	nv8.description = "Nova – Phasengleiten: Schwebt 50% länger."
+	nv8.rarity = "Rare"
+	nv8.pool = "Bewegung"
+	nv8.color = Color(0.60, 0.40, 1.00)
+	nv8.hero_id = "nova"
+	nv8.family_id = "nova_dash"
+	nv8.dash_effect_mult = 1.5
+	_register(nv8)
+
+	var nv9 = CardData.new()
+	nv9.id = "nova_phasenhuelle"
+	nv9.title = "Phasenhülle"
+	nv9.description = "Phasengleiten-Evolution: Gegnerische Kugeln fliegen beim Gleiten durch dich hindurch und werden um die Hälfte langsamer."
+	nv9.rarity = "Epic"
+	nv9.color = Color(0.60, 0.40, 1.00)
+	nv9.hero_id = "nova"
+	nv9.family_id = "nova_dash"
+	nv9.parent_card_id = "nova_schwebeflug"
+	nv9.evolution_branch = "A"
+	nv9.ability_evolution = "nova_phase"
+	_register(nv9)
+
 	var fa13 = CardData.new()
 	fa13.id = "nova_ereignishorizont"
+	fa13.version = 2
 	fa13.title = "Ereignishorizont"
-	fa13.description = "Nova – Singularität: +30% Sogradius, hält 30% länger, +15% Wurfweite."
+	fa13.description = "Nova – Singularität: +25% Sogradius, hält 30% länger, +15% Wurfweite."
 	fa13.rarity = "Rare"
 	fa13.pool = "Offensive"
 	fa13.color = Color(0.60, 0.40, 1.00)
 	fa13.hero_id = "nova"
 	fa13.family_id = "nova_singularity"
-	fa13.ability_radius_mult = 1.30
-	fa13.ability_duration_mult = 1.30
+	fa13.ult_radius_mult = 1.25
+	fa13.ult_duration_mult = 1.30
 	fa13.ability_range_mult = 1.15
 	_register(fa13)
 
 	var fa14 = CardData.new()
 	fa14.id = "nova_implosion"
-	fa14.title = "Implosion"
-	fa14.description = "Singularitäts-Evolution: Am Ende kollabiert die Singularität und schleudert alle Gegner im Umkreis mit 30 Schaden nach außen."
+	fa14.version = 2
+	fa14.title = "Schwarzes Loch"
+	fa14.description = "Singularitäts-Evolution: Der Kern verschluckt gegnerische Kugeln und spuckt sie bei der Implosion als deine Kugeln in alle Richtungen aus."
 	fa14.rarity = "Epic"
 	fa14.color = Color(0.60, 0.40, 1.00)
 	fa14.hero_id = "nova"
 	fa14.family_id = "nova_singularity"
 	fa14.parent_card_id = "nova_ereignishorizont"
 	fa14.evolution_branch = "A"
-	fa14.ability_evolution = "nova_implosion"
+	fa14.ability_evolution = "nova_blackhole"
 	_register(fa14)
 
 	var fa15 = CardData.new()
 	fa15.id = "nova_doppelstern"
+	fa15.version = 2
 	fa15.title = "Doppelstern"
 	fa15.description = "Singularitäts-Evolution: Erzeugt zwei Singularitäten nebeneinander statt einer."
 	fa15.rarity = "Epic"
@@ -1912,19 +2127,86 @@ func _init_database() -> void:
 
 	var fa16 = CardData.new()
 	fa16.id = "nova_massenanziehung"
+	fa16.version = 2
 	fa16.title = "Massenanziehung"
-	fa16.description = "Nova – Singularität: -15% Fähigkeits-Abklingzeit, +15% Sogradius."
+	fa16.description = "Nova – Singularität: -15% Ulti-Abklingzeit, +15% Sogradius."
 	fa16.rarity = "Uncommon"
 	fa16.pool = "Offensive"
 	fa16.color = Color(0.60, 0.40, 1.00)
 	fa16.hero_id = "nova"
-	fa16.ability_cooldown_mult = 0.85
-	fa16.ability_radius_mult = 1.15
+	fa16.ult_cooldown_mult = 0.85
+	fa16.ult_radius_mult = 1.15
 	_register(fa16)
 
 	# --- Klinge ---
+	var kl5 = CardData.new()
+	kl5.id = "klinge_wurfklinge"
+	kl5.title = "Wurfklinge"
+	kl5.description = "Klinge – Klingenbumerang: +25% Reichweite, +25% Schaden."
+	kl5.rarity = "Rare"
+	kl5.pool = "Offensive"
+	kl5.color = Color(1.00, 0.30, 0.50)
+	kl5.hero_id = "klinge"
+	kl5.family_id = "klinge_boomerang"
+	kl5.ability_range_mult = 1.25
+	kl5.ability_damage_mult = 1.25
+	_register(kl5)
+
+	var kl6 = CardData.new()
+	kl6.id = "klinge_blutung"
+	kl6.title = "Blutung"
+	kl6.description = "Klingenbumerang-Evolution: Getroffene Gegner bluten (4 × 4 Schaden) und nehmen 4 s lang 15% mehr Schaden von dir."
+	kl6.rarity = "Epic"
+	kl6.color = Color(1.00, 0.30, 0.50)
+	kl6.hero_id = "klinge"
+	kl6.family_id = "klinge_boomerang"
+	kl6.parent_card_id = "klinge_wurfklinge"
+	kl6.evolution_branch = "A"
+	kl6.ability_evolution = "klinge_bleed"
+	_register(kl6)
+
+	var kl7 = CardData.new()
+	kl7.id = "klinge_fangen"
+	kl7.title = "Fangen"
+	kl7.description = "Klingenbumerang-Evolution: Fängst du das Schwert im Dash, ist der Bumerang sofort wieder bereit. Größerer Fangradius."
+	kl7.rarity = "Epic"
+	kl7.color = Color(1.00, 0.30, 0.50)
+	kl7.hero_id = "klinge"
+	kl7.family_id = "klinge_boomerang"
+	kl7.parent_card_id = "klinge_wurfklinge"
+	kl7.evolution_branch = "B"
+	kl7.ability_evolution = "klinge_catch"
+	_register(kl7)
+
+	var kl8 = CardData.new()
+	kl8.id = "klinge_stossklinge"
+	kl8.title = "Stoßklinge"
+	kl8.description = "Klinge – Durchstoß: +30% Durchstoß-Schaden, -10% Dash-Abklingzeit."
+	kl8.rarity = "Rare"
+	kl8.pool = "Bewegung"
+	kl8.color = Color(1.00, 0.30, 0.50)
+	kl8.hero_id = "klinge"
+	kl8.family_id = "klinge_dash"
+	kl8.dash_effect_mult = 1.3
+	kl8.dash_cooldown_mult = 0.9
+	_register(kl8)
+
+	var kl9 = CardData.new()
+	kl9.id = "klinge_klingenfluss"
+	kl9.title = "Klingenfluss"
+	kl9.description = "Durchstoß-Evolution: Ein Treffer lädt den Dash ganz auf (höchstens alle 4 s)."
+	kl9.rarity = "Epic"
+	kl9.color = Color(1.00, 0.30, 0.50)
+	kl9.hero_id = "klinge"
+	kl9.family_id = "klinge_dash"
+	kl9.parent_card_id = "klinge_stossklinge"
+	kl9.evolution_branch = "A"
+	kl9.ability_evolution = "klinge_dash_reset"
+	_register(kl9)
+
 	var fa17 = CardData.new()
 	fa17.id = "klinge_geschliffen"
+	fa17.version = 2
 	fa17.title = "Geschliffene Klingen"
 	fa17.description = "Klinge – Klingensturm: +30% Schaden, +15% Radius."
 	fa17.rarity = "Rare"
@@ -1932,14 +2214,15 @@ func _init_database() -> void:
 	fa17.color = Color(1.00, 0.30, 0.50)
 	fa17.hero_id = "klinge"
 	fa17.family_id = "klinge_storm"
-	fa17.ability_damage_mult = 1.30
-	fa17.ability_radius_mult = 1.15
+	fa17.ult_damage_mult = 1.30
+	fa17.ult_radius_mult = 1.15
 	_register(fa17)
 
 	var fa18 = CardData.new()
 	fa18.id = "klinge_echowirbel"
+	fa18.version = 2
 	fa18.title = "Echowirbel"
-	fa18.description = "Klingensturm-Evolution: 0,45 s nach dem ersten Wirbel folgt ein zweiter mit 60% Schaden und Rückstoß."
+	fa18.description = "Klingensturm-Evolution: Nach dem großen Schlusswirbel folgt ein zweiter mit 60% Schaden."
 	fa18.rarity = "Epic"
 	fa18.color = Color(1.00, 0.30, 0.50)
 	fa18.hero_id = "klinge"
@@ -1951,8 +2234,9 @@ func _init_database() -> void:
 
 	var fa19 = CardData.new()
 	fa19.id = "klinge_blutrausch"
+	fa19.version = 2
 	fa19.title = "Blutrausch"
-	fa19.description = "Klingensturm-Evolution: Du heilst dich um 35% des mit Klingensturm verursachten Schadens. +40% Unverwundbarkeitsdauer."
+	fa19.description = "Klingensturm-Evolution: Du heilst dich um 35% des mit Klingensturm verursachten Schadens. Der Sturm hält 20% länger."
 	fa19.rarity = "Epic"
 	fa19.color = Color(1.00, 0.30, 0.50)
 	fa19.hero_id = "klinge"
@@ -1960,39 +2244,107 @@ func _init_database() -> void:
 	fa19.parent_card_id = "klinge_geschliffen"
 	fa19.evolution_branch = "B"
 	fa19.ability_evolution = "klinge_bloodlust"
-	fa19.ability_duration_mult = 1.40
+	fa19.ult_duration_mult = 1.20
 	_register(fa19)
 
 	var fa20 = CardData.new()
 	fa20.id = "klinge_tanzschritt"
+	fa20.version = 2
 	fa20.title = "Tanzschritt"
-	fa20.description = "Klinge – Klingensturm: -20% Fähigkeits-Abklingzeit, +30% Unverwundbarkeitsdauer."
+	fa20.description = "Klinge – Klingensturm: -15% Ulti-Abklingzeit, der Sturm hält 20% länger."
 	fa20.rarity = "Uncommon"
 	fa20.pool = "Offensive"
 	fa20.color = Color(1.00, 0.30, 0.50)
 	fa20.hero_id = "klinge"
-	fa20.ability_cooldown_mult = 0.80
-	fa20.ability_duration_mult = 1.30
+	fa20.ult_cooldown_mult = 0.85
+	fa20.ult_duration_mult = 1.20
 	_register(fa20)
 
 	# --- Bastion ---
+	var bs5 = CardData.new()
+	bs5.id = "bastion_langer_haken"
+	bs5.title = "Langer Haken"
+	bs5.description = "Bastion – Magnethaken: +30% Reichweite, -15% Fähigkeits-Abklingzeit."
+	bs5.rarity = "Rare"
+	bs5.pool = "Offensive"
+	bs5.color = Color(0.30, 0.90, 0.70)
+	bs5.hero_id = "bastion"
+	bs5.family_id = "bastion_hook"
+	bs5.ability_range_mult = 1.3
+	bs5.ability_cooldown_mult = 0.85
+	_register(bs5)
+
+	var bs6 = CardData.new()
+	bs6.id = "bastion_kettenschlag"
+	bs6.title = "Kettenschlag"
+	bs6.description = "Magnethaken-Evolution: Dein nächster Hammerschlag innerhalb von 3 s nach einem Hakentreffer macht doppelten Schaden."
+	bs6.rarity = "Epic"
+	bs6.color = Color(0.30, 0.90, 0.70)
+	bs6.hero_id = "bastion"
+	bs6.family_id = "bastion_hook"
+	bs6.parent_card_id = "bastion_langer_haken"
+	bs6.evolution_branch = "A"
+	bs6.ability_evolution = "bastion_chain_hit"
+	_register(bs6)
+
+	var bs7 = CardData.new()
+	bs7.id = "bastion_magnetfeld"
+	bs7.title = "Magnetfeld"
+	bs7.description = "Magnethaken-Evolution: Der fliegende Haken schluckt gegnerische Kugeln und sammelt Powerups für dich ein."
+	bs7.rarity = "Epic"
+	bs7.color = Color(0.30, 0.90, 0.70)
+	bs7.hero_id = "bastion"
+	bs7.family_id = "bastion_hook"
+	bs7.parent_card_id = "bastion_langer_haken"
+	bs7.evolution_branch = "B"
+	bs7.ability_evolution = "bastion_magnet"
+	_register(bs7)
+
+	var bs8 = CardData.new()
+	bs8.id = "bastion_rammbock"
+	bs8.title = "Schwerer Rammbock"
+	bs8.description = "Bastion – Rammbock: +30% Rückstoß am Ende, -10% Dash-Abklingzeit."
+	bs8.rarity = "Rare"
+	bs8.pool = "Bewegung"
+	bs8.color = Color(0.30, 0.90, 0.70)
+	bs8.hero_id = "bastion"
+	bs8.family_id = "bastion_dash"
+	bs8.dash_effect_mult = 1.3
+	bs8.dash_cooldown_mult = 0.9
+	_register(bs8)
+
+	var bs9 = CardData.new()
+	bs9.id = "bastion_prellbock"
+	bs9.title = "Prellbock"
+	bs9.description = "Rammbock-Evolution: Weggestoßene Gegner, die gegen eine Wand prallen, sind 1 s betäubt, und du bekommst 25 Schild."
+	bs9.rarity = "Epic"
+	bs9.color = Color(0.30, 0.90, 0.70)
+	bs9.hero_id = "bastion"
+	bs9.family_id = "bastion_dash"
+	bs9.parent_card_id = "bastion_rammbock"
+	bs9.evolution_branch = "A"
+	bs9.ability_evolution = "bastion_ram_wall"
+	_register(bs9)
+
 	var fa21 = CardData.new()
 	fa21.id = "bastion_emitter"
+	fa21.version = 2
 	fa21.title = "Verstärkte Emitter"
-	fa21.description = "Bastion – Heilfeld: +30% Heilung und Schildaufbau, hält 25% länger."
+	fa21.description = "Bastion – Festung: +30% Heilung und Schildaufbau, hält 25% länger."
 	fa21.rarity = "Rare"
 	fa21.pool = "Defensive"
 	fa21.color = Color(0.30, 0.90, 0.70)
 	fa21.hero_id = "bastion"
 	fa21.family_id = "bastion_field"
-	fa21.ability_damage_mult = 1.30
-	fa21.ability_duration_mult = 1.25
+	fa21.ult_damage_mult = 1.30
+	fa21.ult_duration_mult = 1.25
 	_register(fa21)
 
 	var fa22 = CardData.new()
 	fa22.id = "bastion_schutzkuppel"
+	fa22.version = 2
 	fa22.title = "Schutzkuppel"
-	fa22.description = "Heilfeld-Evolution: Solange dein Heilfeld aktiv ist, erleidest du 30% weniger Schaden."
+	fa22.description = "Festung-Evolution: Solange du in deiner Kuppel stehst, erleidest du 30% weniger Schaden."
 	fa22.rarity = "Epic"
 	fa22.color = Color(0.30, 0.90, 0.70)
 	fa22.hero_id = "bastion"
@@ -2004,8 +2356,9 @@ func _init_database() -> void:
 
 	var fa23 = CardData.new()
 	fa23.id = "bastion_pulsfeld"
+	fa23.version = 2
 	fa23.title = "Pulsfeld"
-	fa23.description = "Heilfeld-Evolution: Bei jedem Heil-Tick pulsiert das Feld und verursacht 7 Schaden mit Rückstoß an Gegnern im Umkreis von 130 px."
+	fa23.description = "Festung-Evolution: Bei jedem Heil-Tick pulsiert die Kuppel und verursacht 7 Schaden mit Rückstoß an Gegnern im Umkreis von 130 px."
 	fa23.rarity = "Epic"
 	fa23.color = Color(0.30, 0.90, 0.70)
 	fa23.hero_id = "bastion"
@@ -2015,15 +2368,29 @@ func _init_database() -> void:
 	fa23.ability_evolution = "bastion_pulse"
 	_register(fa23)
 
+	var bs10 = CardData.new()
+	bs10.id = "bastion_wanderfestung"
+	bs10.title = "Wanderfestung"
+	bs10.description = "Festung-Evolution: Die Kuppel wandert mit dir mit."
+	bs10.rarity = "Epic"
+	bs10.color = Color(0.30, 0.90, 0.70)
+	bs10.hero_id = "bastion"
+	bs10.family_id = "bastion_field"
+	bs10.parent_card_id = "bastion_emitter"
+	bs10.evolution_branch = "C"
+	bs10.ability_evolution = "bastion_mobile_dome"
+	_register(bs10)
+
 	var fa24 = CardData.new()
 	fa24.id = "bastion_notfallprotokoll"
+	fa24.version = 2
 	fa24.title = "Notfallprotokoll"
-	fa24.description = "Bastion – Heilfeld: -25% Fähigkeits-Abklingzeit."
+	fa24.description = "Bastion – Festung: -20% Ulti-Abklingzeit."
 	fa24.rarity = "Uncommon"
 	fa24.pool = "Defensive"
 	fa24.color = Color(0.30, 0.90, 0.70)
 	fa24.hero_id = "bastion"
-	fa24.ability_cooldown_mult = 0.75
+	fa24.ult_cooldown_mult = 0.80
 	_register(fa24)
 
 	# --- Phantom ---
@@ -2414,6 +2781,86 @@ func _init_database() -> void:
 	dr7.evolution_branch = "C"
 	dr7.ability_evolution = "druid_lifebark"
 	_register(dr7)
+
+	# --- Druide: Rankenschwung (Dash) und Urkeiler (Ulti) ---
+	var dr8 = CardData.new()
+	dr8.id = "druid_lange_ranke"
+	dr8.title = "Lange Ranke"
+	dr8.description = "Druide – Rankenschwung: +35% Rankenweite, -10% Dash-Abklingzeit."
+	dr8.rarity = "Rare"
+	dr8.pool = "Bewegung"
+	dr8.color = Color(0.50, 0.72, 0.36)
+	dr8.hero_id = "druid"
+	dr8.family_id = "druid_dash"
+	dr8.dash_effect_mult = 1.35
+	dr8.dash_cooldown_mult = 0.9
+	_register(dr8)
+
+	var dr9 = CardData.new()
+	dr9.id = "druid_fesselranke"
+	dr9.title = "Fesselranke"
+	dr9.description = "Rankenschwung-Evolution: Gegner auf der Linie der Ranke werden 0,7 s festgehalten."
+	dr9.rarity = "Epic"
+	dr9.color = Color(0.50, 0.72, 0.36)
+	dr9.hero_id = "druid"
+	dr9.family_id = "druid_dash"
+	dr9.parent_card_id = "druid_lange_ranke"
+	dr9.evolution_branch = "A"
+	dr9.ability_evolution = "druid_vine_snare"
+	_register(dr9)
+
+	var dr10 = CardData.new()
+	dr10.id = "druid_rankenkletterer"
+	dr10.title = "Rankenkletterer"
+	dr10.description = "Rankenschwung-Evolution: Greift die Ranke deinen eigenen Wurzelwall, bekommst du die Dash-Ladung zurück."
+	dr10.rarity = "Epic"
+	dr10.color = Color(0.50, 0.72, 0.36)
+	dr10.hero_id = "druid"
+	dr10.family_id = "druid_dash"
+	dr10.parent_card_id = "druid_lange_ranke"
+	dr10.evolution_branch = "B"
+	dr10.ability_evolution = "druid_vine_wall"
+	_register(dr10)
+
+	var dr11 = CardData.new()
+	dr11.id = "druid_urkraft"
+	dr11.title = "Urkraft"
+	dr11.description = "Druide – Urkeiler: Hält 30% länger, +25% Schaden."
+	dr11.rarity = "Rare"
+	dr11.pool = "Offensive"
+	dr11.color = Color(0.50, 0.72, 0.36)
+	dr11.hero_id = "druid"
+	dr11.family_id = "druid_ult"
+	dr11.ult_duration_mult = 1.3
+	dr11.ult_damage_mult = 1.25
+	_register(dr11)
+
+	var dr12 = CardData.new()
+	dr12.id = "druid_raserei"
+	dr12.title = "Raserei"
+	dr12.description = "Urkeiler-Evolution: Jeder Treffer in Keilergestalt verlängert sie um 0,5 s."
+	dr12.rarity = "Epic"
+	dr12.color = Color(0.50, 0.72, 0.36)
+	dr12.hero_id = "druid"
+	dr12.family_id = "druid_ult"
+	dr12.parent_card_id = "druid_urkraft"
+	dr12.evolution_branch = "A"
+	dr12.ability_evolution = "druid_frenzy"
+	_register(dr12)
+
+	var dr13 = CardData.new()
+	dr13.id = "druid_dornenfell"
+	dr13.title = "Dornenfell"
+	dr13.description = "Urkeiler-Evolution: In Keilergestalt wirfst du 30% des erlittenen Schadens zurück."
+	dr13.rarity = "Epic"
+	dr13.color = Color(0.50, 0.72, 0.36)
+	dr13.hero_id = "druid"
+	dr13.family_id = "druid_ult"
+	dr13.parent_card_id = "druid_urkraft"
+	dr13.evolution_branch = "B"
+	dr13.ability_evolution = "druid_thornhide"
+	_register(dr13)
+
 
 	# ============================================================
 	# Block-Karten (universell, verbessern die Q-Fähigkeit)
@@ -3250,7 +3697,8 @@ func _infer_required_mechanic(card: CardData) -> String:
 		return "dash"
 	if card.ability_cooldown_mult < 1.0:
 		return "ability"
-	if card.ult_cooldown_mult < 1.0 or card.ult_duration_mult > 1.0:
+	if card.ult_cooldown_mult < 1.0 or card.ult_duration_mult > 1.0 or card.ult_damage_mult > 1.0 \
+			or card.ult_radius_mult > 1.0 or card.ult_count_add > 0:
 		return "ult"
 	if (card.shield_regen_mult > 1.0 or card.shield_regen_delay_add < 0.0) and card.shield_max_add <= 0:
 		return "shield"
@@ -3300,7 +3748,7 @@ func is_card_attack_type_allowed(card: CardData, hero_id: String) -> bool:
 
 # Helden, deren Grundfähigkeit keinen Schaden macht: Allgemeine
 # Fähigkeitsschaden-Karten erscheinen erst mit dieser Evolutionskarte im Deck.
-const ABILITY_DAMAGE_UNLOCK_CARDS: Dictionary = {"nova": "nova_implosion", "phantom": "phantom_sprengkoeder"}
+const ABILITY_DAMAGE_UNLOCK_CARDS: Dictionary = {"phantom": "phantom_sprengkoeder"}
 
 func is_ability_damage_locked(card: CardData, hero_id: String, owned_ids: Array = []) -> bool:
 	if card == null or not card.hero_id.is_empty() or card.ability_damage_mult <= 1.0:
