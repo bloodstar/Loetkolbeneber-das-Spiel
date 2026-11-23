@@ -27,9 +27,10 @@ Vorbilder:
 12. [Bots](#-bots)
 13. [Online & LAN](#-online--lan)
 14. [Hauptmenü & Optionen](#-hauptmenü--optionen)
-15. [Statistiken, HUD & Feedback](#-statistiken-hud--feedback)
-16. [Dateien & Speicherorte](#-dateien--speicherorte)
-17. [Für Entwickler](#-für-entwickler)
+15. [Erfolge, Titel & Freischaltungen](#-erfolge-titel--freischaltungen)
+16. [Statistiken, HUD & Feedback](#-statistiken-hud--feedback)
+17. [Dateien & Speicherorte](#-dateien--speicherorte)
+18. [Für Entwickler](#-für-entwickler)
 
 ---
 
@@ -57,14 +58,14 @@ Alle Tasten lassen sich unter **Optionen → Steuerung** neu belegen. Hier steht
 | Durchfallen (Einweg-Steg) | `S` |
 | Springen, Wandsprung | `Leertaste` (gedrückt halten = höher) |
 | Zielen | Mauszeiger |
-| Schießen | `Linksklick` |
-| Dash / Ausweichen | `Shift` (kurz unverwundbar) |
+| Angriff (Schuss oder Nahkampf, je nach Held) | `Linksklick` |
+| Dash (je nach Held verschieden) | `Shift` (kurz unverwundbar) |
 | Barriere | `Q` |
 | Nachladen | `R` |
-| Nahkampf | `E` |
+| Ulti | `E` |
 | Heldenfähigkeit | `Rechtsklick` |
 
-**Fähigkeiten zielen:** Alle gerichteten Fähigkeiten zielen auf den Mauszeiger: Schwarzes Loch (Nova), Wurzelwall (Druide), Blink (Volt), Schattensprung (Phantom) und Raketensprung (Ignis, nur die Flugrichtung). Fähigkeitstaste **halten** zeigt die Vorschau (Reichweitenring, Form am Ziel bzw. Flugbahn), **Loslassen** zaubert. Der Zeiger wird auf die Reichweite begrenzt. Liegt er in einer Wand, landet der Zauber an der nächsten freien Stelle; die Vorschau zeigt sie mit einer gestrichelten Linie an. `Esc` bricht ab (auch Rechtsklick, wenn die Fähigkeit auf einer anderen Taste liegt). Der Wurzelwall steht immer mit der breiten Seite zum Druiden. Unter *Optionen → Steuerung → Fähigkeit zielen* lässt sich auf **Sofort am Mauszeiger** umstellen (ohne Vorschau). Bots und Spieler 2 nutzen weiter die feste Entfernung in Zielrichtung. Giftwolke, Klingensturm und Heilfeld wirken weiter an der eigenen Position.
+**Fähigkeiten zielen:** Alle gerichteten Fähigkeiten zielen auf den Mauszeiger: Schwarzes Loch (Nova), Wurzelwall (Druide) und Raketensprung (Ignis, nur die Flugrichtung). Fähigkeitstaste **halten** zeigt die Vorschau (Reichweitenring, Form am Ziel bzw. Flugbahn), **Loslassen** zaubert. Der Zeiger wird auf die Reichweite begrenzt. Liegt er in einer Wand, landet der Zauber an der nächsten freien Stelle; die Vorschau zeigt sie mit einer gestrichelten Linie an. `Esc` bricht ab (auch Rechtsklick, wenn die Fähigkeit auf einer anderen Taste liegt). Der Wurzelwall steht immer mit der breiten Seite zum Druiden. Unter *Optionen → Steuerung → Fähigkeit zielen* lässt sich auf **Sofort am Mauszeiger** umstellen (ohne Vorschau). Bots und Spieler 2 nutzen weiter die feste Entfernung in Zielrichtung. Giftwolke, Klingensturm und Heilfeld wirken weiter an der eigenen Position.
 
 ### Spieler 2 (nur lokaler 2-Spieler-Modus am selben PC)
 
@@ -78,7 +79,7 @@ Alle Tasten lassen sich unter **Optionen → Steuerung** neu belegen. Hier steht
 | Dash | `/` |
 | Barriere | `M` |
 | Nachladen | `L` |
-| Nahkampf | `K` |
+| Ulti | `K` |
 | Heldenfähigkeit | `,` (Komma) |
 
 ### Allgemeine Tasten
@@ -93,24 +94,44 @@ Alle Tasten lassen sich unter **Optionen → Steuerung** neu belegen. Hier steht
 
 ## 🐷 Helden
 
-Es gibt **8 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am Kopf.
+Es gibt **9 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am Kopf. Jeder Held ist entweder **Fernkämpfer** (Linksklick schießt) oder **Nahkämpfer** (Linksklick schlägt mit seiner festen Waffe): Klinge (Schwert), Bastion (Hammer), Phantom (Lötkolben-Stich) und Zeitschläger (Uhrenpendel) sind Nahkämpfer, alle anderen schießen. Im Draft erscheinen nur Karten, die zur Angriffsart passen.
+
+**Helden-Kits:** Jeder Held hat einen eigenen Dash (`Shift`), eine Fähigkeit (Rechtsklick) und eine **Ulti** (`E`). Meteorschauer (Ignis) und Singularität (Nova) werden wie gezielte Fähigkeiten mit der Maus gezielt: `E` halten zeigt die Vorschau, Loslassen löst aus (oder sofort, je nach Option „Fähigkeit auslösen“).
+
+| Held | Dash (`Shift`) | Fähigkeit (Rechtsklick) | Ulti (`E`) |
+| :--- | :--- | :--- | :--- |
+| **Volt** | **Blitzschritt**: Teleport 130 px, 2 Ladungen, jede lädt einzeln nach | **Kugelblitz**: langsame Blitzkugel (3,5 s), schockt alle 0,4 s Gegner im Radius 85 px mit 6 Schaden und verlangsamt sie | **Überladung** (26 s): 5 s lang +40 % Tempo, +50 % Feuerrate, kein Munitionsverbrauch, jeder Schuss springt als Kettenblitz weiter |
+| **Phantom** | **Schattenschritt**: Dash, danach 0,8 s unsichtbar | **Köder**: Doppelgänger (40 HP, 3,5 s) läuft weiter, Phantom ist 1,5 s unsichtbar. Bots, Türme und Zielsuche nehmen den Köder ins Visier | **Nachtjagd** (28 s): 6 s unsichtbar und +30 % Tempo, Angriffe lassen nur kurz aufflackern, der erste Treffer macht doppelten Schaden |
+| **Ignis** | **Nachbrenner**: Dash mit Feuerspur | **Rocket Leap**: explosiver Sprung (unverändert) | **Meteorschauer** (28 s, gezielt bis 460 px): nach 0,8 s Warnung schlagen 5 Meteore nebeneinander ein (je Radius 72 px, bis 22 Schaden) und hinterlassen 3 s Feuer |
+| **Spore** | **Sporenstoß**: Dash, am Start bleibt eine Giftwolke | **Giftpilz** (gezielt bis 230 px): Falle am Boden, nach 0,6 s scharf. Platzt bei Gegnern in 55 px oder bei Kugeltreffern zu einer Giftwolke (75 px, 3,5 s, 11 Schaden/s). Höchstens 3 Pilze | **Seuchennebel** (30 s): 6 s lang wandert ein Giftnebel (Radius 260 px) mit Spore, vergiftet und bremst Gegner, Spore heilt 8 HP/s |
+| **Nova** | **Phasengleiten**: 0,6 s frei lenkbar schweben, unverwundbar | **Gravitationsstoß**: Kegel (80°, 175 px) stößt Gegner weg und lenkt Kugeln ab. Nach unten gezielt schleudert er Nova hoch | **Singularität** (30 s, gezielt): Kern zieht Gegner im Radius 300 px heran und implodiert nach 2,6 s (Radius 170 px, 38 Schaden) |
+| **Klinge** | **Durchstoß**: Dash durch Gegner hindurch, trifft jeden einmal (70 % Schwertschaden). Ein Treffer halbiert die Dash-Abklingzeit | **Klingenbumerang**: Schwert fliegt 280 px und zurück, trifft hin und zurück. Solange es fliegt, kein Hieb | **Klingensturm** (24 s): 3 s lang frei beweglicher Wirbel (145 px), alle 0,3 s Schaden, großer Schlusswirbel, schlägt Kugeln zurück |
+| **Bastion** | **Rammbock**: nicht unverwundbar, Kugeln von vorn prallen ab, Gegner werden mitgeschoben und am Ende weggestoßen | **Magnethaken**: Haken bis 380 px, betäubt den ersten Gegner kurz und zieht ihn heran | **Festung** (32 s): 5 s Kuppel (140 px), gegnerische Kugeln prallen von außen ab, innen heilen Bastion und Verbündete |
+| **Druide** | **Rankenschwung**: Ranke bis 220 px zieht den Druiden an Wände und Decken. Ohne Halt normaler Dash | **Wurzelwall** (unverändert) | **Urkeiler** (35 s): 7 s riesiger Keiler, +60 % Leben, Hammer-Nahkampf, der Dash wird zum Ansturm (schleudert weg, bricht Kisten) |
+| **Zeitschläger** | **Rückspul** (6 s Abklingzeit): springt an die Stelle von vor 2 s zurück und bekommt den Schaden aus dieser Zeit als Leben zurück. Ein blasses Nachbild zeigt dir die Stelle | **Zeitblase** (10 s): Kuppel an deiner Position (Radius 150 px, 4 s), Gegner darin 60 % langsamer, gegnerische Kugeln fliegen nur mit 25 % Tempo | **Zeitstopp** (32 s): 2 s lang frieren alle Gegner und ihre Kugeln ein. Deine Treffer an ihnen stauen sich und schlagen am Ende gesammelt ein |
+
+Klinge schlägt in Kombos: Jeder **dritte Hieb** in Folge (innerhalb 1,6 s) ist ein starker Stoß mit 160 % Schaden.
+
+Die **Ulti** lädt über eine Abklingzeit, nicht über Schaden. Sie läuft über Rundenwechsel weiter und startet im Match halb geladen. Fähigkeits-Abklingzeit-Karten wirken zur Hälfte auch auf die Ulti. Phantoms Passiv **Hinterhalt**: +50 % Nahkampfschaden aus der Unsichtbarkeit oder von hinten.
 
 | Held | Rolle | HP | Tempo | Schild | Passiv | Fähigkeit | Outfit |
 | :--- | :--- | ---: | ---: | ---: | :--- | :--- | :--- |
 | **Ignis** | Pyro Skirmisher | 100 | 310 | 0 | **Afterburner**: Dash hinterlässt eine echte Feuerspur, Gegner darin brennen | **Rocket Leap**: Explosiver Sprung, 35 Schaden im Einschlag (Radius 140) | Schweißerbrille |
-| **Volt** | Hyper Speedster | 85 | 350 | 0 | **Overcharge**: Doppelsprung von Anfang an | **Flash Blink**: Teleport 260 px, 20 Schaden und 1,2 s Frost am Ziel | Gelbe Kappe mit Blitz |
-| **Spore** | Toxic Alchemist | 105 | 295 | 10 | **Spore Coat**: Treffer vergiften (2 Stapel) | **Spore Burst**: Giftwolke, 9 Schaden/s für 3,5 s | Pilzhut |
-| **Nova** | Gravity Mage | 95 | 290 | 10 | **Schwerelos**: Höchste Sprungkraft | **Singularität**: Kern zieht Gegner 2 s lang zur Mitte (kein Schaden) | Zauberhut mit Mini-Planet |
-| **Klinge** | Blade Dancer | 110 | 315 | 15 | **Klingentanz**: Start-Schild und hohes Tempo | **Klingensturm**: Rundumschlag mit Rückstoß, 0,5 s unverwundbar | Roter Schal |
-| **Bastion** | Field Engineer | 125 | 270 | 20 | **Aurora**: Doppelte Schild-Regeneration, Schild-Cooldown nur 4 s | **Heilfeld**: 4 s lang 8 HP und 10 Schild alle 0,5 s | Bauhelm mit Lampe |
-| **Phantom** | Shadow Assassin | 90 | 325 | 5 | **Nachtwind**: Sehr schnell, kürzestes Feuerintervall | **Schattensprung**: Teleport 260 px mit Treffer, 0,9 s unverwundbar | Ninja-Stirnband |
+| **Volt** | Hyper Speedster | 85 | 350 | 0 | **Overcharge**: Doppelsprung von Anfang an | **Kugelblitz**: wandernde Blitzkugel, schockt und verlangsamt | Gelbe Kappe mit Blitz |
+| **Spore** | Toxic Alchemist | 105 | 295 | 10 | **Spore Coat**: Treffer vergiften (2 Stapel) | **Giftpilz**: Falle, platzt zu einer Giftwolke | Pilzhut |
+| **Nova** | Gravity Mage | 95 | 290 | 10 | **Schwerelos**: Höchste Sprungkraft | **Gravitationsstoß**: stößt Gegner und Kugeln im Kegel weg | Zauberhut mit Mini-Planet |
+| **Klinge** | Blade Dancer | 125 | 315 | 15 | **Klingentanz**: Start-Schild und hohes Tempo | **Klingenbumerang**: Schwert fliegt hin und zurück | Roter Schal |
+| **Bastion** | Field Engineer | 145 | 270 | 20 | **Aurora**: Doppelte Schild-Regeneration, Schild-Cooldown nur 4 s | **Magnethaken**: zieht den ersten Gegner heran | Bauhelm mit Lampe |
+| **Phantom** | Shadow Assassin | 100 | 325 | 5 | **Hinterhalt**: +50 % Nahkampfschaden aus der Unsichtbarkeit oder von hinten | **Köder**: Doppelgänger läuft weiter, Phantom wird unsichtbar | Ninja-Stirnband |
 | **Druide** | Grove Warden | 105 | 295 | 10 | **Wurzelkraft**: Regeneriert ständig 2 HP/s | **Wurzelwall**: Rankenwand am Zielpunkt, breite Seite zum Druiden (108 px, 5 s, 150 HP), blockt Bewegung und Kugeln | Blätterkranz mit Geweih |
+| **Blutritter** | Blood Knight (Nahkampf-Vampir, Schwert) | 110 | 300 | 0 | **Blutschild**: Jeder 3. Treffer lässt eine Blutkugel fallen; jede Kugel gibt +25 Schild, bis 200 % der Max-HP (zweite, rote Lage auf der Lebensleiste) | **Blutbersten**: der ganze Schild explodiert, 1 Schaden pro Schildpunkt im Radius 150. Dash **Blutsturm**: legt eine Blutkugel ab, stürmt 40 % weiter und durch Gegner. Ulti **Blutruf** (24 s): bis zu 6 Kugeln im Umkreis 520 px fliegen zu ihm, treffen sie unterwegs einen Gegner: 30 Schaden und +30 HP | Hoher Dracula-Kragen mit rotem Edelstein |
+| **Zeitschläger** | Chrono Brawler | 120 | 300 | 10 | **Taktschlag**: Jeder 3. Pendeltreffer verlangsamt den Gegner 1,5 s um 30 % | **Zeitblase**: Kuppel, in der Gegner und ihre Kugeln stark verlangsamt sind | Wecker mit zwei Glocken |
 
 Die genauen Zahlen der Fähigkeiten stehen im Spiel unter **HELDEN** im Hauptmenü und im Tooltip der Heldenwahl. Sie kommen direkt aus den Konstanten in `player.gd`, stimmen also immer.
 
 ### Waffe & Munition
 
-Alle Eber schießen mit einem **Lötkolben**. Basis-Schaden pro Schuss ist **22** (in der Lobby einstellbar).
+Fernkämpfer schießen mit einem **Lötkolben**. Basis-Schaden pro Schuss ist **22** (in der Lobby einstellbar).
 
 | Held | Munition | Feuerintervall | Nachladezeit |
 | :--- | ---: | ---: | ---: |
@@ -118,9 +139,6 @@ Alle Eber schießen mit einem **Lötkolben**. Basis-Schaden pro Schuss ist **22*
 | Volt | 4 | 0,17 s | 1,4 s |
 | Spore | 3 | 0,28 s | 1,05 s |
 | Nova | 3 | 0,30 s | 1,35 s |
-| Klinge | 4 | 0,20 s | 1,25 s |
-| Bastion | 3 | 0,30 s | 1,45 s |
-| Phantom | 2 | 0,14 s | 1,05 s |
 | Druide | 3 | 0,24 s | 1,2 s |
 
 Die HP-Werte gelten bei **Basis-HP-Faktor 100 %**. In der Lobby lässt sich der Faktor von 50–300 % einstellen, die Unterschiede zwischen den Klassen bleiben dabei erhalten.
@@ -145,7 +163,7 @@ Die HP-Werte gelten bei **Basis-HP-Faktor 100 %**. In der Lobby lässt sich der 
 
 ### Barriere (`Q`)
 
-Jeder Held hat die Barriere (früher „Block“): **0,5 s kein Schaden**, gegnerische Projektile werden **zurückgeworfen**, **4 s Abklingzeit**. Eine aktive Barriere fängt auch Nahkampfschläge ab. Barriere-Karten verlängern sie oder lösen Bomben, Heilzonen, Minen und Rückstoß aus. Die Barriere ist **nicht** der Schild: Barriere-Karten verbessern nie den Schild und Schild-Karten nie die Barriere.
+Jeder Held hat die Barriere (früher „Block“): **0,5 s kein Schaden**, gegnerische Projektile werden **zurückgeworfen**, **4 s Abklingzeit**. Eine aktive Barriere fängt auch Nahkampfschläge ab. Sie hält **2 Treffer** aus (abgewehrte Kugeln zählen mit, eine Schrotsalve oder Rakete samt Explosion zählt als ein Treffer, Gift-Ticks gar nicht) und zerbricht danach mit Scherben und Glasklirren; die Abklingzeit beginnt dann sofort. Jeder Treffer hinterlässt einen Riss. Barriere-Karten verlängern sie oder lösen Bomben, Heilzonen, Minen und Rückstoß aus. Die Barriere ist **nicht** der Schild: Barriere-Karten verbessern nie den Schild und Schild-Karten nie die Barriere.
 
 ### Dash (`Shift`)
 
@@ -177,7 +195,7 @@ Feuerböden, Giftwolken, Eisflächen, Blitzzonen, Singularität und Heilfelder w
 
 ## 🔨 Nahkampf
 
-Jeder Eber hat eine Nahkampfwaffe auf `E` (P2: `K`). Gewählt wird sie im Lobby-Tab **Charakter**, sie wird im Profil gespeichert. Reichweite wird in Feldern (36 px) ab dem Körperrand gemessen. Wände blockieren den Schlag. Der Schlag trifft auch Blöcke, Kisten, Fässer und Türme.
+Nahkampf gehört fest zum Helden und liegt auf **Linksklick**: Klinge schlägt mit dem **Schwert** (30 Schaden alle 0,68 s), Bastion mit dem **Hammer** (30 Schaden alle 0,88 s), Phantom sticht mit dem **Lötkolben** (27 Schaden alle 0,77 s). Fernkämpfer haben keinen Nahkampf mehr, die Waffenwahl im Tab Charakter und die Lobby-Regel „Nahkampfwaffen“ entfallen. Die Tabelle zeigt die Grundwerte der Waffen vor den Helden-Faktoren. Allgemeine Karten für Schaden, Feuerrate, Lebensraub und Elemente wirken bei Nahkämpfern auf die Schläge (Feuerrate = Angriffstempo, Feuer = 3 Brandstapel, Blitz = 0,1 s Betäubung). Reine Projektil-Karten (Munition, Abpraller, Durchschlag, Zielsuche, Explosionen, Multishot) bekommen nur Fernkämpfer, Nahkampf-Karten nur Nahkämpfer. Reichweite wird in Feldern (36 px) ab dem Körperrand gemessen. Wände blockieren den Schlag. Der Schlag trifft auch Blöcke, Kisten, Fässer und Türme.
 
 | Waffe | Form | Schaden | Reichweite | Rückstoß | Abklingzeit | Besonderheit |
 | :--- | :--- | ---: | ---: | :--- | ---: | :--- |
@@ -188,9 +206,9 @@ Jeder Eber hat eine Nahkampfwaffe auf `E` (P2: `K`). Gewählt wird sie im Lobby-
 
 **Parade** (Legendary): Ist der Schlag bereit (nicht auf Abklingzeit), schlägt die Waffe von selbst in Richtung eines gegnerischen Projektils, sobald es in Reichweite ist und auf dich zufliegt, und wirft es zurück. Der Schlag trifft dabei normal und startet die Abklingzeit. Ein manueller Schlag pariert ebenfalls. Gilt auch für Bots und online.
 
-Das Powerup **Auto-Angriff** und der Runden-Modifier **Brawl** verstärken den Nahkampf. Ist Nahkampf in den Lobby-Regeln aus, erscheinen beide nicht.
+Das Powerup **Auto-Angriff** lässt Nahkämpfer von selbst zuschlagen und verkürzt bei Fernkämpfern das Feuerintervall um 35 %. Der Runden-Modifier **Brawl** verstärkt den Nahkampf und erscheint nur, wenn ein Nahkämpfer mitspielt.
 
-Nahkampf-Karten (Pool **Nahkampf**, 19 Karten) wirken nur auf den `E`-Schlag, siehe [Karten-Übersicht](#nahkampf-karten).
+Nahkampf-Karten (Pool **Nahkampf**, 19 Karten) wirken nur auf die Schläge der Nahkämpfer, siehe [Karten-Übersicht](#nahkampf-karten).
 
 ---
 
@@ -267,6 +285,30 @@ Die Lobby hat mehrere Tabs. **Spieler 1 ist Host** und stellt Regeln, Map und Ka
 
 **Weiterspielen**: Nach dem Match-Sieg kann der Host **WEITERSPIELEN** wählen. Punkte und Decks bleiben, das Ziel steigt um 30 %.
 
+### MVP-Ehrungen
+
+Am Matchende zeigt der Win-Screen unter der Match-Statistik bis zu **8 Ehrungen**. Pro Spieler gibt es höchstens 2 (bei 2 bis 3 Spielern etwas mehr), der MVP-Titel zählt nicht mit. Spaß-Ehrungen erscheinen höchstens zwei.
+
+| Ehrung | Wer bekommt sie |
+|---|---|
+| **MVP** | Bester Gesamtwert aus Punkten, Kills, Schaden, Barriere, Heilung, Rundensiegen und Toden |
+| **Schadenskönig** | Meister Schaden |
+| **Serienkiller** | Längste Kill-Serie ohne eigenen Tod (ab 3) |
+| **Beste Karte** | Karte, mit der ihr Besitzer am stärksten war: Schadensanteil und Rundensiege in den Runden mit der Karte, plus die Verbesserung gegenüber den Runden davor |
+| **Scharfschütze** | Beste Trefferquote (ab 20 Schüssen und 25 %) |
+| **Erstes Blut** | Am häufigsten den ersten Kill einer Runde (ab 2) |
+| **Fähigkeiten-Ass** | Meister Fähigkeitsschaden (ab 100) |
+| **Nahkampf-Metzger** | Meister Nahkampfschaden (ab 60) |
+| **Bollwerk** | Meister Barriere-Schaden (ab 60) |
+| **Sanitäter** | Meiste Heilung (ab 60) |
+| **Überlebenskünstler** | Am häufigsten bis zum Rundenende überlebt (ab 2) |
+| **Haarscharf** | Runde mit höchstens 20 % Leben gewonnen |
+| **Größter Pechvogel** *(Spaß)* | Meiste Tode (ab 2), bei Gleichstand mehr eingesteckter Schaden |
+| **Tollpatsch** *(Spaß)* | Tode ohne gegnerischen Schützen (Lava, Absturz, eigene Schüsse) |
+| **Kugelfang** *(Spaß)* | Am meisten Schaden eingesteckt |
+
+Online berechnet der Host die Ehrungen und schickt sie mit dem Match-Ende an alle Clients.
+
 ---
 
 ## 👥 Spielmodi
@@ -294,9 +336,9 @@ Im Tab **Regeln** unter *Spielmodus & Spielfeld* wählt der Host die **Spielart*
 - **Karten:** Alle Karten bleiben gleich. Sprungkraft, Luftsprünge und Schwerkraft wirken auf die Sprunghöhe. *Projektil-Schwerkraft* (Leichtes/Schweres Geschoss, Mörser) hat in der Arena noch keine Wirkung, Kugeln fliegen flach.
 - **Kamera:** fester Zoom, sie zoomt nicht heraus. Sie folgt dem eigenen Schwein (lokal zu zweit: beiden) und bleibt innerhalb der Karte. Gegner außerhalb des Bildes zeigt ein Randpfeil in Teamfarbe.
 - **Erhöhungen, Rampen, Stege:** Erhöhungen haben oben Boden und seitlich Felswände. Rampen führen ohne Sprung hinauf, ihre höheren Teile kann man von der Seite nicht betreten. Unter Holzstegen läuft man durch, oben läuft man darüber. Wer von einer Kante läuft, fällt herunter.
-- **Maps:** zufällig eine von acht Arenen. Kompakt: *Burghof*, *Kistenlager*, *Ruinen*. Groß und offen (etwa die vierfache Fläche): *Weite Steppe*, *Marktplatz*, *Canyon*, *Hochplateau* (große Erhöhung in der Mitte mit vier Rampen, erhöhte Randplattform), *Stegwerk* (fünf Türme mit Holzstegen). Wände gibt es gerade und schräg, Boden und Mauern haben 32×32-Pixeltexturen. Die Levelauswahl der Seitenansicht gilt hier nicht.
+- **Maps:** zufällig eine von zwölf Arenen. Autoscroll-Strecken (siehe Autoscroll unten): *Rennstrecke* (Insel, Slalom, drei Spuren) und *Bergrennen* (Hügel mit Rampen, Turmbrücke, Felsbuckel-Slalom). Dazu *Hafen* (Holzstege zwischen sechs Türmen, Kistenstapel) und *Festung* (Wehrgang mit Toren und Rampen, Bergfried mit Stegen zu den Mauern). Kompakt: *Burghof*, *Kistenlager*, *Ruinen*. Groß und offen (etwa die vierfache Fläche): *Weite Steppe*, *Marktplatz*, *Canyon*, *Hochplateau* (große Erhöhung in der Mitte mit vier Rampen, erhöhte Randplattform), *Stegwerk* (fünf Türme mit Holzstegen). Wände gibt es gerade und schräg, Boden und Mauern haben 32×32-Pixeltexturen. Die Levelauswahl der Seitenansicht gilt hier nicht.
 - **Karteneditor:** *Optionen → KARTENEDITOR*. Links malen, rechts radieren, Mausrad zoomt, mittlere Maustaste oder Leertaste + Ziehen verschiebt. Werkzeuge: Pinsel (B, 1×1 bis 5×5), Rechteck (R), Füllen (F), schräge Wand (W, von Ecke zu Ecke ziehen, Rechtsklick löscht). Kacheln: Boden, Deckung, Halbmauer, Mauer, Kiste, Spawn, Erhöhung 1 bis 3, Steg, Rampe (Richtung wählen; eine Reihe gleicher Pfeile endet an der Erhöhung). Symmetrie spiegelt links/rechts, oben/unten, vierfach oder um den Mittelpunkt, Rampen drehen mit. Strg+Z / Strg+Y, Strg+S speichert. Die Prüfung zeigt, ob alle Spawns erreichbar sind. Vorlagen laden eine eingebaute Arena als Kopie. Gespeichert wird unter `user://arena_maps/`. Mit *Im Zufallspool* kommt die Karte in die Arena-Auswahl, online schickt der Host sie an alle. **TESTEN** speichert und startet eine Runde auf der Karte mit den Spielern und Bots der letzten Lobby; ESC → Hauptmenü beendet den Test.
-- **Seitenansicht-Level im Editor:** Im Karteneditor führt *Zum Seitenansicht-Editor* zu den klassischen Leveln. Jedes Level lässt sich laden und ändern: Plattformen, Einweg-Stege, Kistenblöcke und Gruben waagrecht ziehen, Wände als Rechteck, Stacheln, Sprungfedern und Mystery-Blöcke anklicken, Röhrenpaare mit zwei Klicks. Mit *Objekt setzen* kommen Wippen, Kettenplattformen, Fahrplattformen, Drehbalken, Häuser, Pyramiden, Treppen, Kistenketten, Gitterzäune, Schrägen und Kugel-Objekte dazu. Ein ausgewähltes Objekt zeigt unter *Eigenschaften* alle Werte (z. B. Kettenlänge, Wippenbreite, Drehtempo und Stil, Kistengrößen); Verschieben per Ziehen, Löschen per Rechtsklick oder Entf. Gespiegelte Level zeigen die automatische Spiegelung blass. *Speichern* legt eine geänderte Fassung an, die das Spiel statt des eingebauten Bauplans nutzt; *Original* stellt ihn wieder her. *Als neues Level* legt ein eigenes Level an, das im Levels-Tab der Lobby erscheint. *Zufällige Extras* schaltet die zufälligen Zusatzplattformen, Kistenhaufen und Eisflächen des Levels ab. Gespeichert wird unter `user://side_levels/`, online schickt der Host den Bauplan vor jeder Runde an alle.
+- **Seitenansicht-Level im Editor:** Im Karteneditor führt *Zum Seitenansicht-Editor* zu den klassischen Leveln. Jedes Level lässt sich laden und ändern: Plattformen, Einweg-Stege, Kistenblöcke und Gruben waagrecht ziehen, Wände als Rechteck, Stacheln, Sprungfedern und Mystery-Blöcke anklicken, Röhrenpaare mit zwei Klicks. Mit *Objekt setzen* kommen Wippen, Kettenplattformen, Fahrplattformen, Drehbalken, Häuser, Pyramiden, Treppen, Kistenketten, Gitterzäune, Schrägen, Kugel-Objekte sowie Schalter, Türen/Falltüren, Laser und Orbitalschläge dazu (verbunden über die Kanalnummer; die gespiegelte Seite bekommt Kanal + 100). Ein ausgewähltes Objekt zeigt unter *Eigenschaften* alle Werte (z. B. Kettenlänge, Wippenbreite, Drehtempo und Stil, Kistengrößen); Verschieben per Ziehen, Löschen per Rechtsklick oder Entf. Gespiegelte Level zeigen die automatische Spiegelung blass. *Speichern* legt eine geänderte Fassung an, die das Spiel statt des eingebauten Bauplans nutzt; *Original* stellt ihn wieder her. *Als neues Level* legt ein eigenes Level an, das im Levels-Tab der Lobby erscheint. *Zufällige Extras* schaltet die zufälligen Zusatzplattformen, Kistenhaufen und Eisflächen des Levels ab. Gespeichert wird unter `user://side_levels/`, online schickt der Host den Bauplan vor jeder Runde an alle.
 - **Runden-Modifier:** nur Sturmwind, Mondgravitation, Schwerewelt, Mini-Chaos, Schadensrausch, Turboschweine, Luftakrobatik, Regeneration, Startschild und Zone. Die übrigen sind in der Arena vorerst aus.
 
 ---
@@ -400,7 +442,8 @@ Kartentexte nutzen für gleiche Effekte immer dieselben Begriffe: **Tempo** (Lau
 | **Nova** | Schwerkraftkern, Leerer Raum, Supernova |
 | **Klinge** | Wirbelklinge, Klingenreflexe, Duellklinge |
 | **Bastion** | Energieschild, Feldwartung, Bastionsfestung |
-| **Phantom** | Schattenklinge, Schattensprung, Todeskuss |
+| **Phantom** | Schattenklinge, Schattenlauf, Todeskuss |
+| **Blutritter** | Aderlass, Dickes Blut (Kugeln +50 % Schild), Blutgier |
 
 ### Fähigkeitskarten (je 4 pro Held)
 
@@ -409,12 +452,28 @@ Eine Grundkarte (Rare) mit zwei exklusiven Evolutionen (Epic) und eine Einzelkar
 | Held | Grundkarte | Evolution A | Evolution B | Einzelkarte |
 | :--- | :--- | :--- | :--- | :--- |
 | **Ignis** | Raketentriebwerk | Napalm-Landung | Splitterlandung | Kurze Zündschnur |
-| **Volt** | Hochspannung | Kettenblink | Gewitterspur | Restladung |
-| **Spore** | Dichter Nebel | Ätzender Nebel | Symbiose | Sporenvorrat |
-| **Nova** | Ereignishorizont | Implosion | Doppelstern | Massenanziehung |
-| **Klinge** | Geschliffene Klingen | Echowirbel | Blutrausch | Tanzschritt |
-| **Bastion** | Verstärkte Emitter | Schutzkuppel | Pulsfeld | Notfallprotokoll |
-| **Phantom** | Lautlose Klinge | Schattenschnitt | Lähmendes Mal | Lange Schatten |
+| **Volt** (Kugelblitz) | Hochspannung | Sprungziel | Entladung | Restladung |
+| **Spore** (Giftpilz) | Pilzgarten | Ätzender Nebel | Klebsporen (C: Sprungpilz) | Sporenvorrat |
+| **Nova** (Gravitationsstoß) | Druckwelle | Wandschlag | Umkehr | – |
+| **Klinge** (Klingenbumerang) | Wurfklinge | Blutung | Fangen | – |
+| **Bastion** (Magnethaken) | Langer Haken | Kettenschlag | Magnetfeld | – |
+| **Phantom** (Köder) | Doppelgänger | Sprengköder | Platztausch (C: Lähmendes Mal) | Lange Schatten |
+| **Blutritter** (Blutbersten) | Weites Bersten | Blutspende (heilt 30 % des Schilds) | Blutregen (Getroffene lassen Blutkugeln fallen) | Blutschneise (Dash, Epic) und Blutsog (Ulti, Epic) |
+
+**Zeitschläger** (Nahkampf mit Uhrenpendel = Flegel, 30 Schaden, Rundumschlag) hat 7 Klassenkarten und 2 Familien mit je 2 Evolutionen: **Taktgeber** (Common, +15 % Nahkampftempo, +10 % Tempo), **Schweres Pendel** (Uncommon, +30 % Nahkampfschaden, +0,5 Felder, −10 % Tempo), **Schnellladung** (Uncommon, −15 % Ulti- und −10 % Fähigkeits-Abklingzeit), **Stundenschlag** (Epic, Taktschlag schon jeden 2. Treffer, 2,5 s lang), **Ewige Sekunde** (Epic, Zeitstopp +50 % Dauer), **Zinseszins** (Epic, gestaute Treffer schlagen mit 150 % ein). Familie Zeitblase: **Große Blase** (Rare, +30 % Radius, +25 % Dauer) → A **Zerfall** (8 Schaden/s in der Blase) oder B **Eigenzeit** (+30 % Tempo in der eigenen Blase). Familie Rückspul: **Lange Erinnerung** (Rare, 1 s weiter zurück, −15 % Dash-Abklingzeit) → A **Zeitriss** (Explosion an der verlassenen Stelle, 25 Schaden) oder B **Reinigung** (entfernt Gift, Brand und Verlangsamung, +20 Schild).
+
+**Dash- und Ulti-Karten (neu):** Volt: **Dreifachblitz** (Rare, +1 Blitzschritt-Ladung, +20 % Teleportweite) mit den Evolutionen **Kettenblink** (Kettenblitz am Zielpunkt) und **Gewitterspur** (Blitzzone am Zielpunkt); **Starkstrom** (Rare, Überladung +30 % Dauer, −10 % Ulti-Abklingzeit) mit **Dauerblitz** (Blitzschritt lädt in der Überladung dreimal so schnell) und **Schockring** (Schockwelle am Ende). Phantom: **Schattenschnitt** (Epic, der Dash sticht alle Gegner auf dem Weg, 60 % Schaden) und **Blutspur** (Epic, ein Kill in der Nachtjagd gibt die halbe Ulti-Abklingzeit zurück). Für alle Helden mit Ulti: **Ulti-Akku** (Uncommon, −15 % Ulti-Abklingzeit).
+
+**Dash- und Ulti-Karten der übrigen Helden** (Grundkarte Rare, Evolutionen Epic):
+
+| Held | Dash-Grundkarte → Evolutionen | Ulti-Grundkarte → Evolutionen | Einzelkarte |
+| :--- | :--- | :--- | :--- |
+| **Ignis** | Glutspur → Zündung (Explosion am Dash-Ende) | Meteorregen (+2 Meteore) → Komet (ein riesiger Einschlag) / Flächenbrand (größeres, längeres Feuer) | – |
+| **Spore** | Sporenschleier → Symbiose (Heilung in der Dash-Wolke) | Seuchenherd → Pandemie (Gift springt über) / Verwesung (keine Heilung im Nebel) | – |
+| **Nova** | Schwebeflug → Phasenhülle (Kugeln fliegen beim Gleiten durch Nova) | Ereignishorizont → Schwarzes Loch (verschluckt Kugeln, spuckt sie als eigene aus) / Doppelstern | Massenanziehung |
+| **Klinge** | Stoßklinge → Klingenfluss (Treffer lädt den Dash ganz auf, alle 4 s) | Geschliffene Klingen → Echowirbel / Blutrausch | Tanzschritt |
+| **Bastion** | Schwerer Rammbock → Prellbock (Wandaufprall betäubt, +25 Schild) | Verstärkte Emitter → Schutzkuppel / Pulsfeld (C: Wanderfestung) | Notfallprotokoll |
+| **Druide** | Lange Ranke → Fesselranke / Rankenkletterer | Urkraft → Raserei (Treffer verlängern) / Dornenfell (Schaden zurückwerfen) | – |
 
 **Druide (Wurzelwall)** hat statt 3 Klassen- und 4 Fähigkeitskarten 4 Wandkarten plus 3 Evolutionen:
 
@@ -471,7 +530,7 @@ Dazu kommen einzelne Reflexions-Karten im Pool Defensive: **Stachelweste**, **Ra
 | Seltenheit | Karten |
 | :--- | :--- |
 | Common | Barriereübung (+0,15 s), Schnelle Deckung (−15 % Abklingzeit) |
-| Uncommon | Verstärkte Deckung (+0,3 s, Evolution: Ausdauerbarriere), Barrierestoß (stößt weg) |
+| Uncommon | Verstärkte Deckung (+0,3 s, Evolution: Ausdauerbarriere), Barrierestoß (stößt weg), Panzerglas (+1 Treffer, bevor die Barriere zerbricht) |
 | Rare | Barrierebombe, Heilzone, Druckwelle |
 | Epic | Konterblitz (+50 % auf reflektierte Schüsse), Barriere-Experte, Unzerbrechlich |
 
@@ -495,10 +554,10 @@ Der Host wählt die Map unter **Regeln → Spielfeld**. **Zufällig** zieht pro 
 
 | Map | Art | Besonderheiten |
 | :--- | :--- | :--- |
-| **Grasarena** | Arena | Luftige Balken, zentrale Wippe, Kisten, Ranken |
+| **Grasarena** | Arena | Luftige Balken, zentrale Wippe, Kisten, Ranken. Der Mittelbalken hat eine Falltür über den Stacheln, Hebel unter den Seitenbalken öffnen sie für 4 s |
 | **Wüstenruine** | Arena | Offene Sandinseln, Kettenplattformen, TNT |
 | **Eisgrotte** | Arena | Glatte Eisflächen, schwebende Wippe, Kistenstapel |
-| **Neonfabrik** | Arena | Technik-Balken, Ketten, Kisten, Powerups |
+| **Neonfabrik** | Arena | Technik-Balken, Ketten, Kisten, Powerups. Hebel unter den Einweg-Stegen schalten 4 s lang einen senkrechten Laser durch die Mitte |
 | **Weite Wiese** | Arena | Wenige Plattformen, viel Platz für Duelle |
 | **Wolkeninsel** | Arena | Kleine Wolkeninseln, weite Sprünge, Wolkenfähre |
 | **Uhrwerk** | Arena | Großes Zifferblatt in der Mitte: Der lange Minutenzeiger dreht sich in 16 s einmal herum, man fährt auf ihm mit. Aufzüge an den Seiten, aus zwei Trichtern fallen alle 10 s Kugeln, die der Zeiger herumschiebt |
@@ -506,7 +565,7 @@ Der Host wählt die Map unter **Regeln → Spielfeld**. **Zufällig** zieht pro 
 | **Kistenfestung** | Arena | Nur Holzkisten, große Wippe mit Kistentürmen |
 | **Sonnentempel** | Arena | Riesige hohle Pyramide über drei Viertel der Breite (drüberlaufen oder unten hinein), Kistenkette über der Spitze |
 | **Kettenwerk** | Arena | Neon-Halle voller Kistenketten, Einweg-Stege |
-| **Wollhaus** | Arena | Haus mit vier Räumen, Luken und begehbarem Dach, Kisten an Ketten |
+| **Wollhaus** | Arena | Haus mit vier Räumen, Luken und begehbarem Dach, Kisten an Ketten. Die untere Mitteltür ist zu (Hebel im Raum öffnet sie 6 s), die obere steht offen (Hebel schließt sie 5 s) |
 | **Eispyramiden** | Arena | Zwei große hohle Eispyramiden über fast die ganze Breite, Kistenkette zwischen den Spitzen |
 | **Serverhaus** | Arena | Rechenzentrum mit vier Räumen, tief gespannte Kistenketten zum Rand |
 | **Gitterzaun** | Arena | Gitter aus fünf senkrechten Ketten (Decke bis Boden) und vier waagrechten Ketten, große Kisten an jeder Kreuzung, Einweg-Stege an den Rändern |
@@ -518,12 +577,34 @@ Der Host wählt die Map unter **Regeln → Spielfeld**. **Zufällig** zieht pro 
 | **Kugelbahn** | Arena | Doppelte, gespiegelte Zickzack-Kugelbahn. Oben an jeder Bahn erscheint alle 5 s eine Kugel, oft mit bis zu zwei kleinen Kugeln davor, und rollt bis auf den Boden. Die Schrägen sind Einweg-Rampen: von unten durchspringen, mit `S` / `↓` durchfallen, Kugeln rollen oben darauf. Leiter aus Einweg-Stegen in der Mitte |
 | **Kugelkette** | Arena | Lange Kette quer unter der Decke zwischen zwei Randleisten, oben drauf viele Kugeln aller Größen. Zerschießt man ein Glied, regnet alles in die Arena |
 | **Kugelmühle** | Arena | Zwei gegenläufige Windmühlen-Kreuze. Aus Trichtern fallen alle 5 s Kugeln auf die Flügel, die sie anheben und zur Mitte schleudern. Leiter aus Einweg-Stegen in der Mitte, Steg-Treppen außen |
+| **Falltürburg** | Arena | Breite Falltür-Brücke über einer Stachelgrube, Hebel darunter öffnen sie für 3 s. Oben je eine Falltür-Bastion, deren Hebel auf der Gegenseite hängt. Ganz oben eine Druckplatte: Wer sie betritt, ruft einen Orbitalschlag auf die andere Kartenseite |
+| **Laserlabor** | Arena | Laser in Knöchelhöhe quer über den Boden (drüberspringen!), Laser auf den Seitenbalken mit dem Hebel auf der Gegenseite. Oben ein Tresor mit Herz-Blöcken hinter zwei Laserwänden: Der Hebel schaltet die eigene Wand ab, ein zweiter Treffer wieder an |
+| **Schleusenwerk** | Arena | Tresor mit zwei Schleusentüren und einer Falltür über Stacheln als Boden. Die Druckplatte vor der Tür hält sie offen, solange jemand draufsteht (danach 2,5 s), innen öffnet ein Hebel. Außen lässt ein Hebel den Boden fallen. Über dem Dach ein Laser, oben eine Platte für einen Bodenlaser über die gegnerische Hälfte |
 | **Pilzpfad** | Scrollt seitlich | Gruben, Treppen, Herz-Block, Fähre, Portale |
 | **Gletscherpass** | Scrollt seitlich | Aufzüge im Abgrund, Eisfähre, hängende Wippe |
 | **Lavaturm** | Scrollt nach oben | Lava steigt schon ab 4 s, Gipfel-Arena |
 | **Himmelsleiter** | Scrollt nach oben | Feder, Aufzug, Wolkenfähre, Gipfelportal |
+| **Turbotrasse** | Autoscroll | Das Bild fährt von selbst nach rechts. Kurze Abzweigungen laufen wieder zusammen: Steg über zwei Gruben oder unten durch, Tunnel unter der Decke oder obendrüber, Trittsteine oder Fähre über die große Grube. Turbo- und Umkehrfelder |
+| **Asteroidenfeld** | Weltraum | Schwerelos zwischen schwebenden Stationen. Asteroiden treiben durchs Bild, kleine mit goldenem Kern enthalten Powerups, Weltraumquallen jagen die Spieler |
+| **Kometenjagd** | Weltraum, Autoscroll | Schwerelose Autoscroll-Strecke durch einen Asteroidengürtel, Stationswände teilen die Bahn kurz in Spuren. Asteroiden kommen von vorn |
 
 Auf Scroll-Maps folgt die Kamera dir. Gegner außerhalb des Bildes zeigen Pfeile am Rand.
+
+### Autoscroll
+
+Auf Autoscroll-Maps (Seitenansicht und die Arena-Karte *Rennstrecke*) fährt ein Bildfenster von etwa 40 Kacheln Breite zwei Sekunden nach dem Countdown von selbst los, alle müssen mithalten.
+
+- **Rote Wand hinten:** schiebt nach vorn und macht 30 Schaden pro Sekunde. Wer weit dahinter hängt oder dort gegen eine Wand gedrückt wird, wird zerquetscht (95 pro Sekunde).
+- **Vordere Kante** (gestrichelt): bremst nur, weiter vorlaufen geht nicht.
+- **Turbofeld** (orange, Doppelpfeile): Das Bild fährt 5 s lang 1,8-mal so schnell.
+- **Umkehrfeld** (lila, Gegenpfeile): Die Fahrtrichtung dreht sich um, die rote Wand ist dann auf der anderen Seite.
+- Felder lösen aus, sobald jemand sie berührt, und laden 9 s nach (Balken unter dem Feld). Am Kartenende dreht die Strecke von selbst um. Im Sudden Death fährt sie 35 % schneller.
+
+### Weltraum
+
+- **Schwerelos:** `W` `A` `S` `D` (bzw. Pfeiltasten) sind Düsen in alle Richtungen, man treibt weiter, bis man gegensteuert oder anstößt. `Leertaste` ist ein Schubstoß in Steuerrichtung (ohne Richtung: zur Maus). Schübe laden bei Kontakt mit einer Fläche sofort, sonst alle 1,1 s einer; Anzahl wie Sprünge (Luftsprung-Karten geben mehr). Dash geht in Steuerrichtung. Kugeln fliegen geradeaus, Kisten und Fässer schweben.
+- **Asteroiden** in drei Größen treiben durchs Bild und machen beim Aufprall Schaden je nach Größe und Tempo. Schüsse und Explosionen zerlegen sie: groß in zwei mittlere, mittel in zwei kleine. Kleine mit **goldenem Kern** lassen ein Powerup fallen. Neue kommen vom Rand herein (auf Autoscroll-Strecken von vorn).
+- **Weltraumquallen** (90 LP) treiben auf den nächsten Spieler zu, laden sichtbar auf (rot, zitternd) und schießen dann auf ihn zu. Berührung 13 Schaden, beim Vorstoß 22. Beim Tod lassen sie oft ein Powerup fallen.
 
 ### Spielfeld
 
@@ -552,6 +633,10 @@ Auf Scroll-Maps folgt die Kamera dir. Gegner außerhalb des Bildes zeigen Pfeile
 | **Haus** | Vier Räume: unten Türen, oben Fenster, Einweg-Luken in der Zwischendecke über kleinen Plattformen. Außen führen Leisten zum Fenster und aufs Satteldach |
 | **Aufzug / Fähre** | Fährt zwischen zwei Punkten und nimmt dich mit |
 | **Drehbalken** | Dreht sich gleichmäßig um seine Nabe (Uhrzeiger, Rührbalken, Windmühlen-Kreuz). Man fährt darauf mit, bis er zu steil wird. Kugeln, Kisten und Fässer schiebt und schleudert er weg. Schüsse prallen ab wie an einer Wand |
+| **Schalter** | **Hebel** (Kasten mit Hebel) werden angeschossen, geschlagen oder von Explosionen umgelegt; Spieler laufen hindurch. **Druckplatten** reagieren auf Spieler, Kisten und Kugeln, solange etwas draufsteht, und bleiben danach noch kurz an. Jeder Schalter hat eine Laufzeit: Der Ring (Platte: Balken) läuft leer, in der letzten 1,5 s blinkt er rot und tickt, dann fällt er zurück. Danach ist er einige Sekunden gesperrt (roter Ring füllt sich), damit niemand Türen im Dauerfeuer flattern lässt. *Zeitschalter* lassen sich während der Laufzeit nicht erneut auslösen, *Kippschalter* (Toggle) schaltet ein zweiter Treffer wieder aus. Schalter und Ziel tragen dieselbe Farbe. Bots schießen Hebel, wenn es dem Gegner schadet (Falltür unter ihm, Laser auf ihm) oder eine Tür im Weg ist, laufen zu lohnenden Platten und weichen aktiven Lasern aus |
+| **Tür / Falltür** | Gesteuert von Schaltern: Türen fahren nach oben auf, Falltüren klappen nach unten weg. Manche sind normal offen und schließen per Schalter. Sie schließen nie auf jemandem: Steht etwas im Rahmen, warten sie und blinken rot |
+| **Laserschranke** | Zwischen zwei Emittern. Beim Einschalten erst 0,6 s rote Warnlinie, dann der Strahl: 70 Schaden pro Sekunde und leichtes Wegstoßen. Manche Schranken sind normal an und werden per Schalter abgeschaltet |
+| **Orbitalschlag** | Per Schalter: derselbe Strahl wie beim Modifier Orbitallaser entlang einer festen Bahn (Peilmarken in Schalterfarbe), 1,8 s Warnung |
 | **Fass** | Rollt und fliegt bei Treffern weg, fallende Fässer machen Schaden |
 | **TNT-Fass** | Blinkt 3 s nach einem Treffer, dann Explosion mit Kettenreaktion |
 | **Holzkisten** | Stapelbar, kippen um. Fallende oder geschleuderte Kisten machen Schaden (bis 38) |
@@ -653,7 +738,9 @@ Das Hauptmenü im **Platinen-Look**: leuchtende Leiterbahnen, zwei Eber mit Löt
 | :--- | :--- |
 | **SPIEL STARTEN** | Lokale Lobby |
 | **ONLINE SPIELEN** | Hosten oder beitreten (Code oder IP) |
+| **PROFIL** | Deine Werte über alle Partien (siehe unten) |
 | **HELDEN** | Übersicht aller Helden mit Werten und Fähigkeiten |
+| **ERFOLGE** | Erfolge, Fortschritt, Titel-Auswahl |
 | **WIKI** | Öffnet dieses Wiki im Browser |
 | **OPTIONEN** | Einstellungen |
 | **BEENDEN** | Spiel schließen |
@@ -669,9 +756,48 @@ Jede Map-Stilrichtung hat eine eigene, ruhige **Hintergrundmusik**.
 
 ---
 
+## 🏅 Erfolge, Titel & Freischaltungen
+
+Über **ERFOLGE** im Hauptmenü (oder im Lobby-Tab **Charakter**) siehst du alle 32 Erfolge mit Fortschrittsbalken, Belohnung und Freischaltdatum. Neu erreichte Erfolge werden oben eingeblendet.
+
+- **Was zählt**: nur dein eigener Slot, nur in Runden mit mindestens einem Gegner (Mensch oder Bot), nicht im Bot-Test. Online rechnet der Host und schickt jedem Mitspieler seine Rundenwerte; gespeichert wird auf deinem PC. Am selben PC mit mehreren Menschen zählt nur Slot 1.
+- **Titel**: Fast jeder Erfolg gibt einen Titel (z. B. *Kartoffelkönig*, *Bollwerk*, *Feuerteufel*). Wähle ihn im Charakter-Tab oder im Erfolge-Fenster. Er steht hinter deinem Namen in der Lobby, im Tab-Charakterblatt und in der Match-Statistik und wird online an alle verteilt.
+- **Freischaltungen**: Einige Aussehens-Teile sind gesperrt (🔒 im Charakter-Tab, Tooltip nennt den Erfolg): Hauer *Säbel* und *Doppelt*, Lötspitzen *Diamant*, *Stern* und *Flamme*, Ohren *Fledermaus*, Frisuren *Irokese* und *Mähne*, Rüssel *Herz*, Körperform *Keiler*, Augen *Wild*, Oberteil *Kleid / Robe*, Schwanz *Quaste*. Was du schon trägst, bleibt. **ZUFÄLLIG** würfelt nur freie Teile.
+- **Test-Schalter**: „Alle Aussehens-Teile freigeben (Test)“ im Erfolge-Fenster macht alles wählbar, ohne Erfolge zu vergeben.
+
+| Erfolg | Ziel | Belohnung |
+| :--- | :--- | :--- |
+| Erstes Blut | 1 Kill | Titel Ersttäter |
+| Erster Sieg | 1 Match gewinnen | Titel Frischling, Hauer Säbel |
+| Stammgast | 10 Matches spielen | Titel, Ohren Fledermaus |
+| Rundenjäger | 25 Runden gewinnen | Titel, Frisur Irokese |
+| Schweinejäger | 50 Kills | Titel, Lötspitze Diamant |
+| Dreifach-Eber | 3 Kills in einer Runde | Titel |
+| Unberührbar | Runde ohne Schaden gewinnen | Titel |
+| Feuerwerker | 10.000 Schaden | Titel, Schwanz Quaste |
+| Feldsanitäter | 3.000 Heilung | Titel, Rüssel Herz |
+| Bollwerk | 150 geblockte Treffer | Titel, Körperform Keiler |
+| Raufbold | 4.000 Nahkampfschaden | Titel, Frisur Mähne |
+| Fähigkeitsfanatiker | 8.000 Fähigkeitsschaden | Titel, Lötspitze Stern |
+| Kartoffelkönig | 3 Rundensiege mit Heißer Kartoffel | Titel |
+| Zonenläufer | 5 Rundensiege mit Zone | Titel |
+| Arenafürst | 10 Rundensiege im Arena-Modus | Titel |
+| Nervenstark | 5 Rundensiege im Sudden Death | Titel |
+| Kartenhai | 12 Karten in einem Match | Titel |
+| Unantastbar | 10 Runden ohne Schaden gewinnen | Titel, Hauer Doppelt |
+| Seriensieger | 10 Matches gewinnen | Titel, Oberteil Kleid / Robe |
+| Keilerkönig | 250 Kills | Titel, Augen Wild |
+| Tausendsassa | Mit jedem Helden ein Match gewinnen | Titel |
+| Urgestein | 100 Matches spielen | Titel |
+| Großmeister | 50 Matches gewinnen | Titel Großmeister des Lötens, Lötspitze Flamme |
+| Legende | 1.000 Kills | Titel Legende vom Lötkolben |
+| *Held*-Profi (×8) | 15 Rundensiege mit dem Helden | Feuerteufel, Blitzableiter, Pilzkönig, Sternenkind, Klingenmeister, Eiserne Wand, Schattenschwein, Waldhüter |
+
+---
+
 ## 📊 Statistiken, HUD & Feedback
 
-- **HUD**: Oben rechts das Match-Ziel, pro Spieler ein Punktebalken (im Team-Modus in Teamfarbe), Nahkampf-Status `[E]: BEREIT`.
+- **HUD**: Oben rechts das Match-Ziel, pro Spieler ein Punktebalken (im Team-Modus in Teamfarbe), Ulti-Status `[E]: BEREIT`. Am Charakter zeigen Symbole Barriere, Schild, Dash (mit Punkten für mehrere Ladungen), Fähigkeit und Ulti (Krone); Nahkämpfer haben statt der Munition einen Balken für den nächsten Schlag.
 - **Am Charakter**: Munitionsstriche bzw. Nachlade-Ring, Lebensbalken mit Schild-Overlay, Symbole für Barriere (mit Abklingzeit-Anzeige), Schild, Dash und Fähigkeit.
 - **Tab-Charakterblatt**: Alle Werte, die Nahkampfwaffe und **KARTEN-BONI (SUMMEN)**. Geht auch während der Kartenwahl und wenn du tot bist. Ohne Blind Pick zeigt oben eine Leiste alle Spieler: bei gehaltenem Tab mit den Tasten 1–9 oder per Klick umschalten. Mit Blind Pick (online) bleibt es beim eigenen Blatt.
 - **Kill-Cam**: Beim rundenentscheidenden Tod läuft das Spiel 1,6 s lang in Zeitlupe (20 %), die Kamera zoomt auf den Treffer.
@@ -679,6 +805,7 @@ Jede Map-Stilrichtung hat eine eigene, ruhige **Hintergrundmusik**.
 - **Trefferanimation**: Stauchen, Zittern, rotes Aufblitzen, Blutspritzer. Dazu ein Todes-Sound.
 - **Match-Ende**: Tabelle mit Punkten, Kills, Toden, Schaden, Barriere, Heilung, Trefferquote, Runden und Nahkampf. Dazu **MVP**, **Meister Schaden**, **meiste Barriere-Treffer**, **meiste Heilung** und **Meister Nahkampf**.
 - **ALLE SPIELER, KARTEN & STATS**: Nach dem Match für jeden Spieler das komplette Blatt mit Karten.
+- **Spielerprofil**: Hauptmenü → **PROFIL**. Deine Werte über alle Partien: Matches und Siegquote, Runden, K/D, MVP-Ehrungen, Schaden, Trefferquote, Heilung, gewählte Karten und Spielzeit. Dazu **Lieblingsheld**, **meistgewählte Karte**, **Lieblingsmap**, **Rekorde** (meiste Kills pro Runde und Match, meister Schaden, längste Siegesserie), Tabellen für Helden, Karten und Maps und die letzten 20 Matches. Es zählt nur dein eigener Slot auf diesem PC (online dein Slot, lokal Spieler 1); Bot-Test, Zuschauen und Testrunden aus den Editoren zählen nicht. Eine abgebrochene Runde zählt nicht, ein vorzeitig beendetes Match schon (als „abgebr.“). **ZURÜCKSETZEN** (zweimal klicken) löscht die Werte.
 - **Rundenstatistik**: Jede Runde wird als Zeile in `round_stats.jsonl` gespeichert (für Balancing).
 - **Balance-Statistik im Spiel**: Optionen → **STATISTIK**. Sortierbare Tabellen (Spaltenkopf anklicken) für **Karten**, **Waffen** und **Helden**, getrennt nach Version: Runden, geglättete Siegquote, Vergleich mit derselben Seltenheit, Kills/Tode pro Runde, Schadens- und Heilanteil, Nahkampfschaden, Pickquote und Aufstiegsvorschläge. Filter: nur menschliche Spieler, nur aktuelle Versionen, Mindestrunden für Vorschläge. Bei Helden zusätzlich **Fähigk./R** und **Fähigk.-Anteil**: Schaden aus direkten Treffern der Heldenfähigkeit samt Evolutionen (Brand/Gift danach zählt nicht), erfasst seit 28.10.2026. Die Seite **Hinweise** listet Vorschläge, Werte ohne neue Version und die automatischen Aufstiege. Hältst du die Maus 0,5 s über eine Kartenzeile oder einen Kartennamen unter Hinweise, erscheint die Karte unten links. Rechnet genauso wie `tools/analyze_round_stats.py`.
 
@@ -692,9 +819,11 @@ Spieldaten liegen unter `%APPDATA%\Godot\app_userdata\Lötkolbeneber\`. Beim ers
 | :--- | :--- |
 | `settings.cfg` | Optionen: Grafik, Lautstärke, Effekt-Set, Tasten |
 | `character_customization.json` | Dein Charakter, Name, Nahkampfwaffe |
+| `achievements.json` | Erfolge: Zähler, freigeschaltete Erfolge, gewählter Titel |
 | `lobby_loadouts.json` | Eigene Regel-Presets |
 | `card_statistics.json` | Kartenstatistik und Aufwertungen |
 | `round_stats.jsonl` | Eine Zeile pro gespielter Runde |
+| `player_profile.json` | Dein Spielerprofil mit Lebenszeit-Werten |
 | `epic_online.log` | Protokoll der Epic-Verbindung |
 | `wiki.html` | Kopie dieses Wikis, wird beim Klick auf **WIKI** angelegt |
 | `logs/` | Godot-Logs |
@@ -715,6 +844,7 @@ Spieldaten liegen unter `%APPDATA%\Godot\app_userdata\Lötkolbeneber\`. Beim ers
 | `scripts/autoload/game_settings.gd` | Optionen und Tastenbelegung |
 | `scripts/autoload/card_stats.gd`, `round_stats.gd` | Statistik |
 | `scripts/balance_report.gd`, `scripts/ui/stats_screen.gd` | Balance-Statistik im Optionsmenü |
+| `scripts/autoload/player_profile.gd`, `scripts/ui/profile_screen.gd` | Spielerprofil: Lebenszeit-Werte, Signale `round_recorded`/`match_recorded`, Erweiterungen über `get_ext()` |
 | `scripts/main.gd` | Rundenablauf, Snapshots, Kill-Cam, Lava |
 | `scripts/player.gd` | Spieler, Fähigkeiten (Konstanten oben), Nahkampf |
 | `scripts/bullet.gd` | Ballistik, Durchschlag, Zielsuche, Kollision |

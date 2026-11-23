@@ -65,7 +65,9 @@ const MATCH_MODE_FFA: String = "ffa"
 const MATCH_MODE_2V2: String = "2v2"
 const MATCH_MODE_3V3: String = "3v3"
 const MATCH_MODE_2V2V2: String = "2v2v2"
-const MATCH_MODE_ORDER: Array[String] = [MATCH_MODE_FFA, MATCH_MODE_2V2, MATCH_MODE_3V3, MATCH_MODE_2V2V2]
+# Horden-Modus: alle Eber in einem Team gegen Schweinejäger (scripts/horde/).
+const MATCH_MODE_HORDE: String = "horde"
+const MATCH_MODE_ORDER: Array[String] = [MATCH_MODE_FFA, MATCH_MODE_2V2, MATCH_MODE_3V3, MATCH_MODE_2V2V2, MATCH_MODE_HORDE]
 const MATCH_MODES: Dictionary = {
 	MATCH_MODE_FFA: {
 		"name": "FFA",
@@ -90,6 +92,12 @@ const MATCH_MODES: Dictionary = {
 		"players": 6,
 		"teams": 3,
 		"description": "Sechs Spieler, drei Teams mit je zwei Mitgliedern.",
+	},
+	MATCH_MODE_HORDE: {
+		"name": "Horde (Koop)",
+		"players": 0,
+		"teams": 1,
+		"description": "Alle zusammen gegen Horden von Schweinejägern: Wölfe, Bären, Metzger … XP sammeln, bei jedem Stufenaufstieg eine Karte, Bosse alle 3 Minuten. 10 Minuten überleben und den Endboss besiegen. Allein oder bis zu 6 Eber, immer in der Arena.",
 	},
 }
 const TEAM_NAMES: Array[String] = ["ROT", "BLAU", "GRÜN"]
@@ -161,6 +169,9 @@ var bot_test_matches_played: int = 0
 var _bot_test_backup: Dictionary = {}
 var _bot_test_hero_deck: Array = []
 var _bot_test_weapon_deck: Array = []
+# Testraum (Hauptmenü → TESTRAUM): Du gegen einen Dummy auf einer frei
+# wählbaren Karte, ohne Runden, Punkte und Statistik. Steuerung in TestRoom.
+var test_room_active: bool = false
 # Runden-Modifier: Rate in Prozent (0 = aus, 100 = Standard, 200 = mehr)
 # und die Menge der freigeschalteten Modifier-IDs aus LevelModifierDefs.
 var level_modifier_rate_percent: int = LevelModifierDefsClass.RATE_DEFAULT_PERCENT
@@ -207,11 +218,13 @@ const MAP_PLAYABLE: Array[String] = [
 	"sonnentempel", "kettenwerk", "wollhaus", "eispyramiden", "serverhaus",
 	"gitterzaun", "truemmerfeld", "schrottplatz", "schneefeld", "wollmarkt",
 	"kugellawine", "kugelbahn", "kugelkette", "kugelmuehle",
+	"turbotrasse", "asteroidenfeld", "kometenjagd",
+	"falltuerburg", "laserlabor", "schleusenwerk",
 ]
 const MAPS: Dictionary = {
 	"zufall": {
 		"name": "Zufällig",
-		"description": "Wählt pro Runde eine der siebenundzwanzig Maps.",
+		"description": "Wählt pro Runde eine der dreißig Maps.",
 	},
 	"grasarena": {
 		"name": "Grasarena",
@@ -244,6 +257,18 @@ const MAPS: Dictionary = {
 	"pilzpfad": {
 		"name": "Pilzpfad",
 		"description": "Seitlich scrollendes Jump-'n'-Run-Level mit Gruben, Treppen, Steinen und Fähre.",
+	},
+	"turbotrasse": {
+		"name": "Turbotrasse",
+		"description": "Autoscroll: Das Bild fährt mit, die rote Wand hinten verbrennt Nachzügler. Kurze Abzweigungen, Turbo- und Umkehrfelder.",
+	},
+	"asteroidenfeld": {
+		"name": "Asteroidenfeld",
+		"description": "Schwerelos im All: Düsen in alle Richtungen, treibende Asteroiden (kleine mit Powerups) und Weltraumquallen.",
+	},
+	"kometenjagd": {
+		"name": "Kometenjagd",
+		"description": "Schwerelose Autoscroll-Strecke durch einen Asteroidengürtel, Stationswände teilen die Bahn.",
 	},
 	"gletscherpass": {
 		"name": "Gletscherpass",
@@ -316,6 +341,18 @@ const MAPS: Dictionary = {
 	"kugelbahn": {
 		"name": "Kugelbahn",
 		"description": "Doppelte Zickzack-Kugelbahn: Alle 5 Sekunden rollen neue Kugeln herab bis auf den Boden.",
+	},
+	"falltuerburg": {
+		"name": "Falltürburg",
+		"description": "Brücke über Stacheln ist eine Falltür: Hebel öffnen sie. Oben ruft eine Druckplatte einen Orbitalschlag.",
+	},
+	"laserlabor": {
+		"name": "Laserlabor",
+		"description": "Laserschranken am Boden und auf den Balken, per Hebel scharf geschaltet. Oben ein Tresor hinter Laserwänden.",
+	},
+	"schleusenwerk": {
+		"name": "Schleusenwerk",
+		"description": "Tresor mit Schleusentüren: Druckplatten öffnen, Hebel lassen den Boden über den Stacheln fallen.",
 	},
 	"kugelmuehle": {
 		"name": "Kugelmühle",
@@ -489,6 +526,8 @@ var player_tusk_shapes: Array[String] = ["small", "small", "small", "small", "sm
 var player_pig_parts: Array[Dictionary] = []
 # Selbst gewählte Benutzernamen; leer = Ersatzname wie "Spieler 2".
 var player_names: Array[String] = ["", "", "", "", "", ""]
+# Gewählter Titel pro Slot (Erfolgs-ID aus AchievementManager, "" = keiner).
+var player_titles: Array[String] = ["", "", "", "", "", ""]
 # Gewählte Nahkampfwaffe pro Slot (Schlüssel aus MELEE_WEAPONS).
 var player_melee_weapons: Array[String] = ["iron", "iron", "iron", "iron", "iron", "iron"]
 var player_wand_tip_colors: Array[Color] = [
@@ -591,6 +630,11 @@ func _setup_heroes() -> void:
 	ignis.ability_name = "Rocket Leap"
 	ignis.ability_desc = "Explosiver Sprung nach vorn mit AOE-Rückstoß!"
 	ignis.ability_cooldown = 5.0
+	ignis.dash_name = "Nachbrenner"
+	ignis.dash_desc = "Dash, der eine brennende Spur hinterlässt."
+	ignis.ult_name = "Meteorschauer"
+	ignis.ult_desc = "Nach kurzer Warnung schlägt eine Reihe Meteore am Zielpunkt ein und hinterlässt Feuer!"
+	ignis.ult_cooldown = 28.0
 	ignis.base_hp = 100
 	ignis.base_shield = 0
 	ignis.base_speed = 310.0
@@ -600,8 +644,8 @@ func _setup_heroes() -> void:
 	ignis.base_reload_time = 1.2
 	ignis.color_tint = Color(1.0, 0.4, 0.2)
 	ignis.sprite_tile_name = "tile_0000.png"
-	ignis.version = 2
-	ignis.ability_version = 1
+	ignis.version = 3 # Nachbrenner-Dash, Ulti Meteorschauer
+	ignis.ability_version = 2
 	heroes["ignis"] = ignis
 
 	# 2. Volt
@@ -611,9 +655,15 @@ func _setup_heroes() -> void:
 	volt.role = "Hyper Speedster"
 	volt.description = "Extrem schnell und mobil."
 	volt.passive_desc = "Overcharge: Standardmäßig Doppelsprung aktiv"
-	volt.ability_name = "Flash Blink"
-	volt.ability_desc = "Sofortiger Teleport-Dash in Zielrichtung!"
-	volt.ability_cooldown = 4.5
+	volt.ability_name = "Kugelblitz"
+	volt.ability_desc = "Schickt eine langsame Blitzkugel los, die Gegner in ihrer Nähe schockt und bremst!"
+	volt.ability_cooldown = 7.0
+	volt.dash_name = "Blitzschritt"
+	volt.dash_desc = "Kurzer Teleport statt Dash, mit zwei Ladungen."
+	volt.dash_charges = 2
+	volt.ult_name = "Überladung"
+	volt.ult_desc = "Kurzzeitig schneller, Dauerfeuer ohne Nachladen, jeder Schuss springt als Kettenblitz weiter!"
+	volt.ult_cooldown = 26.0
 	volt.base_hp = 85
 	volt.base_shield = 0
 	volt.base_speed = 350.0
@@ -624,8 +674,8 @@ func _setup_heroes() -> void:
 	volt.base_reload_time = 1.4
 	volt.color_tint = Color(1.0, 0.9, 0.2)
 	volt.sprite_tile_name = "tile_0006.png"
-	volt.version = 2
-	volt.ability_version = 1
+	volt.version = 3 # Blitzschritt mit 2 Ladungen, Ulti Überladung
+	volt.ability_version = 2 # Kugelblitz statt Flash Blink
 	heroes["volt"] = volt
 
 	# 3. Spore
@@ -635,9 +685,14 @@ func _setup_heroes() -> void:
 	spore.role = "Toxic Alchemist"
 	spore.description = "Zermürbt Feinde mit ätzenden Giften."
 	spore.passive_desc = "Spore Coat: Treffer vergiften Gegner (2 Stapel à 4 Schaden, alle 0,8 s = 8 Schaden)"
-	spore.ability_name = "Spore Burst"
-	spore.ability_desc = "Hinterlässt eine giftige Gaswolke!"
-	spore.ability_cooldown = 6.0
+	spore.ability_name = "Giftpilz"
+	spore.ability_desc = "Wirft einen Giftpilz als Falle. Er platzt bei Gegnern oder Kugeln zu einer Giftwolke!"
+	spore.ability_cooldown = 5.0
+	spore.dash_name = "Sporenstoß"
+	spore.dash_desc = "Dash, der am Start eine Giftwolke zurücklässt."
+	spore.ult_name = "Seuchennebel"
+	spore.ult_desc = "Ein großer Giftnebel wandert mit dir: Gegner darin werden vergiftet und gebremst, du regenerierst!"
+	spore.ult_cooldown = 30.0
 	spore.base_hp = 105
 	spore.base_shield = 10
 	spore.base_speed = 295.0
@@ -647,8 +702,8 @@ func _setup_heroes() -> void:
 	spore.base_reload_time = 1.05
 	spore.color_tint = Color(0.4, 0.9, 0.3)
 	spore.sprite_tile_name = "tile_0002.png"
-	spore.version = 3 # Schild-Cooldown 5 s statt 3 s (Bastion 4 s)
-	spore.ability_version = 1
+	spore.version = 4 # Sporenstoß-Dash, Ulti Seuchennebel
+	spore.ability_version = 2 # Giftpilz statt Spore Burst
 	heroes["spore"] = spore
 
 	# 4. Nova – Gravitationsmagier
@@ -658,9 +713,14 @@ func _setup_heroes() -> void:
 	nova.role = "Gravity Mage"
 	nova.description = "Kontrolliert den Raum und zieht Gegner in ihr Verderben."
 	nova.passive_desc = "Schwerelos: Höchste Sprungkraft (540)"
-	nova.ability_name = "Singularität"
-	nova.ability_desc = "Erzeugt einen Gravitationskern, der Gegner in die Mitte zieht!"
-	nova.ability_cooldown = 6.5
+	nova.ability_name = "Gravitationsstoß"
+	nova.ability_desc = "Drückt Gegner und Kugeln im Kegel weg. Nach unten gezielt schleudert er dich hoch!"
+	nova.ability_cooldown = 6.0
+	nova.dash_name = "Phasengleiten"
+	nova.dash_desc = "Schwebt kurz frei lenkbar durch die Luft."
+	nova.ult_name = "Singularität"
+	nova.ult_desc = "Ein großer Gravitationskern am Zielpunkt zieht alle Gegner heran und implodiert am Ende!"
+	nova.ult_cooldown = 30.0
 	nova.base_hp = 95
 	nova.base_shield = 10
 	nova.base_speed = 290.0
@@ -670,8 +730,8 @@ func _setup_heroes() -> void:
 	nova.base_reload_time = 1.35
 	nova.color_tint = Color(0.6, 0.4, 1.0)
 	nova.sprite_tile_name = "tile_0003.png"
-	nova.version = 3 # Schild-Cooldown 5 s statt 3 s (Bastion 4 s)
-	nova.ability_version = 2
+	nova.version = 4 # Phasengleiten, Singularität als Ulti
+	nova.ability_version = 3 # Gravitationsstoß statt Singularität
 	heroes["nova"] = nova
 
 	# 5. Klinge – Klingentänzer
@@ -681,10 +741,18 @@ func _setup_heroes() -> void:
 	klinge.role = "Blade Dancer"
 	klinge.description = "Schneidet sich nah am Gegner durch die Arena."
 	klinge.passive_desc = "Klingentanz: 15 Start-Schild und hohe Grundgeschwindigkeit"
-	klinge.ability_name = "Klingensturm"
-	klinge.ability_desc = "Wirbelt herum und verletzt alle Gegner in der Nähe mit Rückstoß!"
-	klinge.ability_cooldown = 5.5
-	klinge.base_hp = 110
+	klinge.ability_name = "Klingenbumerang"
+	klinge.ability_desc = "Wirft das Schwert, das hin und zurück fliegt und dabei alles schneidet!"
+	klinge.ability_cooldown = 6.0
+	klinge.dash_name = "Durchstoß"
+	klinge.dash_desc = "Dash durch Gegner hindurch. Ein Treffer halbiert die Dash-Abklingzeit."
+	klinge.ult_name = "Klingensturm"
+	klinge.ult_desc = "Wirbelt einige Sekunden frei beweglich, schneidet alles in der Nähe und schlägt Kugeln zurück!"
+	klinge.ult_cooldown = 24.0
+	klinge.attack_type = "melee"
+	klinge.melee_weapon = "sword"
+	klinge.melee_cooldown_mult = 0.75
+	klinge.base_hp = 125
 	klinge.base_shield = 15
 	klinge.base_speed = 315.0
 	klinge.base_jump_force = -505.0
@@ -693,8 +761,8 @@ func _setup_heroes() -> void:
 	klinge.base_reload_time = 1.25
 	klinge.color_tint = Color(1.0, 0.3, 0.5)
 	klinge.sprite_tile_name = "tile_0005.png"
-	klinge.version = 3 # Schild-Cooldown 5 s statt 3 s (Bastion 4 s)
-	klinge.ability_version = 1
+	klinge.version = 5 # Dreierkombo, Durchstoß, Ulti Klingensturm
+	klinge.ability_version = 2 # Klingenbumerang statt Klingensturm
 	heroes["klinge"] = klinge
 
 	# 6. Bastion – Feldtechniker
@@ -704,10 +772,19 @@ func _setup_heroes() -> void:
 	bastion.role = "Field Engineer"
 	bastion.description = "Robuster Unterstützer mit Schildtechnik."
 	bastion.passive_desc = "Aurora: Doppelte Schild-Regeneration (30 statt 15 Schild/s) und kürzerer Schild-Cooldown (startet 4 statt 5 s nach dem letzten Schaden)"
-	bastion.ability_name = "Heilfeld"
-	bastion.ability_desc = "Errichtet ein Feld, das dich über Zeit heilt und Schild aufbaut!"
-	bastion.ability_cooldown = 8.0
-	bastion.base_hp = 125
+	bastion.ability_name = "Magnethaken"
+	bastion.ability_desc = "Schießt einen Haken, der den ersten Gegner betäubt und zu dir zieht!"
+	bastion.ability_cooldown = 7.0
+	bastion.dash_name = "Rammbock"
+	bastion.dash_desc = "Schild nach vorn: hält Kugeln auf, schiebt Gegner mit und stößt sie weg."
+	bastion.ult_name = "Festung"
+	bastion.ult_desc = "Eine Kuppel, an der gegnerische Kugeln abprallen. Innen heilen du und deine Verbündeten!"
+	bastion.ult_cooldown = 32.0
+	bastion.attack_type = "melee"
+	bastion.melee_weapon = "hammer"
+	bastion.melee_damage_mult = 1.5
+	bastion.melee_cooldown_mult = 0.8
+	bastion.base_hp = 145
 	bastion.base_shield = 20
 	bastion.base_speed = 270.0
 	bastion.base_jump_force = -490.0
@@ -716,8 +793,8 @@ func _setup_heroes() -> void:
 	bastion.base_reload_time = 1.45
 	bastion.color_tint = Color(0.3, 0.9, 0.7)
 	bastion.sprite_tile_name = "tile_0001.png"
-	bastion.version = 3 # Schild-Cooldown 5 s statt 3 s (Bastion 4 s)
-	bastion.ability_version = 1
+	bastion.version = 5 # Rammbock-Dash, Ulti Festung
+	bastion.ability_version = 2 # Magnethaken statt Heilfeld
 	heroes["bastion"] = bastion
 
 	# 7. Phantom – Schattenassassine
@@ -726,11 +803,20 @@ func _setup_heroes() -> void:
 	phantom.name = "Phantom"
 	phantom.role = "Shadow Assassin"
 	phantom.description = "Blitzschnelle Überraschungsangriffe aus dem Nichts."
-	phantom.passive_desc = "Nachtwind: Sehr hohes Grundtempo (325) und schnellstes Feuerintervall (0,14 s)"
-	phantom.ability_name = "Schattensprung"
-	phantom.ability_desc = "Teleportiert in Zielrichtung, wird kurz unverwundbar und schlägt zu!"
-	phantom.ability_cooldown = 5.0
-	phantom.base_hp = 90
+	phantom.passive_desc = "Hinterhalt: Sehr hohes Grundtempo (325). Stiche aus der Unsichtbarkeit oder in den Rücken machen +%d %% Schaden" % int(round(Player.PHANTOM_BACKSTAB_BONUS * 100.0))
+	phantom.ability_name = "Köder"
+	phantom.ability_desc = "Ein Doppelgänger läuft weiter, während du kurz unsichtbar wirst!"
+	phantom.ability_cooldown = 9.0
+	phantom.attack_type = "melee"
+	phantom.melee_weapon = "iron"
+	phantom.melee_damage_mult = 0.55
+	phantom.melee_cooldown_mult = 0.55
+	phantom.dash_name = "Schattenschritt"
+	phantom.dash_desc = "Dash, nach dem du kurz unsichtbar bist."
+	phantom.ult_name = "Nachtjagd"
+	phantom.ult_desc = "Lange unsichtbar und schneller. Angriffe lassen dich nur kurz aufflackern, der erste Treffer trifft doppelt!"
+	phantom.ult_cooldown = 28.0
+	phantom.base_hp = 100
 	phantom.base_shield = 5
 	phantom.base_speed = 325.0
 	phantom.base_jump_force = -515.0
@@ -739,8 +825,8 @@ func _setup_heroes() -> void:
 	phantom.base_reload_time = 1.05
 	phantom.color_tint = Color(0.45, 0.45, 0.6)
 	phantom.sprite_tile_name = "tile_0007.png"
-	phantom.version = 3 # Schild-Cooldown 5 s statt 3 s (Bastion 4 s)
-	phantom.ability_version = 1
+	phantom.version = 4 # Nahkämpfer: Stich auf Linksklick, 100 HP, Schattenschritt
+	phantom.ability_version = 2 # Köder statt Schattensprung, Ulti Nachtjagd
 	heroes["phantom"] = phantom
 
 	# 8. Druide – Hainwächter
@@ -753,6 +839,11 @@ func _setup_heroes() -> void:
 	druid.ability_name = "Wurzelwall"
 	druid.ability_desc = "Lässt quer zur Zielrichtung eine Rankenwand wachsen, die Schüsse und Gegner aufhält!"
 	druid.ability_cooldown = 7.0
+	druid.dash_name = "Rankenschwung"
+	druid.dash_desc = "Eine Ranke zieht dich zur nächsten Wand oder Decke in Zielrichtung."
+	druid.ult_name = "Urkeiler"
+	druid.ult_desc = "Verwandelt dich in einen riesigen Keiler: mehr Leben, Hauer-Nahkampf und ein Ansturm statt Dash!"
+	druid.ult_cooldown = 35.0
 	druid.base_hp = 105
 	druid.base_shield = 10
 	druid.base_speed = 295.0
@@ -762,9 +853,107 @@ func _setup_heroes() -> void:
 	druid.base_reload_time = 1.2
 	druid.color_tint = Color(0.50, 0.72, 0.36)
 	druid.sprite_tile_name = "tile_0004.png"
-	druid.version = 1
-	druid.ability_version = 1
+	druid.version = 2 # Rankenschwung, Ulti Urkeiler
+	druid.ability_version = 2
 	heroes["druid"] = druid
+
+	# 9. Vampir – Fernkampf-Blutsauger
+	var vampire = HeroData.new()
+	vampire.id = "vampire"
+	vampire.name = "Vampir"
+	vampire.role = "Blood Hunter"
+	vampire.description = "Saugt seine Gegner aus und lebt von ihrem Blut."
+	vampire.passive_desc = "Blutdurst: Jeder %d. Treffer an einem Gegner lässt eine Blutkugel fallen. Eine Kugel heilt dich um %d HP, du sammelst sie aber nur, wenn du verletzt bist. Alle Vampire können jede Blutkugel nutzen." % [
+		Player.VAMPIRE_ORB_HIT_INTERVAL, int(Player.VAMPIRE_ORB_HEAL),
+	]
+	vampire.ability_name = "Blutexplosion"
+	vampire.ability_desc = "Lässt alle Blutkugeln in deiner Nähe explodieren!"
+	vampire.ability_cooldown = 6.0
+	vampire.dash_name = "Blutsturm"
+	vampire.dash_desc = "Stürmt durch Gegner hindurch, jeder Getroffene lässt eine Blutkugel fallen."
+	vampire.ult_name = "Fledermausschwarm"
+	vampire.ult_desc = "Blutkugeln in der Nähe werden zu Fledermäusen, die Gegner angreifen!"
+	vampire.ult_cooldown = 26.0
+	vampire.base_hp = 100
+	vampire.base_shield = 5
+	vampire.base_speed = 300.0
+	vampire.base_jump_force = -500.0
+	vampire.base_ammo = 3
+	vampire.base_fire_rate_cooldown = 0.24
+	vampire.base_reload_time = 1.2
+	vampire.color_tint = Color(0.72, 0.10, 0.18)
+	vampire.sprite_tile_name = "tile_0007.png"
+	vampire.version = 1
+	vampire.ability_version = 1
+	heroes["vampire"] = vampire
+	# 9. Blutritter – Nahkampf-Vampir. Teilt sich die Blutkugeln mit allen
+	# Vampiren (Held-IDs mit "vampire" am Anfang).
+	var vamp_melee = HeroData.new()
+	vamp_melee.id = "vampire_melee"
+	vamp_melee.name = "Blutritter"
+	vamp_melee.role = "Blood Knight"
+	vamp_melee.description = "Nahkampf-Vampir, der sich aus Blutkugeln einen gewaltigen Schild baut."
+	vamp_melee.passive_desc = "Blutschild: Jeder 3. Treffer erzeugt eine Blutkugel. Aufgesammelte Blutkugeln geben +%d Schild, bis zu %d %% deiner Max-HP" % [
+		int(Player.VAMP_MELEE_ORB_SHIELD), int(round(Player.VAMP_MELEE_SHIELD_CAP * 100.0))]
+	vamp_melee.ability_name = "Blutbersten"
+	vamp_melee.ability_desc = "Dein ganzer Schild explodiert: 1 Schaden pro Schildpunkt an allen Gegnern in der Nähe!"
+	vamp_melee.ability_cooldown = 7.0
+	vamp_melee.attack_type = "melee"
+	vamp_melee.melee_weapon = "sword"
+	vamp_melee.melee_damage_mult = 1.0
+	vamp_melee.melee_cooldown_mult = 0.9
+	vamp_melee.dash_name = "Blutsturm"
+	vamp_melee.dash_desc = "Lässt eine Blutkugel zurück und stürmt weit nach vorn, auch durch Gegner."
+	vamp_melee.ult_name = "Blutruf"
+	vamp_melee.ult_desc = "Zieht nahe Blutkugeln zu dir. Treffen sie unterwegs einen Gegner, explodieren sie und heilen dich!"
+	vamp_melee.ult_cooldown = 24.0
+	vamp_melee.base_hp = 110
+	vamp_melee.base_shield = 0
+	vamp_melee.base_speed = 300.0
+	vamp_melee.base_jump_force = -495.0
+	vamp_melee.base_ammo = 3
+	vamp_melee.base_fire_rate_cooldown = 0.24
+	vamp_melee.base_reload_time = 1.2
+	vamp_melee.color_tint = Color(0.78, 0.10, 0.20)
+	vamp_melee.sprite_tile_name = "tile_0006.png"
+	vamp_melee.version = 1
+	vamp_melee.ability_version = 1
+	heroes["vampire_melee"] = vamp_melee
+
+	# 9. Zeitschläger – Zeitmagier mit Uhrenpendel
+	var zeit = HeroData.new()
+	zeit.id = "zeitschlaeger"
+	zeit.name = "Zeitschläger"
+	zeit.role = "Chrono Brawler"
+	zeit.description = "Schwingt ein Uhrenpendel und biegt die Zeit um sich herum."
+	zeit.passive_desc = "Taktschlag: Jeder %d. Pendeltreffer an einem Gegner verlangsamt ihn %.1f s lang um %d %%." % [
+		Player.ZEIT_PASSIVE_HIT_INTERVAL, Player.ZEIT_PASSIVE_SLOW_DURATION,
+		int(round(Player.ZEIT_PASSIVE_SLOW * 100.0)),
+	]
+	zeit.ability_name = "Zeitblase"
+	zeit.ability_desc = "Eine Kuppel, in der Gegner und ihre Kugeln stark verlangsamt sind!"
+	zeit.ability_cooldown = 10.0
+	zeit.attack_type = "melee"
+	zeit.melee_weapon = "flail"
+	zeit.melee_damage_mult = 1.0
+	zeit.melee_cooldown_mult = 0.85
+	zeit.dash_name = "Rückspul"
+	zeit.dash_desc = "Springt an die Stelle von vor 2 s zurück und holt den Schaden dieser Zeit als Leben zurück."
+	zeit.ult_name = "Zeitstopp"
+	zeit.ult_desc = "Alles außer dir friert ein. Deine Treffer stauen sich und schlagen danach gesammelt ein!"
+	zeit.ult_cooldown = 32.0
+	zeit.base_hp = 120
+	zeit.base_shield = 10
+	zeit.base_speed = 300.0
+	zeit.base_jump_force = -505.0
+	zeit.base_ammo = 3
+	zeit.base_fire_rate_cooldown = 0.24
+	zeit.base_reload_time = 1.2
+	zeit.color_tint = Color(0.86, 0.68, 0.30)
+	zeit.sprite_tile_name = "tile_0006.png"
+	zeit.version = 1
+	zeit.ability_version = 1
+	heroes["zeitschlaeger"] = zeit
 
 func get_hero(id: String) -> HeroData:
 	return heroes.get(id, heroes["ignis"])
@@ -782,43 +971,37 @@ func get_hero_ability_details(hero: HeroData) -> String:
 				int(Player.ROCKET_IMPACT_RADIUS), int(Player.ROCKET_IMPACT_DAMAGE),
 			]
 		"volt":
-			return "Teleport zum Zielpunkt, höchstens %d px weit. Schockwelle am Ziel: Radius %d px, %d Schaden und verlangsamt Gegner %.1f s lang um %d%%." % [
-				int(Player.FLASH_BLINK_DISTANCE), int(Player.FLASH_BLINK_RADIUS),
-				int(Player.FLASH_BLINK_DAMAGE), Player.FLASH_BLINK_FREEZE,
+			return "Blitzkugel in Zielrichtung: fliegt %.1f s lang mit Tempo %d. Schockt alle %.1f s Gegner im Radius %d px mit %d Schaden und verlangsamt sie %.1f s lang um %d%%." % [
+				Player.VOLT_ORB_DURATION, int(Player.VOLT_ORB_SPEED), Player.VOLT_ORB_TICK,
+				int(Player.VOLT_ORB_RADIUS), int(Player.VOLT_ORB_DAMAGE), Player.VOLT_ORB_SLOW,
 				int(round((1.0 - Player.FREEZE_SPEED_MULT) * 100.0)),
 			]
 		"spore":
-			return "Giftwolke an deiner Position: Radius %d px, %.1f s lang %d Schaden pro Sekunde (bis zu %d Schaden gesamt)." % [
-				int(Player.SPORE_CLOUD_RADIUS), Player.SPORE_CLOUD_DURATION,
-				int(Player.SPORE_CLOUD_DPS),
-				int(Player.SPORE_CLOUD_DPS * Player.SPORE_CLOUD_DURATION),
+			return "Wirft einen Giftpilz bis %d px weit. Nach %.1f s scharf, platzt er, wenn ein Gegner näher als %d px kommt oder eine Kugel ihn trifft: Giftwolke mit Radius %d px, %.1f s lang %d Schaden pro Sekunde. Höchstens %d Pilze, der älteste verschwindet." % [
+				int(Player.SPORE_SHROOM_RANGE), Player.SPORE_SHROOM_ARM, int(Player.SPORE_SHROOM_TRIGGER),
+				int(Player.SPORE_SHROOM_CLOUD_RADIUS), Player.SPORE_SHROOM_CLOUD_DURATION,
+				int(Player.SPORE_SHROOM_CLOUD_DPS), Player.SPORE_SHROOM_MAX,
 			]
 		"nova":
-			return "Gravitationskern am Zielpunkt, höchstens %d px entfernt, %.1f s aktiv. Zieht alle Gegner im Radius %d px stark in die Mitte, hält sie im Kern fest und schwächt ihre Laufkontrolle. Macht selbst keinen Schaden." % [
-				int(Player.SINGULARITY_DISTANCE), Player.SINGULARITY_DURATION,
-				int(Player.SINGULARITY_PULL_RADIUS),
+			return "Kegel von %d° und %d px in Zielrichtung: stößt Gegner stark weg und lenkt gegnerische Kugeln ab. Nach unten gezielt schleudert er dich selbst hoch." % [
+				int(Player.NOVA_PUSH_ANGLE_DEG), int(Player.NOVA_PUSH_RANGE),
 			]
 		"klinge":
-			return "Rundumschlag im Radius %d px: %d Schaden (%d%% des Schussschadens) mit starkem Rückstoß. %.1f s unverwundbar." % [
-				int(Player.BLADE_STORM_RADIUS),
-				int(round(base_damage * Player.BLADE_STORM_DAMAGE_MULT)),
-				int(round(Player.BLADE_STORM_DAMAGE_MULT * 100.0)),
-				Player.BLADE_STORM_INVULN,
+			return "Wirft das Schwert bis %d px weit, es kehrt danach zu dir zurück. Hin und zurück je %d Schaden. Solange es fliegt, kannst du nicht zuschlagen." % [
+				int(Player.KLINGE_BOOMERANG_RANGE),
+				int(round(float(get_melee_weapon_data("sword")["damage"]) * hero.melee_damage_mult * Player.KLINGE_BOOMERANG_DAMAGE_MULT)),
 			]
 		"bastion":
-			var ticks := int(ceil(Player.HEAL_FIELD_DURATION / Player.HEAL_FIELD_TICK_INTERVAL))
-			return "%.0f s lang: +%d HP pro Sekunde (%d HP gesamt) und +%d Schild pro Sekunde (bis zum Maximum)." % [
-				Player.HEAL_FIELD_DURATION,
-				int(round(Player.HEAL_FIELD_TICK_HEAL / Player.HEAL_FIELD_TICK_INTERVAL)),
-				int(Player.HEAL_FIELD_TICK_HEAL * ticks),
-				int(round(Player.HEAL_FIELD_TICK_SHIELD / Player.HEAL_FIELD_TICK_INTERVAL)),
+			return "Haken bis %d px weit. Trifft er einen Gegner: %d Schaden, %.1f s betäubt, und der Gegner wird zu dir gezogen. An Gelände rollt die Kette wieder ein." % [
+				int(Player.BASTION_HOOK_RANGE), int(Player.BASTION_HOOK_DAMAGE), Player.BASTION_HOOK_STUN,
 			]
 		"phantom":
-			return "Teleport zum Zielpunkt, höchstens %d px weit, danach %.1f s unverwundbar. Am Ziel: Radius %d px, %d Schaden (%d%% des Schussschadens) mit Rückstoß." % [
-				int(Player.SHADOW_STEP_DISTANCE), Player.SHADOW_STEP_INVULN,
-				int(Player.SHADOW_STEP_RADIUS),
-				int(round(base_damage * Player.SHADOW_STEP_DAMAGE_MULT)),
-				int(round(Player.SHADOW_STEP_DAMAGE_MULT * 100.0)),
+			return "Ein Doppelgänger mit %d HP läuft %.1f s lang in Blickrichtung weiter. Du selbst bist %.1f s unsichtbar. Bots, Türme und Zielsuche fallen auf den Köder herein." % [
+				int(Player.PHANTOM_DECOY_HP), Player.PHANTOM_DECOY_DURATION, Player.PHANTOM_STEALTH_DECOY,
+			]
+		"vampire":
+			return "Alle Blutkugeln bis %d px um dich explodieren: je %d Schaden im Radius %d px mit Rückstoß. Mehrere Kugeln am selben Gegner treffen mehrfach. Ohne Kugel in Reichweite passiert nichts und es gibt keinen Cooldown." % [
+				int(Player.VAMPIRE_BURST_RANGE), int(Player.VAMPIRE_BURST_DAMAGE), int(Player.VAMPIRE_BURST_RADIUS),
 			]
 		"druid":
 			return "Rankenwand am Zielpunkt, höchstens %d px entfernt. Die breite Seite zeigt immer zu dir: %d px lang, %.0f s lang, %d HP. Hält Bewegung und Kugeln aller Spieler auf, man kann darauf stehen. Höchstens %d Wand gleichzeitig, die älteste zerfällt." % [
@@ -826,7 +1009,164 @@ func get_hero_ability_details(hero: HeroData) -> String:
 				Player.DRUID_WALL_DURATION, int(Player.DRUID_WALL_HP),
 				Player.DRUID_WALL_MAX_ACTIVE,
 			]
+		"vampire_melee":
+			return "Verbraucht deinen ganzen Schild: %d Schaden pro Schildpunkt an allen Gegnern im Radius %d px (mit vollem Blutschild von %d %% Max-HP sind das %d Schaden). Ohne Schild passiert nichts und es gibt keinen Cooldown." % [
+				int(Player.VAMP_MELEE_BURST_DAMAGE_PER_SHIELD), int(Player.VAMP_MELEE_BURST_RADIUS),
+				int(round(Player.VAMP_MELEE_SHIELD_CAP * 100.0)),
+				int(round(hero.base_hp * Player.VAMP_MELEE_SHIELD_CAP * Player.VAMP_MELEE_BURST_DAMAGE_PER_SHIELD)),
+			]
+		"zeitschlaeger":
+			return "Zeitkuppel an deiner Position: Radius %d px, %.0f s lang. Gegner darin laufen %d %% langsamer, gegnerische Kugeln fliegen nur mit %d %% Tempo. Du selbst bewegst dich normal." % [
+				int(Player.ZEIT_BUBBLE_RADIUS), Player.ZEIT_BUBBLE_DURATION,
+				int(round(Player.ZEIT_BUBBLE_SLOW * 100.0)), int(round(Player.ZEIT_BUBBLE_BULLET_SCALE * 100.0)),
+			]
 	return hero.ability_desc
+
+# Ausführlicher Text zur Ulti (Taste E). Leer, wenn der Held noch keine hat.
+func get_hero_ult_details(hero: HeroData) -> String:
+	match hero.id:
+		"volt":
+			return "%.0f s lang: +%d%% Tempo, +%d%% Feuerrate, kein Munitionsverbrauch. Jeder Schuss springt als Kettenblitz auf einen weiteren Gegner." % [
+				Player.VOLT_OVERCHARGE_DURATION,
+				int(round((Player.VOLT_OVERCHARGE_SPEED_MULT - 1.0) * 100.0)),
+				int(round((Player.VOLT_OVERCHARGE_FIRE_RATE_MULT - 1.0) * 100.0)),
+			]
+		"phantom":
+			return "%.0f s lang unsichtbar und +%d%% Tempo. Angriffe und Treffer lassen dich nur %.2f s aufflackern. Der erste Treffer macht %d%% Schaden." % [
+				Player.PHANTOM_HUNT_DURATION,
+				int(round((Player.PHANTOM_HUNT_SPEED_MULT - 1.0) * 100.0)),
+				Player.PHANTOM_STEALTH_FLICKER,
+				int(round(Player.PHANTOM_HUNT_FIRST_HIT_MULT * 100.0)),
+			]
+		"vampire":
+			return "Bis zu %d Blutkugeln im Umkreis von %d px werden zu Fledermäusen (mindestens %d, notfalls aus dir selbst). Jede hat %d HP, lebt %.0f s, fliegt zum nächsten Gegner und beißt alle %.1f s für %d Schaden." % [
+				Player.VAMPIRE_ULT_MAX_BATS, int(Player.VAMPIRE_ULT_RANGE), Player.VAMPIRE_ULT_MIN_BATS,
+				int(Player.VAMPIRE_BAT_HP), Player.VAMPIRE_BAT_DURATION, Player.VAMPIRE_BAT_BITE_INTERVAL,
+				int(Player.VAMPIRE_BAT_DAMAGE),
+			]
+		"vampire_melee":
+			return "Bis zu %d freie Blutkugeln im Radius %d px fliegen zu dir. Trifft eine unterwegs einen Gegner, explodiert sie für %d Schaden und heilt dich um %d HP. Erreicht sie dich, gibt sie Schild wie beim Aufsammeln. Ohne Kugel in Reichweite bleibt die Ulti geladen." % [
+				Player.VAMP_MELEE_ULT_MAX_ORBS, int(Player.VAMP_MELEE_ULT_RADIUS),
+				int(Player.VAMP_MELEE_ULT_DAMAGE), int(Player.VAMP_MELEE_ULT_HEAL),
+			]
+		"ignis":
+			return "Gezielt (bis %d px): Nach %.1f s schlagen %d Meteore nebeneinander ein, je Radius %d px und bis zu %d Schaden. Jeder hinterlässt %.0f s lang Feuer." % [
+				int(Player.IGNIS_METEOR_RANGE), Player.IGNIS_METEOR_WARN, Player.IGNIS_METEOR_COUNT,
+				int(Player.IGNIS_METEOR_RADIUS), int(Player.IGNIS_METEOR_DAMAGE), Player.IGNIS_METEOR_FIRE_DURATION,
+			]
+		"spore":
+			return "%.0f s lang wandert ein Giftnebel mit Radius %d px mit dir. Alle %.1f s: %d Giftstapel und Verlangsamung für Gegner darin, du heilst %d HP pro Sekunde." % [
+				Player.SPORE_FOG_DURATION, int(Player.SPORE_FOG_RADIUS), Player.SPORE_FOG_TICK,
+				Player.SPORE_FOG_POISON_STACKS, int(Player.SPORE_FOG_HEAL),
+			]
+		"nova":
+			return "Gezielt (bis %d px): Gravitationskern für %.1f s, zieht Gegner im Radius %d px heran. Am Ende Implosion mit Radius %d px und %d Schaden." % [
+				int(Player.SINGULARITY_DISTANCE), Player.SINGULARITY_DURATION, int(Player.SINGULARITY_PULL_RADIUS),
+				int(Player.SINGULARITY_IMPLOSION_RADIUS), int(Player.SINGULARITY_IMPLOSION_DAMAGE),
+			]
+		"klinge":
+			return "%.0f s lang Wirbel um dich (Radius %d px), du bleibst beweglich. Alle %.1f s %d Schaden, zum Schluss ein großer Wirbel mit %d Schaden. Kugeln, die auf dich zufliegen, prallen zurück." % [
+				Player.BLADE_STORM_DURATION, int(Player.BLADE_STORM_RADIUS), Player.BLADE_STORM_TICK,
+				int(round(base_damage * Player.BLADE_STORM_TICK_DAMAGE_MULT)),
+				int(round(base_damage * Player.BLADE_STORM_DAMAGE_MULT)),
+			]
+		"bastion":
+			return "%.0f s lang Kuppel mit Radius %d px: gegnerische Kugeln prallen von außen ab. Innen alle %.1f s +%d HP und +%d Schild für dich und Verbündete." % [
+				Player.HEAL_FIELD_DURATION, int(Player.BASTION_DOME_RADIUS), Player.HEAL_FIELD_TICK_INTERVAL,
+				int(Player.HEAL_FIELD_TICK_HEAL), int(Player.HEAL_FIELD_TICK_SHIELD),
+			]
+		"druid":
+			return "%.0f s lang Urkeiler: %d%% Größe, +%d%% Leben, Hammer-Nahkampf mit %d%% Schaden. Der Dash wird zum Ansturm (%d Schaden, schleudert Gegner weg, bricht Kisten)." % [
+				Player.DRUID_BOAR_DURATION, int(round(Player.DRUID_BOAR_SCALE * 100.0)),
+				int(round((Player.DRUID_BOAR_HP_MULT - 1.0) * 100.0)),
+				int(round(Player.DRUID_BOAR_MELEE_DAMAGE_MULT * 100.0)), int(Player.DRUID_BOAR_CHARGE_DAMAGE),
+			]
+		"zeitschlaeger":
+			return "%.0f s lang frieren alle Gegner und ihre Kugeln ein, auch ihre Abklingzeiten stehen. Deine Treffer an eingefrorenen Gegnern stauen sich (%d %% Schaden) und schlagen am Ende gesammelt mit Rückstoß ein." % [
+				Player.ZEIT_STOP_DURATION, int(round(Player.ZEIT_STOP_DAMAGE_MULT * 100.0)),
+			]
+	return hero.ult_desc
+
+# Ausführlicher Text zum Helden-Dash (Shift).
+func get_hero_dash_details(hero: HeroData) -> String:
+	match hero.id:
+		"ignis":
+			return "Dash in Laufrichtung, kurz unverwundbar, hinterlässt eine Feuerspur (%.0f s, Gegner darin brennen)." % Player.AFTERBURNER_ZONE_DURATION
+		"spore":
+			return "Dash in Laufrichtung, kurz unverwundbar. Am Start bleibt eine Giftwolke (Radius %d px, %d Schaden pro Sekunde)." % [
+				int(Player.SPORE_CLOUD_RADIUS), int(Player.SPORE_CLOUD_DPS),
+			]
+		"nova":
+			return "Schwebt %.1f s lang mit Tempo %d, mit den Bewegungstasten lenkbar, unverwundbar." % [
+				Player.NOVA_GLIDE_DURATION, int(Player.NOVA_GLIDE_SPEED),
+			]
+		"druid":
+			return "Ranke bis %d px in Zielrichtung. Greift sie Gelände, zieht sie dich schnell hin. Ohne Halt ein normaler Dash." % int(Player.DRUID_VINE_RANGE)
+		"klinge":
+			return "Dash durch Gegner hindurch, jeder getroffene bekommt %d%% Schwertschaden. Ein Treffer halbiert die Dash-Abklingzeit." % int(round(Player.KLINGE_DASH_DAMAGE_MULT * 100.0))
+		"bastion":
+			return "Kurzer Rammstoß, nicht unverwundbar. Kugeln von vorn prallen ab, Gegner werden mitgeschoben (%d Schaden) und am Ende weggestoßen." % int(Player.BASTION_RAM_DAMAGE)
+		"volt":
+			return "Teleportiert %d px in Lauf- bzw. Zielrichtung. %d Ladungen, jede lädt einzeln nach." % [
+				int(Player.VOLT_DASH_DISTANCE), hero.dash_charges,
+			]
+		"phantom":
+			return "Dash in Laufrichtung, kurz unverwundbar. Danach %.1f s unsichtbar." % Player.PHANTOM_STEALTH_DASH
+		"vampire":
+			return "Dash in Laufrichtung, kurz unverwundbar und durch Gegner hindurch. Jeder Getroffene nimmt %d Schaden und lässt sofort eine Blutkugel fallen." % int(Player.VAMPIRE_DASH_DAMAGE)
+		"vampire_melee":
+			return "Legt an der Startstelle eine Blutkugel ab und stürmt %d %% weiter als ein normaler Dash, kurz unverwundbar und durch Gegner hindurch." % int(round(Player.VAMP_MELEE_DASH_DURATION_MULT * 100.0))
+		"zeitschlaeger":
+			return "Springt an die Stelle von vor %.0f s zurück (ein Nachbild zeigt sie dir) und bekommt %d %% des Schadens aus dieser Zeit als Leben zurück. %.0f s Abklingzeit." % [
+				Player.ZEIT_REWIND_SECONDS, int(round(Player.ZEIT_REWIND_HEAL_SHARE * 100.0)), Player.ZEIT_REWIND_COOLDOWN,
+			]
+	return "Dash in Laufrichtung, kurz unverwundbar."
+
+# Zeile zum Hauptangriff (Linksklick) für Menü und Tooltips.
+func get_hero_attack_text(hero: HeroData) -> String:
+	if not hero.is_melee():
+		return "Fernkampf: %d Schuss, Feuerintervall %.2f s, Nachladen %.2f s" % [
+			hero.base_ammo, hero.base_fire_rate_cooldown, hero.base_reload_time,
+		]
+	var data := get_melee_weapon_data(hero.melee_weapon)
+	return "Nahkampf: %s, %d Schaden alle %.2f s, Reichweite %.1f Felder" % [
+		str(data["label"]), int(round(float(data["damage"]) * hero.melee_damage_mult)),
+		float(data["cooldown"]) * hero.melee_cooldown_mult, float(data["range_tiles"]),
+	]
+
+# Angriff, Dash und Ulti eines Helden als Textblock für Menü und Tooltips.
+func get_hero_kit_text(hero: HeroData) -> String:
+	var lines: Array[String] = ["Angriff [LMB]: %s" % get_hero_attack_text(hero)]
+	var dash_label := hero.dash_name if not hero.dash_name.is_empty() else "Dash"
+	lines.append("Dash [Shift]: %s. %s" % [dash_label, get_hero_dash_details(hero)])
+	if hero.has_ult():
+		lines.append("Ulti [E]: %s (%.0fs Cooldown). %s" % [hero.ult_name, hero.ult_cooldown, get_hero_ult_details(hero)])
+	return "\n".join(lines)
+
+func is_melee_hero(hero_id: String) -> bool:
+	var hero: HeroData = heroes.get(hero_id, null)
+	return hero != null and hero.is_melee()
+
+# Alle Vampir-Helden (IDs beginnen mit "vampire") teilen sich die Blutkugeln.
+func is_vampire_hero(hero_id: String) -> bool:
+	return hero_id.begins_with("vampire")
+
+func is_melee_slot(index: int) -> bool:
+	return is_melee_hero(get_player_hero_id(index))
+
+func has_melee_hero_in_match() -> bool:
+	for slot in get_active_player_indices():
+		if is_melee_slot(slot):
+			return true
+	return false
+
+# Restliche Ulti-Abklingzeit je Slot. Sie läuft über Rundenwechsel weiter;
+# -1 = noch nicht gesetzt, der Spieler startet dann halb geladen.
+var player_ult_timers: Array[float] = [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0]
+
+func reset_ult_timers() -> void:
+	for i in range(player_ult_timers.size()):
+		player_ult_timers[i] = -1.0
 
 func _setup_default_inputs() -> void:
 	_ensure_key_action("p1_left", KEY_A)
@@ -841,8 +1181,8 @@ func _setup_default_inputs() -> void:
 	_ensure_key_action("p1_block", KEY_Q)
 	# Manuelles Nachladen.
 	_ensure_key_action("p1_reload", KEY_R)
-	# Nahkampfwaffe aus dem Charakter-Tab.
-	_ensure_key_action("p1_melee", KEY_E)
+	# Ulti des Helden.
+	_ensure_key_action("p1_ult", KEY_E)
 
 	# P2 bindings (Keyboard fallback for local 2-player)
 	_ensure_key_action("p2_left", KEY_LEFT)
@@ -855,7 +1195,7 @@ func _setup_default_inputs() -> void:
 	_ensure_key_action("p2_ability", KEY_COMMA)
 	_ensure_key_action("p2_block", KEY_M)
 	_ensure_key_action("p2_reload", KEY_L)
-	_ensure_key_action("p2_melee", KEY_K)
+	_ensure_key_action("p2_ult", KEY_K)
 
 	# Utility
 	_ensure_key_action("restart_game", KEY_F9)
@@ -926,9 +1266,14 @@ func get_tusk_shape_label(shape: String) -> String:
 func normalize_melee_weapon(weapon_id: String) -> String:
 	return weapon_id if MELEE_WEAPONS.has(weapon_id) else "iron"
 
+# Die Nahkampfwaffe gehört zum Helden. Fernkämpfer haben keine; für sie
+# bleibt der alte, im Charakter-Tab gespeicherte Wert nur als Platzhalter.
 func get_melee_weapon(index: int) -> String:
 	if index < 1 or index > MAX_PLAYERS:
 		return "iron"
+	var hero: HeroData = heroes.get(get_player_hero_id(index), null)
+	if hero != null and hero.is_melee():
+		return normalize_melee_weapon(hero.melee_weapon)
 	return player_melee_weapons[index - 1]
 
 func get_melee_weapon_data(weapon_id: String) -> Dictionary:
@@ -1016,6 +1361,29 @@ func set_player_name(index: int, value: String) -> void:
 	player_names[index - 1] = clean
 	if index == local_player_index:
 		save_character_customization(index)
+	lobby_state_changed.emit()
+
+## Titel-ID eines Slots (Bots haben keinen).
+func get_player_title(index: int) -> String:
+	if index < 1 or index > MAX_PLAYERS or is_bot_slot(index):
+		return ""
+	return player_titles[index - 1]
+
+## Angezeigter Titeltext eines Slots, z. B. "Kartoffelkönig" ("" = keiner).
+func get_player_title_text(index: int) -> String:
+	var title_id := get_player_title(index)
+	if title_id.is_empty():
+		return ""
+	var manager := get_node_or_null("/root/AchievementManager")
+	return "" if manager == null else str(manager.get_title_text(title_id))
+
+func set_player_title(index: int, title_id: String) -> void:
+	if index < 1 or index > MAX_PLAYERS:
+		return
+	var clean := title_id.strip_edges().substr(0, 40)
+	if player_titles[index - 1] == clean:
+		return
+	player_titles[index - 1] = clean
 	lobby_state_changed.emit()
 
 func set_pig_appearance(
@@ -1311,7 +1679,10 @@ func set_game_mode(mode: String) -> void:
 	lobby_state_changed.emit()
 
 func is_arena_mode() -> bool:
-	return game_mode == GAME_MODE_ARENA
+	return game_mode == GAME_MODE_ARENA or is_horde_mode()
+
+func is_horde_mode() -> bool:
+	return match_mode == MATCH_MODE_HORDE
 
 func get_game_mode_name(mode: String = "") -> String:
 	var resolved := mode if not mode.is_empty() else game_mode
@@ -1322,6 +1693,9 @@ func set_match_mode(mode: String) -> void:
 	if match_mode == resolved:
 		return
 	match_mode = resolved
+	# Solo gibt es nur in der Horde; sonst mindestens zwei Spieler.
+	if resolved != MATCH_MODE_HORDE and player_count < MIN_PLAYERS:
+		set_player_count(MIN_PLAYERS)
 	match_mode_changed.emit(match_mode)
 
 func get_match_mode_name(mode: String = "") -> String:
@@ -1350,6 +1724,8 @@ func get_team_count() -> int:
 	if not is_team_mode():
 		return player_count
 	match match_mode:
+		MATCH_MODE_HORDE:
+			return 1
 		MATCH_MODE_2V2:
 			return 2
 		MATCH_MODE_3V3:
@@ -1362,6 +1738,8 @@ func get_team_count() -> int:
 func get_team_for_slot(slot: int) -> int:
 	if slot < 1 or slot > MAX_PLAYERS:
 		return 0
+	if match_mode == MATCH_MODE_HORDE:
+		return 1
 	if not is_team_mode():
 		return slot
 	var per_team := 2
@@ -1402,7 +1780,8 @@ func get_team_color(team: int) -> Color:
 	return TEAM_COLORS[team - 1]
 
 func set_player_count(count: int) -> void:
-	var clamped := clampi(count, MIN_PLAYERS, MAX_PLAYERS)
+	var min_players := 1 if match_mode == MATCH_MODE_HORDE else MIN_PLAYERS
+	var clamped := clampi(count, min_players, MAX_PLAYERS)
 	if player_count == clamped:
 		return
 	player_count = clamped
@@ -1426,6 +1805,7 @@ func get_scores() -> Array:
 	return result
 
 func reset_match() -> void:
+	reset_ult_timers()
 	for i in range(MAX_PLAYERS):
 		player_scores[i] = 0
 		if player_cards[i] is Array:
@@ -1965,6 +2345,8 @@ func set_disabled_powerups(kinds: Array) -> void:
 # Löst "zufall" deterministisch anhand des Runden-Seeds auf. Host und Client
 # erhalten so dieselbe Map, auch wenn der Host "Zufällig" ausgewählt hat.
 func resolve_map_id(level_seed: int) -> String:
+	if is_horde_mode():
+		return ArenaMaps.HORDE_MAP_ID
 	if is_arena_mode():
 		return ArenaMaps.pick_random(level_seed)
 	if not SideLevels.test_map_id.is_empty() and SideLevels.has(SideLevels.test_map_id):
@@ -2031,7 +2413,10 @@ func set_draft_config(picks: int, offered: int) -> void:
 	draft_config_changed.emit(draft_picks, cards_per_draft)
 	cards_per_draft_changed.emit(cards_per_draft)
 
-func set_melee_enabled(enabled: bool) -> void:
+# Nahkampf ist seit den Helden-Kits fester Teil der Nahkampfhelden und lässt
+# sich nicht mehr abschalten. Alte Lobby-Einstellungen mit "aus" zählen als an.
+func set_melee_enabled(_enabled: bool) -> void:
+	var enabled := true
 	if melee_enabled == enabled:
 		return
 	melee_enabled = enabled

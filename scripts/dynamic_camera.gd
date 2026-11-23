@@ -230,6 +230,15 @@ func _process(delta: float) -> void:
 	var target_zoom = clampf(minf(width_zoom, height_zoom), min_zoom, scroll_max_zoom if scroll_mode else max_zoom)
 	if ArenaMode.active:
 		target_zoom = arena_zoom
+	# Autoscroll: Die Kamera fährt mit dem Streckenfenster, nicht mit den Spielern.
+	var scroll := AutoScroll.current
+	if scroll != null and is_instance_valid(scroll):
+		if ArenaMode.active:
+			target_center.x = scroll.center_x
+		else:
+			target_center = Vector2(scroll.center_x, scroll.map_px.y * 0.5 - 18.0)
+			target_zoom = scroll.camera_zoom(screen_size)
+	if ArenaMode.active:
 		target_center = _arena_clamp_center(target_center, target_zoom)
 
 	var intro_running := _intro_active and is_instance_valid(_intro_focus)

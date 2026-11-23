@@ -77,7 +77,7 @@ func _ready() -> void:
 # Bot-Test-Matches landen nur im Runden-Protokoll (markiert mit "bot_test"),
 # nicht hier: Sonst würden reine Bot-Matches die Seltenheiten automatisch ändern.
 func _ignored_run() -> bool:
-	return Global.is_bot_test_active()
+	return Global.is_bot_test_active() or Global.test_room_active
 
 func _is_automated_test_run() -> bool:
 	if OS.has_feature("headless"):

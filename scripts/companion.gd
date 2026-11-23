@@ -31,7 +31,7 @@ static var _next_net_id: int = 1
 
 var mode: Mode = Mode.TOWER
 var owner_player: Player = null
-var target_enemy: Player = null
+var target_enemy = null # Player oder HordeEnemy
 var follow_owner: bool = false
 var support: bool = false
 var is_replica: bool = false
@@ -125,7 +125,7 @@ func _physics_process(delta: float) -> void:
 			if not is_instance_valid(target_enemy) or target_enemy.current_health <= 0.0:
 				target_enemy = _find_target()
 			if is_instance_valid(target_enemy):
-				aim_angle = (target_enemy.global_position - global_position).angle()
+				aim_angle = (target_enemy.get_lure_target().global_position - global_position).angle()
 			if follow_owner:
 				_orbit_angle += delta * 0.7
 				var tower_offset := Vector2(cos(_orbit_angle), sin(_orbit_angle)) * (orbit_radius + 12.0)
@@ -226,14 +226,16 @@ func _try_fire() -> void:
 	if not is_instance_valid(target_enemy):
 		return
 
-	var direction := (target_enemy.global_position - global_position).normalized()
+	# Ein Köder (Phantom) lenkt Türme und Drohnen auf sich.
+	var lure: Node2D = target_enemy.get_lure_target()
+	var direction := (lure.global_position - global_position).normalized()
 	if direction == Vector2.ZERO:
 		return
 
 	var bullet = BULLET_SCENE.instantiate()
 	bullet.shooter = owner_player
 	# Nur gültige, lebende Ziele setzen (Gegner kann zwischen Frames sterben).
-	bullet.target_enemy = target_enemy if is_instance_valid(target_enemy) else null
+	bullet.target_enemy = lure if is_instance_valid(lure) else null
 	bullet.damage = owner_player.bullet_damage * damage_mult
 	bullet.velocity = direction * 680.0
 	# Drohnenschüsse behalten ihre flache Flugbahn (früherer Fallwert 90).
@@ -249,7 +251,20 @@ func _try_fire() -> void:
 	if is_instance_valid(cannon):
 		cannon.play_recoil()
 
-func _find_target() -> Player:
+func _find_target() -> Node2D:
+	# Horden-Modus: nächster Gegner in Reichweite.
+	if HordeDirector.is_active() and is_instance_valid(owner_player):
+		var best: Node2D = null
+		var best_d := 700.0 * 700.0
+		for node in get_tree().get_nodes_in_group(HordeEnemy.GROUP):
+			var e := node as HordeEnemy
+			if e == null or not e.is_alive() or e.is_replica:
+				continue
+			var d := global_position.distance_squared_to(e.global_position)
+			if d < best_d:
+				best_d = d
+				best = e
+		return best
 	for p in get_tree().get_nodes_in_group("player"):
 		if p != owner_player and is_instance_valid(p) and p.current_health > 0.0 and p.team_id != owner_player.team_id:
 			return p

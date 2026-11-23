@@ -189,7 +189,6 @@ func _ready() -> void:
 	Global.set_base_damage(27.0)
 	Global.set_enabled_level_modifiers(["wind", "zone"])
 	Global.set_level_modifier_rate_percent(180)
-	Global.set_melee_enabled(false)
 	Global.set_selected_map("eisgrotte")
 	Global.set_rarity_percent("Rare", 42.0)
 	Global.save_lobby_loadout(ui_preset_name)
@@ -209,7 +208,6 @@ func _ready() -> void:
 	assert(int(main.lobby.picks_spin.value) == 2 and int(main.lobby.offer_spin.value) == 6, "Loading a preset should update the draft controls")
 	assert(int(main.lobby.base_hp_spin.value) == 115 and int(main.lobby.base_damage_spin.value) == 27, "Loading a preset should update HP and damage controls")
 	assert(int(main.lobby.modifier_rate_spin.value) == 180, "Loading a preset should update the modifier rate control")
-	assert(not main.lobby.melee_enabled_check.button_pressed, "Loading a preset should update the melee toggle")
 	assert(is_equal_approx(float(main.lobby.rarity_spins["Rare"].value), 42.0), "Loading a preset should update rarity controls")
 	assert(
 		main.lobby.map_option.get_item_text(main.lobby.map_option.selected) == Global.get_map_name("eisgrotte"),
@@ -281,17 +279,12 @@ func _ready() -> void:
 	assert(main.lobby.ban_icons.size() == CardDatabase.all_cards.size(), "Lobby ban list should show an icon for every card")
 	# Klassen-Icons: Jede Heldenklasse besitzt ein eigenes Icon im Helden-Grid,
 	# in der Slot-Kopfzeile und im Charakter-Tab.
-	var first_hero_grid := main.lobby.slot_nodes[1]["grid"] as HBoxContainer
-	assert(first_hero_grid != null, "Lobby should build the hero grid")
-	assert(first_hero_grid.get_child_count() == Global.heroes.size(), "Hero grid should show every class")
-	for child in first_hero_grid.get_children():
-		var hero_btn := child as Button
+	assert(main.lobby.hero_grid != null, "Lobby should build the hero grid")
+	assert(main.lobby.hero_tiles.size() == Global.heroes.size(), "Hero grid should show every class")
+	for hero_id in main.lobby.hero_tiles.keys():
+		var hero_btn := main.lobby.hero_tiles[hero_id]["button"] as Button
 		assert(hero_btn != null, "Every hero entry should be a button")
-		var hero_id := str(hero_btn.get_meta("hero_id", ""))
-		assert(not hero_id.is_empty(), "Hero button should carry its class id")
-		var stats_label := hero_btn.get_meta("stats_label", null) as Label
-		assert(stats_label != null, "Hero button should contain a stats label")
-		assert(stats_label.text == main.lobby._hero_button_text(Global.get_hero(hero_id)), "Hero button should show live class stats")
+		assert(str(hero_btn.get_meta("hero_id", "")) == hero_id, "Hero button should carry its class id")
 		assert(main.lobby._get_hero_icon(hero_id) != null, "Hero class should have an icon texture")
 	var header_icon := main.lobby.slot_nodes[1]["hero_icon"] as TextureRect
 	assert(header_icon != null and header_icon.texture != null, "Slot header should show the selected class icon")
@@ -301,10 +294,12 @@ func _ready() -> void:
 	# ein normaler Client nicht.
 	assert(Global.is_bot_slot(2), "Slot 2 should be a bot for the class-selection check")
 	assert(Global.can_choose_hero(2), "Host should be able to choose the class of bot slot 2")
-	var bot_grid := main.lobby.slot_nodes[2]["grid"] as HBoxContainer
-	assert(bot_grid != null, "Bot slot should build a hero grid")
-	for child in bot_grid.get_children():
-		assert(not (child as Button).disabled, "Bot class buttons should be enabled for the host")
+	main.lobby._hero_edit_slot = 2
+	main.lobby._refresh_hero_controls()
+	for hero_id in main.lobby.hero_tiles.keys():
+		assert(not (main.lobby.hero_tiles[hero_id]["button"] as Button).disabled, "Bot class buttons should be enabled for the host")
+	main.lobby._hero_edit_slot = 1
+	main.lobby._refresh_hero_controls()
 	var online_backup := Global.network_mode
 	var local_slot_backup := Global.local_player_index
 	Global.network_mode = true
@@ -1216,7 +1211,7 @@ func _ready() -> void:
 	assert(bollwerk.block_duration_add == 0.0 and bollwerk.shield_regen_delay_add < 0.0, "Bollwerk must only upgrade the shield, not the Barriere")
 	for c in CardDatabase.all_cards:
 		var has_shield: bool = c.shield_max_add > 0 or c.shield_regen_mult > 1.0 or c.shield_regen_delay_add < 0.0
-		var has_barrier: bool = c.block_duration_add > 0.0 or c.block_cooldown_mult < 1.0
+		var has_barrier: bool = c.block_duration_add > 0.0 or c.block_cooldown_mult < 1.0 or c.block_hits_add > 0
 		assert(not (has_shield and has_barrier), "Card %s must not upgrade Schild and Barriere at once" % c.id)
 	# Powerups wirken sofort und laufen anschließend über kurze Timer aus.
 	p1.current_health = 40.0

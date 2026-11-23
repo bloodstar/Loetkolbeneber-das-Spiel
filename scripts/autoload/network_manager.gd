@@ -32,7 +32,7 @@ signal draft_pick_requested(slot: int, card_id: String)
 signal draft_gamble_flip_received(revealed: int)
 signal draft_gamble_flip_requested(slot: int, revealed: int)
 signal draft_finished_received()
-signal match_over_received(winner_index: int, scores: Array, stats: Array, reason: String)
+signal match_over_received(winner_index: int, scores: Array, stats: Array, reason: String, honors: Array)
 signal kill_cam_received(point: Vector2, killer_slot: int, duration: float)
 signal tile_broken_received(tile_id: int)
 signal tile_regrown_received(tile_id: int)
@@ -628,6 +628,7 @@ func build_lobby_sync() -> Dictionary:
 		"player_count": Global.player_count,
 		"heroes": Global.player_hero_ids.duplicate(),
 		"names": Global.player_names.duplicate(),
+		"titles": Global.player_titles.duplicate(),
 		"pig_parts": Global.player_pig_parts.duplicate(true),
 		"melee": Global.player_melee_weapons.duplicate(),
 		"kinds": Global.player_kind.duplicate(),
@@ -717,8 +718,8 @@ func receive_lobby_sync(data: Dictionary) -> void:
 
 func _apply_lobby_sync(data: Dictionary) -> void:
 	host_build_id = str(data.get("build_id", "?"))
-	Global.set_player_count(int(data.get("player_count", Global.player_count)))
 	Global.set_match_mode(str(data.get("match_mode", Global.MATCH_MODE_FFA)))
+	Global.set_player_count(int(data.get("player_count", Global.player_count)))
 	Global.set_game_mode(str(data.get("game_mode", Global.GAME_MODE_SIDE)))
 	var heroes: Array = data.get("heroes", [])
 	for i in range(mini(heroes.size(), Global.MAX_PLAYERS)):
@@ -726,6 +727,11 @@ func _apply_lobby_sync(data: Dictionary) -> void:
 	var names: Array = data.get("names", [])
 	for i in range(mini(names.size(), Global.MAX_PLAYERS)):
 		Global.player_names[i] = Global.sanitize_player_name(str(names[i]))
+	# Titel: den eigenen bestimmt der Client selbst (sein Erfolgsprofil).
+	var titles: Array = data.get("titles", [])
+	for i in range(mini(titles.size(), Global.MAX_PLAYERS)):
+		if i + 1 != Global.local_player_index:
+			Global.player_titles[i] = str(titles[i]).substr(0, 40)
 	# Baukasten-Teile: set_pig_parts meldet nur echte Änderungen weiter. Den
 	# eigenen Slot bestimmt der Client selbst (sein gespeichertes Profil), sonst
 	# würde ein älterer Host-Stand es beim Beitritt überschreiben.
@@ -901,15 +907,27 @@ func receive_input(data: Dictionary) -> void:
 	input_received.emit(slot, data)
 
 # reason wie Global.match_end_reason ("", "tiebreak", "early"); winner 0 = Unentschieden.
-func send_match_over(winner_index: int, scores: Array, stats: Array = [], reason: String = "") -> void:
+# honors: MVP-Ehrungen des Hosts (MatchHonors.get_honors()).
+func send_match_over(winner_index: int, scores: Array, stats: Array = [], reason: String = "", honors: Array = []) -> void:
 	if not is_host:
 		return
 	for peer_id in _broadcast_targets():
-		receive_match_over.rpc_id(int(peer_id), winner_index, scores, stats, reason)
+		receive_match_over.rpc_id(int(peer_id), winner_index, scores, stats, reason, honors)
 
 @rpc("authority", "call_remote", "reliable")
-func receive_match_over(winner_index: int, scores: Array, stats: Array, reason: String = "") -> void:
-	match_over_received.emit(winner_index, scores, stats, reason)
+func receive_match_over(winner_index: int, scores: Array, stats: Array, reason: String = "", honors: Array = []) -> void:
+	match_over_received.emit(winner_index, scores, stats, reason, honors)
+
+# Spielerprofil: Rundenwerte aller Slots, jeder Client bucht nur seinen eigenen.
+func send_profile_round(info: Dictionary, rows: Array) -> void:
+	if not is_host:
+		return
+	for peer_id in _broadcast_targets():
+		receive_profile_round.rpc_id(int(peer_id), info, rows)
+
+@rpc("authority", "call_remote", "reliable")
+func receive_profile_round(info: Dictionary, rows: Array) -> void:
+	PlayerProfile.receive_round(info, rows)
 
 # Rundenentscheidender Tod: Clients starten Zeitlupe und Kill-Cam gleichzeitig mit dem Host.
 func send_kill_cam(point: Vector2, killer_slot: int, duration: float) -> void:
@@ -1112,6 +1130,20 @@ func client_player_name(player_name: String) -> void:
 	if slot <= 0:
 		return
 	Global.set_player_name(slot, player_name)
+
+# Titel (Erfolge): Der Client meldet seine Titel-ID, der Host verteilt sie.
+func request_player_title(title_id: String) -> void:
+	if is_client:
+		client_player_title.rpc_id(1, title_id)
+
+@rpc("any_peer", "call_remote", "reliable")
+func client_player_title(title_id: String) -> void:
+	if not is_host:
+		return
+	var slot := get_slot_for_peer(multiplayer.get_remote_sender_id())
+	if slot <= 0:
+		return
+	Global.set_player_title(slot, title_id)
 
 # Nahkampfwaffe: wie der Name meldet der Client sie, der Host verteilt sie per
 # Lobby-Sync. Treffer berechnet ohnehin nur der Host.

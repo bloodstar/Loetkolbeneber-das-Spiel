@@ -119,6 +119,7 @@ extends Resource
 # --- Standard-Block (universell, Taste Q) ---
 @export var block_duration_add: float = 0.0 # Zusätzliche Sekunden Blockdauer
 @export var block_cooldown_mult: float = 1.0 # <1.0 = kürzerer Block-Cooldown
+@export var block_hits_add: int = 0 # Barriere hält so viele Treffer mehr aus, bevor sie zerbricht
 @export var block_reflect_damage_add: float = 0.0 # Reflektierte Projektile: +Schaden (0.5 = +50%)
 @export var block_knockback_radius_add: float = 0.0 # Rückstoß-Radius beim Blocken
 @export var block_knockback_force_add: float = 0.0 # Stärke des Rückstoßes
@@ -157,6 +158,17 @@ extends Resource
 @export var ability_range_mult: float = 1.0 # Teleport-, Sprung- bzw. Wurfweite
 # Druide: zusätzliche Wände, die gleichzeitig stehen dürfen.
 @export var wall_count_add: int = 0
+# --- Ulti (Taste E) und Helden-Dash ---
+@export var ult_cooldown_mult: float = 1.0 # <1.0 = Ulti schneller wieder bereit
+@export var ult_duration_mult: float = 1.0 # Dauer der Ulti (Überladung, Nachtjagd)
+@export var dash_charges_add: int = 0 # Zusätzliche Dash-Ladungen
+@export var ult_damage_mult: float = 1.0 # Schaden bzw. Heilstärke der Ulti (zusätzlich zu ability_damage_mult)
+@export var ult_radius_mult: float = 1.0 # Wirkungsbereich der Ulti (zusätzlich zu ability_radius_mult)
+@export var ult_count_add: int = 0 # Zusätzliche Einschläge der Ulti (Ignis-Meteore)
+@export var dash_effect_mult: float = 1.0 # Stärke des Helden-Dashs (Spur, Wolke, Weite, Rammstoß)
+# Angriffsart, für die die Karte gedacht ist: "ranged", "melee" oder leer für
+# beide. Leer = wird beim Registrieren aus den Werten abgeleitet (CardDatabase).
+@export var attack_type: String = ""
 # Schaltet einen Evolutionseffekt der Fähigkeit frei, z. B. "ignis_napalm".
 # Die Effekte selbst sind in player.gd hinterlegt.
 @export var ability_evolution: String = ""
@@ -169,7 +181,7 @@ extends Resource
 
 # Werte, die nichts an der Spielstärke ändern bzw. separat protokolliert werden.
 const _FINGERPRINT_IGNORED: Array[String] = [
-	"id", "title", "description", "rarity", "color", "version", "pool", "sub_tags",
+	"id", "title", "description", "rarity", "color", "version", "pool", "sub_tags", "attack_type",
 ]
 
 # Automatischer Fingerabdruck aller Balance-Werte. Ändert sich ein Wert, ohne

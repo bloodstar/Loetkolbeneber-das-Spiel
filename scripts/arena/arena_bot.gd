@@ -22,22 +22,34 @@ static func navigate(ai: AIController, delta: float) -> void:
 		st["strafe_t"] = randf_range(0.6, 1.6)
 		st["strafe"] = 1.0 if randf() < 0.5 else -1.0
 
-	var goal := target.global_position
+	var goal := ai.target_pos()
 	var mode := "fight"
+	# Nahkämpfer gehen auf Schlagdistanz, statt Abstand zu halten.
+	var pref_max := PREFERRED_MAX
+	var pref_min := PREFERRED_MIN
+	if p.is_melee:
+		pref_max = p.get_melee_reach() * 0.8
+		pref_min = 0.0
 	var zone := ai._zone_state()
 	if not zone.is_empty():
 		var center: Vector2 = zone["center"]
 		if p.global_position.distance_to(center) > float(zone["radius"]) - ZONE_SAFE_MARGIN:
 			goal = center
 			mode = "zone"
+	# Autoscroll-Rennstrecke: zu weit hinten im Fenster -> nach vorn.
+	var scroll := AutoScroll.current
+	if mode == "fight" and scroll != null and is_instance_valid(scroll) and scroll.running \
+			and scroll.relative_x(p.global_position.x) < -scroll.window_w * 0.1:
+		goal = Vector2(scroll.center_x + scroll.dir * scroll.window_w * 0.2, p.global_position.y)
+		mode = "zone"
 
 	var to_goal := goal - p.global_position
 	var dist := to_goal.length()
 	var sees := has_line_of_sight(p, target)
 	var dir := Vector2.ZERO
-	if mode == "zone" or not sees or dist > PREFERRED_MAX:
+	if mode == "zone" or not sees or dist > pref_max:
 		dir = _path_direction(p, goal, st)
-	elif dist < PREFERRED_MIN or p.current_health < p.max_health * 0.35:
+	elif dist < pref_min or (not p.is_melee and p.current_health < p.max_health * 0.35):
 		dir = -to_goal.normalized()
 		dir += to_goal.orthogonal().normalized() * float(st.get("strafe", 1.0)) * 0.6
 	else:

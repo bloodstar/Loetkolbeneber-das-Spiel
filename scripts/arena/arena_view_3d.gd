@@ -11,18 +11,24 @@ extends Node3D
 
 const CAMERA_DISTANCE: float = 3000.0
 # Voxel-Schwein etwas größer als die Kollisionsbox, damit es gut lesbar ist.
-const PIG_SCALE: float = 1.45
+const PIG_SCALE: float = 1.2
 # Sichtbare Dicke der Stege.
 const STEG_VIS: float = 14.0
 
 var camera_2d: Camera2D = null
 var cam: Camera3D
-var _pigs: Dictionary = {}        # Player-Instanz-ID -> VoxelPig
+var _decoy_pigs: Dictionary = {}  # Köder-Instanz-ID -> VoxelBoar
+var _pigs: Dictionary = {}        # Player-Instanz-ID -> VoxelBoar
 var _crates: Dictionary = {}      # Vector2i -> Node3D
 var _druid_walls: Dictionary = {} # DruidWall-Instanz-ID -> MeshInstance3D
+var _beasts: Dictionary = {}      # HordeEnemy-Instanz-ID -> HordeBeast / VoxelPig (Boss)
 var _shadow_mat: StandardMaterial3D
 var _shadow_mesh: PlaneMesh
 var _contact_mat: StandardMaterial3D
+# Für die Grafikstufen (GameSettings): live umschaltbar.
+var _env: Environment = null
+var _sun: DirectionalLight3D = null
+var _contact_shadows: Array[Node3D] = []
 var _rng := RandomNumberGenerator.new()
 
 func setup(map_data: Dictionary, grid: ArenaGrid, cam2d: Camera2D) -> void:
@@ -46,6 +52,21 @@ func setup(map_data: Dictionary, grid: ArenaGrid, cam2d: Camera2D) -> void:
 	_shadow_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_shadow_mat.albedo_texture = ArenaTextures.get_soft_blob()
 	_shadow_mat.albedo_color = Color(0.02, 0.04, 0.1, 0.55)
+	_apply_graphics_settings()
+	GameSettings.settings_changed.connect(_apply_graphics_settings)
+
+## Grafikstufe: Glühen, Sonnenschatten und Kontaktschatten (statt AO).
+func _apply_graphics_settings() -> void:
+	if _env != null:
+		_env.glow_enabled = GameSettings.glow_enabled()
+	if _sun != null:
+		var q := GameSettings.shadow_quality()
+		_sun.shadow_enabled = q > 0
+		_sun.shadow_blur = 1.2 if q >= 2 else 0.0
+	var contact := GameSettings.contact_shadows_enabled()
+	for node in _contact_shadows:
+		if is_instance_valid(node):
+			node.visible = contact
 
 func _build_environment(_map_data: Dictionary) -> void:
 	var env := Environment.new()
@@ -65,6 +86,7 @@ func _build_environment(_map_data: Dictionary) -> void:
 	env.adjustment_enabled = true
 	env.adjustment_contrast = 1.1
 	env.adjustment_saturation = 1.12
+	_env = env
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
@@ -78,6 +100,7 @@ func _build_environment(_map_data: Dictionary) -> void:
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	sun.rotation_degrees = Vector3(-52.0, -38.0, 0.0)
 	add_child(sun)
+	_sun = sun
 
 func _voxel_multimesh(count: int, size: Vector3, mat: Material) -> MultiMeshInstance3D:
 	var mm := MultiMesh.new()
@@ -169,6 +192,7 @@ func _build_blocks(map_data: Dictionary, grid: ArenaGrid) -> void:
 		skirt.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		skirt.position = Vector3(0.0, -ArenaMode.BAND_H * 0.5 + 0.5, 0.0)
 		crate.add_child(skirt)
+		_contact_shadows.append(skirt)
 
 ## Kontaktschatten: weicher dunkler Saum am Fuß jedes Blocks. Erdet die
 ## Würfel auf dem Boden (ersetzt Ambient Occlusion, die der mobile Renderer
@@ -208,6 +232,7 @@ func _build_contact_shadows(grid: ArenaGrid, entries: Array) -> void:
 	mmi.material_override = _contact_material()
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mmi)
+	_contact_shadows.append(mmi)
 
 func _floor_material(map_data: Dictionary, grid: ArenaGrid) -> Material:
 	var floor_col: Color = map_data.get("floor", Color(0.4, 0.6, 0.3))
@@ -442,8 +467,10 @@ func _add_box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> Mesh
 func _process(delta: float) -> void:
 	_sync_camera()
 	_sync_players(delta)
+	_sync_decoys(delta)
 	_sync_crates()
 	_sync_druid_walls()
+	_sync_horde(delta)
 
 # Wände des Druiden als Rindenblock mit Moosdecke.
 func _sync_druid_walls() -> void:
@@ -515,20 +542,11 @@ func _sync_players(delta: float) -> void:
 			continue
 		var pid := p.get_instance_id()
 		seen[pid] = true
-		var pig: VoxelPig = _pigs.get(pid, null)
+		var pig: VoxelBoar = _pigs.get(pid, null)
 		if pig == null:
-			pig = VoxelPig.new()
+			pig = VoxelBoar.new()
+			pig.xray = true
 			add_child(pig)
-			var fur: Color = Color(0.91, 0.60, 0.67)
-			var pants: Color = Color(0.25, 0.35, 0.8)
-			if p.sprite != null:
-				var f = p.sprite.get("fur_color")
-				if f is Color:
-					fur = f
-				var pc = p.sprite.get("pants_color")
-				if pc is Color:
-					pants = pc
-			pig.build(fur, pants, Global.get_team_color(p.team_id), 1.0, Global.get_player_hero_id(p.player_index), p.wand_tip_color)
 			var shadow := MeshInstance3D.new()
 			shadow.name = "Shadow"
 			shadow.mesh = _shadow_mesh
@@ -536,6 +554,7 @@ func _sync_players(delta: float) -> void:
 			add_child(shadow)
 			pig.set_meta("shadow", shadow)
 			_pigs[pid] = pig
+		pig.sync_with_player(p, delta)
 		var z: float = p.arena_z
 		var pos := p.global_position
 		pig.visible = p.visible and not p.is_dead
@@ -546,16 +565,6 @@ func _sync_players(delta: float) -> void:
 		if aim.length_squared() > 0.001:
 			pig.rotation.y = -atan2(aim.y, aim.x)
 		pig.animate(delta, p.velocity.length() > 30.0, not p.arena_grounded, p.modulate.a, p.velocity, pig.rotation.y, p.arena_vz)
-		# Schuss und Treffer aus dem Spielerzustand ablesen (läuft so auch auf
-		# Clients, die nur Snapshots bekommen).
-		var pool: float = p.current_health + p.current_shield
-		var last: Dictionary = pig.get_meta("last", {})
-		if not last.is_empty():
-			if pool < float(last["pool"]) - 0.5:
-				pig.flash()
-			if p.current_ammo < int(last["ammo"]) or p.fire_timer > float(last["fire"]) + 0.01:
-				pig.recoil(1.0)
-		pig.set_meta("last", {"pool": pool, "ammo": p.current_ammo, "fire": p.fire_timer})
 		var shadow_node := pig.get_meta("shadow") as MeshInstance3D
 		if shadow_node:
 			shadow_node.visible = pig.visible
@@ -568,12 +577,42 @@ func _sync_players(delta: float) -> void:
 			shadow_node.scale = Vector3.ONE * pig.scale.x / PIG_SCALE * lerpf(1.0, 0.6, lift)
 	for pid in _pigs.keys():
 		if not seen.has(pid):
-			var pig: VoxelPig = _pigs[pid]
+			var pig: VoxelBoar = _pigs[pid]
 			var sh = pig.get_meta("shadow")
 			if sh is Node:
 				(sh as Node).queue_free()
 			pig.queue_free()
 			_pigs.erase(pid)
+
+# Phantoms Köder: gleiches Voxel-Schwein wie sein Besitzer, damit er in der
+# Arena nicht vom echten Eber zu unterscheiden ist.
+func _sync_decoys(delta: float) -> void:
+	var seen := {}
+	for node in get_tree().get_nodes_in_group("phantom_decoy"):
+		var d := node as PhantomDecoy
+		if d == null or not is_instance_valid(d) or not d.is_active():
+			continue
+		var did := d.get_instance_id()
+		seen[did] = true
+		var pig: VoxelBoar = _decoy_pigs.get(did, null)
+		if pig == null:
+			# Gleiches Voxel-Modell wie der Besitzer (Baukasten-Teile, Klassenhut).
+			pig = VoxelBoar.new()
+			add_child(pig)
+			pig.build(VoxelBoar.spec_for_player(d.owner_index, Global.get_team_color(d.team_id),
+				Global.get_player_hero_id(d.owner_index)))
+			_decoy_pigs[did] = pig
+		var size_scale: float = d.scale.x / Player.BASE_CHARACTER_SCALE if Player.BASE_CHARACTER_SCALE > 0.0 else 1.0
+		pig.scale = Vector3.ONE * clampf(size_scale, 0.3, 3.0) * PIG_SCALE
+		pig.global_position = Vector3(d.global_position.x, d.arena_z, d.global_position.y)
+		var aim: Vector2 = d.aim_direction
+		if aim.length_squared() > 0.001:
+			pig.rotation.y = -atan2(aim.y, aim.x)
+		pig.animate(delta, d.velocity.length() > 30.0, false, 1.0, d.velocity, pig.rotation.y, 0.0)
+	for did in _decoy_pigs.keys():
+		if not seen.has(did):
+			(_decoy_pigs[did] as VoxelBoar).queue_free()
+			_decoy_pigs.erase(did)
 
 func _sync_crates() -> void:
 	var lg := get_parent().get_node_or_null("ProceduralLevel") as LevelGenerator
@@ -587,3 +626,66 @@ func _sync_crates() -> void:
 		if broken and crate.visible:
 			crate.visible = false
 			ArenaMode.grid.clear_cell(cell)
+
+# Horden-Modus: Gegner als Voxel-Tiere, Bosse als riesiges Helden-Schwein.
+func _sync_horde(delta: float) -> void:
+	if _beasts.is_empty() and not HordeDirector.is_active():
+		return
+	var seen := {}
+	for node in get_tree().get_nodes_in_group(HordeEnemy.GROUP):
+		var e := node as HordeEnemy
+		if e == null or not is_instance_valid(e) or e.is_dead or e.is_queued_for_deletion():
+			continue
+		var eid := e.get_instance_id()
+		seen[eid] = true
+		var model: Node3D = _beasts.get(eid, null)
+		if model == null:
+			if e.is_boss:
+				var pig := VoxelPig.new()
+				add_child(pig)
+				pig.build(Color(0.62, 0.42, 0.46), Color(0.3, 0.08, 0.1), Color(1.0, 0.25, 0.2), 1.0, e.hero_id, Color(1.0, 0.3, 0.3))
+				model = pig
+			else:
+				var beast := HordeBeast.new()
+				add_child(beast)
+				beast.build(e.kind)
+				model = beast
+			var shadow := MeshInstance3D.new()
+			shadow.mesh = _shadow_mesh
+			shadow.material_override = _shadow_mat
+			add_child(shadow)
+			model.set_meta("shadow", shadow)
+			_beasts[eid] = model
+		var pos := e.global_position
+		model.global_position = Vector3(pos.x, e.arena_z, pos.y)
+		var aim := e.aim_direction
+		if e.velocity.length_squared() > 400.0 and not e.is_boss and e.ai != "ranged" and e.ai != "throw":
+			aim = e.velocity.normalized()
+		if aim.length_squared() > 0.001:
+			model.rotation.y = lerp_angle(model.rotation.y, -atan2(aim.y, aim.x), minf(1.0, delta * 12.0))
+		var frozen := e.freeze_timer > 0.0
+		if model is VoxelPig:
+			var pig2 := model as VoxelPig
+			pig2.scale = Vector3.ONE * e.size * PIG_SCALE
+			pig2.animate(delta, e.velocity.length() > 30.0, false, 1.0, e.velocity, pig2.rotation.y, 0.0)
+			if e.hit_flash > 0.0:
+				pig2.flash()
+			if e.anim_action > 0.0:
+				pig2.recoil(1.0)
+		else:
+			var beast2 := model as HordeBeast
+			beast2.scale = Vector3.ONE * e.size * PIG_SCALE
+			beast2.animate(delta, e.velocity.length(), e.anim_action, e.hit_flash > 0.0, frozen, e.riese)
+		var sh := model.get_meta("shadow") as MeshInstance3D
+		if sh:
+			sh.global_position = Vector3(pos.x, 0.8, pos.y)
+			var lift := clampf(e.arena_z / 120.0, 0.0, 1.0)
+			sh.scale = Vector3.ONE * (e.radius / 16.0) * lerpf(1.0, 0.55, lift)
+	for eid in _beasts.keys():
+		if not seen.has(eid):
+			var m: Node3D = _beasts[eid]
+			var sh2 = m.get_meta("shadow")
+			if sh2 is Node:
+				(sh2 as Node).queue_free()
+			m.queue_free()
+			_beasts.erase(eid)

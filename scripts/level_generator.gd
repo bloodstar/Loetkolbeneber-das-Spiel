@@ -13,6 +13,9 @@ const MAP_HEIGHT: int = 25
 # Generator abfragen können.
 static var map_w: int = MAP_WIDTH
 static var map_h: int = MAP_HEIGHT
+## Weltraum-Maps (Profil "zero_g"): keine Schwerkraft für Spieler, Kugeln
+## und Physikobjekte, Düsensteuerung in alle Richtungen (SpaceMotion).
+static var zero_g: bool = false
 const RUBBER_BAND: float = 320.0
 # Abstand der Spawn-Mitte über der Standfläche. Der Player-Körper reicht etwa
 # 12 px unter seinen Ursprung, sodass die Figur knapp über der Fläche startet
@@ -440,6 +443,100 @@ const MAP_PROFILES: Dictionary = {
 		"crate_powerup_chance": 0.6,
 		"powerups": 3,
 	},
+	# --- Autoscroll- und Weltraum-Karten ------------------------------------
+	"turbotrasse": {
+		# Autoscroll-Strecke: Das Bild fährt nach rechts, die rote Wand hinten
+		# schiebt und verbrennt, wer zurückfällt. Kurze Abzweigungen (Steg
+		# über Gruben, Tunnel unter der Decke, Trittsteine oder Fähre) laufen
+		# wieder zusammen. Am Ende dreht die Strecke von selbst um.
+		"archetype": "layout",
+		"theme": "neon",
+		"backdrop_variant": "foundry",
+		"width": 150,
+		"autoscroll": {"speed": 75.0, "delay": 2.0, "window": 40},
+		"ground_top": [113, 114, 115, 132, 133, 134],
+		"ground_bottom": [132, 133, 134, 113, 114, 115],
+		"platform": [111, 112, 113, 114, 115, 132, 133, 134],
+		"destructible": [12, 13, 14, 15],
+		"strong_vine": [],
+		"weak_vine": [],
+		"decoration": [150, 151, 152, 157, 158, 159],
+		"ice": [],
+		"accent": Color(1.0, 0.55, 0.2, 1.0),
+		"ice_patches": 0,
+		"speed_boosters": 2,
+		"vines": false,
+		"destructibles": 0,
+		"random_platforms": 0,
+		"barrels": 2,
+		"tnt_barrels": 1,
+		"crate_stacks": 3,
+		"crate_powerup_chance": 0.6,
+		"powerups": 3,
+	},
+	"asteroidenfeld": {
+		# Schwerelos: Düsen in alle Richtungen, Schubstoß auf Springen.
+		# Asteroiden treiben durchs Bild, kleine mit leuchtendem Kern
+		# enthalten Powerups, Weltraumquallen jagen die Spieler.
+		"archetype": "layout",
+		"theme": "neon",
+		"backdrop_variant": "space",
+		"width": 54,
+		"height": 30,
+		"no_ground": true,
+		"zero_g": true,
+		"space": {"asteroids": 10, "big": 0.3, "loot": 0.5, "monsters": 2, "monster_delay": 8.0, "drift": [40, 110]},
+		"ground_top": [113, 114, 115, 132, 133, 134],
+		"ground_bottom": [132, 133, 134, 113, 114, 115],
+		"platform": [111, 112, 113, 114, 115, 132, 133, 134],
+		"destructible": [12, 13, 14, 15],
+		"strong_vine": [],
+		"weak_vine": [],
+		"decoration": [150, 151, 152, 157, 158, 159],
+		"ice": [],
+		"accent": Color(0.70, 0.45, 1.0, 1.0),
+		"ice_patches": 0,
+		"vines": false,
+		"destructibles": 0,
+		"random_platforms": 0,
+		"barrels": 0,
+		"tnt_barrels": 1,
+		"crate_stacks": 1,
+		"crate_powerup_chance": 0.5,
+		"powerups": 1,
+	},
+	"kometenjagd": {
+		# Schwerelose Autoscroll-Strecke: Das Fenster fliegt durch einen
+		# Asteroidengürtel, Stationswände teilen die Bahn kurz in Spuren.
+		# Asteroiden kommen von vorn entgegen.
+		"archetype": "layout",
+		"theme": "neon",
+		"backdrop_variant": "space",
+		"width": 140,
+		"height": 28,
+		"no_ground": true,
+		"zero_g": true,
+		"autoscroll": {"speed": 80.0, "delay": 2.0, "window": 40},
+		"space": {"asteroids": 12, "big": 0.25, "loot": 0.5, "monsters": 2, "monster_delay": 9.0, "drift": [50, 130]},
+		"ground_top": [113, 114, 115, 132, 133, 134],
+		"ground_bottom": [132, 133, 134, 113, 114, 115],
+		"platform": [111, 112, 113, 114, 115, 132, 133, 134],
+		"destructible": [12, 13, 14, 15],
+		"strong_vine": [],
+		"weak_vine": [],
+		"decoration": [150, 151, 152, 157, 158, 159],
+		"ice": [],
+		"accent": Color(0.40, 0.85, 1.0, 1.0),
+		"ice_patches": 0,
+		"vines": false,
+		"destructibles": 0,
+		"random_platforms": 0,
+		"barrels": 0,
+		"tnt_barrels": 1,
+		"crate_stacks": 1,
+		"crate_powerup_chance": 0.5,
+		"powerups": 1,
+	},
 	"himmelsleiter": {
 		# Zweites vertikales Level: ein Aufstieg durch die Wolken mit Feder,
 		# Aufzug, Fähre und Wippe. Ein Portal führt vom Boden direkt zum
@@ -831,6 +928,78 @@ const MAP_PROFILES: Dictionary = {
 		"crate_powerup_chance": 0.6,
 		"powerups": 2,
 	},
+	"falltuerburg": {
+		# Burg über einer Stachelgrube mit Falltüren und Orbitalschlag-Platte (Schalter).
+		"archetype": "layout",
+		"theme": "storybook",
+		"backdrop_variant": "dusk",
+		"ground_top": [0, 2, 3, 20, 21, 22, 23],
+		"ground_bottom": [4, 5, 6, 24, 25, 26],
+		"platform": [1, 24, 25, 26, 30, 40, 42, 130, 131, 146, 147],
+		"destructible": [12, 13, 14, 15],
+		"strong_vine": [],
+		"weak_vine": [],
+		"decoration": [124, 125, 126, 127, 128],
+		"ice": [],
+		"accent": Color(1.0, 0.62, 0.3, 1.0),
+		"ice_patches": 0,
+		"vines": false,
+		"destructibles": 0,
+		"random_platforms": 0,
+		"barrels": 1,
+		"tnt_barrels": 1,
+		"crate_stacks": 1,
+		"crate_powerup_chance": 0.6,
+		"powerups": 2,
+	},
+	"laserlabor": {
+		# Neon-Labor mit Laserschranken, Hebeln und Tresor hinter Laserwänden (Schalter).
+		"archetype": "layout",
+		"theme": "neon",
+		"backdrop_variant": "foundry",
+		"ground_top": [113, 114, 115, 132, 133, 134],
+		"ground_bottom": [132, 133, 134, 113, 114, 115],
+		"platform": [111, 112, 113, 114, 115, 132, 133, 134],
+		"destructible": [12, 13, 14, 15],
+		"strong_vine": [],
+		"weak_vine": [],
+		"decoration": [150, 151, 152, 157, 158, 159],
+		"ice": [],
+		"accent": Color(1.0, 0.3, 0.55, 1.0),
+		"ice_patches": 0,
+		"vines": false,
+		"destructibles": 0,
+		"random_platforms": 0,
+		"barrels": 1,
+		"tnt_barrels": 1,
+		"crate_stacks": 1,
+		"crate_powerup_chance": 0.6,
+		"powerups": 2,
+	},
+	"schleusenwerk": {
+		# Tresor mit Schleusentüren, Druckplatten und Falltür über Stacheln (Schalter).
+		"archetype": "layout",
+		"theme": "platine",
+		"backdrop_variant": "circuit",
+		"ground_top": [113, 114, 115, 132, 133, 134],
+		"ground_bottom": [132, 133, 134, 113, 114, 115],
+		"platform": [111, 112, 113, 114, 115, 132, 133, 134],
+		"destructible": [12, 13, 14, 15],
+		"strong_vine": [],
+		"weak_vine": [],
+		"decoration": [150, 151, 152, 157, 158, 159],
+		"ice": [],
+		"accent": Color(0.45, 1.0, 0.6, 1.0),
+		"ice_patches": 0,
+		"vines": false,
+		"destructibles": 0,
+		"random_platforms": 0,
+		"barrels": 1,
+		"tnt_barrels": 0,
+		"crate_stacks": 1,
+		"crate_powerup_chance": 0.6,
+		"powerups": 2,
+	},
 	"kugelmuehle": {
 		# Zwei gegenläufige Windmühlen-Kreuze schleudern herabfallende Kugeln
 		# zur Mitte.
@@ -905,6 +1074,8 @@ var _moving_objects_by_id: Dictionary = {}
 var _mystery_blocks: Array[Node] = []
 var _warp_pipes: Array[Node] = []
 var _next_moving_object_id: int = 1
+# Schalter und ihre Ziele (Türen, Falltüren, Laser, Orbitalschläge).
+var switch_network: SwitchNetwork = SwitchNetwork.new()
 var _spawn_candidates: Array[Dictionary] = []
 var _round_spawn_positions: Array[Vector2] = []
 var _round_spawn_total: int = 0
@@ -917,6 +1088,12 @@ var _crate_drops_spawned: int = 0
 var active_level_modifiers: Array[String] = []
 # Seitenflächen aller festen Blöcke (räumliche Tiefe), siehe LevelDepth.
 var level_depth: LevelDepth = null
+# Autoscroll-Strecke (Profil/Arena-Karte "autoscroll") und Weltraum-Regie.
+var auto_scroll: AutoScroll = null
+var space_director: SpaceDirector = null
+# Spawn-Spalten der Autoscroll-Strecke (Startfenster), sonst -1.
+var _spawn_col_min: int = -1
+var _spawn_col_max: int = -1
 
 func _ready() -> void:
 	_load_textures()
@@ -1005,6 +1182,12 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 		child.queue_free()
 	
 	level_depth = null
+	auto_scroll = null
+	AutoScroll.current = null
+	space_director = null
+	_spawn_col_min = -1
+	_spawn_col_max = -1
+	zero_g = false
 	_solid_cells.clear()
 	_special_cells.clear()
 	_object_cells.clear()
@@ -1017,6 +1200,7 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 	_moving_objects.clear()
 	_moving_objects_by_id.clear()
 	_next_moving_object_id = 1
+	switch_network.clear()
 	_mystery_blocks.clear()
 	_warp_pipes.clear()
 	_spawn_candidates.clear()
@@ -1041,12 +1225,16 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 	# Arena-Modus (Draufsicht): eigener Aufbau aus ArenaMaps, ohne 2D-Grafik.
 	if ArenaMaps.is_arena_map(resolved_map):
 		ArenaBuilder.build(self, resolved_map, level_seed)
+		var arena_data := ArenaMaps.get_map(resolved_map)
+		_setup_auto_scroll(arena_data.get("autoscroll", {}), arena_data.get("scroll_fields", []))
 		return
 	ArenaBuilder.deactivate(self)
 	_apply_tileset(resolved_map)
 	var profile: Dictionary = SideLevels.profile(current_map_id)
 	map_w = int(profile.get("width", MAP_WIDTH))
 	map_h = int(profile.get("height", MAP_HEIGHT))
+	zero_g = bool(profile.get("zero_g", false))
+	ArenaBuilder.set_world_gravity(self, not zero_g)
 	_build_theme_backdrop(level_seed)
 	
 	# 1. Boden: obere Grasschicht + Erde. Keine Seiten- oder Deckenwände –
@@ -1056,6 +1244,9 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 	var layout: Dictionary = SideLevels.layout(current_map_id)
 	for gap in layout.get("ground_gaps", []):
 		_cut_ground(int(gap[0]), int(gap[1]))
+	# Weltraum: kein Boden, nur schwebende Stationen aus dem Bauplan.
+	if bool(profile.get("no_ground", false)):
+		_cut_ground(0, map_w - 1)
 	var segment_start := -1
 	for x in range(map_w + 1):
 		var is_gap := x >= map_w or _ground_gap_columns.has(x)
@@ -1072,6 +1263,8 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 		_generate_crate_fortress_arena()
 	else:
 		_build_layout(layout)
+	# 2b. Autoscroll-Strecke: Fenster, Effektfelder und Spawn-Bereich.
+	_setup_auto_scroll(profile.get("autoscroll", {}), layout.get("scroll_fields", []))
 	
 	# 3. Zusätzliche, gespiegelte Plattformen für mehr Varianz
 	_add_random_platforms(int(profile.get("random_platforms", 3)))
@@ -1106,6 +1299,53 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 		_build_rubber_boundary()
 	if level_depth != null:
 		level_depth.bake()
+
+	# 9. Weltraum: Asteroiden und Monster (Host simuliert, Clients folgen).
+	var space_cfg: Dictionary = profile.get("space", {})
+	if not space_cfg.is_empty():
+		space_director = SpaceDirector.new()
+		space_director.name = "SpaceDirector"
+		space_director.setup(self, space_cfg, level_seed)
+		add_child(space_director)
+
+## Legt die Autoscroll-Strecke an (cfg leer = keine). Begrenzt die Spawns auf
+## das Startfenster.
+func _setup_auto_scroll(cfg: Dictionary, field_entries: Array) -> void:
+	if cfg.is_empty():
+		return
+	auto_scroll = AutoScroll.new()
+	auto_scroll.name = "AutoScroll"
+	auto_scroll.is_replica = Global.network_mode and not Global.is_local_host()
+	auto_scroll.setup(cfg, field_entries, Vector2(float(map_w), float(map_h)) * TILE_SIZE, TILE_SIZE)
+	add_child(auto_scroll)
+	# Felder frei halten: keine Kisten, Fässer oder Powerups darauf.
+	for f in auto_scroll.fields:
+		var r: Rect2 = f["rect"]
+		_reserve_rect(int(r.position.x / TILE_SIZE) - 1, int(r.end.x / TILE_SIZE),
+			int(r.position.y / TILE_SIZE), int(r.end.y / TILE_SIZE) - 1)
+	var lo := auto_scroll.left_edge() / TILE_SIZE
+	var hi := auto_scroll.right_edge() / TILE_SIZE
+	# Hinten etwas mehr Luft als vorn, damit niemand direkt an der Kante startet.
+	if auto_scroll.dir > 0.0:
+		_spawn_col_min = int(ceil(lo + 4.0))
+		_spawn_col_max = int(floor(hi - 8.0))
+	else:
+		_spawn_col_min = int(ceil(lo + 8.0))
+		_spawn_col_max = int(floor(hi - 4.0))
+
+func start_auto_scroll() -> void:
+	if auto_scroll != null and is_instance_valid(auto_scroll):
+		auto_scroll.start()
+
+func get_auto_scroll_snapshot() -> Dictionary:
+	if auto_scroll == null or not is_instance_valid(auto_scroll):
+		return {}
+	return auto_scroll.get_network_state()
+
+func apply_auto_scroll_snapshot(data: Dictionary) -> void:
+	if data.is_empty() or auto_scroll == null or not is_instance_valid(auto_scroll):
+		return
+	auto_scroll.apply_network_state(data)
 
 func get_map_width() -> int:
 	return map_w
@@ -1246,6 +1486,8 @@ func _is_spawn_surface_clear(cell: Vector2i) -> bool:
 	if cell.y < 2 or cell.y >= map_h - 1:
 		return false
 	if cell.y < int(SideLevels.profile(current_map_id).get("spawn_min_row", 0)):
+		return false
+	if _spawn_col_min >= 0 and (cell.x < _spawn_col_min or cell.x > _spawn_col_max):
 		return false
 	if not _solid_cells.has(cell):
 		return false
@@ -1405,14 +1647,30 @@ func is_spawn_position_clear(world_position: Vector2) -> bool:
 #  crate_chains: [ax, ay, bx, by, [kistengrößen](, durchhang)]  Kistenkette zwischen zwei
 #             Ankern (Kachel-Koordinaten als Kommazahl, z. B. Plattformkante oder Kartenrand);
 #             bx = -1: hängt frei von A herab, by ist dann die Länge in Kacheln
+#  switches: [x, y, kanal, art, modus, dauer_s(, sperre_s)]  Schalter (Kacheln als Kommazahl).
+#             art "lever" = Hebel, Mitte bei (x, y), wird angeschossen/geschlagen;
+#             art "plate" = Bodenplatte, Mitte x auf der Oberkante von Reihe y, reagiert
+#             auf Spieler/Kisten/Kugeln. modus "timed" (an für dauer_s) oder "toggle"
+#             (erneuter Treffer schaltet aus, spätestens nach dauer_s). Danach sperre_s
+#             gesperrt (Standard 3 s). Gespiegelte Kopie: Kanal + 100.
+#  gates:     [x_start, x_end, y_start, y_end, kanal, art(, invert)]  Tür ("door",
+#             senkrecht) oder Falltür ("hatch", waagrecht) über die Zellen. invert 1 = offen,
+#             Schalter schließt. Liegt sie mittig auf der Achse, hört sie auf beide Seiten.
+#  lasers:    [ax, ay, bx, by, kanal(, invert)]  Laserschranke zwischen zwei Punkten
+#             (Kacheln als Kommazahl). invert 1 = normal an, Schalter schaltet ab.
+#  strikes:   [ax, ay, bx, by, kanal]  Orbitallaser entlang der Linie beim Einschalten.
 #  chain_grids: [[spalten_x], [reihen_y], kistengröße]  Kettengitter: senkrechte Ketten
 #             von der Decke, waagrechte zwischen den äußeren Spalten, an jeder Kreuzung
 #             eine Kiste (nicht gespiegelt, die Spalten liegen selbst symmetrisch)
 const LAYOUTS: Dictionary = {
 	"grasarena": {
+		# Mittelbalken mit Falltür über den Stacheln: Hebel unter den Balken
+		# links und rechts öffnen sie für 4 s.
 		"mirror": true,
-		"platforms": [[3, 10, 20], [8, 13, 17], [18, 25, 17], [3, 7, 14], [12, 16, 14],
+		"platforms": [[3, 10, 20], [8, 13, 17], [18, 19, 17], [3, 7, 14], [12, 16, 14],
 			[2, 6, 8], [12, 16, 8]],
+		"gates": [[20, 23, 17, 17, 0, "hatch"]],
+		"switches": [[14.5, 15.7, 0, "lever", "timed", 4.0, 4.0]],
 		"oneway": [[8, 12, 11]],
 		"pads": [[18, 16]],
 		"mystery": [[4, 4]],
@@ -1452,6 +1710,9 @@ const LAYOUTS: Dictionary = {
 		"spikes": [[13, 22]],
 		"pipes": [[1, 22, 42, 22]],
 		"chains": [[13.0, 0, 6, 4]],
+		# Senkrechter Laser durch die Mitte, Hebel unter den Einweg-Stegen.
+		"lasers": [[22.0, 9.0, 22.0, 23.0, 0]],
+		"switches": [[12.5, 12.6, 0, "lever", "timed", 4.0, 5.0]],
 	},
 	"weite": {
 		"mirror": true,
@@ -1564,6 +1825,52 @@ const LAYOUTS: Dictionary = {
 			[16, 32, 4, 8, 0, 7.0, 0.0],
 		],
 	},
+	"turbotrasse": {
+		# 150 Kacheln, Boden auf Reihe 23. Abschnitte:
+		#   0-37    Start (Spawns nur im Startfenster), Turbo am Boden (x 34)
+		#   38-62   Abzweigung A: Steg (Reihe 17) über zwei Gruben, auf dem
+		#           Steg ein Umkehrfeld; unten Gruben und Stachel
+		#   63-80   Treppenpyramide, darüber Plattform mit Umkehrfeld
+		#   78-102  Abzweigung B: Tunnel unter der Decke (Turbo im Tunnel)
+		#           oder oben über die Decke mit zwei Plattformen
+		#   103-122 Abzweigung C: große Grube, Trittsteine (Umkehrfeld) oder Fähre
+		#   123-149 Ziel, Turbo auf der hohen Plattform
+		"mirror": false,
+		"ground_gaps": [[43, 46], [52, 55], [108, 114]],
+		"platforms": [[5, 9, 20], [25, 29, 20], [38, 41, 20], [42, 56, 17], [57, 60, 20],
+			[67, 71, 16], [83, 100, 19], [86, 90, 16], [94, 98, 16],
+			[104, 107, 20], [110, 113, 17], [116, 119, 20],
+			[126, 131, 20], [134, 138, 17], [141, 146, 20]],
+		"oneway": [[13, 19, 17], [78, 81, 20]],
+		"stairs": [[63, 66, 1, 4], [72, 75, 4, 1]],
+		"mystery": [[27, 16], [88, 12], [143, 16]],
+		"spikes": [[49, 22], [124, 22]],
+		"reserve": [[83, 100, 20, 22], [42, 56, 14, 16]],
+		"movers": [[108, 22, 3, 4, 0, 4.0, 0.0]],
+		"scroll_fields": [
+			[34, 21, 2, "turbo"], [48, 14, 3, "reverse"], [69, 13, 3, "reverse"],
+			[91, 20, 3, "turbo"], [111, 14, 3, "reverse"], [136, 14, 3, "turbo"],
+		],
+	},
+	"asteroidenfeld": {
+		# Schwebende Stationen (gespiegelt), dazwischen freier Raum.
+		"mirror": true,
+		"platforms": [[5, 10, 8], [4, 9, 23], [16, 20, 15], [24, 29, 6], [24, 29, 25]],
+		"oneway": [[11, 14, 19]],
+		"mystery": [[26, 2]],
+	},
+	"kometenjagd": {
+		# Start mit Stationen im ersten Fenster, danach Stationswände, die die
+		# Bahn kurz in Spuren teilen (oben/unten, Tor, Korridor, Pfeiler).
+		"mirror": false,
+		"platforms": [[6, 11, 10], [6, 11, 20], [18, 24, 15], [28, 32, 7], [28, 32, 23]],
+		"walls": [[45, 58, 12, 15], [75, 77, 0, 9], [75, 77, 19, 27],
+			[95, 110, 6, 8], [95, 110, 20, 22], [125, 127, 8, 20]],
+		"scroll_fields": [
+			[52, 3, 6, "turbo"], [52, 18, 6, "reverse"],
+			[102, 1, 4, "reverse"], [102, 23, 4, "turbo"],
+		],
+	},
 	"gletscherpass": {
 		# Zweites Scroll-Level: vereiste Gruben, Aufzüge im Abgrund, eine
 		# hängende Wippe über der Höhle und eine Kettenplattform am Ende.
@@ -1620,6 +1927,10 @@ const LAYOUTS: Dictionary = {
 		# Zwischendecke. Kistenkette vom Rand zur Plattform, Kisten an Fäden.
 		"mirror": true,
 		"houses": [[14, 29, 23]],
+		# Untere Mitteltür ist zu, ein Hebel in jedem unteren Raum öffnet sie
+		# für 6 s. Die obere Tür steht offen; die Hebel oben schließen sie.
+		"gates": [[21, 22, 21, 22, 0, "door"], [21, 22, 15, 16, 1, "door", 1]],
+		"switches": [[20.55, 19.5, 0, "lever", "timed", 6.0, 3.0], [20.55, 14.0, 1, "lever", "timed", 5.0, 4.0]],
 		"platforms": [[2, 6, 20], [7, 10, 17], [7, 10, 11]],
 		"oneway": [[2, 6, 14], [2, 6, 8]],
 		"mystery": [[4, 4]],
@@ -1744,6 +2055,68 @@ const LAYOUTS: Dictionary = {
 		"oneway": [[0, 2, 16], [0, 2, 13], [0, 2, 10], [19, 24, 18]],
 		"ball_chains": [[3.0, 7.15, 41.0, 7.15, 1.0, 0.9, 0.15, 0.4]],
 	},
+	"falltuerburg": {
+		# Burg über einer Stachelgrube: Die breite Brücke in der Mitte ist eine
+		# Falltür. Hebel unter den Seitenbalken öffnen sie für 3 s. Oben je
+		# eine Falltür-Bastion, deren Hebel auf der Gegenseite hängt. Wer auf
+		# der Platte ganz oben steht, ruft einen Orbitalschlag auf die andere
+		# Kartenseite.
+		"mirror": true,
+		"platforms": [[1, 4, 20], [11, 15, 20], [5, 9, 17], [9, 12, 14], [2, 7, 11], [10, 16, 8], [19, 21, 6]],
+		"spikes": [[18, 22], [19, 22], [20, 22], [21, 22]],
+		"gates": [[16, 27, 20, 20, 0, "hatch"], [27, 30, 14, 14, 1, "hatch"]],
+		"switches": [
+			[12.5, 21.7, 0, "lever", "timed", 3.0, 5.0],
+			[4.5, 12.7, 1, "lever", "timed", 4.0, 4.0],
+			[20.5, 6.0, 2, "plate", "timed", 1.0, 8.0],
+		],
+		"strikes": [[38.5, 0.0, 38.5, 23.0, 2]],
+		"mystery": [[5, 4]],
+	},
+	"laserlabor": {
+		# Neon-Labor voller Laserschranken. Am Boden ein langer Laser in
+		# Knöchelhöhe (drüberspringen!), auf den Seitenbalken je ein Laser,
+		# dessen Hebel auf der Gegenseite hängt. Oben ein Tresor mit
+		# Herz-Blöcken hinter zwei Laserwänden: der Hebel schaltet die eigene
+		# Wand ab, ein zweiter Treffer wieder an.
+		"mirror": true,
+		"platforms": [[3, 9, 20], [14, 18, 20], [8, 13, 17], [2, 7, 14], [16, 20, 14], [9, 14, 11],
+			[2, 6, 8], [17, 26, 8], [9, 13, 5]],
+		"lasers": [
+			[15.0, 22.45, 29.0, 22.45, 0],
+			[36.1, 13.65, 42.9, 13.65, 2],
+			[17.0, 0.5, 17.0, 8.0, 1, 1],
+		],
+		"switches": [
+			[11.0, 18.7, 0, "lever", "timed", 3.5, 4.0],
+			[12.0, 12.7, 2, "lever", "timed", 3.0, 4.0],
+			[4.0, 9.7, 1, "lever", "toggle", 8.0, 2.0],
+		],
+		"mystery": [[21, 4]],
+	},
+	"schleusenwerk": {
+		# Tresor in der Mitte mit zwei Schleusentüren und einer Falltür als
+		# Boden über Stacheln. Die Bodenplatte vor der Tür hält sie offen,
+		# solange jemand draufsteht (danach noch 2,5 s). Innen öffnet ein
+		# Hebel die Tür, außen an der Wand lässt ein Hebel den Boden fallen.
+		# Über dem Dach ein Laser, ganz oben eine Platte für einen Bodenlaser
+		# quer über die gegnerische Hälfte.
+		"mirror": true,
+		"platforms": [[11, 17, 20], [4, 9, 17], [10, 14, 14], [3, 8, 11], [10, 15, 8], [19, 21, 8], [17, 26, 12]],
+		"walls": [[17, 17, 13, 17]],
+		"gates": [[17, 17, 18, 19, 1, "door"], [18, 25, 20, 20, 0, "hatch"]],
+		"spikes": [[19, 22], [20, 22], [21, 22]],
+		"lasers": [[17.0, 11.6, 27.0, 11.6, 2]],
+		"strikes": [[24.0, 22.5, 43.5, 22.5, 3]],
+		"switches": [
+			[14.5, 20.0, 1, "plate", "timed", 2.5, 1.0],
+			[18.6, 15.5, 1, "lever", "timed", 3.0, 2.0],
+			[16.4, 15.0, 0, "lever", "timed", 3.0, 6.0],
+			[5.5, 12.7, 2, "lever", "timed", 3.5, 4.0],
+			[20.5, 8.0, 3, "plate", "timed", 1.0, 9.0],
+		],
+		"mystery": [[20, 16]],
+	},
 	"kugelmuehle": {
 		# Zwei Windmühlen-Kreuze drehen sich gegenläufig. Aus Trichtern
 		# neben den Naben fallen alle 5 s Kugeln auf die Flügel; die heben
@@ -1820,6 +2193,7 @@ func _build_layout(layout: Dictionary) -> void:
 				_spawn_moving_platform(mx0, int(entry[1]), width, -float(entry[3]), float(entry[4]), float(entry[5]), float(entry[6]))
 	for entry in layout.get("rotators", []):
 		_spawn_rotator_mirrored(entry, mirror)
+	_build_switch_layout(layout, mirror)
 
 func _for_mirrored(x: int, mirror: bool, action: Callable) -> void:
 	action.call(x)
@@ -3434,6 +3808,131 @@ func _spawn_rotator(center: Vector2, arm: float, tail: float, period: float, pha
 				_reserved_cells[Vector2i(x, y)] = true
 				_object_cells[Vector2i(x, y)] = true
 
+# --- Schalter -------------------------------------------------------------------
+
+## Schalter, Türen, Laser und Orbitalschläge aus dem Bauplan. Ziele werden
+## vor den Schaltern erzeugt; die Reihenfolge der net_ids ist auf Host und
+## Client gleich, weil beide denselben Bauplan abarbeiten.
+func _build_switch_layout(layout: Dictionary, mirror: bool) -> void:
+	for entry in layout.get("gates", []):
+		_spawn_gate_mirrored(entry, mirror)
+	for entry in layout.get("lasers", []):
+		_spawn_line_target_mirrored(entry, mirror, "laser")
+	for entry in layout.get("strikes", []):
+		_spawn_line_target_mirrored(entry, mirror, "strike")
+	for entry in layout.get("switches", []):
+		var cx := float(entry[0])
+		_spawn_switch(entry, cx, int(entry[2]), 1.0)
+		if mirror and absf(float(map_w) - cx - cx) > 0.01:
+			_spawn_switch(entry, float(map_w) - cx, int(entry[2]) + SwitchNetwork.MIRROR_OFFSET, -1.0)
+
+func _spawn_switch(entry: Array, cx: float, channel: int, facing: float) -> void:
+	var sw := LevelSwitch.new()
+	sw.kind = str(entry[3])
+	sw.mode = str(entry[4]) if entry.size() > 4 else "timed"
+	sw.duration = float(entry[5]) if entry.size() > 5 else 6.0
+	sw.cooldown = float(entry[6]) if entry.size() > 6 else 3.0
+	sw.channel = channel
+	sw.facing = facing
+	var cy := float(entry[1])
+	sw.position = Vector2(cx, cy) * TILE_SIZE
+	_register_moving_object(sw)
+	switch_network.add_switch(sw)
+	add_child(sw)
+	var cell := Vector2i(int(floor(cx)), int(floor(cy)))
+	if sw.kind == "plate":
+		# Platte liegt auf der Oberkante von Reihe cy: die Zelle darüber und
+		# die Nachbarn freihalten (keine Kisten, Deko oder Spawns darauf).
+		for dx in [-1, 0, 1]:
+			var c := Vector2i(cell.x + dx, int(round(cy)) - 1)
+			_object_cells[c] = true
+			_reserved_cells[c] = true
+	else:
+		_object_cells[cell] = true
+
+func _spawn_gate_mirrored(entry: Array, mirror: bool) -> void:
+	var x0 := int(entry[0])
+	var x1 := int(entry[1])
+	var ch := int(entry[4])
+	var mx0 := _layout_mirror_x(x1)
+	var mx1 := _layout_mirror_x(x0)
+	if mirror and mx0 == x0:
+		_spawn_gate(x0, x1, entry, [ch, ch + SwitchNetwork.MIRROR_OFFSET])
+		return
+	_spawn_gate(x0, x1, entry, [ch])
+	if mirror and (mx0 > x1 or mx1 < x0):
+		_spawn_gate(mx0, mx1, entry, [ch + SwitchNetwork.MIRROR_OFFSET])
+
+func _spawn_gate(x0: int, x1: int, entry: Array, channels: Array) -> void:
+	var y0 := int(entry[2])
+	var y1 := int(entry[3])
+	var gate := SwitchGate.new()
+	gate.kind = str(entry[5])
+	gate.invert = entry.size() > 6 and int(entry[6]) == 1
+	gate.channels = channels
+	gate.size_px = Vector2(float(x1 - x0 + 1), float(y1 - y0 + 1)) * TILE_SIZE
+	if gate.kind == "hatch":
+		# Falltür: so dick wie ein Einweg-Steg, oben in der Zelle.
+		gate.size_px.y = 16.0
+	if not platform_textures.is_empty():
+		gate.tile_texture = platform_textures[0]
+	gate.position = Vector2(float(x0), float(y0)) * TILE_SIZE
+	_register_moving_object(gate)
+	switch_network.add_target(gate)
+	add_child(gate)
+	for x in range(x0, x1 + 1):
+		for y in range(y0 - (1 if gate.kind == "hatch" else 0), y1 + 1):
+			_object_cells[Vector2i(x, y)] = true
+			_reserved_cells[Vector2i(x, y)] = true
+
+## Laser und Orbitalschläge: Linie zwischen zwei Punkten (Kacheln). Eine
+## Linie, die auf sich selbst gespiegelt wird, entsteht nur einmal und hört
+## auf beide Seiten.
+func _spawn_line_target_mirrored(entry: Array, mirror: bool, what: String) -> void:
+	var a := Vector2(float(entry[0]), float(entry[1]))
+	var b := Vector2(float(entry[2]), float(entry[3]))
+	var ch := int(entry[4])
+	if not mirror:
+		_spawn_line_target(a, b, entry, [ch], what)
+		return
+	var ma := Vector2(float(map_w) - a.x, a.y)
+	var mb := Vector2(float(map_w) - b.x, b.y)
+	var self_mirrored := (ma.distance_to(b) < 0.01 and mb.distance_to(a) < 0.01) \
+		or (ma.distance_to(a) < 0.01 and mb.distance_to(b) < 0.01)
+	if self_mirrored:
+		_spawn_line_target(a, b, entry, [ch, ch + SwitchNetwork.MIRROR_OFFSET], what)
+		return
+	_spawn_line_target(a, b, entry, [ch], what)
+	_spawn_line_target(ma, mb, entry, [ch + SwitchNetwork.MIRROR_OFFSET], what)
+
+func _spawn_line_target(a: Vector2, b: Vector2, entry: Array, channels: Array, what: String) -> void:
+	var pa := a * TILE_SIZE
+	var pb := b * TILE_SIZE
+	if what == "laser":
+		var laser := SwitchLaser.new()
+		laser.point_a = pa
+		laser.point_b = pb
+		laser.invert = entry.size() > 5 and int(entry[5]) == 1
+		laser.channels = channels
+		_register_moving_object(laser)
+		switch_network.add_target(laser)
+		add_child(laser)
+		# Strahlbahn freihalten: keine Kisten, Spawns oder Zufallsbalken.
+		var steps := maxi(1, int(ceil(pa.distance_to(pb) / (TILE_SIZE * 0.5))))
+		for i in range(steps + 1):
+			var p := pa.lerp(pb, float(i) / float(steps))
+			var c := Vector2i(int(floor(p.x / TILE_SIZE)), int(floor(p.y / TILE_SIZE)))
+			_object_cells[c] = true
+			_reserved_cells[c] = true
+	else:
+		var strike := SwitchStrike.new()
+		strike.point_a = pa
+		strike.point_b = pb
+		strike.channels = channels
+		strike.is_replica = Global.network_mode and not Global.is_local_host()
+		switch_network.add_target(strike)
+		add_child(strike)
+
 # --- Kletterhilfe für Bots ----------------------------------------------------
 
 func _is_bot_surface(cell: Vector2i) -> bool:
@@ -3583,6 +4082,13 @@ func _instantiate_moving_object_from_snapshot(data: Dictionary) -> Node:
 			obj = RollingBall.new()
 			obj.set("ball_material", str(data.get("mat", "wood")))
 			obj.set("ball_size", float(data.get("size", 1.0)))
+		"asteroid":
+			obj = Asteroid.new()
+			obj.set("size_class", int(data.get("size", 2)))
+			obj.set("loot", bool(data.get("loot", false)))
+			obj.set("shape_seed", int(data.get("seed", 1)))
+		"space_monster":
+			obj = SpaceMonster.new()
 		_:
 			return null
 	obj.set("is_replica", true)
@@ -3941,6 +4447,52 @@ func spawn_ball(world_position: Vector2, ball_mat: String, size: float, start_ve
 	_register_moving_object(ball)
 	add_child(ball)
 	return ball
+
+## Weltraum: Asteroid als Map-Objekt mit Netzwerk-ID (nur Host zur Laufzeit).
+func spawn_asteroid(world_position: Vector2, size_class: int, velocity: Vector2, loot: bool) -> Asteroid:
+	var a := Asteroid.new()
+	a.size_class = clampi(size_class, 1, 3)
+	a.loot = loot
+	a.shape_seed = randi() % 100000 + 1
+	a.position = world_position
+	a.linear_velocity = velocity
+	a.angular_velocity = randf_range(-1.2, 1.2) / float(a.size_class)
+	a.asteroid_broken.connect(_on_asteroid_broken)
+	_register_moving_object(a)
+	add_child(a)
+	return a
+
+func spawn_space_monster(world_position: Vector2) -> SpaceMonster:
+	var m := SpaceMonster.new()
+	m.position = world_position
+	m.monster_died.connect(_on_space_monster_died)
+	_register_moving_object(m)
+	add_child(m)
+	return m
+
+# Große Asteroiden zerfallen in zwei kleinere, kleine mit Schatz-Kern lassen
+# ein Powerup frei.
+func _on_asteroid_broken(world_position: Vector2, size_class: int, loot: bool, velocity: Vector2) -> void:
+	if size_class > 1:
+		var side := velocity.orthogonal().normalized()
+		if side == Vector2.ZERO:
+			side = Vector2.UP
+		var spread := Asteroid.SPLIT_SPEED
+		for s in [-1.0, 1.0]:
+			var child_loot := size_class == 2 and randf() < Asteroid.SPLIT_LOOT_CHANCE
+			var offset: Vector2 = side * s * Asteroid.radius_for(size_class - 1)
+			call_deferred("spawn_asteroid", world_position + offset, size_class - 1,
+				velocity * 0.7 + side * s * spread, child_loot)
+	elif loot:
+		var kind := _random_powerup_kind()
+		if not kind.is_empty():
+			call_deferred("_spawn_powerup_at", world_position, kind)
+
+func _on_space_monster_died(world_position: Vector2) -> void:
+	if randf() < SpaceMonster.POWERUP_CHANCE:
+		var kind := _random_powerup_kind()
+		if not kind.is_empty():
+			call_deferred("_spawn_powerup_at", world_position, kind)
 
 func get_ball_count() -> int:
 	var count := 0

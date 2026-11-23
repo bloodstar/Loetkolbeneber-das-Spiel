@@ -30,6 +30,17 @@ const DEVIL_LINE_MARGIN: float = 34.0
 var _devil: Dictionary = {}
 var _devil_aim: Vector2 = Vector2.INF
 
+# Schalter: Lohnt sich ein Hebel (Falltür unter dem Gegner, Laser auf ihm,
+# Tür im Weg), schießt der Bot darauf; eine lohnende Bodenplatte in der Nähe
+# läuft er an. Aktive Laser und Warnlinien meidet er.
+const SWITCH_SCAN_TIME: float = 0.35
+const SWITCH_SHOOT_RANGE: float = 620.0
+const SWITCH_MIN_VALUE: float = 0.9
+const LASER_ESCAPE_DIST: float = 70.0
+var _switch_aim: Vector2 = Vector2.INF
+var _plate_goal: Vector2 = Vector2.INF
+var _switch_scan_timer: float = 0.0
+
 func _ready() -> void:
 	if not player:
 		player = get_parent() as Player
@@ -53,23 +64,33 @@ func _physics_process(delta: float) -> void:
 		block_decision_timer -= delta
 	
 	# Ziel wählen: der nächstgelegene lebende Gegner (FFA-tauglich).
-	# Unsichtbare Gegner (Powerup) werden nicht anvisiert.
-	if not target or not is_instance_valid(target) or target.current_health <= 0.0 or target.is_invisible():
+	# Unsichtbare Gegner (Powerup, Phantom) werden nicht anvisiert, außer sie
+	# haben einen Köder stehen: auf den fällt der Bot herein.
+	if not target or not is_instance_valid(target) or target.current_health <= 0.0 or _is_hidden(target):
 		target = _find_nearest_opponent()
 
 	if not target or not is_instance_valid(target):
 		return
 
 	_update_devil_aim()
+	_update_switch_goal(delta)
 	_handle_aim(delta)
 	_handle_navigation(delta)
 	_handle_combat(delta)
+
+# Unsichtbar und ohne Köder: für den Bot nicht zu sehen.
+func _is_hidden(p: Player) -> bool:
+	return p.is_invisible() and p.get_lure_target() == p
+
+# Wohin der Bot zielt und läuft: der Köder des Ziels, falls einer steht.
+func target_pos() -> Vector2:
+	return target.get_lure_target().global_position
 
 func _find_nearest_opponent() -> Player:
 	var best: Player = null
 	var best_dist := INF
 	for p in get_tree().get_nodes_in_group("player"):
-		if p == player or not is_instance_valid(p) or p.current_health <= 0.0 or p.is_invisible():
+		if p == player or not is_instance_valid(p) or p.current_health <= 0.0 or _is_hidden(p):
 			continue
 		if p.team_id == player.team_id:
 			continue
@@ -82,7 +103,15 @@ func _find_nearest_opponent() -> Player:
 	return best
 
 func _handle_aim(delta: float) -> void:
-	var goal: Vector2 = _devil_aim if _devil_aim != Vector2.INF else target.global_position
+	var goal: Vector2 = target_pos()
+	if _devil_aim != Vector2.INF:
+		goal = _devil_aim
+	elif _switch_aim != Vector2.INF:
+		# Kleine Ziele: von der Waffe aus zielen, nicht von der Körpermitte,
+		# sonst geht die Kugel knapp über den Hebel hinweg.
+		goal = _switch_aim
+		if player.muzzle != null:
+			goal += player.global_position - player.muzzle.get_parent().global_position
 	var to_target = (_drop_compensated_aim_point(goal) - player.global_position).normalized()
 	# Add slight noisy deviation
 	var noise = Vector2(randf_range(-aim_spread, aim_spread), randf_range(-aim_spread, aim_spread))
@@ -94,8 +123,8 @@ func _handle_aim(delta: float) -> void:
 # geschätzt und einmal nachgerechnet, weil der höhere Zielpunkt weiter weg liegt.
 func _drop_compensated_aim_point(goal: Vector2) -> Vector2:
 	var aim_point: Vector2 = goal
-	if ArenaMode.active:
-		return aim_point # Kugeln fliegen in der Arena flach
+	if ArenaMode.active or LevelGenerator.zero_g:
+		return aim_point # Kugeln fliegen in der Arena und im All flach
 	var speed: float = maxf(player.bullet_speed, 1.0)
 	var gravity: float = Bullet.BULLET_GRAVITY * maxf(0.0, player.projectile_gravity_mult)
 	if gravity <= 0.0:
@@ -137,7 +166,7 @@ func _devil_in_line_of_fire() -> bool:
 			or int(_devil["target_slot"]) == player.player_index:
 		return false
 	var pos: Vector2 = _devil["pos"]
-	var closest := Geometry2D.get_closest_point_to_segment(pos, player.global_position, target.global_position)
+	var closest := Geometry2D.get_closest_point_to_segment(pos, player.global_position, target_pos())
 	return closest.distance_to(pos) < DEVIL_LINE_MARGIN
 
 func _handle_navigation(_delta: float) -> void:
@@ -150,22 +179,34 @@ func _handle_navigation(_delta: float) -> void:
 	if ArenaMode.active:
 		ArenaBot.navigate(self, _delta)
 		return
+	# Weltraum: frei schweben, Asteroiden und Monstern ausweichen.
+	if LevelGenerator.zero_g:
+		_handle_space_navigation(_delta)
+		return
 
 	if _handle_lava_escape(_delta):
 		return
 	if _handle_zone_escape():
 		return
+	if _handle_autoscroll():
+		return
+	if _handle_laser_escape():
+		return
+	if _handle_plate_goal():
+		return
 
-	var diff = target.global_position - player.global_position
+	var diff = target_pos() - player.global_position
 	var dist_x = diff.x
 	var dist_y = diff.y
-	var current_spd = player.move_speed
+	var current_spd = player._current_ground_speed()
 	
-	# Horizontal pursuit / spacing
+	# Horizontal pursuit / spacing. Nahkämpfer gehen auf Schlagdistanz und
+	# weichen bei wenig Leben nicht zurück.
 	var move_input = 0.0
-	if abs(dist_x) > combat_range:
+	var keep_range: float = player.get_melee_reach() * 0.6 if player.is_melee else combat_range
+	if abs(dist_x) > keep_range:
 		move_input = signf(dist_x)
-	elif abs(dist_x) < 80.0 and player.current_health < player.max_health * 0.4:
+	elif not player.is_melee and abs(dist_x) < 80.0 and player.current_health < player.max_health * 0.4:
 		# Low health kite away
 		move_input = -signf(dist_x)
 	else:
@@ -290,12 +331,99 @@ func _handle_zone_escape() -> bool:
 		jump_cooldown = 0.45
 	return true
 
+# --- Autoscroll & Weltraum ---------------------------------------------------
+
+const SCROLL_BEHIND_FRACTION: float = 0.12
+const SPACE_PREFERRED_MIN: float = 220.0
+const SPACE_PREFERRED_MAX: float = 430.0
+const SPACE_HAZARD_RANGE: float = 150.0
+const SPACE_EDGE_MARGIN: float = 130.0
+
+## Autoscroll: Liegt der Bot zu weit hinten im Fenster, läuft er nach vorn
+## und springt über Gruben und Wände, statt dem Gegner zu folgen.
+func _handle_autoscroll() -> bool:
+	var s := AutoScroll.current
+	if s == null or not is_instance_valid(s) or not s.running:
+		return false
+	if s.relative_x(player.global_position.x) > -s.window_w * SCROLL_BEHIND_FRACTION:
+		return false
+	var speed := player.move_speed
+	var move_input := _avoid_ground_hazards(s.dir)
+	player.velocity.x = move_toward(player.velocity.x, move_input * speed, speed * 0.25)
+	if jump_cooldown <= 0.0 and player.is_on_floor() and (player.is_on_wall() or _gap_ahead(s.dir)):
+		player.jump()
+		jump_cooldown = 0.35
+	elif jump_cooldown <= 0.0 and player.is_on_wall():
+		player.jump()
+		jump_cooldown = 0.35
+	return true
+
+## Kein Boden kurz vor dem Bot (Grube).
+func _gap_ahead(facing: float) -> bool:
+	var space := player.get_world_2d().direct_space_state
+	var from := player.global_position + Vector2(facing * 46.0, 0.0)
+	var query := PhysicsRayQueryParameters2D.create(from, from + Vector2(0.0, 140.0), 1)
+	query.exclude = [player.get_rid()]
+	return space.intersect_ray(query).is_empty()
+
+## Bots in Schwerelosigkeit: Abstand zum Ziel halten, seitlich kreisen,
+## Asteroiden, Monstern und dem Kartenrand ausweichen. Schubstoß bei
+## naher Gefahr.
+func _handle_space_navigation(delta: float) -> void:
+	var pos := player.global_position
+	var to_target := target.global_position - pos
+	var dist := to_target.length()
+	var strafe := 1.0 if int(Time.get_ticks_msec() / 1700 + player.player_index) % 2 == 0 else -1.0
+	var dir := Vector2.ZERO
+	if dist > SPACE_PREFERRED_MAX:
+		dir = to_target.normalized()
+	elif dist < SPACE_PREFERRED_MIN or player.current_health < player.max_health * 0.35:
+		dir = -to_target.normalized() + to_target.orthogonal().normalized() * strafe * 0.5
+	else:
+		dir = to_target.orthogonal().normalized() * strafe + to_target.normalized() * 0.1
+	var s := AutoScroll.current
+	if s != null and is_instance_valid(s) and s.running:
+		var rel := s.relative_x(pos.x)
+		if rel < -s.window_w * SCROLL_BEHIND_FRACTION:
+			dir = Vector2(s.dir, 0.0) * 1.5 + dir * 0.3
+		elif rel > s.window_w * 0.3:
+			dir += Vector2(-s.dir, 0.0)
+	var danger := 0.0
+	for node in get_tree().get_nodes_in_group("space_hazard"):
+		var hazard := node as Node2D
+		if hazard == null or not is_instance_valid(hazard):
+			continue
+		var away := pos - hazard.global_position
+		var reach := SPACE_HAZARD_RANGE + float(hazard.get("hazard_radius") if hazard.get("hazard_radius") != null else 30.0)
+		var d := away.length()
+		if d < reach and d > 0.01:
+			var w := 1.0 - d / reach
+			dir += away / d * w * 2.2
+			danger = maxf(danger, w)
+	var map_px := Vector2(float(LevelGenerator.map_w), float(LevelGenerator.map_h)) * LevelGenerator.TILE_SIZE
+	if pos.x < SPACE_EDGE_MARGIN:
+		dir.x += 1.5
+	elif pos.x > map_px.x - SPACE_EDGE_MARGIN:
+		dir.x -= 1.5
+	if pos.y < SPACE_EDGE_MARGIN:
+		dir.y += 1.5
+	elif pos.y > map_px.y - SPACE_EDGE_MARGIN:
+		dir.y -= 1.5
+	if player.is_on_wall() or player.is_on_floor() or player.is_on_ceiling():
+		dir += player.get_wall_normal() * 0.5 if player.is_on_wall() else Vector2.ZERO
+	dir = dir.normalized() if dir.length() > 0.01 else Vector2.ZERO
+	SpaceMotion.apply_thrust(player, dir, delta)
+	if jump_cooldown <= 0.0 and danger > 0.55 and player.jumps_remaining > 0:
+		player.velocity = player.velocity.move_toward(dir * player.move_speed, player.move_speed)
+		player.jump()
+		jump_cooldown = 0.9
+
 # Sucht den nächsten Bodenstachel in Laufrichtung. Die KI springt rechtzeitig
 # darüber; falls das nicht mehr möglich ist, weicht sie zurück.
 func _avoid_ground_hazards(move_input: float) -> float:
 	var facing := signf(move_input)
 	if facing == 0.0:
-		facing = signf(target.global_position.x - player.global_position.x)
+		facing = signf(target_pos().x - player.global_position.x)
 	if facing == 0.0:
 		facing = 1.0
 
@@ -338,23 +466,36 @@ func _avoid_ground_hazards(move_input: float) -> float:
 	return move_input
 
 func _handle_combat(_delta: float) -> void:
-	var dist = player.global_position.distance_to(target.global_position)
+	var dist = player.global_position.distance_to(target_pos())
+	var hero_id: String = Global.get_player_hero_id(player.player_index)
 	
-	# Shooting
-	if shoot_decision_timer <= 0.0:
+	# Hauptangriff: Fernkämpfer schießen, Nahkämpfer schlagen in Reichweite.
+	if player.is_melee:
+		if player.melee_cooldown_timer <= 0.0 and dist < player.get_melee_reach() and randf() < 0.5:
+			player.attack()
+	elif shoot_decision_timer <= 0.0:
 		# Schnellere Klassen sollen ihre höhere Feuerrate auch als Bots nutzen.
 		shoot_decision_timer = maxf(0.06, player.fire_rate_cooldown * randf_range(1.0, 2.0))
 		var shot_dist: float = dist
 		if _devil_aim != Vector2.INF:
 			shot_dist = player.global_position.distance_to(_devil_aim)
+		elif _switch_aim != Vector2.INF:
+			shot_dist = player.global_position.distance_to(_switch_aim)
 		var line_clear := not ArenaMode.active or _devil_aim != Vector2.INF or ArenaBot.has_line_of_sight(player, target)
 		if shot_dist < 650.0 and line_clear and not _devil_in_line_of_fire():
-			player.shoot()
+			player.attack()
 	
-	# Defensive Dash
+	# Dash: Fernkämpfer weichen aus, Nahkämpfer schließen damit die Lücke.
 	if dash_decision_timer <= 0.0:
 		dash_decision_timer = randf_range(1.5, 3.0)
-		if dist < 150.0 or (player.current_health < player.max_health * 0.5 and randf() < 0.6):
+		if hero_id == "zeitschlaeger":
+			# Rückspul lohnt sich, wenn viel Schaden zurückkäme oder es eng wird.
+			if player.zeit_rewind_heal_amount() >= 25.0 or (player.current_health < player.max_health * 0.35 and randf() < 0.6):
+				player.dash()
+		elif player.is_melee:
+			if dist > player.get_melee_reach() * 1.2 and dist < 420.0 and randf() < 0.7:
+				player.dash()
+		elif dist < 150.0 or (player.current_health < player.max_health * 0.5 and randf() < 0.6):
 			player.dash()
 
 	# Standard-Block: bei Druck oder niedriger HP gelegentlich hochhalten.
@@ -365,16 +506,162 @@ func _handle_combat(_delta: float) -> void:
 		# Minenleger: auch ohne Druck ab und zu blocken, um Minen zu legen.
 		elif player.block_mine and player.is_on_floor() and randf() < 0.35:
 			player.start_block()
-	
-	# Nahkampf: zuschlagen, sobald der Gegner in Reichweite der Waffe ist.
-	if Global.melee_enabled and player.melee_cooldown_timer <= 0.0 and dist < player.get_melee_reach() and randf() < 0.35:
-		player.melee_attack()
+
+	# Ulti: einsetzen, sobald der Gegner in sinnvoller Nähe ist.
+	if player.has_ult() and player.ult_timer <= 0.0 and randf() < 0.05:
+		var ult_range := 450.0
+		match hero_id:
+			"klinge":
+				ult_range = 200.0
+			"spore":
+				ult_range = 260.0
+			"druid":
+				ult_range = 400.0
+			"zeitschlaeger":
+				ult_range = 260.0
+			"bastion":
+				# Festung bei Druck oder wenig Leben.
+				ult_range = 420.0 if player.current_health < player.max_health * 0.6 else 220.0
+		if dist < ult_range:
+			# Meteorschauer und Singularität landen auf dem Gegner.
+			if player.has_targeted_ult() and is_instance_valid(target):
+				player.use_ultimate(target_pos())
+			else:
+				player.use_ultimate()
 
 	# Ability Usage
 	if player.ability_timer <= 0.0:
-		if dist < 220.0 or player.current_health < player.max_health * 0.6:
-			# Nova-Bots setzen das Schwarze Loch direkt auf den Gegner.
-			if Global.get_player_hero_id(player.player_index) == "nova" and is_instance_valid(target):
-				player.use_ability(target.global_position)
+		var wants: bool = dist < 220.0 or player.current_health < player.max_health * 0.6
+		match hero_id:
+			"volt":
+				# Kugelblitz dem Gegner in den Weg schicken.
+				wants = dist < 380.0
+			"phantom":
+				# Köder zum Anschleichen oder zum Entkommen.
+				wants = dist < 320.0
+			"vampire":
+				# Blutexplosion nur, wenn eine Kugel nah genug am Gegner liegt.
+				wants = false
+				if is_instance_valid(target):
+					wants = not BloodOrb.free_orbs(player.get_tree(), target.global_position,
+						Player.VAMPIRE_BURST_RADIUS * player.ability_radius_mult).is_empty()
+			"vampire_melee":
+				# Blutbersten erst mit genug Schild und nah am Gegner.
+				wants = player.current_shield >= 30.0 and dist < Player.VAMP_MELEE_BURST_RADIUS * 0.85
+			"nova":
+				wants = dist < 160.0
+			"spore":
+				wants = dist < 240.0
+			"klinge":
+				wants = dist < 300.0 and dist > player.get_melee_reach()
+			"bastion":
+				wants = dist < 380.0 and dist > player.get_melee_reach() * 1.3
+			"zeitschlaeger":
+				# Zeitblase mitten im Nahkampf aufziehen.
+				wants = dist < Player.ZEIT_BUBBLE_RADIUS * player.ability_radius_mult * 0.8
+		if wants:
+			# Giftpilz-Bots werfen den Pilz direkt vor den Gegner.
+			if hero_id == "spore" and is_instance_valid(target):
+				player.use_ability(target_pos())
 			else:
 				player.use_ability()
+
+# --- Schalter ------------------------------------------------------------------
+
+func _switch_network() -> SwitchNetwork:
+	var main := player.get_parent()
+	var level = main.get("level_generator") if main != null else null
+	if level == null or not is_instance_valid(level):
+		return null
+	return level.get("switch_network") as SwitchNetwork
+
+func _update_switch_goal(delta: float) -> void:
+	if ArenaMode.active:
+		_switch_aim = Vector2.INF
+		_plate_goal = Vector2.INF
+		return
+	_switch_scan_timer -= delta
+	if _switch_scan_timer > 0.0:
+		return
+	_switch_scan_timer = SWITCH_SCAN_TIME * randf_range(0.8, 1.3)
+	_switch_aim = Vector2.INF
+	_plate_goal = Vector2.INF
+	var net := _switch_network()
+	if net == null:
+		return
+	var best_score := -INF
+	var best_plate := -INF
+	var space := player.get_world_2d().direct_space_state
+	for sw in net.get_switches():
+		var value := float(sw.bot_value(player, target))
+		if value < SWITCH_MIN_VALUE:
+			continue
+		var point: Vector2 = sw.get_aim_point()
+		var d := player.global_position.distance_to(point)
+		if sw.kind == "lever":
+			if d > SWITCH_SHOOT_RANGE:
+				continue
+			var ray := PhysicsRayQueryParameters2D.create(player.global_position, point, 1)
+			ray.exclude = [player.get_rid()]
+			if not space.intersect_ray(ray).is_empty():
+				continue
+			var score := value - d / 600.0
+			if score > best_score:
+				best_score = score
+				_switch_aim = point
+		else:
+			var dy := point.y - (player.global_position.y + BODY_FOOT_OFFSET * player.scale.y)
+			if absf(point.x - player.global_position.x) > 340.0 or absf(dy) > 50.0:
+				continue
+			var plate_score := value - d / 400.0
+			if plate_score > best_plate:
+				best_plate = plate_score
+				_plate_goal = point
+
+## Läuft zu einer lohnenden Bodenplatte (gleiche Ebene, nicht zu weit).
+func _handle_plate_goal() -> bool:
+	if _plate_goal == Vector2.INF or not player.is_on_floor():
+		return false
+	var dx := _plate_goal.x - player.global_position.x
+	if absf(dx) < 10.0:
+		player.velocity.x = move_toward(player.velocity.x, 0.0, player.move_speed * 0.3)
+		return true
+	var move_input := _avoid_ground_hazards(signf(dx))
+	player.velocity.x = move_toward(player.velocity.x, move_input * player.move_speed, player.move_speed * 0.25)
+	if player.is_on_wall() and jump_cooldown <= 0.0:
+		player.jump()
+		jump_cooldown = 0.4
+	return true
+
+## Weicht aktiven Lasern und Warnlinien aus: von senkrechten Strahlen
+## seitlich weg, aus waagrechten zum näheren Ende hinaus (und hoch, wenn der
+## Strahl unter dem Bot liegt).
+func _handle_laser_escape() -> bool:
+	var pos := player.global_position
+	for laser in get_tree().get_nodes_in_group("switch_laser"):
+		if not is_instance_valid(laser) or not laser.is_dangerous():
+			continue
+		if laser.distance_to(pos) > LASER_ESCAPE_DIST:
+			continue
+		var a: Vector2 = laser.point_a
+		var b: Vector2 = laser.point_b
+		var dir := (b - a).normalized()
+		var speed := player.move_speed
+		var move_input := 0.0
+		if absf(dir.y) > 0.7:
+			var closest := Geometry2D.get_closest_point_to_segment(pos, a, b)
+			move_input = signf(pos.x - closest.x)
+			if move_input == 0.0:
+				move_input = 1.0 if randf() < 0.5 else -1.0
+		else:
+			var to_a := absf(pos.x - a.x)
+			var to_b := absf(pos.x - b.x)
+			move_input = signf((a.x if to_a < to_b else b.x) - pos.x)
+			var beam_y := Geometry2D.get_closest_point_to_segment(pos, a, b).y
+			if beam_y > pos.y and player.is_on_floor() and jump_cooldown <= 0.0:
+				player.jump()
+				jump_cooldown = 0.4
+		move_input = _avoid_ground_hazards(move_input)
+		player.velocity.x = move_toward(player.velocity.x, move_input * speed, speed * 0.3)
+		return true
+	return false

@@ -47,6 +47,10 @@ const OTHER_KINDS := {
 	"ball_chains": ["Kugelkette", Color(0.95, 0.65, 0.30)],
 	"ball_spawners": ["Kugelquelle", Color(0.95, 0.65, 0.30)],
 	"reserve": ["Freihaltefläche", Color(1, 1, 1, 0.25)],
+	"switches": ["Schalter", Color(1.0, 0.85, 0.25)],
+	"gates": ["Tür/Falltür", Color(0.95, 0.75, 0.2)],
+	"lasers": ["Laser", Color(1.0, 0.3, 0.3)],
+	"strikes": ["Orbitalschlag", Color(1.0, 0.5, 0.4)],
 }
 # Welche Felder eines Eintrags x- bzw. y-Koordinaten (in Kacheln) sind.
 const COORDS := {
@@ -59,9 +63,12 @@ const COORDS := {
 	"rotators": [[0], [1]], "ball_gates": [[0], [1]], "ball_spawners": [[0], [1]],
 	"crate_chains": [[0, 2], [1, 3]], "ramps": [[0, 2], [1, 3]],
 	"ball_rows": [[0, 2], [1, 3]], "ball_chains": [[0, 2], [1, 3]],
+	"switches": [[0], [1]], "gates": [[0, 1], [2, 3]],
+	"lasers": [[0, 2], [1, 3]], "strikes": [[0, 2], [1, 3]],
 }
 # Felder, die Mittelpunkte sind (Spiegelung an w statt w - 1).
-const CENTER_KINDS := ["pyramids", "seesaws", "chains", "rotators", "crate_chains", "ramps", "ball_gates", "ball_rows", "ball_chains", "ball_spawners"]
+const CENTER_KINDS := ["pyramids", "seesaws", "chains", "rotators", "crate_chains", "ramps", "ball_gates", "ball_rows", "ball_chains", "ball_spawners",
+	"switches", "lasers", "strikes"]
 
 # Felder je Objektart für die Eigenschaften-Leiste:
 # [Index, Bezeichnung, Typ (i = ganze Zahl, f = Kommazahl, b = an/aus,
@@ -95,11 +102,26 @@ const FIELDS := {
 	"ball_chains": [[0, "Start x", "f", -2, 200, 0.5], [1, "Start y", "f", -2, 200, 0.5], [2, "Ende x", "f", -2, 200, 0.5], [3, "Ende y", "f", -2, 200, 0.5],
 		[4, "Durchhang", "f", 1.0, 2.0, 0.01], [5, "Gliedmasse", "f", 0.1, 5, 0.1], [6, "Anteil große Kugeln", "f", 0, 1, 0.05], [7, "Anteil kleine Kugeln", "f", 0, 1, 0.05]],
 	"ball_spawners": [[0, "x", "f", -2, 200, 0.5], [1, "y", "f", -2, 200, 0.5], [2, "Richtung", "f", -1, 1, 0.1], [3, "Abstand (s)", "f", 0.5, 60, 0.5]],
+	"switches": [[0, "x", "f", -2, 200, 0.1], [1, "y (Platte: Reihe)", "f", -2, 200, 0.1], [2, "Kanal", "i", 0, 99, 1], [3, "Art", "s", 0, 0, 0],
+		[4, "Modus", "s", 0, 0, 0], [5, "Dauer (s)", "f", 0.5, 60, 0.5], [6, "Sperre (s)", "f", 0, 60, 0.5]],
+	"gates": [[0, "x Anfang", "i", -2, 200, 1], [1, "x Ende", "i", -2, 200, 1], [2, "Reihe oben", "i", -2, 200, 1], [3, "Reihe unten", "i", -2, 200, 1],
+		[4, "Kanal", "i", 0, 99, 1], [5, "Art", "s", 0, 0, 0], [6, "normal offen", "b", 0, 1, 1]],
+	"lasers": [[0, "Start x", "f", -2, 200, 0.1], [1, "Start y", "f", -2, 200, 0.1], [2, "Ende x", "f", -2, 200, 0.1], [3, "Ende y", "f", -2, 200, 0.1],
+		[4, "Kanal", "i", 0, 99, 1], [5, "normal an", "b", 0, 1, 1]],
+	"strikes": [[0, "Start x", "f", -2, 200, 0.5], [1, "Start y", "f", -2, 200, 0.5], [2, "Ende x", "f", -2, 200, 0.5], [3, "Ende y", "f", -2, 200, 0.5],
+		[4, "Kanal", "i", 0, 99, 1]],
 }
 const ROTATOR_STYLES := ["bar", "clock"]
+# Auswahllisten für Textfelder (Typ "s") je Objektart und Feldindex.
+const STRING_OPTIONS := {
+	"rotators": {7: ["bar", "clock"]},
+	"switches": {3: ["lever", "plate"], 4: ["timed", "toggle"]},
+	"gates": {5: ["door", "hatch"]},
+}
 # Neue Spezialobjekte: Vorlage relativ zur angeklickten Kachel c (x, y).
 const PLACE_KINDS := ["seesaws", "chains", "movers", "rotators", "houses", "pyramids", "stairs",
-	"crate_chains", "chain_grids", "ramps", "ball_spawners", "ball_gates", "ball_rows", "ball_chains", "reserve"]
+	"crate_chains", "chain_grids", "ramps", "ball_spawners", "ball_gates", "ball_rows", "ball_chains", "reserve",
+	"switches", "gates", "lasers", "strikes"]
 
 static var _last_state: Dictionary = {}
 
@@ -309,10 +331,17 @@ func _rects(kind: String, e: Array) -> Array:
 			return [Rect2(float(e[0]) - 0.3, float(e[1]), 0.6, float(e[2]))]
 		"ball_spawners":
 			return [Rect2(float(e[0]) - 0.5, float(e[1]) - 0.5, 1.0, 1.0)]
-		"crate_chains", "ramps", "ball_rows", "ball_chains":
+		"crate_chains", "ramps", "ball_rows", "ball_chains", "lasers", "strikes":
 			var a := Vector2(float(e[0]), float(e[1]))
 			var b := Vector2(float(e[2]), float(e[3])) if float(e[2]) >= 0.0 else a + Vector2(0, float(e[3]))
 			return [Rect2(a, Vector2.ZERO).expand(b).grow(0.4)]
+		"switches":
+			if str(e[3]) == "plate":
+				return [Rect2(float(e[0]) - 0.7, float(e[1]) - 0.35, 1.4, 0.35)]
+			return [Rect2(float(e[0]) - 0.4, float(e[1]) - 0.45, 0.8, 0.9)]
+		"gates":
+			var gh := 0.45 if str(e[5]) == "hatch" else float(e[3]) - float(e[2]) + 1.0
+			return [Rect2(float(e[0]), float(e[2]), float(e[1]) - float(e[0]) + 1.0, gh)]
 	return []
 
 ## Gespiegelter Eintrag (wie LevelGenerator ihn baut) oder [] ohne Spiegelung.
@@ -834,6 +863,10 @@ func _template(kind: String, c: Vector2i) -> Array:
 		"ball_rows": return [x, y, x + 5.0, y]
 		"ball_chains": return [x, y, x + 8.0, y, 1.02, 0.9, 0.15, 0.4]
 		"reserve": return [c.x, c.x + 3, c.y, c.y + 3]
+		"switches": return [x + 0.5, y + 0.5, 0, "lever", "timed", 5.0, 3.0]
+		"gates": return [c.x, c.x, c.y, c.y + 1, 0, "door", 0]
+		"lasers": return [x, y + 0.5, x + 6.0, y + 0.5, 0, 0]
+		"strikes": return [x + 0.5, 0.0, x + 0.5, y, 0]
 	return []
 
 func _tool_kind() -> String:
@@ -968,7 +1001,7 @@ func _draw_entry(kind: String, e: Array, alpha: float, selected: bool) -> void:
 			var c := _pan + Vector2(float(e[0]), float(e[1])) * z
 			_canvas.draw_arc(c, float(e[2]) * z, 0, TAU, 32, col, 2.0)
 			_canvas.draw_line(c - Vector2(float(e[2]), 0) * z, c + Vector2(float(e[3]), 0) * z, col, maxf(2.0, z * 0.3))
-		"crate_chains", "ramps", "ball_rows", "ball_chains":
+		"crate_chains", "ramps", "ball_rows", "ball_chains", "lasers", "strikes":
 			var a := Vector2(float(e[0]), float(e[1]))
 			var b := Vector2(float(e[2]), float(e[3])) if float(e[2]) >= 0.0 else a + Vector2(0, float(e[3]))
 			_canvas.draw_line(_pan + a * z, _pan + b * z, col, maxf(2.0, z * 0.3))
@@ -1057,10 +1090,11 @@ func _field_row(kind: String, e: Array, f: Array) -> Control:
 			row.add_child(cb)
 		"s":
 			var ob := OptionButton.new()
-			for st in ROTATOR_STYLES:
+			var opts: Array = (STRING_OPTIONS.get(kind, {}) as Dictionary).get(idx, ROTATOR_STYLES)
+			for st in opts:
 				ob.add_item(st)
-			ob.select(maxi(0, ROTATOR_STYLES.find(str(cur if cur != null else "bar"))))
-			ob.item_selected.connect(func(i): _set_field(idx, ROTATOR_STYLES[i]))
+			ob.select(maxi(0, opts.find(str(cur if cur != null else opts[0]))))
+			ob.item_selected.connect(func(i): _set_field(idx, opts[i]))
 			row.add_child(ob)
 		"a":
 			var le := LineEdit.new()

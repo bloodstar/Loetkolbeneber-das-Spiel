@@ -20,6 +20,8 @@ const OUTLINE: Color = Color(0.02, 0.05, 0.1, 0.45)
 const STALE_MSEC: int = 150
 
 var player: Player = null
+# Vorschau der Ulti (eigener Abbruch über cancel_ult_aim).
+var for_ult: bool = false
 var _info: Dictionary = {}
 var _origin: Vector2 = Vector2.ZERO
 var _range: float = 0.0
@@ -51,7 +53,10 @@ func _process(_delta: float) -> void:
 		return
 	if Time.get_ticks_msec() - _last_update_msec > STALE_MSEC:
 		if player != null and is_instance_valid(player):
-			player.cancel_ability_aim()
+			if for_ult:
+				player.cancel_ult_aim()
+			else:
+				player.cancel_ability_aim()
 		else:
 			hide_preview()
 

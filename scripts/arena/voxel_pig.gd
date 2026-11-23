@@ -182,12 +182,37 @@ func _build_outfit() -> void:
 			_box(Vector3(18, 5, 20), Vector3(-0.5, top + 3.6, 0), teal, _head)
 			_box(Vector3(18.4, 1.6, 4), Vector3(-0.5, top + 6.6, 0), teal.lightened(0.2), _head)
 			_box(Vector3(3, 4, 5), Vector3(9.5, top + 3.4, 0), Color(1.0, 0.97, 0.75), _head, Color(1.0, 0.95, 0.6), 2.0)
+		"vampire_melee":
+			# Hoher Umhangkragen (schwarz, rot gefüttert) mit Edelstein
+			var cape := accent if Global.is_team_mode() else Color(0.12, 0.06, 0.10)
+			var lining := Color(0.72, 0.05, 0.14)
+			_box(Vector3(4, 10, 24), Vector3(-9, 6.0, 0), cape, _head)
+			_box(Vector3(2, 8, 20), Vector3(-7, 6.5, 0), lining, _head)
+			for sz in [-1.0, 1.0]:
+				_box(Vector3(14, 9, 3), Vector3(-2, 5.5, 11.5 * sz), cape, _head)
+			_box(Vector3(3, 3, 3), Vector3(10.5, -1.0, 0), Color(0.85, 0.08, 0.18), _head, Color(0.9, 0.1, 0.2), 1.2)
 		"phantom":
 			# Ninja-Stirnband mit Bändern
 			var cloth := accent if Global.is_team_mode() else Color(0.16, 0.14, 0.24)
 			_box(Vector3(19.8, 3, 21.8), Vector3(0, 15.2, 0), cloth, _head)
 			_box(Vector3(8, 2.4, 3), Vector3(-13, 15.0, 3), cloth, _head)
 			_box(Vector3(8, 2.4, 3), Vector3(-15, 12.5, -2), cloth.lightened(0.1), _head)
+		"vampire":
+			# Zylinder mit rotem Band
+			var felt := accent if Global.is_team_mode() else Color(0.1, 0.08, 0.12)
+			_box(Vector3(24, 2, 26), Vector3(0, top + 0.8, 0), felt, _head)
+			_box(Vector3(14, 12, 16), Vector3(-1, top + 7.5, 0), felt, _head)
+			_box(Vector3(14.6, 3, 16.6), Vector3(-1, top + 3.2, 0), Color(0.74, 0.06, 0.14), _head)
+		"zeitschlaeger":
+			# Wecker als Hut: Messinggehäuse, Zifferblatt, zwei Glocken
+			var brass := accent if Global.is_team_mode() else Color(0.86, 0.66, 0.26)
+			_box(Vector3(4, 2, 12), Vector3(0, top + 1.0, 0), brass.darkened(0.3), _head)
+			_box(Vector3(8, 11, 13), Vector3(0, top + 7.0, 0), brass, _head)
+			_box(Vector3(1.2, 8, 9), Vector3(4.5, top + 7.0, 0), Color(0.98, 0.96, 0.88), _head)
+			_box(Vector3(1.4, 3.6, 0.9), Vector3(5.3, top + 8.2, 0.2), Color(0.15, 0.1, 0.06), _head)
+			_box(Vector3(1.4, 0.9, 2.6), Vector3(5.3, top + 7.0, 1.0), Color(0.15, 0.1, 0.06), _head)
+			_box(Vector3(5, 3, 5), Vector3(0, top + 13.5, -4.5), brass.lightened(0.15), _head)
+			_box(Vector3(5, 3, 5), Vector3(0, top + 13.5, 4.5), brass.lightened(0.15), _head)
 
 func _box(size: Vector3, pos: Vector3, color: Color, parent: Node3D, emission: Color = Color(0, 0, 0, 0), energy: float = 0.0) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()

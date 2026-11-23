@@ -246,6 +246,9 @@ Runden-Modifier</a></li>
 LAN</a></li>
 <li><a href="#-hauptmenü--optionen" id="toc--hauptmenü--optionen">🔧
 Hauptmenü &amp; Optionen</a></li>
+<li><a href="#-erfolge-titel--freischaltungen"
+id="toc--erfolge-titel--freischaltungen">🏅 Erfolge, Titel &amp;
+Freischaltungen</a></li>
 <li><a href="#-statistiken-hud--feedback"
 id="toc--statistiken-hud--feedback">📊 Statistiken, HUD &amp;
 Feedback</a></li>
@@ -328,11 +331,12 @@ höher)</td>
 <td style="text-align: left;">Mauszeiger</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">Schießen</td>
+<td style="text-align: left;">Angriff (Schuss oder Nahkampf, je nach
+Held)</td>
 <td style="text-align: left;"><code>Linksklick</code></td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">Dash / Ausweichen</td>
+<td style="text-align: left;">Dash (je nach Held verschieden)</td>
 <td style="text-align: left;"><code>Shift</code> (kurz
 unverwundbar)</td>
 </tr>
@@ -345,7 +349,7 @@ unverwundbar)</td>
 <td style="text-align: left;"><code>R</code></td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">Nahkampf</td>
+<td style="text-align: left;">Ulti</td>
 <td style="text-align: left;"><code>E</code></td>
 </tr>
 <tr class="even">
@@ -355,20 +359,19 @@ unverwundbar)</td>
 </tbody>
 </table>
 <p><strong>Fähigkeiten zielen:</strong> Alle gerichteten Fähigkeiten
-zielen auf den Mauszeiger: Schwarzes Loch (Nova), Wurzelwall (Druide),
-Blink (Volt), Schattensprung (Phantom) und Raketensprung (Ignis, nur die
-Flugrichtung). Fähigkeitstaste <strong>halten</strong> zeigt die
-Vorschau (Reichweitenring, Form am Ziel bzw. Flugbahn),
-<strong>Loslassen</strong> zaubert. Der Zeiger wird auf die Reichweite
-begrenzt. Liegt er in einer Wand, landet der Zauber an der nächsten
-freien Stelle; die Vorschau zeigt sie mit einer gestrichelten Linie an.
-<code>Esc</code> bricht ab (auch Rechtsklick, wenn die Fähigkeit auf
-einer anderen Taste liegt). Der Wurzelwall steht immer mit der breiten
-Seite zum Druiden. Unter <em>Optionen → Steuerung → Fähigkeit
-zielen</em> lässt sich auf <strong>Sofort am Mauszeiger</strong>
-umstellen (ohne Vorschau). Bots und Spieler 2 nutzen weiter die feste
-Entfernung in Zielrichtung. Giftwolke, Klingensturm und Heilfeld wirken
-weiter an der eigenen Position.</p>
+zielen auf den Mauszeiger: Schwarzes Loch (Nova), Wurzelwall (Druide)
+und Raketensprung (Ignis, nur die Flugrichtung). Fähigkeitstaste
+<strong>halten</strong> zeigt die Vorschau (Reichweitenring, Form am
+Ziel bzw. Flugbahn), <strong>Loslassen</strong> zaubert. Der Zeiger wird
+auf die Reichweite begrenzt. Liegt er in einer Wand, landet der Zauber
+an der nächsten freien Stelle; die Vorschau zeigt sie mit einer
+gestrichelten Linie an. <code>Esc</code> bricht ab (auch Rechtsklick,
+wenn die Fähigkeit auf einer anderen Taste liegt). Der Wurzelwall steht
+immer mit der breiten Seite zum Druiden. Unter <em>Optionen → Steuerung
+→ Fähigkeit zielen</em> lässt sich auf <strong>Sofort am
+Mauszeiger</strong> umstellen (ohne Vorschau). Bots und Spieler 2 nutzen
+weiter die feste Entfernung in Zielrichtung. Giftwolke, Klingensturm und
+Heilfeld wirken weiter an der eigenen Position.</p>
 <h3 id="spieler-2-nur-lokaler-2-spieler-modus-am-selben-pc">Spieler 2
 (nur lokaler 2-Spieler-Modus am selben PC)</h3>
 <table>
@@ -412,7 +415,7 @@ weiter an der eigenen Position.</p>
 <td style="text-align: left;"><code>L</code></td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">Nahkampf</td>
+<td style="text-align: left;">Ulti</td>
 <td style="text-align: left;"><code>K</code></td>
 </tr>
 <tr class="even">
@@ -450,9 +453,141 @@ online läuft die Runde weiter</td>
 </table>
 <hr />
 <h2 id="-helden">🐷 Helden</h2>
-<p>Es gibt <strong>8 Klassen</strong>. Jede hat eigene Werte, ein
+<p>Es gibt <strong>9 Klassen</strong>. Jede hat eigene Werte, ein
 Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am
-Kopf.</p>
+Kopf. Jeder Held ist entweder <strong>Fernkämpfer</strong> (Linksklick
+schießt) oder <strong>Nahkämpfer</strong> (Linksklick schlägt mit seiner
+festen Waffe): Klinge (Schwert), Bastion (Hammer), Phantom
+(Lötkolben-Stich) und Zeitschläger (Uhrenpendel) sind Nahkämpfer, alle
+anderen schießen. Im Draft erscheinen nur Karten, die zur Angriffsart
+passen.</p>
+<p><strong>Helden-Kits:</strong> Jeder Held hat einen eigenen Dash
+(<code>Shift</code>), eine Fähigkeit (Rechtsklick) und eine
+<strong>Ulti</strong> (<code>E</code>). Meteorschauer (Ignis) und
+Singularität (Nova) werden wie gezielte Fähigkeiten mit der Maus
+gezielt: <code>E</code> halten zeigt die Vorschau, Loslassen löst aus
+(oder sofort, je nach Option „Fähigkeit auslösen“).</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Held</th>
+<th style="text-align: left;">Dash (<code>Shift</code>)</th>
+<th style="text-align: left;">Fähigkeit (Rechtsklick)</th>
+<th style="text-align: left;">Ulti (<code>E</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Volt</strong></td>
+<td style="text-align: left;"><strong>Blitzschritt</strong>: Teleport
+130 px, 2 Ladungen, jede lädt einzeln nach</td>
+<td style="text-align: left;"><strong>Kugelblitz</strong>: langsame
+Blitzkugel (3,5 s), schockt alle 0,4 s Gegner im Radius 85 px mit 6
+Schaden und verlangsamt sie</td>
+<td style="text-align: left;"><strong>Überladung</strong> (26 s): 5 s
+lang +40 % Tempo, +50 % Feuerrate, kein Munitionsverbrauch, jeder Schuss
+springt als Kettenblitz weiter</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Phantom</strong></td>
+<td style="text-align: left;"><strong>Schattenschritt</strong>: Dash,
+danach 0,8 s unsichtbar</td>
+<td style="text-align: left;"><strong>Köder</strong>: Doppelgänger (40
+HP, 3,5 s) läuft weiter, Phantom ist 1,5 s unsichtbar. Bots, Türme und
+Zielsuche nehmen den Köder ins Visier</td>
+<td style="text-align: left;"><strong>Nachtjagd</strong> (28 s): 6 s
+unsichtbar und +30 % Tempo, Angriffe lassen nur kurz aufflackern, der
+erste Treffer macht doppelten Schaden</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Ignis</strong></td>
+<td style="text-align: left;"><strong>Nachbrenner</strong>: Dash mit
+Feuerspur</td>
+<td style="text-align: left;"><strong>Rocket Leap</strong>: explosiver
+Sprung (unverändert)</td>
+<td style="text-align: left;"><strong>Meteorschauer</strong> (28 s,
+gezielt bis 460 px): nach 0,8 s Warnung schlagen 5 Meteore nebeneinander
+ein (je Radius 72 px, bis 22 Schaden) und hinterlassen 3 s Feuer</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Spore</strong></td>
+<td style="text-align: left;"><strong>Sporenstoß</strong>: Dash, am
+Start bleibt eine Giftwolke</td>
+<td style="text-align: left;"><strong>Giftpilz</strong> (gezielt bis 230
+px): Falle am Boden, nach 0,6 s scharf. Platzt bei Gegnern in 55 px oder
+bei Kugeltreffern zu einer Giftwolke (75 px, 3,5 s, 11 Schaden/s).
+Höchstens 3 Pilze</td>
+<td style="text-align: left;"><strong>Seuchennebel</strong> (30 s): 6 s
+lang wandert ein Giftnebel (Radius 260 px) mit Spore, vergiftet und
+bremst Gegner, Spore heilt 8 HP/s</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Nova</strong></td>
+<td style="text-align: left;"><strong>Phasengleiten</strong>: 0,6 s frei
+lenkbar schweben, unverwundbar</td>
+<td style="text-align: left;"><strong>Gravitationsstoß</strong>: Kegel
+(80°, 175 px) stößt Gegner weg und lenkt Kugeln ab. Nach unten gezielt
+schleudert er Nova hoch</td>
+<td style="text-align: left;"><strong>Singularität</strong> (30 s,
+gezielt): Kern zieht Gegner im Radius 300 px heran und implodiert nach
+2,6 s (Radius 170 px, 38 Schaden)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Klinge</strong></td>
+<td style="text-align: left;"><strong>Durchstoß</strong>: Dash durch
+Gegner hindurch, trifft jeden einmal (70 % Schwertschaden). Ein Treffer
+halbiert die Dash-Abklingzeit</td>
+<td style="text-align: left;"><strong>Klingenbumerang</strong>: Schwert
+fliegt 280 px und zurück, trifft hin und zurück. Solange es fliegt, kein
+Hieb</td>
+<td style="text-align: left;"><strong>Klingensturm</strong> (24 s): 3 s
+lang frei beweglicher Wirbel (145 px), alle 0,3 s Schaden, großer
+Schlusswirbel, schlägt Kugeln zurück</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Bastion</strong></td>
+<td style="text-align: left;"><strong>Rammbock</strong>: nicht
+unverwundbar, Kugeln von vorn prallen ab, Gegner werden mitgeschoben und
+am Ende weggestoßen</td>
+<td style="text-align: left;"><strong>Magnethaken</strong>: Haken bis
+380 px, betäubt den ersten Gegner kurz und zieht ihn heran</td>
+<td style="text-align: left;"><strong>Festung</strong> (32 s): 5 s
+Kuppel (140 px), gegnerische Kugeln prallen von außen ab, innen heilen
+Bastion und Verbündete</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Druide</strong></td>
+<td style="text-align: left;"><strong>Rankenschwung</strong>: Ranke bis
+220 px zieht den Druiden an Wände und Decken. Ohne Halt normaler
+Dash</td>
+<td style="text-align: left;"><strong>Wurzelwall</strong>
+(unverändert)</td>
+<td style="text-align: left;"><strong>Urkeiler</strong> (35 s): 7 s
+riesiger Keiler, +60 % Leben, Hammer-Nahkampf, der Dash wird zum Ansturm
+(schleudert weg, bricht Kisten)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Zeitschläger</strong></td>
+<td style="text-align: left;"><strong>Rückspul</strong> (6 s
+Abklingzeit): springt an die Stelle von vor 2 s zurück und bekommt den
+Schaden aus dieser Zeit als Leben zurück. Ein blasses Nachbild zeigt dir
+die Stelle</td>
+<td style="text-align: left;"><strong>Zeitblase</strong> (10 s): Kuppel
+an deiner Position (Radius 150 px, 4 s), Gegner darin 60 % langsamer,
+gegnerische Kugeln fliegen nur mit 25 % Tempo</td>
+<td style="text-align: left;"><strong>Zeitstopp</strong> (32 s): 2 s
+lang frieren alle Gegner und ihre Kugeln ein. Deine Treffer an ihnen
+stauen sich und schlagen am Ende gesammelt ein</td>
+</tr>
+</tbody>
+</table>
+<p>Klinge schlägt in Kombos: Jeder <strong>dritte Hieb</strong> in Folge
+(innerhalb 1,6 s) ist ein starker Stoß mit 160 % Schaden.</p>
+<p>Die <strong>Ulti</strong> lädt über eine Abklingzeit, nicht über
+Schaden. Sie läuft über Rundenwechsel weiter und startet im Match halb
+geladen. Fähigkeits-Abklingzeit-Karten wirken zur Hälfte auch auf die
+Ulti. Phantoms Passiv <strong>Hinterhalt</strong>: +50 % Nahkampfschaden
+aus der Unsichtbarkeit oder von hinten.</p>
 <table>
 <thead>
 <tr class="header">
@@ -487,8 +622,8 @@ Sprung, 35 Schaden im Einschlag (Radius 140)</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: left;"><strong>Overcharge</strong>: Doppelsprung
 von Anfang an</td>
-<td style="text-align: left;"><strong>Flash Blink</strong>: Teleport 260
-px, 20 Schaden und 1,2 s Frost am Ziel</td>
+<td style="text-align: left;"><strong>Kugelblitz</strong>: wandernde
+Blitzkugel, schockt und verlangsamt</td>
 <td style="text-align: left;">Gelbe Kappe mit Blitz</td>
 </tr>
 <tr class="odd">
@@ -499,8 +634,8 @@ px, 20 Schaden und 1,2 s Frost am Ziel</td>
 <td style="text-align: right;">10</td>
 <td style="text-align: left;"><strong>Spore Coat</strong>: Treffer
 vergiften (2 Stapel)</td>
-<td style="text-align: left;"><strong>Spore Burst</strong>: Giftwolke, 9
-Schaden/s für 3,5 s</td>
+<td style="text-align: left;"><strong>Giftpilz</strong>: Falle, platzt
+zu einer Giftwolke</td>
 <td style="text-align: left;">Pilzhut</td>
 </tr>
 <tr class="even">
@@ -511,44 +646,44 @@ Schaden/s für 3,5 s</td>
 <td style="text-align: right;">10</td>
 <td style="text-align: left;"><strong>Schwerelos</strong>: Höchste
 Sprungkraft</td>
-<td style="text-align: left;"><strong>Singularität</strong>: Kern zieht
-Gegner 2 s lang zur Mitte (kein Schaden)</td>
+<td style="text-align: left;"><strong>Gravitationsstoß</strong>: stößt
+Gegner und Kugeln im Kegel weg</td>
 <td style="text-align: left;">Zauberhut mit Mini-Planet</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Klinge</strong></td>
 <td style="text-align: left;">Blade Dancer</td>
-<td style="text-align: right;">110</td>
+<td style="text-align: right;">125</td>
 <td style="text-align: right;">315</td>
 <td style="text-align: right;">15</td>
 <td style="text-align: left;"><strong>Klingentanz</strong>: Start-Schild
 und hohes Tempo</td>
-<td style="text-align: left;"><strong>Klingensturm</strong>:
-Rundumschlag mit Rückstoß, 0,5 s unverwundbar</td>
+<td style="text-align: left;"><strong>Klingenbumerang</strong>: Schwert
+fliegt hin und zurück</td>
 <td style="text-align: left;">Roter Schal</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>Bastion</strong></td>
 <td style="text-align: left;">Field Engineer</td>
-<td style="text-align: right;">125</td>
+<td style="text-align: right;">145</td>
 <td style="text-align: right;">270</td>
 <td style="text-align: right;">20</td>
 <td style="text-align: left;"><strong>Aurora</strong>: Doppelte
 Schild-Regeneration, Schild-Cooldown nur 4 s</td>
-<td style="text-align: left;"><strong>Heilfeld</strong>: 4 s lang 8 HP
-und 10 Schild alle 0,5 s</td>
+<td style="text-align: left;"><strong>Magnethaken</strong>: zieht den
+ersten Gegner heran</td>
 <td style="text-align: left;">Bauhelm mit Lampe</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Phantom</strong></td>
 <td style="text-align: left;">Shadow Assassin</td>
-<td style="text-align: right;">90</td>
+<td style="text-align: right;">100</td>
 <td style="text-align: right;">325</td>
 <td style="text-align: right;">5</td>
-<td style="text-align: left;"><strong>Nachtwind</strong>: Sehr schnell,
-kürzestes Feuerintervall</td>
-<td style="text-align: left;"><strong>Schattensprung</strong>: Teleport
-260 px mit Treffer, 0,9 s unverwundbar</td>
+<td style="text-align: left;"><strong>Hinterhalt</strong>: +50 %
+Nahkampfschaden aus der Unsichtbarkeit oder von hinten</td>
+<td style="text-align: left;"><strong>Köder</strong>: Doppelgänger läuft
+weiter, Phantom wird unsichtbar</td>
 <td style="text-align: left;">Ninja-Stirnband</td>
 </tr>
 <tr class="even">
@@ -564,6 +699,37 @@ Zielpunkt, breite Seite zum Druiden (108 px, 5 s, 150 HP), blockt
 Bewegung und Kugeln</td>
 <td style="text-align: left;">Blätterkranz mit Geweih</td>
 </tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Blutritter</strong></td>
+<td style="text-align: left;">Blood Knight (Nahkampf-Vampir,
+Schwert)</td>
+<td style="text-align: right;">110</td>
+<td style="text-align: right;">300</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;"><strong>Blutschild</strong>: Jeder 3.
+Treffer lässt eine Blutkugel fallen; jede Kugel gibt +25 Schild, bis 200
+% der Max-HP (zweite, rote Lage auf der Lebensleiste)</td>
+<td style="text-align: left;"><strong>Blutbersten</strong>: der ganze
+Schild explodiert, 1 Schaden pro Schildpunkt im Radius 150. Dash
+<strong>Blutsturm</strong>: legt eine Blutkugel ab, stürmt 40 % weiter
+und durch Gegner. Ulti <strong>Blutruf</strong> (24 s): bis zu 6 Kugeln
+im Umkreis 520 px fliegen zu ihm, treffen sie unterwegs einen Gegner: 30
+Schaden und +30 HP</td>
+<td style="text-align: left;">Hoher Dracula-Kragen mit rotem
+Edelstein</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Zeitschläger</strong></td>
+<td style="text-align: left;">Chrono Brawler</td>
+<td style="text-align: right;">120</td>
+<td style="text-align: right;">300</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: left;"><strong>Taktschlag</strong>: Jeder 3.
+Pendeltreffer verlangsamt den Gegner 1,5 s um 30 %</td>
+<td style="text-align: left;"><strong>Zeitblase</strong>: Kuppel, in der
+Gegner und ihre Kugeln stark verlangsamt sind</td>
+<td style="text-align: left;">Wecker mit zwei Glocken</td>
+</tr>
 </tbody>
 </table>
 <p>Die genauen Zahlen der Fähigkeiten stehen im Spiel unter
@@ -571,7 +737,7 @@ Bewegung und Kugeln</td>
 kommen direkt aus den Konstanten in <code>player.gd</code>, stimmen also
 immer.</p>
 <h3 id="waffe--munition">Waffe &amp; Munition</h3>
-<p>Alle Eber schießen mit einem <strong>Lötkolben</strong>.
+<p>Fernkämpfer schießen mit einem <strong>Lötkolben</strong>.
 Basis-Schaden pro Schuss ist <strong>22</strong> (in der Lobby
 einstellbar).</p>
 <table>
@@ -609,24 +775,6 @@ einstellbar).</p>
 <td style="text-align: right;">1,35 s</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">Klinge</td>
-<td style="text-align: right;">4</td>
-<td style="text-align: right;">0,20 s</td>
-<td style="text-align: right;">1,25 s</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Bastion</td>
-<td style="text-align: right;">3</td>
-<td style="text-align: right;">0,30 s</td>
-<td style="text-align: right;">1,45 s</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Phantom</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">0,14 s</td>
-<td style="text-align: right;">1,05 s</td>
-</tr>
-<tr class="even">
 <td style="text-align: left;">Druide</td>
 <td style="text-align: right;">3</td>
 <td style="text-align: right;">0,24 s</td>
@@ -684,10 +832,15 @@ die Steuerung des Ziels gedämpft, damit der Stoß wirkt.</li>
 <p>Jeder Held hat die Barriere (früher „Block“): <strong>0,5 s kein
 Schaden</strong>, gegnerische Projektile werden
 <strong>zurückgeworfen</strong>, <strong>4 s Abklingzeit</strong>. Eine
-aktive Barriere fängt auch Nahkampfschläge ab. Barriere-Karten
-verlängern sie oder lösen Bomben, Heilzonen, Minen und Rückstoß aus. Die
-Barriere ist <strong>nicht</strong> der Schild: Barriere-Karten
-verbessern nie den Schild und Schild-Karten nie die Barriere.</p>
+aktive Barriere fängt auch Nahkampfschläge ab. Sie hält <strong>2
+Treffer</strong> aus (abgewehrte Kugeln zählen mit, eine Schrotsalve
+oder Rakete samt Explosion zählt als ein Treffer, Gift-Ticks gar nicht)
+und zerbricht danach mit Scherben und Glasklirren; die Abklingzeit
+beginnt dann sofort. Jeder Treffer hinterlässt einen Riss.
+Barriere-Karten verlängern sie oder lösen Bomben, Heilzonen, Minen und
+Rückstoß aus. Die Barriere ist <strong>nicht</strong> der Schild:
+Barriere-Karten verbessern nie den Schild und Schild-Karten nie die
+Barriere.</p>
 <h3 id="dash-shift">Dash (<code>Shift</code>)</h3>
 <p>Kurzer Sprint mit kurzer Unverwundbarkeit. Ignis hinterlässt dabei
 Feuer.</p>
@@ -753,11 +906,21 @@ darunter und fährt auf beweglichen Plattformen, Wippen und Kisten
 mit.</p>
 <hr />
 <h2 id="-nahkampf">🔨 Nahkampf</h2>
-<p>Jeder Eber hat eine Nahkampfwaffe auf <code>E</code> (P2:
-<code>K</code>). Gewählt wird sie im Lobby-Tab
-<strong>Charakter</strong>, sie wird im Profil gespeichert. Reichweite
-wird in Feldern (36 px) ab dem Körperrand gemessen. Wände blockieren den
-Schlag. Der Schlag trifft auch Blöcke, Kisten, Fässer und Türme.</p>
+<p>Nahkampf gehört fest zum Helden und liegt auf
+<strong>Linksklick</strong>: Klinge schlägt mit dem
+<strong>Schwert</strong> (30 Schaden alle 0,68 s), Bastion mit dem
+<strong>Hammer</strong> (30 Schaden alle 0,88 s), Phantom sticht mit dem
+<strong>Lötkolben</strong> (27 Schaden alle 0,77 s). Fernkämpfer haben
+keinen Nahkampf mehr, die Waffenwahl im Tab Charakter und die
+Lobby-Regel „Nahkampfwaffen“ entfallen. Die Tabelle zeigt die Grundwerte
+der Waffen vor den Helden-Faktoren. Allgemeine Karten für Schaden,
+Feuerrate, Lebensraub und Elemente wirken bei Nahkämpfern auf die
+Schläge (Feuerrate = Angriffstempo, Feuer = 3 Brandstapel, Blitz = 0,1 s
+Betäubung). Reine Projektil-Karten (Munition, Abpraller, Durchschlag,
+Zielsuche, Explosionen, Multishot) bekommen nur Fernkämpfer,
+Nahkampf-Karten nur Nahkämpfer. Reichweite wird in Feldern (36 px) ab
+dem Körperrand gemessen. Wände blockieren den Schlag. Der Schlag trifft
+auch Blöcke, Kisten, Fässer und Türme.</p>
 <table>
 <thead>
 <tr class="header">
@@ -816,11 +979,12 @@ gegnerischen Projektils, sobald es in Reichweite ist und auf dich
 zufliegt, und wirft es zurück. Der Schlag trifft dabei normal und
 startet die Abklingzeit. Ein manueller Schlag pariert ebenfalls. Gilt
 auch für Bots und online.</p>
-<p>Das Powerup <strong>Auto-Angriff</strong> und der Runden-Modifier
-<strong>Brawl</strong> verstärken den Nahkampf. Ist Nahkampf in den
-Lobby-Regeln aus, erscheinen beide nicht.</p>
+<p>Das Powerup <strong>Auto-Angriff</strong> lässt Nahkämpfer von selbst
+zuschlagen und verkürzt bei Fernkämpfern das Feuerintervall um 35 %. Der
+Runden-Modifier <strong>Brawl</strong> verstärkt den Nahkampf und
+erscheint nur, wenn ein Nahkämpfer mitspielt.</p>
 <p>Nahkampf-Karten (Pool <strong>Nahkampf</strong>, 19 Karten) wirken
-nur auf den <code>E</code>-Schlag, siehe <a
+nur auf die Schläge der Nahkämpfer, siehe <a
 href="#nahkampf-karten">Karten-Übersicht</a>.</p>
 <hr />
 <h2 id="-lobby--match-regeln">🏆 Lobby &amp; Match-Regeln</h2>
@@ -1003,6 +1167,86 @@ an.</li>
 <p><strong>Weiterspielen</strong>: Nach dem Match-Sieg kann der Host
 <strong>WEITERSPIELEN</strong> wählen. Punkte und Decks bleiben, das
 Ziel steigt um 30 %.</p>
+<h3 id="mvp-ehrungen">MVP-Ehrungen</h3>
+<p>Am Matchende zeigt der Win-Screen unter der Match-Statistik bis zu
+<strong>8 Ehrungen</strong>. Pro Spieler gibt es höchstens 2 (bei 2 bis
+3 Spielern etwas mehr), der MVP-Titel zählt nicht mit. Spaß-Ehrungen
+erscheinen höchstens zwei.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Ehrung</th>
+<th>Wer bekommt sie</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>MVP</strong></td>
+<td>Bester Gesamtwert aus Punkten, Kills, Schaden, Barriere, Heilung,
+Rundensiegen und Toden</td>
+</tr>
+<tr class="even">
+<td><strong>Schadenskönig</strong></td>
+<td>Meister Schaden</td>
+</tr>
+<tr class="odd">
+<td><strong>Serienkiller</strong></td>
+<td>Längste Kill-Serie ohne eigenen Tod (ab 3)</td>
+</tr>
+<tr class="even">
+<td><strong>Beste Karte</strong></td>
+<td>Karte, mit der ihr Besitzer am stärksten war: Schadensanteil und
+Rundensiege in den Runden mit der Karte, plus die Verbesserung gegenüber
+den Runden davor</td>
+</tr>
+<tr class="odd">
+<td><strong>Scharfschütze</strong></td>
+<td>Beste Trefferquote (ab 20 Schüssen und 25 %)</td>
+</tr>
+<tr class="even">
+<td><strong>Erstes Blut</strong></td>
+<td>Am häufigsten den ersten Kill einer Runde (ab 2)</td>
+</tr>
+<tr class="odd">
+<td><strong>Fähigkeiten-Ass</strong></td>
+<td>Meister Fähigkeitsschaden (ab 100)</td>
+</tr>
+<tr class="even">
+<td><strong>Nahkampf-Metzger</strong></td>
+<td>Meister Nahkampfschaden (ab 60)</td>
+</tr>
+<tr class="odd">
+<td><strong>Bollwerk</strong></td>
+<td>Meister Barriere-Schaden (ab 60)</td>
+</tr>
+<tr class="even">
+<td><strong>Sanitäter</strong></td>
+<td>Meiste Heilung (ab 60)</td>
+</tr>
+<tr class="odd">
+<td><strong>Überlebenskünstler</strong></td>
+<td>Am häufigsten bis zum Rundenende überlebt (ab 2)</td>
+</tr>
+<tr class="even">
+<td><strong>Haarscharf</strong></td>
+<td>Runde mit höchstens 20 % Leben gewonnen</td>
+</tr>
+<tr class="odd">
+<td><strong>Größter Pechvogel</strong> <em>(Spaß)</em></td>
+<td>Meiste Tode (ab 2), bei Gleichstand mehr eingesteckter Schaden</td>
+</tr>
+<tr class="even">
+<td><strong>Tollpatsch</strong> <em>(Spaß)</em></td>
+<td>Tode ohne gegnerischen Schützen (Lava, Absturz, eigene Schüsse)</td>
+</tr>
+<tr class="odd">
+<td><strong>Kugelfang</strong> <em>(Spaß)</em></td>
+<td>Am meisten Schaden eingesteckt</td>
+</tr>
+</tbody>
+</table>
+<p>Online berechnet der Host die Ehrungen und schickt sie mit dem
+Match-Ende an alle Clients.</p>
 <hr />
 <h2 id="-spielmodi">👥 Spielmodi</h2>
 <table>
@@ -1085,9 +1329,14 @@ Boden und seitlich Felswände. Rampen führen ohne Sprung hinauf, ihre
 höheren Teile kann man von der Seite nicht betreten. Unter Holzstegen
 läuft man durch, oben läuft man darüber. Wer von einer Kante läuft,
 fällt herunter.</li>
-<li><strong>Maps:</strong> zufällig eine von acht Arenen. Kompakt:
-<em>Burghof</em>, <em>Kistenlager</em>, <em>Ruinen</em>. Groß und offen
-(etwa die vierfache Fläche): <em>Weite Steppe</em>, <em>Marktplatz</em>,
+<li><strong>Maps:</strong> zufällig eine von zwölf Arenen.
+Autoscroll-Strecken (siehe Autoscroll unten): <em>Rennstrecke</em>
+(Insel, Slalom, drei Spuren) und <em>Bergrennen</em> (Hügel mit Rampen,
+Turmbrücke, Felsbuckel-Slalom). Dazu <em>Hafen</em> (Holzstege zwischen
+sechs Türmen, Kistenstapel) und <em>Festung</em> (Wehrgang mit Toren und
+Rampen, Bergfried mit Stegen zu den Mauern). Kompakt: <em>Burghof</em>,
+<em>Kistenlager</em>, <em>Ruinen</em>. Groß und offen (etwa die
+vierfache Fläche): <em>Weite Steppe</em>, <em>Marktplatz</em>,
 <em>Canyon</em>, <em>Hochplateau</em> (große Erhöhung in der Mitte mit
 vier Rampen, erhöhte Randplattform), <em>Stegwerk</em> (fünf Türme mit
 Holzstegen). Wände gibt es gerade und schräg, Boden und Mauern haben
@@ -1115,8 +1364,10 @@ Kistenblöcke und Gruben waagrecht ziehen, Wände als Rechteck, Stacheln,
 Sprungfedern und Mystery-Blöcke anklicken, Röhrenpaare mit zwei Klicks.
 Mit <em>Objekt setzen</em> kommen Wippen, Kettenplattformen,
 Fahrplattformen, Drehbalken, Häuser, Pyramiden, Treppen, Kistenketten,
-Gitterzäune, Schrägen und Kugel-Objekte dazu. Ein ausgewähltes Objekt
-zeigt unter <em>Eigenschaften</em> alle Werte (z. B. Kettenlänge,
+Gitterzäune, Schrägen, Kugel-Objekte sowie Schalter, Türen/Falltüren,
+Laser und Orbitalschläge dazu (verbunden über die Kanalnummer; die
+gespiegelte Seite bekommt Kanal + 100). Ein ausgewähltes Objekt zeigt
+unter <em>Eigenschaften</em> alle Werte (z. B. Kettenlänge,
 Wippenbreite, Drehtempo und Stil, Kistengrößen); Verschieben per Ziehen,
 Löschen per Rechtsklick oder Entf. Gespiegelte Level zeigen die
 automatische Spiegelung blass. <em>Speichern</em> legt eine geänderte
@@ -1489,8 +1740,13 @@ Bastionsfestung</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Phantom</strong></td>
-<td style="text-align: left;">Schattenklinge, Schattensprung,
+<td style="text-align: left;">Schattenklinge, Schattenlauf,
 Todeskuss</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Blutritter</strong></td>
+<td style="text-align: left;">Aderlass, Dickes Blut (Kugeln +50 %
+Schild), Blutgier</td>
 </tr>
 </tbody>
 </table>
@@ -1518,46 +1774,152 @@ Grundkarte, und nur ein Zweig ist wählbar.</p>
 <td style="text-align: left;">Kurze Zündschnur</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>Volt</strong></td>
+<td style="text-align: left;"><strong>Volt</strong> (Kugelblitz)</td>
 <td style="text-align: left;">Hochspannung</td>
-<td style="text-align: left;">Kettenblink</td>
-<td style="text-align: left;">Gewitterspur</td>
+<td style="text-align: left;">Sprungziel</td>
+<td style="text-align: left;">Entladung</td>
 <td style="text-align: left;">Restladung</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Spore</strong></td>
-<td style="text-align: left;">Dichter Nebel</td>
+<td style="text-align: left;"><strong>Spore</strong> (Giftpilz)</td>
+<td style="text-align: left;">Pilzgarten</td>
 <td style="text-align: left;">Ätzender Nebel</td>
-<td style="text-align: left;">Symbiose</td>
+<td style="text-align: left;">Klebsporen (C: Sprungpilz)</td>
 <td style="text-align: left;">Sporenvorrat</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>Nova</strong></td>
-<td style="text-align: left;">Ereignishorizont</td>
-<td style="text-align: left;">Implosion</td>
-<td style="text-align: left;">Doppelstern</td>
-<td style="text-align: left;">Massenanziehung</td>
+<td style="text-align: left;"><strong>Nova</strong>
+(Gravitationsstoß)</td>
+<td style="text-align: left;">Druckwelle</td>
+<td style="text-align: left;">Wandschlag</td>
+<td style="text-align: left;">Umkehr</td>
+<td style="text-align: left;">–</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Klinge</strong></td>
-<td style="text-align: left;">Geschliffene Klingen</td>
-<td style="text-align: left;">Echowirbel</td>
-<td style="text-align: left;">Blutrausch</td>
-<td style="text-align: left;">Tanzschritt</td>
+<td style="text-align: left;"><strong>Klinge</strong>
+(Klingenbumerang)</td>
+<td style="text-align: left;">Wurfklinge</td>
+<td style="text-align: left;">Blutung</td>
+<td style="text-align: left;">Fangen</td>
+<td style="text-align: left;">–</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>Bastion</strong></td>
-<td style="text-align: left;">Verstärkte Emitter</td>
-<td style="text-align: left;">Schutzkuppel</td>
-<td style="text-align: left;">Pulsfeld</td>
-<td style="text-align: left;">Notfallprotokoll</td>
+<td style="text-align: left;"><strong>Bastion</strong>
+(Magnethaken)</td>
+<td style="text-align: left;">Langer Haken</td>
+<td style="text-align: left;">Kettenschlag</td>
+<td style="text-align: left;">Magnetfeld</td>
+<td style="text-align: left;">–</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Phantom</strong></td>
-<td style="text-align: left;">Lautlose Klinge</td>
-<td style="text-align: left;">Schattenschnitt</td>
-<td style="text-align: left;">Lähmendes Mal</td>
+<td style="text-align: left;"><strong>Phantom</strong> (Köder)</td>
+<td style="text-align: left;">Doppelgänger</td>
+<td style="text-align: left;">Sprengköder</td>
+<td style="text-align: left;">Platztausch (C: Lähmendes Mal)</td>
 <td style="text-align: left;">Lange Schatten</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Blutritter</strong>
+(Blutbersten)</td>
+<td style="text-align: left;">Weites Bersten</td>
+<td style="text-align: left;">Blutspende (heilt 30 % des Schilds)</td>
+<td style="text-align: left;">Blutregen (Getroffene lassen Blutkugeln
+fallen)</td>
+<td style="text-align: left;">Blutschneise (Dash, Epic) und Blutsog
+(Ulti, Epic)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Zeitschläger</strong> (Nahkampf mit Uhrenpendel = Flegel, 30
+Schaden, Rundumschlag) hat 7 Klassenkarten und 2 Familien mit je 2
+Evolutionen: <strong>Taktgeber</strong> (Common, +15 % Nahkampftempo,
++10 % Tempo), <strong>Schweres Pendel</strong> (Uncommon, +30 %
+Nahkampfschaden, +0,5 Felder, −10 % Tempo),
+<strong>Schnellladung</strong> (Uncommon, −15 % Ulti- und −10 %
+Fähigkeits-Abklingzeit), <strong>Stundenschlag</strong> (Epic,
+Taktschlag schon jeden 2. Treffer, 2,5 s lang), <strong>Ewige
+Sekunde</strong> (Epic, Zeitstopp +50 % Dauer),
+<strong>Zinseszins</strong> (Epic, gestaute Treffer schlagen mit 150 %
+ein). Familie Zeitblase: <strong>Große Blase</strong> (Rare, +30 %
+Radius, +25 % Dauer) → A <strong>Zerfall</strong> (8 Schaden/s in der
+Blase) oder B <strong>Eigenzeit</strong> (+30 % Tempo in der eigenen
+Blase). Familie Rückspul: <strong>Lange Erinnerung</strong> (Rare, 1 s
+weiter zurück, −15 % Dash-Abklingzeit) → A <strong>Zeitriss</strong>
+(Explosion an der verlassenen Stelle, 25 Schaden) oder B
+<strong>Reinigung</strong> (entfernt Gift, Brand und Verlangsamung, +20
+Schild).</p>
+<p><strong>Dash- und Ulti-Karten (neu):</strong> Volt:
+<strong>Dreifachblitz</strong> (Rare, +1 Blitzschritt-Ladung, +20 %
+Teleportweite) mit den Evolutionen <strong>Kettenblink</strong>
+(Kettenblitz am Zielpunkt) und <strong>Gewitterspur</strong> (Blitzzone
+am Zielpunkt); <strong>Starkstrom</strong> (Rare, Überladung +30 %
+Dauer, −10 % Ulti-Abklingzeit) mit <strong>Dauerblitz</strong>
+(Blitzschritt lädt in der Überladung dreimal so schnell) und
+<strong>Schockring</strong> (Schockwelle am Ende). Phantom:
+<strong>Schattenschnitt</strong> (Epic, der Dash sticht alle Gegner auf
+dem Weg, 60 % Schaden) und <strong>Blutspur</strong> (Epic, ein Kill in
+der Nachtjagd gibt die halbe Ulti-Abklingzeit zurück). Für alle Helden
+mit Ulti: <strong>Ulti-Akku</strong> (Uncommon, −15 %
+Ulti-Abklingzeit).</p>
+<p><strong>Dash- und Ulti-Karten der übrigen Helden</strong> (Grundkarte
+Rare, Evolutionen Epic):</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Held</th>
+<th style="text-align: left;">Dash-Grundkarte → Evolutionen</th>
+<th style="text-align: left;">Ulti-Grundkarte → Evolutionen</th>
+<th style="text-align: left;">Einzelkarte</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Ignis</strong></td>
+<td style="text-align: left;">Glutspur → Zündung (Explosion am
+Dash-Ende)</td>
+<td style="text-align: left;">Meteorregen (+2 Meteore) → Komet (ein
+riesiger Einschlag) / Flächenbrand (größeres, längeres Feuer)</td>
+<td style="text-align: left;">–</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Spore</strong></td>
+<td style="text-align: left;">Sporenschleier → Symbiose (Heilung in der
+Dash-Wolke)</td>
+<td style="text-align: left;">Seuchenherd → Pandemie (Gift springt über)
+/ Verwesung (keine Heilung im Nebel)</td>
+<td style="text-align: left;">–</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Nova</strong></td>
+<td style="text-align: left;">Schwebeflug → Phasenhülle (Kugeln fliegen
+beim Gleiten durch Nova)</td>
+<td style="text-align: left;">Ereignishorizont → Schwarzes Loch
+(verschluckt Kugeln, spuckt sie als eigene aus) / Doppelstern</td>
+<td style="text-align: left;">Massenanziehung</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Klinge</strong></td>
+<td style="text-align: left;">Stoßklinge → Klingenfluss (Treffer lädt
+den Dash ganz auf, alle 4 s)</td>
+<td style="text-align: left;">Geschliffene Klingen → Echowirbel /
+Blutrausch</td>
+<td style="text-align: left;">Tanzschritt</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Bastion</strong></td>
+<td style="text-align: left;">Schwerer Rammbock → Prellbock
+(Wandaufprall betäubt, +25 Schild)</td>
+<td style="text-align: left;">Verstärkte Emitter → Schutzkuppel /
+Pulsfeld (C: Wanderfestung)</td>
+<td style="text-align: left;">Notfallprotokoll</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Druide</strong></td>
+<td style="text-align: left;">Lange Ranke → Fesselranke /
+Rankenkletterer</td>
+<td style="text-align: left;">Urkraft → Raserei (Treffer verlängern) /
+Dornenfell (Schaden zurückwerfen)</td>
+<td style="text-align: left;">–</td>
 </tr>
 </tbody>
 </table>
@@ -1802,7 +2164,8 @@ oder heilen dich mit.</p>
 <tr class="even">
 <td style="text-align: left;">Uncommon</td>
 <td style="text-align: left;">Verstärkte Deckung (+0,3 s, Evolution:
-Ausdauerbarriere), Barrierestoß (stößt weg)</td>
+Ausdauerbarriere), Barrierestoß (stößt weg), Panzerglas (+1 Treffer,
+bevor die Barriere zerbricht)</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Rare</td>
@@ -1885,7 +2248,8 @@ dieselbe.</p>
 <td style="text-align: left;"><strong>Grasarena</strong></td>
 <td style="text-align: left;">Arena</td>
 <td style="text-align: left;">Luftige Balken, zentrale Wippe, Kisten,
-Ranken</td>
+Ranken. Der Mittelbalken hat eine Falltür über den Stacheln, Hebel unter
+den Seitenbalken öffnen sie für 4 s</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>Wüstenruine</strong></td>
@@ -1902,8 +2266,9 @@ Kistenstapel</td>
 <tr class="even">
 <td style="text-align: left;"><strong>Neonfabrik</strong></td>
 <td style="text-align: left;">Arena</td>
-<td style="text-align: left;">Technik-Balken, Ketten, Kisten,
-Powerups</td>
+<td style="text-align: left;">Technik-Balken, Ketten, Kisten, Powerups.
+Hebel unter den Einweg-Stegen schalten 4 s lang einen senkrechten Laser
+durch die Mitte</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Weite Wiese</strong></td>
@@ -1954,7 +2319,8 @@ Einweg-Stege</td>
 <td style="text-align: left;"><strong>Wollhaus</strong></td>
 <td style="text-align: left;">Arena</td>
 <td style="text-align: left;">Haus mit vier Räumen, Luken und begehbarem
-Dach, Kisten an Ketten</td>
+Dach, Kisten an Ketten. Die untere Mitteltür ist zu (Hebel im Raum
+öffnet sie 6 s), die obere steht offen (Hebel schließt sie 5 s)</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Eispyramiden</strong></td>
@@ -2034,33 +2400,121 @@ Mitte schleudern. Leiter aus Einweg-Stegen in der Mitte, Steg-Treppen
 außen</td>
 </tr>
 <tr class="even">
+<td style="text-align: left;"><strong>Falltürburg</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Breite Falltür-Brücke über einer
+Stachelgrube, Hebel darunter öffnen sie für 3 s. Oben je eine
+Falltür-Bastion, deren Hebel auf der Gegenseite hängt. Ganz oben eine
+Druckplatte: Wer sie betritt, ruft einen Orbitalschlag auf die andere
+Kartenseite</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Laserlabor</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Laser in Knöchelhöhe quer über den Boden
+(drüberspringen!), Laser auf den Seitenbalken mit dem Hebel auf der
+Gegenseite. Oben ein Tresor mit Herz-Blöcken hinter zwei Laserwänden:
+Der Hebel schaltet die eigene Wand ab, ein zweiter Treffer wieder
+an</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Schleusenwerk</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Tresor mit zwei Schleusentüren und einer
+Falltür über Stacheln als Boden. Die Druckplatte vor der Tür hält sie
+offen, solange jemand draufsteht (danach 2,5 s), innen öffnet ein Hebel.
+Außen lässt ein Hebel den Boden fallen. Über dem Dach ein Laser, oben
+eine Platte für einen Bodenlaser über die gegnerische Hälfte</td>
+</tr>
+<tr class="odd">
 <td style="text-align: left;"><strong>Pilzpfad</strong></td>
 <td style="text-align: left;">Scrollt seitlich</td>
 <td style="text-align: left;">Gruben, Treppen, Herz-Block, Fähre,
 Portale</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><strong>Gletscherpass</strong></td>
 <td style="text-align: left;">Scrollt seitlich</td>
 <td style="text-align: left;">Aufzüge im Abgrund, Eisfähre, hängende
 Wippe</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><strong>Lavaturm</strong></td>
 <td style="text-align: left;">Scrollt nach oben</td>
 <td style="text-align: left;">Lava steigt schon ab 4 s,
 Gipfel-Arena</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><strong>Himmelsleiter</strong></td>
 <td style="text-align: left;">Scrollt nach oben</td>
 <td style="text-align: left;">Feder, Aufzug, Wolkenfähre,
 Gipfelportal</td>
 </tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Turbotrasse</strong></td>
+<td style="text-align: left;">Autoscroll</td>
+<td style="text-align: left;">Das Bild fährt von selbst nach rechts.
+Kurze Abzweigungen laufen wieder zusammen: Steg über zwei Gruben oder
+unten durch, Tunnel unter der Decke oder obendrüber, Trittsteine oder
+Fähre über die große Grube. Turbo- und Umkehrfelder</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Asteroidenfeld</strong></td>
+<td style="text-align: left;">Weltraum</td>
+<td style="text-align: left;">Schwerelos zwischen schwebenden Stationen.
+Asteroiden treiben durchs Bild, kleine mit goldenem Kern enthalten
+Powerups, Weltraumquallen jagen die Spieler</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Kometenjagd</strong></td>
+<td style="text-align: left;">Weltraum, Autoscroll</td>
+<td style="text-align: left;">Schwerelose Autoscroll-Strecke durch einen
+Asteroidengürtel, Stationswände teilen die Bahn kurz in Spuren.
+Asteroiden kommen von vorn</td>
+</tr>
 </tbody>
 </table>
 <p>Auf Scroll-Maps folgt die Kamera dir. Gegner außerhalb des Bildes
 zeigen Pfeile am Rand.</p>
+<h3 id="autoscroll">Autoscroll</h3>
+<p>Auf Autoscroll-Maps (Seitenansicht und die Arena-Karte
+<em>Rennstrecke</em>) fährt ein Bildfenster von etwa 40 Kacheln Breite
+zwei Sekunden nach dem Countdown von selbst los, alle müssen
+mithalten.</p>
+<ul>
+<li><strong>Rote Wand hinten:</strong> schiebt nach vorn und macht 30
+Schaden pro Sekunde. Wer weit dahinter hängt oder dort gegen eine Wand
+gedrückt wird, wird zerquetscht (95 pro Sekunde).</li>
+<li><strong>Vordere Kante</strong> (gestrichelt): bremst nur, weiter
+vorlaufen geht nicht.</li>
+<li><strong>Turbofeld</strong> (orange, Doppelpfeile): Das Bild fährt 5
+s lang 1,8-mal so schnell.</li>
+<li><strong>Umkehrfeld</strong> (lila, Gegenpfeile): Die Fahrtrichtung
+dreht sich um, die rote Wand ist dann auf der anderen Seite.</li>
+<li>Felder lösen aus, sobald jemand sie berührt, und laden 9 s nach
+(Balken unter dem Feld). Am Kartenende dreht die Strecke von selbst um.
+Im Sudden Death fährt sie 35 % schneller.</li>
+</ul>
+<h3 id="weltraum">Weltraum</h3>
+<ul>
+<li><strong>Schwerelos:</strong> <code>W</code> <code>A</code>
+<code>S</code> <code>D</code> (bzw. Pfeiltasten) sind Düsen in alle
+Richtungen, man treibt weiter, bis man gegensteuert oder anstößt.
+<code>Leertaste</code> ist ein Schubstoß in Steuerrichtung (ohne
+Richtung: zur Maus). Schübe laden bei Kontakt mit einer Fläche sofort,
+sonst alle 1,1 s einer; Anzahl wie Sprünge (Luftsprung-Karten geben
+mehr). Dash geht in Steuerrichtung. Kugeln fliegen geradeaus, Kisten und
+Fässer schweben.</li>
+<li><strong>Asteroiden</strong> in drei Größen treiben durchs Bild und
+machen beim Aufprall Schaden je nach Größe und Tempo. Schüsse und
+Explosionen zerlegen sie: groß in zwei mittlere, mittel in zwei kleine.
+Kleine mit <strong>goldenem Kern</strong> lassen ein Powerup fallen.
+Neue kommen vom Rand herein (auf Autoscroll-Strecken von vorn).</li>
+<li><strong>Weltraumquallen</strong> (90 LP) treiben auf den nächsten
+Spieler zu, laden sichtbar auf (rot, zitternd) und schießen dann auf ihn
+zu. Berührung 13 Schaden, beim Vorstoß 22. Beim Tod lassen sie oft ein
+Powerup fallen.</li>
+</ul>
 <h3 id="spielfeld">Spielfeld</h3>
 <ul>
 <li><strong>Gummiwand</strong>: Um die Karte liegt ein Rahmen mit
@@ -2172,6 +2626,42 @@ mit</td>
 (Uhrzeiger, Rührbalken, Windmühlen-Kreuz). Man fährt darauf mit, bis er
 zu steil wird. Kugeln, Kisten und Fässer schiebt und schleudert er weg.
 Schüsse prallen ab wie an einer Wand</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Schalter</strong></td>
+<td style="text-align: left;"><strong>Hebel</strong> (Kasten mit Hebel)
+werden angeschossen, geschlagen oder von Explosionen umgelegt; Spieler
+laufen hindurch. <strong>Druckplatten</strong> reagieren auf Spieler,
+Kisten und Kugeln, solange etwas draufsteht, und bleiben danach noch
+kurz an. Jeder Schalter hat eine Laufzeit: Der Ring (Platte: Balken)
+läuft leer, in der letzten 1,5 s blinkt er rot und tickt, dann fällt er
+zurück. Danach ist er einige Sekunden gesperrt (roter Ring füllt sich),
+damit niemand Türen im Dauerfeuer flattern lässt. <em>Zeitschalter</em>
+lassen sich während der Laufzeit nicht erneut auslösen,
+<em>Kippschalter</em> (Toggle) schaltet ein zweiter Treffer wieder aus.
+Schalter und Ziel tragen dieselbe Farbe. Bots schießen Hebel, wenn es
+dem Gegner schadet (Falltür unter ihm, Laser auf ihm) oder eine Tür im
+Weg ist, laufen zu lohnenden Platten und weichen aktiven Lasern aus</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Tür / Falltür</strong></td>
+<td style="text-align: left;">Gesteuert von Schaltern: Türen fahren nach
+oben auf, Falltüren klappen nach unten weg. Manche sind normal offen und
+schließen per Schalter. Sie schließen nie auf jemandem: Steht etwas im
+Rahmen, warten sie und blinken rot</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Laserschranke</strong></td>
+<td style="text-align: left;">Zwischen zwei Emittern. Beim Einschalten
+erst 0,6 s rote Warnlinie, dann der Strahl: 70 Schaden pro Sekunde und
+leichtes Wegstoßen. Manche Schranken sind normal an und werden per
+Schalter abgeschaltet</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Orbitalschlag</strong></td>
+<td style="text-align: left;">Per Schalter: derselbe Strahl wie beim
+Modifier Orbitallaser entlang einer festen Bahn (Peilmarken in
+Schalterfarbe), 1,8 s Warnung</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>Fass</strong></td>
@@ -2527,9 +3017,18 @@ Leiterbahnen, zwei Eber mit Lötkolben, die Knöpfe in der Mitte.</p>
 <td style="text-align: left;">Hosten oder beitreten (Code oder IP)</td>
 </tr>
 <tr class="odd">
+<td style="text-align: left;"><strong>PROFIL</strong></td>
+<td style="text-align: left;">Deine Werte über alle Partien (siehe
+unten)</td>
+</tr>
+<tr class="even">
 <td style="text-align: left;"><strong>HELDEN</strong></td>
 <td style="text-align: left;">Übersicht aller Helden mit Werten und
 Fähigkeiten</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>ERFOLGE</strong></td>
+<td style="text-align: left;">Erfolge, Fortschritt, Titel-Auswahl</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>WIKI</strong></td>
@@ -2563,12 +3062,184 @@ WIEDERHERSTELLEN</strong> setzt alles zurück.</li>
 <p>Jede Map-Stilrichtung hat eine eigene, ruhige
 <strong>Hintergrundmusik</strong>.</p>
 <hr />
+<h2 id="-erfolge-titel--freischaltungen">🏅 Erfolge, Titel &amp;
+Freischaltungen</h2>
+<p>Über <strong>ERFOLGE</strong> im Hauptmenü (oder im Lobby-Tab
+<strong>Charakter</strong>) siehst du alle 32 Erfolge mit
+Fortschrittsbalken, Belohnung und Freischaltdatum. Neu erreichte Erfolge
+werden oben eingeblendet.</p>
+<ul>
+<li><strong>Was zählt</strong>: nur dein eigener Slot, nur in Runden mit
+mindestens einem Gegner (Mensch oder Bot), nicht im Bot-Test. Online
+rechnet der Host und schickt jedem Mitspieler seine Rundenwerte;
+gespeichert wird auf deinem PC. Am selben PC mit mehreren Menschen zählt
+nur Slot 1.</li>
+<li><strong>Titel</strong>: Fast jeder Erfolg gibt einen Titel (z. B.
+<em>Kartoffelkönig</em>, <em>Bollwerk</em>, <em>Feuerteufel</em>). Wähle
+ihn im Charakter-Tab oder im Erfolge-Fenster. Er steht hinter deinem
+Namen in der Lobby, im Tab-Charakterblatt und in der Match-Statistik und
+wird online an alle verteilt.</li>
+<li><strong>Freischaltungen</strong>: Einige Aussehens-Teile sind
+gesperrt (🔒 im Charakter-Tab, Tooltip nennt den Erfolg): Hauer
+<em>Säbel</em> und <em>Doppelt</em>, Lötspitzen <em>Diamant</em>,
+<em>Stern</em> und <em>Flamme</em>, Ohren <em>Fledermaus</em>, Frisuren
+<em>Irokese</em> und <em>Mähne</em>, Rüssel <em>Herz</em>, Körperform
+<em>Keiler</em>, Augen <em>Wild</em>, Oberteil <em>Kleid / Robe</em>,
+Schwanz <em>Quaste</em>. Was du schon trägst, bleibt.
+<strong>ZUFÄLLIG</strong> würfelt nur freie Teile.</li>
+<li><strong>Test-Schalter</strong>: „Alle Aussehens-Teile freigeben
+(Test)“ im Erfolge-Fenster macht alles wählbar, ohne Erfolge zu
+vergeben.</li>
+</ul>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Erfolg</th>
+<th style="text-align: left;">Ziel</th>
+<th style="text-align: left;">Belohnung</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Erstes Blut</td>
+<td style="text-align: left;">1 Kill</td>
+<td style="text-align: left;">Titel Ersttäter</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Erster Sieg</td>
+<td style="text-align: left;">1 Match gewinnen</td>
+<td style="text-align: left;">Titel Frischling, Hauer Säbel</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Stammgast</td>
+<td style="text-align: left;">10 Matches spielen</td>
+<td style="text-align: left;">Titel, Ohren Fledermaus</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Rundenjäger</td>
+<td style="text-align: left;">25 Runden gewinnen</td>
+<td style="text-align: left;">Titel, Frisur Irokese</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Schweinejäger</td>
+<td style="text-align: left;">50 Kills</td>
+<td style="text-align: left;">Titel, Lötspitze Diamant</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Dreifach-Eber</td>
+<td style="text-align: left;">3 Kills in einer Runde</td>
+<td style="text-align: left;">Titel</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Unberührbar</td>
+<td style="text-align: left;">Runde ohne Schaden gewinnen</td>
+<td style="text-align: left;">Titel</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Feuerwerker</td>
+<td style="text-align: left;">10.000 Schaden</td>
+<td style="text-align: left;">Titel, Schwanz Quaste</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Feldsanitäter</td>
+<td style="text-align: left;">3.000 Heilung</td>
+<td style="text-align: left;">Titel, Rüssel Herz</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Bollwerk</td>
+<td style="text-align: left;">150 geblockte Treffer</td>
+<td style="text-align: left;">Titel, Körperform Keiler</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Raufbold</td>
+<td style="text-align: left;">4.000 Nahkampfschaden</td>
+<td style="text-align: left;">Titel, Frisur Mähne</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Fähigkeitsfanatiker</td>
+<td style="text-align: left;">8.000 Fähigkeitsschaden</td>
+<td style="text-align: left;">Titel, Lötspitze Stern</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Kartoffelkönig</td>
+<td style="text-align: left;">3 Rundensiege mit Heißer Kartoffel</td>
+<td style="text-align: left;">Titel</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Zonenläufer</td>
+<td style="text-align: left;">5 Rundensiege mit Zone</td>
+<td style="text-align: left;">Titel</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Arenafürst</td>
+<td style="text-align: left;">10 Rundensiege im Arena-Modus</td>
+<td style="text-align: left;">Titel</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Nervenstark</td>
+<td style="text-align: left;">5 Rundensiege im Sudden Death</td>
+<td style="text-align: left;">Titel</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Kartenhai</td>
+<td style="text-align: left;">12 Karten in einem Match</td>
+<td style="text-align: left;">Titel</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Unantastbar</td>
+<td style="text-align: left;">10 Runden ohne Schaden gewinnen</td>
+<td style="text-align: left;">Titel, Hauer Doppelt</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Seriensieger</td>
+<td style="text-align: left;">10 Matches gewinnen</td>
+<td style="text-align: left;">Titel, Oberteil Kleid / Robe</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Keilerkönig</td>
+<td style="text-align: left;">250 Kills</td>
+<td style="text-align: left;">Titel, Augen Wild</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Tausendsassa</td>
+<td style="text-align: left;">Mit jedem Helden ein Match gewinnen</td>
+<td style="text-align: left;">Titel</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Urgestein</td>
+<td style="text-align: left;">100 Matches spielen</td>
+<td style="text-align: left;">Titel</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Großmeister</td>
+<td style="text-align: left;">50 Matches gewinnen</td>
+<td style="text-align: left;">Titel Großmeister des Lötens, Lötspitze
+Flamme</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Legende</td>
+<td style="text-align: left;">1.000 Kills</td>
+<td style="text-align: left;">Titel Legende vom Lötkolben</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><em>Held</em>-Profi (×8)</td>
+<td style="text-align: left;">15 Rundensiege mit dem Helden</td>
+<td style="text-align: left;">Feuerteufel, Blitzableiter, Pilzkönig,
+Sternenkind, Klingenmeister, Eiserne Wand, Schattenschwein,
+Waldhüter</td>
+</tr>
+</tbody>
+</table>
+<hr />
 <h2 id="-statistiken-hud--feedback">📊 Statistiken, HUD &amp;
 Feedback</h2>
 <ul>
 <li><strong>HUD</strong>: Oben rechts das Match-Ziel, pro Spieler ein
-Punktebalken (im Team-Modus in Teamfarbe), Nahkampf-Status
-<code>[E]: BEREIT</code>.</li>
+Punktebalken (im Team-Modus in Teamfarbe), Ulti-Status
+<code>[E]: BEREIT</code>. Am Charakter zeigen Symbole Barriere, Schild,
+Dash (mit Punkten für mehrere Ladungen), Fähigkeit und Ulti (Krone);
+Nahkämpfer haben statt der Munition einen Balken für den nächsten
+Schlag.</li>
 <li><strong>Am Charakter</strong>: Munitionsstriche bzw. Nachlade-Ring,
 Lebensbalken mit Schild-Overlay, Symbole für Barriere (mit
 Abklingzeit-Anzeige), Schild, Dash und Fähigkeit.</li>
@@ -2591,6 +3262,18 @@ Barriere-Treffer</strong>, <strong>meiste Heilung</strong> und
 <strong>Meister Nahkampf</strong>.</li>
 <li><strong>ALLE SPIELER, KARTEN &amp; STATS</strong>: Nach dem Match
 für jeden Spieler das komplette Blatt mit Karten.</li>
+<li><strong>Spielerprofil</strong>: Hauptmenü → <strong>PROFIL</strong>.
+Deine Werte über alle Partien: Matches und Siegquote, Runden, K/D,
+MVP-Ehrungen, Schaden, Trefferquote, Heilung, gewählte Karten und
+Spielzeit. Dazu <strong>Lieblingsheld</strong>, <strong>meistgewählte
+Karte</strong>, <strong>Lieblingsmap</strong>, <strong>Rekorde</strong>
+(meiste Kills pro Runde und Match, meister Schaden, längste
+Siegesserie), Tabellen für Helden, Karten und Maps und die letzten 20
+Matches. Es zählt nur dein eigener Slot auf diesem PC (online dein Slot,
+lokal Spieler 1); Bot-Test, Zuschauen und Testrunden aus den Editoren
+zählen nicht. Eine abgebrochene Runde zählt nicht, ein vorzeitig
+beendetes Match schon (als „abgebr.“). <strong>ZURÜCKSETZEN</strong>
+(zweimal klicken) löscht die Werte.</li>
 <li><strong>Rundenstatistik</strong>: Jede Runde wird als Zeile in
 <code>round_stats.jsonl</code> gespeichert (für Balancing).</li>
 <li><strong>Balance-Statistik im Spiel</strong>: Optionen →
@@ -2635,16 +3318,26 @@ style="text-align: left;"><code>character_customization.json</code></td>
 <td style="text-align: left;">Dein Charakter, Name, Nahkampfwaffe</td>
 </tr>
 <tr class="odd">
+<td style="text-align: left;"><code>achievements.json</code></td>
+<td style="text-align: left;">Erfolge: Zähler, freigeschaltete Erfolge,
+gewählter Titel</td>
+</tr>
+<tr class="even">
 <td style="text-align: left;"><code>lobby_loadouts.json</code></td>
 <td style="text-align: left;">Eigene Regel-Presets</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><code>card_statistics.json</code></td>
 <td style="text-align: left;">Kartenstatistik und Aufwertungen</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><code>round_stats.jsonl</code></td>
 <td style="text-align: left;">Eine Zeile pro gespielter Runde</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>player_profile.json</code></td>
+<td style="text-align: left;">Dein Spielerprofil mit
+Lebenszeit-Werten</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><code>epic_online.log</code></td>
@@ -2715,42 +3408,50 @@ style="text-align: left;"><code>scripts/autoload/card_stats.gd</code>,
 <td style="text-align: left;">Balance-Statistik im Optionsmenü</td>
 </tr>
 <tr class="odd">
+<td
+style="text-align: left;"><code>scripts/autoload/player_profile.gd</code>,
+<code>scripts/ui/profile_screen.gd</code></td>
+<td style="text-align: left;">Spielerprofil: Lebenszeit-Werte, Signale
+<code>round_recorded</code>/<code>match_recorded</code>, Erweiterungen
+über <code>get_ext()</code></td>
+</tr>
+<tr class="even">
 <td style="text-align: left;"><code>scripts/main.gd</code></td>
 <td style="text-align: left;">Rundenablauf, Snapshots, Kill-Cam,
 Lava</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><code>scripts/player.gd</code></td>
 <td style="text-align: left;">Spieler, Fähigkeiten (Konstanten oben),
 Nahkampf</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><code>scripts/bullet.gd</code></td>
 <td style="text-align: left;">Ballistik, Durchschlag, Zielsuche,
 Kollision</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td
 style="text-align: left;"><code>scripts/level_generator.gd</code></td>
 <td style="text-align: left;">Maps und Tilesets, Einweg-Stege, Pyramide,
 Haus</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><code>scripts/level/crate_chain.gd</code>,
 <code>chain_link.gd</code></td>
 <td style="text-align: left;">Kistenketten (Bauplan, Gelenke,
 Netzwerk)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td
 style="text-align: left;"><code>scripts/level_modifier_defs.gd</code></td>
 <td style="text-align: left;">Liste der Runden-Modifier</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><code>scripts/main_menu.gd</code></td>
 <td style="text-align: left;">Hauptmenü inkl. Wiki-Knopf</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><code>scripts/ui/hud.gd</code></td>
 <td style="text-align: left;">HUD, Tab-Blatt, Match-Ende</td>
 </tr>

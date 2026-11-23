@@ -144,6 +144,12 @@ func _read_level() -> void:
 			for link in child.get_children():
 				if link is ChainLink:
 					obstacle_rects.append(Rect2(link.position - Vector2(10, 10), Vector2(20, 20)))
+		elif child is SwitchGate:
+			# Schalter-Türen: Geschlossene Falltüren tragen. Türen zählen als
+			# offen, weil jede Tür einen Schalter in Reichweite hat.
+			if child.kind == "hatch" and not child.invert:
+				extra_rects.append(child.get_rect())
+				extra_names.append("Falltür")
 		elif child is StaticBody2D and _has_polygon(child):
 			for col in child.get_children():
 				if col is CollisionPolygon2D:
@@ -413,7 +419,8 @@ func check_current_level() -> Array[String]:
 	for n in nodes.keys():
 		# Herz-Blöcke werden von unten angesprungen, ihre Oberseite muss
 		# nicht erreichbar sein.
-		if not reached.has(n) and str(nodes[n]) != "Herz-Block":
+		# Schwerelos (Weltraum-Maps): Man fliegt überall hin.
+		if not reached.has(n) and str(nodes[n]) != "Herz-Block" and not LevelGenerator.zero_g:
 			unreached.append(n)
 			_last_unreached[n] = true
 	unreached.sort_custom(func(a, b): return a.y < b.y or (a.y == b.y and a.x < b.x))

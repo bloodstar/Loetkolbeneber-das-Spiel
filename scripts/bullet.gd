@@ -237,8 +237,11 @@ func _draw() -> void:
 		draw_set_transform(off / Vector2(maxf(absf(scale.x), 0.01), maxf(absf(scale.y), 0.01)))
 	if _glow_texture == null:
 		_glow_texture = _make_glow_texture()
-	var r := ORB_GLOW_RADIUS
-	draw_texture_rect(_glow_texture, Rect2(Vector2(-r, -r), Vector2(r, r) * 2.0), false, Color(1, 1, 1, ORB_GLOW_ALPHA))
+	# Grafikstufe ohne Glühen: der große halbtransparente Hof kostet auf
+	# schwacher Grafik am meisten Füllrate.
+	if GameSettings.glow_enabled():
+		var r := ORB_GLOW_RADIUS
+		draw_texture_rect(_glow_texture, Rect2(Vector2(-r, -r), Vector2(r, r) * 2.0), false, Color(1, 1, 1, ORB_GLOW_ALPHA))
 	draw_circle(Vector2.ZERO, ORB_RADIUS, Color(ORB_BODY_BOOST, ORB_BODY_BOOST, ORB_BODY_BOOST, 1.0))
 	draw_circle(Vector2.ZERO, ORB_CORE_RADIUS, Color(ORB_CORE_BOOST, ORB_CORE_BOOST, ORB_CORE_BOOST, 1.0))
 
@@ -265,6 +268,8 @@ func _advance_trail() -> void:
 	if _trail_points.is_empty() or _trail_points[_trail_points.size() - 1].distance_to(global_position) > 1.0:
 		_trail_points.append(global_position)
 	var max_points := 13 if lightning_trail else 9
+	if GameSettings.effects_scale() < 0.5:
+		max_points = 9 if lightning_trail else 6
 	while _trail_points.size() > max_points:
 		_trail_points.remove_at(0)
 	if lightning_trail:
@@ -324,6 +329,11 @@ func _physics_process(delta: float) -> void:
 			_resolve_projectile_clashes()
 		if is_queued_for_deletion():
 			return
+		# Zeitschläger: Zeitstopp friert ein, Zeitblase bremst.
+		var time_scale := TimeBubble.bullet_time_scale(self)
+		if time_scale <= 0.0:
+			return
+		delta *= time_scale
 	lifetime += delta
 	if lifetime >= max_lifetime:
 		_explode_and_destroy()
@@ -331,8 +341,9 @@ func _physics_process(delta: float) -> void:
 	
 	# Schwerkraft: Die Flugbahn wird zum Bogen. Mörser-Karten
 	# verstärken den Fall, Präzisionskarten flachen ihn ab.
-	# In der Arena (Draufsicht) fliegen Kugeln flach, y ist dort horizontal.
-	if not ArenaMode.active:
+	# In der Arena (Draufsicht) fliegen Kugeln flach, y ist dort horizontal,
+	# im Weltraum (Schwerelosigkeit) geradeaus.
+	if not ArenaMode.active and not LevelGenerator.zero_g:
 		var gravity := BULLET_GRAVITY * maxf(0.0, projectile_gravity_mult)
 		if velocity.y < 0.0:
 			gravity *= BULLET_RISE_GRAVITY_MULT

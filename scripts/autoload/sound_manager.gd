@@ -76,6 +76,7 @@ const SOUND_TABLE: Dictionary = {
 	"explosion": {"files": ["explosion"], "vol": -2.0, "max": 3, "gap": 0.05},
 	"explosion_big": {"files": ["explosion_big"], "vol": -3.0, "max": 2, "gap": 0.1},
 	"shield": {"files": ["shield"], "vol": -6.0, "max": 2, "gap": 0.05},
+	"barrier_break": {"files": ["barrier_break_1", "barrier_break_2"], "vol": -5.0, "max": 2, "gap": 0.08},
 	"poison": {"files": ["poison"], "vol": -6.0, "max": 2, "gap": 0.08},
 	"death": {"files": ["death"], "vol": -3.0, "max": 2, "gap": 0.05},
 	# Bewegung & Fähigkeiten

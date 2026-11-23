@@ -10,6 +10,7 @@ nennen Kenney trotzdem gern. Lizenztext: https://creativecommons.org/publicdomai
 | Paket | Autor | Lizenz | Bezogen über |
 | :--- | :--- | :--- | :--- |
 | Retro-Soundeffekte (Teilmenge, „sounds“) | Kenney | CC0 1.0 | Python-Paket `arcade` 3.3.2 (PyPI), Ordner `arcade/resources/assets/sounds/`; beiliegende `License.txt`: „Everything in this package is licensed CC0“, `readme.txt`: „These assets are a subset of what is available from Kenney.nl“ |
+| Impact Sounds (nur `impactGlass_heavy_*`) | Kenney | CC0 1.0 | Original: https://kenney.nl/assets/impact-sounds, Dateien bezogen über das CC0-Spiel-Repository https://github.com/drwhut/tabletop-club (`game/Sounds/GlassHeavy/`) |
 | UI Audio | Kenney | CC0 1.0 | https://github.com/Calinou/kenney-ui-audio (Original: https://kenney.nl/assets/ui-audio), beiliegende `LICENSE.txt`: „License (Creative Commons Zero, CC0)“ |
 
 ## Bearbeitung
@@ -28,6 +29,8 @@ Quellen gemischt (siehe Tabelle).
 | shoot_2.wav | Retro `laser3.wav` | +2 Halbtöne, gekürzt |
 | shoot_3.wav | Retro `laser5.wav` | +1 Halbton, gekürzt |
 | hit_1…hit_4.wav | Retro `hit1`–`hit4.wav` | – |
+| barrier_break_1.wav | Impact `impactGlass_heavy_000.ogg` + `shield.wav` (−7 Halbtöne, −9 dB) | Tiefpass 9 kHz, Lautheit wie `shield` +1 dB |
+| barrier_break_2.wav | Impact `impactGlass_heavy_002.ogg` (+1 Halbton) + `shield.wav` (−7 Halbtöne, −9 dB) | wie oben |
 | bounce_1.wav / bounce_2.wav | Retro `error5.wav` | höher gepitcht |
 | explosion.wav | Retro `explosion2.wav` | – |
 | explosion_big.wav | Retro `explosion1.wav` + `explosion2.wav` | gemischt, Schicht tiefer |

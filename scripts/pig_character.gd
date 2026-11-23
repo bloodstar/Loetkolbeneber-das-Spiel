@@ -41,6 +41,8 @@ var use_parent_floor_state: bool = true
 var outfit_id: String = ""
 # Hauerform aus der Charakteranpassung (Global.TUSK_SHAPES).
 var tusk_shape: String = "small"
+## true: Figur wird als Voxel-Eber gezeichnet (VoxelSprite-Kind), _draw nur Effekte.
+var voxel_mode: bool = false
 # Teamfarbe für das Klassen-Outfit. Alpha 0 = keine Teams, dann trägt das
 # Outfit seine festen Klassenfarben.
 var team_color: Color = Color(0.0, 0.0, 0.0, 0.0)
@@ -169,6 +171,9 @@ func _update_motion(delta: float) -> void:
 func _spawn_dust(local_pos: Vector2, direction: float) -> void:
 	if not animate:
 		return
+	# Niedrige Effektstufe: nur jede zweite Staubwolke.
+	if GameSettings.effects_scale() < 0.5 and _dust.size() % 2 == 1:
+		return
 	_dust.append({
 		"pos": local_pos,
 		"vel": Vector2(direction * 14.0, -6.0),
@@ -204,7 +209,7 @@ func _draw_dust() -> void:
 func _spawn_blood_particles() -> void:
 	if not animate or _hit_strength < BLOOD_MIN_STRENGTH:
 		return
-	var count := 5 + int(round(_hit_strength * 4.0))
+	var count := GameSettings.scaled_count(5 + int(round(_hit_strength * 4.0)), 2)
 	var hit_angle := _hit_direction.angle() if _hit_direction.length_squared() > 0.001 else 0.0
 	for i in range(count):
 		var phase := float(i) * 2.399963
@@ -247,6 +252,11 @@ func _update_blood_particles(delta: float) -> void:
 		_blood_particles[i] = particle
 
 func _draw() -> void:
+	# Voxel-Eber zeichnet die Figur (VoxelSprite als Kind); hier nur Staub und Blut.
+	if voxel_mode:
+		_draw_dust()
+		_draw_blood_particles()
+		return
 	var run := _move_energy
 	var idle := 1.0 - run
 	var air := _air_energy
@@ -413,6 +423,8 @@ func _cloth(base: Color, shade: float = 0.0) -> Color:
 
 func _draw_outfit_back(head: Vector2, neck: Vector2, run: float) -> void:
 	match outfit_id:
+		"vampire_melee":
+			_draw_vampire_collar(neck)
 		"phantom":
 			var knot := head + Vector2(-7.6, -6.6)
 			var band := _cloth(Color(0.13, 0.13, 0.20, 1.0), 0.15)
@@ -443,6 +455,12 @@ func _draw_outfit_front(head: Vector2, neck: Vector2) -> void:
 			_draw_ninja_band(head)
 		"druid":
 			_draw_druid_wreath(head)
+		"vampire":
+			_draw_vampire_top_hat(head)
+		"vampire_melee":
+			_draw_blood_clasp(neck)
+		"zeitschlaeger":
+			_draw_alarm_clock_hat(head)
 
 # Wehendes Stoffband nach hinten. Im Stand hängt es schlaff herunter, beim
 # Laufen weht es fast waagerecht hinter der Figur her.
@@ -601,6 +619,69 @@ func _draw_scarf(neck: Vector2) -> void:
 	draw_line(neck + Vector2(-8.6, 1.6), neck + Vector2(8.6, 1.6), _cloth(Color(1.0, 0.55, 0.60, 0.55), -0.45), 0.5, LINE_AA)
 	_draw_ellipse(neck + Vector2(-8.0, 1.7), 1.9, 1.6, scarf, scarf_outline, 0.6)
 
+# Vampir (Fernkampf): schräger Zylinder mit blutrotem Band und kleiner
+# Fledermaus-Brosche.
+func _draw_vampire_top_hat(head: Vector2) -> void:
+	var felt := _cloth(Color(0.09, 0.07, 0.11, 1.0))
+	var felt_light := _cloth(Color(0.22, 0.18, 0.26, 1.0), -0.3)
+	var outline := _cloth(Color(0.02, 0.01, 0.03, 1.0), 0.7)
+	var band := Color(0.74, 0.06, 0.14, 1.0)
+	var base := head + Vector2(1.0, -10.8)
+	var tilt := Vector2(1.6, 0.0)
+	# Krone (leicht nach hinten gekippt), Krempe, Band.
+	var crown := PackedVector2Array([
+		base + Vector2(-6.2, 0.0),
+		base + Vector2(-5.6, -10.5) + tilt,
+		base + Vector2(6.0, -10.5) + tilt,
+		base + Vector2(6.4, 0.0),
+	])
+	_draw_closed_polygon(crown, felt, outline, 0.8)
+	draw_line(base + Vector2(-3.8, -1.5), base + Vector2(-3.4, -9.5) + tilt, felt_light, 0.9, LINE_AA)
+	_draw_ellipse(base + Vector2(0.0, -10.5) + tilt, 5.8, 1.3, felt.lightened(0.08), outline, 0.6)
+	_draw_closed_polygon(PackedVector2Array([
+		base + Vector2(-6.1, -1.2),
+		base + Vector2(-6.0, -3.6),
+		base + Vector2(6.3, -3.6),
+		base + Vector2(6.4, -1.2),
+	]), band, Color(0.35, 0.0, 0.05, 1.0), 0.5)
+	_draw_ellipse(base + Vector2(0.0, 0.2), 10.4, 1.8, felt, outline, 0.8)
+	# Fledermaus-Brosche auf dem Band.
+	var b := base + Vector2(3.0, -2.4)
+	draw_colored_polygon(PackedVector2Array([
+		b + Vector2(-2.6, -0.6), b + Vector2(-1.0, 0.2), b + Vector2(0.0, -0.6),
+		b + Vector2(1.0, 0.2), b + Vector2(2.6, -0.6), b + Vector2(1.2, 1.0),
+		b + Vector2(0.0, 0.6), b + Vector2(-1.2, 1.0),
+	]), Color(0.95, 0.80, 0.35, 1.0))
+
+# Zeitschläger: Wecker als Hut, mit zwei Glocken und laufenden Zeigern.
+func _draw_alarm_clock_hat(head: Vector2) -> void:
+	var brass := _cloth(Color(0.86, 0.66, 0.26, 1.0))
+	var brass_light := _cloth(Color(1.0, 0.86, 0.48, 1.0), -0.35)
+	var outline := _cloth(Color(0.36, 0.22, 0.06, 1.0), 0.7)
+	var center := head + Vector2(0.5, -16.0)
+	# Füßchen, auf denen der Wecker steht.
+	draw_line(center + Vector2(-3.4, 5.0), center + Vector2(-5.2, 7.6), outline, 1.4, LINE_AA)
+	draw_line(center + Vector2(3.4, 5.0), center + Vector2(5.2, 7.6), outline, 1.4, LINE_AA)
+	# Glocken und Klöppel-Bügel.
+	_draw_closed_polygon(_dome_points(center + Vector2(-4.6, -5.0), 3.1, 2.6, 0.3), brass_light, outline, 0.6)
+	_draw_closed_polygon(_dome_points(center + Vector2(4.6, -5.0), 3.1, 2.6, 0.3), brass_light, outline, 0.6)
+	draw_line(center + Vector2(-2.0, -7.2), center + Vector2(2.0, -7.2), outline, 1.0, LINE_AA)
+	draw_line(center + Vector2(0.0, -7.2), center + Vector2(0.0, -6.0), outline, 1.0, LINE_AA)
+	# Gehäuse und Zifferblatt.
+	_draw_ellipse(center, 6.6, 6.2, brass, outline, 0.8)
+	_draw_ellipse(center, 5.0, 4.7, Color(0.98, 0.96, 0.88, 1.0), Color(0.55, 0.40, 0.16, 1.0), 0.5)
+	for i in range(4):
+		var dir := Vector2.from_angle(TAU * float(i) / 4.0)
+		draw_line(center + dir * 3.7, center + dir * 4.4, Color(0.25, 0.18, 0.10, 1.0), 0.7, LINE_AA)
+	# Die Zeiger laufen sichtbar, der große schneller als der kleine.
+	var big := Vector2.from_angle(-PI * 0.5 + _time * 2.4)
+	var small := Vector2.from_angle(-PI * 0.5 + _time * 0.2)
+	draw_line(center, center + big * 3.6, Color(0.15, 0.10, 0.06, 1.0), 0.7, LINE_AA)
+	draw_line(center, center + small * 2.4, Color(0.15, 0.10, 0.06, 1.0), 1.0, LINE_AA)
+	draw_circle(center, 0.7, Color(0.75, 0.15, 0.12, 1.0))
+	# Glanzlicht auf dem Gehäuse.
+	draw_arc(center, 5.8, PI * 1.05, PI * 1.45, 6, Color(1.0, 0.95, 0.75, 0.7), 0.7, true)
+
 # Bastion: Bauhelm mit Stirnlampe.
 func _draw_hard_hat(head: Vector2) -> void:
 	var helmet := _cloth(Color(0.24, 0.74, 0.60, 1.0))
@@ -612,6 +693,32 @@ func _draw_hard_hat(head: Vector2) -> void:
 	draw_circle(head + Vector2(0.0, -8.9), 2.6, Color(1.0, 0.95, 0.55, 0.22))
 	draw_rect(Rect2(head + Vector2(-1.8, -10.2), Vector2(3.6, 2.4)), Color(0.22, 0.24, 0.27, 1.0), true)
 	draw_circle(head + Vector2(0.0, -9.0), 1.0, Color(1.0, 0.95, 0.60, 1.0))
+
+# Blutritter: hoher Umhangkragen hinter dem Kopf, schwarz mit rotem Futter.
+func _draw_vampire_collar(neck: Vector2) -> void:
+	var outer := _cloth(Color(0.10, 0.06, 0.10, 1.0), 0.35)
+	var outline := _cloth(Color(0.03, 0.01, 0.03, 1.0), 0.75)
+	var lining := Color(0.70, 0.05, 0.14, 1.0)
+	for side in [-1.0, 1.0]:
+		_draw_closed_polygon(PackedVector2Array([
+			neck + Vector2(1.5 * side, 2.0),
+			neck + Vector2(12.5 * side, 1.6),
+			neck + Vector2(17.5 * side, -14.0),
+			neck + Vector2(9.0 * side, -7.0),
+		]), outer, outline, 0.7)
+		_draw_closed_polygon(PackedVector2Array([
+			neck + Vector2(3.0 * side, 1.0),
+			neck + Vector2(11.4 * side, 0.6),
+			neck + Vector2(15.4 * side, -11.0),
+			neck + Vector2(9.0 * side, -5.2),
+		]), lining, Color(0.35, 0.02, 0.07, 1.0), 0.4)
+
+# Blutritter: Umhangkette mit rotem Edelstein vorn am Hals.
+func _draw_blood_clasp(neck: Vector2) -> void:
+	var chain := Color(0.78, 0.70, 0.45, 1.0)
+	draw_line(neck + Vector2(-7.5, 1.0), neck + Vector2(7.5, 1.0), chain, 0.8, LINE_AA)
+	_draw_ellipse(neck + Vector2(0.0, 1.6), 2.4, 2.2, Color(0.80, 0.06, 0.16, 1.0), Color(0.45, 0.35, 0.15, 1.0), 0.6)
+	draw_circle(neck + Vector2(-0.7, 0.9), 0.7, Color(1.0, 0.65, 0.70, 0.9))
 
 # Druide: Kranz aus Zweigen und Blättern mit zwei kleinen Geweih-Ästen.
 func _draw_druid_wreath(head: Vector2) -> void:
