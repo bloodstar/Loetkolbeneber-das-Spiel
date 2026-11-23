@@ -13,7 +13,7 @@ func _ready() -> void:
 	Global.lobby_autosave_enabled = false
 	Global.set_match_mode(Global.MATCH_MODE_FFA)
 	Global.set_player_count(4)
-	var heroes := ["volt", "phantom", "klinge", "bastion"]
+	var heroes := ["volt", "phantom", "klinge", "bastion", "vampire"]
 	for i in range(4):
 		Global.set_player_hero(i + 1, heroes[i])
 	Global.set_bot_test_random_loadouts(false)

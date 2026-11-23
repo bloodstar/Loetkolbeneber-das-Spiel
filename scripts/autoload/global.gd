@@ -790,6 +790,36 @@ func _setup_heroes() -> void:
 	druid.ability_version = 1
 	heroes["druid"] = druid
 
+	# 9. Vampir – Fernkampf-Blutsauger
+	var vampire = HeroData.new()
+	vampire.id = "vampire"
+	vampire.name = "Vampir"
+	vampire.role = "Blood Hunter"
+	vampire.description = "Saugt seine Gegner aus und lebt von ihrem Blut."
+	vampire.passive_desc = "Blutdurst: Jeder %d. Treffer an einem Gegner lässt eine Blutkugel fallen. Eine Kugel heilt dich um %d HP, du sammelst sie aber nur, wenn du verletzt bist. Alle Vampire können jede Blutkugel nutzen." % [
+		Player.VAMPIRE_ORB_HIT_INTERVAL, int(Player.VAMPIRE_ORB_HEAL),
+	]
+	vampire.ability_name = "Blutexplosion"
+	vampire.ability_desc = "Lässt alle Blutkugeln in deiner Nähe explodieren!"
+	vampire.ability_cooldown = 6.0
+	vampire.dash_name = "Blutsturm"
+	vampire.dash_desc = "Stürmt durch Gegner hindurch, jeder Getroffene lässt eine Blutkugel fallen."
+	vampire.ult_name = "Fledermausschwarm"
+	vampire.ult_desc = "Blutkugeln in der Nähe werden zu Fledermäusen, die Gegner angreifen!"
+	vampire.ult_cooldown = 26.0
+	vampire.base_hp = 100
+	vampire.base_shield = 5
+	vampire.base_speed = 300.0
+	vampire.base_jump_force = -500.0
+	vampire.base_ammo = 3
+	vampire.base_fire_rate_cooldown = 0.24
+	vampire.base_reload_time = 1.2
+	vampire.color_tint = Color(0.72, 0.10, 0.18)
+	vampire.sprite_tile_name = "tile_0007.png"
+	vampire.version = 1
+	vampire.ability_version = 1
+	heroes["vampire"] = vampire
+
 func get_hero(id: String) -> HeroData:
 	return heroes.get(id, heroes["ignis"])
 
@@ -841,6 +871,10 @@ func get_hero_ability_details(hero: HeroData) -> String:
 			return "Ein Doppelgänger mit %d HP läuft %.1f s lang in Blickrichtung weiter. Du selbst bist %.1f s unsichtbar. Bots, Türme und Zielsuche fallen auf den Köder herein." % [
 				int(Player.PHANTOM_DECOY_HP), Player.PHANTOM_DECOY_DURATION, Player.PHANTOM_STEALTH_DECOY,
 			]
+		"vampire":
+			return "Alle Blutkugeln bis %d px um dich explodieren: je %d Schaden im Radius %d px mit Rückstoß. Mehrere Kugeln am selben Gegner treffen mehrfach. Ohne Kugel in Reichweite passiert nichts und es gibt keinen Cooldown." % [
+				int(Player.VAMPIRE_BURST_RANGE), int(Player.VAMPIRE_BURST_DAMAGE), int(Player.VAMPIRE_BURST_RADIUS),
+			]
 		"druid":
 			return "Rankenwand am Zielpunkt, höchstens %d px entfernt. Die breite Seite zeigt immer zu dir: %d px lang, %.0f s lang, %d HP. Hält Bewegung und Kugeln aller Spieler auf, man kann darauf stehen. Höchstens %d Wand gleichzeitig, die älteste zerfällt." % [
 				int(Player.DRUID_WALL_RANGE), int(Player.DRUID_WALL_LENGTH),
@@ -865,6 +899,12 @@ func get_hero_ult_details(hero: HeroData) -> String:
 				Player.PHANTOM_STEALTH_FLICKER,
 				int(round(Player.PHANTOM_HUNT_FIRST_HIT_MULT * 100.0)),
 			]
+		"vampire":
+			return "Bis zu %d Blutkugeln im Umkreis von %d px werden zu Fledermäusen (mindestens %d, notfalls aus dir selbst). Jede hat %d HP, lebt %.0f s, fliegt zum nächsten Gegner und beißt alle %.1f s für %d Schaden." % [
+				Player.VAMPIRE_ULT_MAX_BATS, int(Player.VAMPIRE_ULT_RANGE), Player.VAMPIRE_ULT_MIN_BATS,
+				int(Player.VAMPIRE_BAT_HP), Player.VAMPIRE_BAT_DURATION, Player.VAMPIRE_BAT_BITE_INTERVAL,
+				int(Player.VAMPIRE_BAT_DAMAGE),
+			]
 	return hero.ult_desc
 
 # Ausführlicher Text zum Helden-Dash (Shift).
@@ -878,6 +918,8 @@ func get_hero_dash_details(hero: HeroData) -> String:
 			]
 		"phantom":
 			return "Dash in Laufrichtung, kurz unverwundbar. Danach %.1f s unsichtbar." % Player.PHANTOM_STEALTH_DASH
+		"vampire":
+			return "Dash in Laufrichtung, kurz unverwundbar und durch Gegner hindurch. Jeder Getroffene nimmt %d Schaden und lässt sofort eine Blutkugel fallen." % int(Player.VAMPIRE_DASH_DAMAGE)
 	return "Dash in Laufrichtung, kurz unverwundbar."
 
 # Zeile zum Hauptangriff (Linksklick) für Menü und Tooltips.
@@ -904,6 +946,10 @@ func get_hero_kit_text(hero: HeroData) -> String:
 func is_melee_hero(hero_id: String) -> bool:
 	var hero: HeroData = heroes.get(hero_id, null)
 	return hero != null and hero.is_melee()
+
+# Alle Vampir-Helden (IDs beginnen mit "vampire") teilen sich die Blutkugeln.
+func is_vampire_hero(hero_id: String) -> bool:
+	return hero_id.begins_with("vampire")
 
 func is_melee_slot(index: int) -> bool:
 	return is_melee_hero(get_player_hero_id(index))

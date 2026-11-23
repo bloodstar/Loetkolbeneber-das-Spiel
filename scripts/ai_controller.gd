@@ -398,6 +398,12 @@ func _handle_combat(_delta: float) -> void:
 			"phantom":
 				# Köder zum Anschleichen oder zum Entkommen.
 				wants = dist < 320.0
+			"vampire":
+				# Blutexplosion nur, wenn eine Kugel nah genug am Gegner liegt.
+				wants = false
+				if is_instance_valid(target):
+					wants = not BloodOrb.free_orbs(player.get_tree(), target.global_position,
+						Player.VAMPIRE_BURST_RADIUS * player.ability_radius_mult).is_empty()
 		if wants:
 			# Nova-Bots setzen das Schwarze Loch direkt auf den Gegner.
 			if hero_id == "nova" and is_instance_valid(target):

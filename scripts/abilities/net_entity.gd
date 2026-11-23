@@ -23,4 +23,8 @@ static func create_replica(kind: String) -> Node2D:
 			return PhantomDecoy.new()
 		"orb":
 			return BallLightning.new()
+		"blood":
+			return BloodOrb.new()
+		"bat":
+			return VampireBat.new()
 	return null

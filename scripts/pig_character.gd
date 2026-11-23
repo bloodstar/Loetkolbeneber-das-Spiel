@@ -443,6 +443,8 @@ func _draw_outfit_front(head: Vector2, neck: Vector2) -> void:
 			_draw_ninja_band(head)
 		"druid":
 			_draw_druid_wreath(head)
+		"vampire":
+			_draw_vampire_top_hat(head)
 
 # Wehendes Stoffband nach hinten. Im Stand hängt es schlaff herunter, beim
 # Laufen weht es fast waagerecht hinter der Figur her.
@@ -600,6 +602,40 @@ func _draw_scarf(neck: Vector2) -> void:
 	]), scarf, scarf_outline, 0.7)
 	draw_line(neck + Vector2(-8.6, 1.6), neck + Vector2(8.6, 1.6), _cloth(Color(1.0, 0.55, 0.60, 0.55), -0.45), 0.5, LINE_AA)
 	_draw_ellipse(neck + Vector2(-8.0, 1.7), 1.9, 1.6, scarf, scarf_outline, 0.6)
+
+# Vampir (Fernkampf): schräger Zylinder mit blutrotem Band und kleiner
+# Fledermaus-Brosche.
+func _draw_vampire_top_hat(head: Vector2) -> void:
+	var felt := _cloth(Color(0.09, 0.07, 0.11, 1.0))
+	var felt_light := _cloth(Color(0.22, 0.18, 0.26, 1.0), -0.3)
+	var outline := _cloth(Color(0.02, 0.01, 0.03, 1.0), 0.7)
+	var band := Color(0.74, 0.06, 0.14, 1.0)
+	var base := head + Vector2(1.0, -10.8)
+	var tilt := Vector2(1.6, 0.0)
+	# Krone (leicht nach hinten gekippt), Krempe, Band.
+	var crown := PackedVector2Array([
+		base + Vector2(-6.2, 0.0),
+		base + Vector2(-5.6, -10.5) + tilt,
+		base + Vector2(6.0, -10.5) + tilt,
+		base + Vector2(6.4, 0.0),
+	])
+	_draw_closed_polygon(crown, felt, outline, 0.8)
+	draw_line(base + Vector2(-3.8, -1.5), base + Vector2(-3.4, -9.5) + tilt, felt_light, 0.9, LINE_AA)
+	_draw_ellipse(base + Vector2(0.0, -10.5) + tilt, 5.8, 1.3, felt.lightened(0.08), outline, 0.6)
+	_draw_closed_polygon(PackedVector2Array([
+		base + Vector2(-6.1, -1.2),
+		base + Vector2(-6.0, -3.6),
+		base + Vector2(6.3, -3.6),
+		base + Vector2(6.4, -1.2),
+	]), band, Color(0.35, 0.0, 0.05, 1.0), 0.5)
+	_draw_ellipse(base + Vector2(0.0, 0.2), 10.4, 1.8, felt, outline, 0.8)
+	# Fledermaus-Brosche auf dem Band.
+	var b := base + Vector2(3.0, -2.4)
+	draw_colored_polygon(PackedVector2Array([
+		b + Vector2(-2.6, -0.6), b + Vector2(-1.0, 0.2), b + Vector2(0.0, -0.6),
+		b + Vector2(1.0, 0.2), b + Vector2(2.6, -0.6), b + Vector2(1.2, 1.0),
+		b + Vector2(0.0, 0.6), b + Vector2(-1.2, 1.0),
+	]), Color(0.95, 0.80, 0.35, 1.0))
 
 # Bastion: Bauhelm mit Stirnlampe.
 func _draw_hard_hat(head: Vector2) -> void:
