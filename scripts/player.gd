@@ -142,6 +142,15 @@ const VAMP_MELEE_ULT_HEAL: float = 30.0
 const VAMP_MELEE_ULT_HIT_RADIUS: float = 26.0
 const VAMP_MELEE_ULT_BLAST_RADIUS: float = 55.0
 const VAMP_MELEE_ULT_KNOCKBACK: float = 260.0
+# Blutritter-Evolutionen aus den Klassenkarten: Dickes Blut (Kugeln geben
+# mehr Schild), Blutspende (Bersten heilt), Blutschneise (Dash schneidet),
+# Blutsog (Blutruf zieht mehr Kugeln aus größerem Umkreis).
+const VAMPMEVO_THICK_BLOOD_MULT: float = 1.5
+const VAMPMEVO_BURST_HEAL: float = 0.3
+const VAMPMEVO_DASH_CUT_RADIUS: float = 28.0
+const VAMPMEVO_DASH_CUT_DAMAGE_MULT: float = 0.5
+const VAMPMEVO_ULT_MAX_ORBS: int = 10
+const VAMPMEVO_ULT_RADIUS_MULT: float = 1.4
 
 # Vampire (alle Helden, deren ID mit "vampire" beginnt, siehe
 # Global.is_vampire_hero): jeder dritte Angriffstreffer an einem Gegner lässt
@@ -2904,7 +2913,10 @@ func _vamp_melee_absorb_orb() -> bool:
 	var cap := max_health * VAMP_MELEE_SHIELD_CAP
 	if current_shield >= cap - 0.5:
 		return false
-	current_shield = minf(current_shield + VAMP_MELEE_ORB_SHIELD, cap)
+	var gain := VAMP_MELEE_ORB_SHIELD
+	if _has_ability_evolution("vampm_thick_blood"):
+		gain *= VAMPMEVO_THICK_BLOOD_MULT
+	current_shield = minf(current_shield + gain, cap)
 	emit_signal("health_changed", current_health, max_health, current_shield, max_shield)
 	return true
 
@@ -2916,6 +2928,18 @@ func _vamp_melee_dash_start() -> void:
 	# Durch Gegner hindurch geht es wie bei allen Vampiren (_vampire_dash_ghost).
 	spawn_blood_orb(global_position)
 	_fx("ring", NetFx.ring_args(global_position, Color(0.75, 0.05, 0.12, 0.8), 0.6, 3.0, 0.16, 0.25))
+
+# Evolution "Blutschneise": jeder Gegner, den der Blutsturm berührt, nimmt
+# einmal pro Dash einen Teil des Nahkampfschadens.
+func _vamp_melee_dash_cut() -> void:
+	var data := Global.get_melee_weapon_data(melee_weapon)
+	var damage := float(data["damage"]) * melee_damage_mult * powerup_damage_mult * VAMPMEVO_DASH_CUT_DAMAGE_MULT
+	for p in _opponents_within(global_position, VAMPMEVO_DASH_CUT_RADIUS):
+		if _vampire_dash_hits.has(p):
+			continue
+		_vampire_dash_hits.append(p)
+		_ability_hit(p, damage, dash_dir * 140.0)
+		_spawn_blade_hit_spark(p.global_position)
 
 # Fähigkeit "Blutbersten": der gesamte Schild explodiert und macht
 # VAMP_MELEE_BURST_DAMAGE_PER_SHIELD Schaden je Schildpunkt an allen Gegnern
@@ -2937,6 +2961,12 @@ func _vamp_melee_burst() -> bool:
 		if dir.length_squared() < 1.0:
 			dir = Vector2.UP
 		_ability_hit(p, damage, dir.normalized() * VAMP_MELEE_BURST_KNOCKBACK)
+		# Evolution "Blutregen": jeder Getroffene lässt eine Blutkugel fallen.
+		if _has_ability_evolution("vampm_burst_orbs"):
+			spawn_blood_orb(p.global_position)
+	# Evolution "Blutspende": ein Teil des Schilds kommt als Leben zurück.
+	if _has_ability_evolution("vampm_burst_heal"):
+		heal(shield * VAMPMEVO_BURST_HEAL)
 	return true
 
 # Ulti "Blutruf": die nächsten freien Blutkugeln im Radius fliegen als
@@ -2944,17 +2974,20 @@ func _vamp_melee_burst() -> bool:
 func _vamp_melee_call_orbs() -> bool:
 	if is_replica or get_parent() == null:
 		return false
+	var more := _has_ability_evolution("vampm_ult_more")
+	var radius := VAMP_MELEE_ULT_RADIUS * (VAMPMEVO_ULT_RADIUS_MULT if more else 1.0)
+	var max_orbs := VAMPMEVO_ULT_MAX_ORBS if more else VAMP_MELEE_ULT_MAX_ORBS
 	var found: Array = []
 	for o in get_tree().get_nodes_in_group("blood_orb"):
 		if not is_instance_valid(o) or o.is_queued_for_deletion() or not o.is_free():
 			continue
 		var d := global_position.distance_to(o.global_position)
-		if d <= VAMP_MELEE_ULT_RADIUS:
+		if d <= radius:
 			found.append([d, o])
 	if found.is_empty():
 		return false
 	found.sort_custom(func(a, b): return a[0] < b[0])
-	for i in range(mini(found.size(), VAMP_MELEE_ULT_MAX_ORBS)):
+	for i in range(mini(found.size(), max_orbs)):
 		var pos: Vector2 = found[i][1].take()
 		var bolt := BloodBolt.new()
 		bolt.setup(self, VAMP_MELEE_ULT_SPEED, VAMP_MELEE_ULT_HIT_RADIUS)
@@ -2962,7 +2995,7 @@ func _vamp_melee_call_orbs() -> bool:
 		get_parent().add_child(bolt)
 		bolt.global_position = pos
 	_fx("ring", NetFx.with_sound(NetFx.ring_args(global_position, Color(0.8, 0.05, 0.15, 0.7),
-		VAMP_MELEE_ULT_RADIUS / 8.0, 0.5, 0.35, 0.2), "teleport", 0.08, -2.0))
+		radius / 8.0, 0.5, 0.35, 0.2), "teleport", 0.08, -2.0))
 	return true
 
 # Ein herangezogener Blutstropfen trifft einen Gegner: kleine Explosion,
@@ -4293,6 +4326,8 @@ func _handle_timers(delta: float) -> void:
 		var hero_dash_id: String = Global.get_player_hero_id(player_index)
 		if hero_dash_id == "vampire" and not is_replica:
 			_vampire_dash_tick()
+		elif hero_dash_id == VAMP_MELEE_ID and not is_replica and _has_ability_evolution("vampm_dash_cut"):
+			_vamp_melee_dash_cut()
 		if hero_dash_id == "ignis":
 			afterburner_timer -= delta
 			if afterburner_timer <= 0.0:

@@ -27,6 +27,19 @@ func _clear_orbs() -> void:
 	for o in _free_orbs():
 		o.take()
 
+# Seite (links/rechts), auf der vor pos 300 px kein Gelände liegt.
+func _clear_side(pos: Vector2) -> float:
+	var space := get_world_2d().direct_space_state
+	for side in [1.0, -1.0]:
+		var ok := true
+		for dy in [-14.0, 0.0, 8.0]:
+			var q := PhysicsRayQueryParameters2D.create(pos + Vector2(0.0, dy), pos + Vector2(300.0 * side, dy), 1)
+			if not space.intersect_ray(q).is_empty():
+				ok = false
+		if ok:
+			return side
+	return 1.0
+
 func _ready() -> void:
 	CardStats.set_persistence_enabled(false)
 	CardStats.auto_evaluation_enabled = false
@@ -46,11 +59,22 @@ func _ready() -> void:
 	_check(hero.get_ability_fingerprint().length() == 8, "Fähigkeits-Fingerabdruck berechenbar")
 	_check(load("res://assets/ui/hero_vampire_melee.svg") != null, "Helden-Icon vorhanden")
 
+	# --- Klassenkarten ---
+	for id in ["vampm_aderlass", "vampm_dickes_blut", "vampm_blutgier", "vampm_blutbersten",
+			"vampm_blutspende", "vampm_blutregen", "vampm_blutschneise", "vampm_blutsog"]:
+		var card = CardDatabase.get_card(id)
+		_check(card != null and card.hero_id == ID, "Klassenkarte %s existiert" % id)
+	_check(CardDatabase.is_card_available_for_player(CardDatabase.get_card("vampm_aderlass"), ID, []), "Aderlass für den Blutritter verfügbar")
+	_check(not CardDatabase.is_card_available_for_player(CardDatabase.get_card("vampm_aderlass"), "vampire", []), "Aderlass nicht für den Fernkampf-Vampir")
+	_check(not CardDatabase.is_card_available_for_player(CardDatabase.get_card("vampm_blutspende"), ID, []), "Blutspende braucht die Grundkarte")
+	_check(CardDatabase.is_card_available_for_player(CardDatabase.get_card("vampm_blutspende"), ID, ["vampm_blutbersten"]), "Blutspende mit Grundkarte verfügbar")
+
 	# --- Match: Blutritter (1) gegen Volt (2) ---
 	Global.set_match_mode(Global.MATCH_MODE_FFA)
 	Global.set_player_count(2)
 	Global.set_player_hero(1, ID)
 	Global.set_player_hero(2, "volt")
+	Global.set_selected_map("weite")
 	Global.reset_match()
 	var main = load("res://scenes/main.tscn").instantiate()
 	main.skip_menu = true
@@ -108,17 +132,18 @@ func _ready() -> void:
 	await _wait(0.6)
 	_clear_orbs()
 	var start := vamp.global_position
-	foe.global_position = start + Vector2(70.0, 0.0)
+	var side := _clear_side(start)
+	foe.global_position = start + Vector2(70.0 * side, 0.0)
 	foe.velocity = Vector2.ZERO
 	vamp.velocity = Vector2.ZERO
-	vamp.aim_direction = Vector2.RIGHT
+	vamp.aim_direction = Vector2(side, 0.0)
 	vamp.dash()
 	await _wait(0.05)
 	var orbs := _free_orbs()
 	_check(orbs.size() == 1 and orbs[0].global_position.distance_to(start) < 30.0, "Blutsturm legt eine Blutkugel an der Startstelle ab")
 	await _wait(0.45)
-	_check(vamp.global_position.x > foe.global_position.x + 10.0 or vamp.global_position.x - start.x > 150.0,
-		"Blutsturm stürmt durch den Gegner (%.0f px, Gegner bei +70)" % (vamp.global_position.x - start.x))
+	_check((vamp.global_position.x - start.x) * side > 110.0,
+		"Blutsturm stürmt durch den Gegner (%.0f px, Gegner bei 70)" % ((vamp.global_position.x - start.x) * side))
 	_check(vamp.get_collision_mask_value(2), "Nach dem Dash kollidiert er wieder mit Spielern")
 
 	# --- Ulti: Blutruf ---
@@ -131,10 +156,13 @@ func _ready() -> void:
 	vamp.global_position = start
 	vamp.velocity = Vector2.ZERO
 	vamp.current_health = vamp.max_health - 50.0
-	foe.global_position = start + Vector2(120.0, -10.0)
+	side = _clear_side(start)
+	foe.global_position = start + Vector2(120.0 * side, -10.0)
 	foe.velocity = Vector2.ZERO
-	vamp.spawn_blood_orb(start + Vector2(240.0, -10.0))
-	vamp.spawn_blood_orb(start + Vector2(-200.0, -10.0))
+	# Gegner bleibt stehen, damit er sicher in der Flugbahn liegt.
+	foe.set_physics_process(false)
+	vamp.spawn_blood_orb(start + Vector2(240.0 * side, -10.0))
+	vamp.spawn_blood_orb(start + Vector2(-200.0 * side, -10.0))
 	await _wait(0.05)
 	foe.max_shield = 0.0
 	foe.current_shield = 0.0
@@ -150,6 +178,26 @@ func _ready() -> void:
 	_check(vamp.current_health - own_before >= Player.VAMP_MELEE_ULT_HEAL - 1.0, "Treffer heilt den Blutritter (%.0f -> %.0f)" % [own_before, vamp.current_health])
 	_check(vamp.current_shield > 0.0, "Die zweite Kugel erreicht ihn und gibt Schild")
 	_check(get_tree().get_nodes_in_group("blood_bolt").is_empty(), "Keine Tropfen mehr unterwegs")
+	foe.set_physics_process(true)
+
+	# --- Evolutionen ---
+	vamp.ability_evolutions = ["vampm_thick_blood", "vampm_burst_heal", "vampm_ult_more"]
+	vamp.current_shield = 0.0
+	vamp.on_blood_orb_pickup(null)
+	_check(is_equal_approx(vamp.current_shield, Player.VAMP_MELEE_ORB_SHIELD * Player.VAMPMEVO_THICK_BLOOD_MULT), "Dickes Blut: mehr Schild pro Kugel")
+	vamp.current_shield = 100.0
+	vamp.current_health = 20.0
+	foe.global_position = vamp.global_position + Vector2(400.0, 0.0)
+	vamp.ability_timer = 0.0
+	vamp.use_ability()
+	_check(absf(vamp.current_health - (20.0 + 100.0 * Player.VAMPMEVO_BURST_HEAL)) < 1.0, "Blutspende heilt (%.0f HP)" % vamp.current_health)
+	_clear_orbs()
+	await _wait(0.05)
+	vamp.spawn_blood_orb(vamp.global_position + Vector2(-Player.VAMP_MELEE_ULT_RADIUS * 1.2, -10.0))
+	await _wait(0.05)
+	vamp.ult_timer = 0.0
+	vamp.use_ultimate()
+	_check(vamp.ult_timer > 0.0, "Blutsog: Blutruf erreicht weiter entfernte Kugeln")
 
 	print("[TEST] Fertig, Fehler: %d" % _failed)
 	get_tree().quit(1 if _failed > 0 else 0)

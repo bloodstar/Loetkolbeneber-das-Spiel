@@ -408,6 +408,7 @@ Kartentexte nutzen für gleiche Effekte immer dieselben Begriffe: **Tempo** (Lau
 | **Klinge** | Wirbelklinge, Klingenreflexe, Duellklinge |
 | **Bastion** | Energieschild, Feldwartung, Bastionsfestung |
 | **Phantom** | Schattenklinge, Schattenlauf, Todeskuss |
+| **Blutritter** | Aderlass, Dickes Blut (Kugeln +50 % Schild), Blutgier |
 
 ### Fähigkeitskarten (je 4 pro Held)
 
@@ -422,6 +423,7 @@ Eine Grundkarte (Rare) mit zwei exklusiven Evolutionen (Epic) und eine Einzelkar
 | **Klinge** | Geschliffene Klingen | Echowirbel | Blutrausch | Tanzschritt |
 | **Bastion** | Verstärkte Emitter | Schutzkuppel | Pulsfeld | Notfallprotokoll |
 | **Phantom** (Köder) | Doppelgänger | Sprengköder | Platztausch (C: Lähmendes Mal) | Lange Schatten |
+| **Blutritter** (Blutbersten) | Weites Bersten | Blutspende (heilt 30 % des Schilds) | Blutregen (Getroffene lassen Blutkugeln fallen) | Blutschneise (Dash, Epic) und Blutsog (Ulti, Epic) |
 
 **Dash- und Ulti-Karten (neu):** Volt: **Dreifachblitz** (Rare, +1 Blitzschritt-Ladung, +20 % Teleportweite) mit den Evolutionen **Kettenblink** (Kettenblitz am Zielpunkt) und **Gewitterspur** (Blitzzone am Zielpunkt); **Starkstrom** (Rare, Überladung +30 % Dauer, −10 % Ulti-Abklingzeit) mit **Dauerblitz** (Blitzschritt lädt in der Überladung dreimal so schnell) und **Schockring** (Schockwelle am Ende). Phantom: **Schattenschnitt** (Epic, der Dash sticht alle Gegner auf dem Weg, 60 % Schaden) und **Blutspur** (Epic, ein Kill in der Nachtjagd gibt die halbe Ulti-Abklingzeit zurück). Für alle Helden mit Ulti: **Ulti-Akku** (Uncommon, −15 % Ulti-Abklingzeit).
 
