@@ -2582,19 +2582,24 @@ Leiterbahnen, zwei Eber mit Lötkolben, die Knöpfe in der Mitte.</p>
 <td style="text-align: left;">Hosten oder beitreten (Code oder IP)</td>
 </tr>
 <tr class="odd">
+<td style="text-align: left;"><strong>PROFIL</strong></td>
+<td style="text-align: left;">Deine Werte über alle Partien (siehe
+unten)</td>
+</tr>
+<tr class="even">
 <td style="text-align: left;"><strong>HELDEN</strong></td>
 <td style="text-align: left;">Übersicht aller Helden mit Werten und
 Fähigkeiten</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><strong>WIKI</strong></td>
 <td style="text-align: left;">Öffnet dieses Wiki im Browser</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><strong>OPTIONEN</strong></td>
 <td style="text-align: left;">Einstellungen</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><strong>BEENDEN</strong></td>
 <td style="text-align: left;">Spiel schließen</td>
 </tr>
@@ -2649,6 +2654,18 @@ Barriere-Treffer</strong>, <strong>meiste Heilung</strong> und
 <strong>Meister Nahkampf</strong>.</li>
 <li><strong>ALLE SPIELER, KARTEN &amp; STATS</strong>: Nach dem Match
 für jeden Spieler das komplette Blatt mit Karten.</li>
+<li><strong>Spielerprofil</strong>: Hauptmenü → <strong>PROFIL</strong>.
+Deine Werte über alle Partien: Matches und Siegquote, Runden, K/D,
+MVP-Ehrungen, Schaden, Trefferquote, Heilung, gewählte Karten und
+Spielzeit. Dazu <strong>Lieblingsheld</strong>, <strong>meistgewählte
+Karte</strong>, <strong>Lieblingsmap</strong>, <strong>Rekorde</strong>
+(meiste Kills pro Runde und Match, meister Schaden, längste
+Siegesserie), Tabellen für Helden, Karten und Maps und die letzten 20
+Matches. Es zählt nur dein eigener Slot auf diesem PC (online dein Slot,
+lokal Spieler 1); Bot-Test, Zuschauen und Testrunden aus den Editoren
+zählen nicht. Eine abgebrochene Runde zählt nicht, ein vorzeitig
+beendetes Match schon (als „abgebr.“). <strong>ZURÜCKSETZEN</strong>
+(zweimal klicken) löscht die Werte.</li>
 <li><strong>Rundenstatistik</strong>: Jede Runde wird als Zeile in
 <code>round_stats.jsonl</code> gespeichert (für Balancing).</li>
 <li><strong>Balance-Statistik im Spiel</strong>: Optionen →
@@ -2705,15 +2722,20 @@ style="text-align: left;"><code>character_customization.json</code></td>
 <td style="text-align: left;">Eine Zeile pro gespielter Runde</td>
 </tr>
 <tr class="even">
+<td style="text-align: left;"><code>player_profile.json</code></td>
+<td style="text-align: left;">Dein Spielerprofil mit
+Lebenszeit-Werten</td>
+</tr>
+<tr class="odd">
 <td style="text-align: left;"><code>epic_online.log</code></td>
 <td style="text-align: left;">Protokoll der Epic-Verbindung</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><code>wiki.html</code></td>
 <td style="text-align: left;">Kopie dieses Wikis, wird beim Klick auf
 <strong>WIKI</strong> angelegt</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><code>logs/</code></td>
 <td style="text-align: left;">Godot-Logs</td>
 </tr>
@@ -2773,42 +2795,50 @@ style="text-align: left;"><code>scripts/autoload/card_stats.gd</code>,
 <td style="text-align: left;">Balance-Statistik im Optionsmenü</td>
 </tr>
 <tr class="odd">
+<td
+style="text-align: left;"><code>scripts/autoload/player_profile.gd</code>,
+<code>scripts/ui/profile_screen.gd</code></td>
+<td style="text-align: left;">Spielerprofil: Lebenszeit-Werte, Signale
+<code>round_recorded</code>/<code>match_recorded</code>, Erweiterungen
+über <code>get_ext()</code></td>
+</tr>
+<tr class="even">
 <td style="text-align: left;"><code>scripts/main.gd</code></td>
 <td style="text-align: left;">Rundenablauf, Snapshots, Kill-Cam,
 Lava</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><code>scripts/player.gd</code></td>
 <td style="text-align: left;">Spieler, Fähigkeiten (Konstanten oben),
 Nahkampf</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><code>scripts/bullet.gd</code></td>
 <td style="text-align: left;">Ballistik, Durchschlag, Zielsuche,
 Kollision</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td
 style="text-align: left;"><code>scripts/level_generator.gd</code></td>
 <td style="text-align: left;">Maps und Tilesets, Einweg-Stege, Pyramide,
 Haus</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><code>scripts/level/crate_chain.gd</code>,
 <code>chain_link.gd</code></td>
 <td style="text-align: left;">Kistenketten (Bauplan, Gelenke,
 Netzwerk)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td
 style="text-align: left;"><code>scripts/level_modifier_defs.gd</code></td>
 <td style="text-align: left;">Liste der Runden-Modifier</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><code>scripts/main_menu.gd</code></td>
 <td style="text-align: left;">Hauptmenü inkl. Wiki-Knopf</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><code>scripts/ui/hud.gd</code></td>
 <td style="text-align: left;">HUD, Tab-Blatt, Match-Ende</td>
 </tr>

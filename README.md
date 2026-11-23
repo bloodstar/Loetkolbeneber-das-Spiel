@@ -661,6 +661,7 @@ Das Hauptmenü im **Platinen-Look**: leuchtende Leiterbahnen, zwei Eber mit Löt
 | :--- | :--- |
 | **SPIEL STARTEN** | Lokale Lobby |
 | **ONLINE SPIELEN** | Hosten oder beitreten (Code oder IP) |
+| **PROFIL** | Deine Werte über alle Partien (siehe unten) |
 | **HELDEN** | Übersicht aller Helden mit Werten und Fähigkeiten |
 | **WIKI** | Öffnet dieses Wiki im Browser |
 | **OPTIONEN** | Einstellungen |
@@ -687,6 +688,7 @@ Jede Map-Stilrichtung hat eine eigene, ruhige **Hintergrundmusik**.
 - **Trefferanimation**: Stauchen, Zittern, rotes Aufblitzen, Blutspritzer. Dazu ein Todes-Sound.
 - **Match-Ende**: Tabelle mit Punkten, Kills, Toden, Schaden, Barriere, Heilung, Trefferquote, Runden und Nahkampf. Dazu **MVP**, **Meister Schaden**, **meiste Barriere-Treffer**, **meiste Heilung** und **Meister Nahkampf**.
 - **ALLE SPIELER, KARTEN & STATS**: Nach dem Match für jeden Spieler das komplette Blatt mit Karten.
+- **Spielerprofil**: Hauptmenü → **PROFIL**. Deine Werte über alle Partien: Matches und Siegquote, Runden, K/D, MVP-Ehrungen, Schaden, Trefferquote, Heilung, gewählte Karten und Spielzeit. Dazu **Lieblingsheld**, **meistgewählte Karte**, **Lieblingsmap**, **Rekorde** (meiste Kills pro Runde und Match, meister Schaden, längste Siegesserie), Tabellen für Helden, Karten und Maps und die letzten 20 Matches. Es zählt nur dein eigener Slot auf diesem PC (online dein Slot, lokal Spieler 1); Bot-Test, Zuschauen und Testrunden aus den Editoren zählen nicht. Eine abgebrochene Runde zählt nicht, ein vorzeitig beendetes Match schon (als „abgebr.“). **ZURÜCKSETZEN** (zweimal klicken) löscht die Werte.
 - **Rundenstatistik**: Jede Runde wird als Zeile in `round_stats.jsonl` gespeichert (für Balancing).
 - **Balance-Statistik im Spiel**: Optionen → **STATISTIK**. Sortierbare Tabellen (Spaltenkopf anklicken) für **Karten**, **Waffen** und **Helden**, getrennt nach Version: Runden, geglättete Siegquote, Vergleich mit derselben Seltenheit, Kills/Tode pro Runde, Schadens- und Heilanteil, Nahkampfschaden, Pickquote und Aufstiegsvorschläge. Filter: nur menschliche Spieler, nur aktuelle Versionen, Mindestrunden für Vorschläge. Bei Helden zusätzlich **Fähigk./R** und **Fähigk.-Anteil**: Schaden aus direkten Treffern der Heldenfähigkeit samt Evolutionen (Brand/Gift danach zählt nicht), erfasst seit 28.10.2026. Die Seite **Hinweise** listet Vorschläge, Werte ohne neue Version und die automatischen Aufstiege. Hältst du die Maus 0,5 s über eine Kartenzeile oder einen Kartennamen unter Hinweise, erscheint die Karte unten links. Rechnet genauso wie `tools/analyze_round_stats.py`.
 
@@ -703,6 +705,7 @@ Spieldaten liegen unter `%APPDATA%\Godot\app_userdata\Lötkolbeneber\`. Beim ers
 | `lobby_loadouts.json` | Eigene Regel-Presets |
 | `card_statistics.json` | Kartenstatistik und Aufwertungen |
 | `round_stats.jsonl` | Eine Zeile pro gespielter Runde |
+| `player_profile.json` | Dein Spielerprofil mit Lebenszeit-Werten |
 | `epic_online.log` | Protokoll der Epic-Verbindung |
 | `wiki.html` | Kopie dieses Wikis, wird beim Klick auf **WIKI** angelegt |
 | `logs/` | Godot-Logs |
@@ -723,6 +726,7 @@ Spieldaten liegen unter `%APPDATA%\Godot\app_userdata\Lötkolbeneber\`. Beim ers
 | `scripts/autoload/game_settings.gd` | Optionen und Tastenbelegung |
 | `scripts/autoload/card_stats.gd`, `round_stats.gd` | Statistik |
 | `scripts/balance_report.gd`, `scripts/ui/stats_screen.gd` | Balance-Statistik im Optionsmenü |
+| `scripts/autoload/player_profile.gd`, `scripts/ui/profile_screen.gd` | Spielerprofil: Lebenszeit-Werte, Signale `round_recorded`/`match_recorded`, Erweiterungen über `get_ext()` |
 | `scripts/main.gd` | Rundenablauf, Snapshots, Kill-Cam, Lava |
 | `scripts/player.gd` | Spieler, Fähigkeiten (Konstanten oben), Nahkampf |
 | `scripts/bullet.gd` | Ballistik, Durchschlag, Zielsuche, Kollision |

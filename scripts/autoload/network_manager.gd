@@ -911,6 +911,17 @@ func send_match_over(winner_index: int, scores: Array, stats: Array = [], reason
 func receive_match_over(winner_index: int, scores: Array, stats: Array, reason: String = "") -> void:
 	match_over_received.emit(winner_index, scores, stats, reason)
 
+# Spielerprofil: Rundenwerte aller Slots, jeder Client bucht nur seinen eigenen.
+func send_profile_round(info: Dictionary, rows: Array) -> void:
+	if not is_host:
+		return
+	for peer_id in _broadcast_targets():
+		receive_profile_round.rpc_id(int(peer_id), info, rows)
+
+@rpc("authority", "call_remote", "reliable")
+func receive_profile_round(info: Dictionary, rows: Array) -> void:
+	PlayerProfile.receive_round(info, rows)
+
 # Rundenentscheidender Tod: Clients starten Zeitlupe und Kill-Cam gleichzeitig mit dem Host.
 func send_kill_cam(point: Vector2, killer_slot: int, duration: float) -> void:
 	if not is_host:

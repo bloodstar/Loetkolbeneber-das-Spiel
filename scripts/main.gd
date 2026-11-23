@@ -347,6 +347,7 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	if modifier_manager != null:
 		modifier_manager.is_replica = is_network_client
 		modifier_manager.start_round_modifiers(active_mods, self, level_generator)
+	PlayerProfile.begin_round(map_id)
 	if not is_network_client:
 		RoundStats.begin_round(level_seed, map_id, active_mods)
 		CardStats.record_round_start()
@@ -782,6 +783,8 @@ func _on_player_died(dead_player_index: int) -> void:
 
 func _finish_round(winner: int, award_survival: bool) -> void:
 	last_match_winner = 0
+	# Vor award_round: Endet damit das Match, ist die letzte Runde schon gebucht.
+	PlayerProfile.finish_round(winner, round_death_order)
 	Global.award_round(winner, award_survival)
 	# Nach award_round, damit Rundensieg und Punkte schon verbucht sind.
 	# Endet damit das Match, hat _on_match_over last_match_winner gesetzt.

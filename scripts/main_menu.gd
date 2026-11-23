@@ -21,6 +21,8 @@ var hero_stats_panel: PanelContainer = null
 var hero_stats_grid: GridContainer = null
 var options_btn: Button = null
 var wiki_btn: Button = null
+var profile_btn: Button = null
+var profile_screen: ProfileScreen = null
 
 # Das Wiki (aus README.md gebaut, siehe tools/build_wiki.py) liegt im PCK.
 # Der Browser kann dort nicht lesen, darum wird es vor dem Öffnen nach
@@ -53,6 +55,7 @@ func _ready() -> void:
 	network_panel.visible = false
 	main_box.visible = true
 	_build_epic_section()
+	_build_profile_ui()
 	_build_hero_stats_ui()
 	_build_wiki_button()
 	_build_options_button()
@@ -75,6 +78,29 @@ func _build_options_button() -> void:
 func _on_options_pressed() -> void:
 	SoundManager.play_sound("click")
 	options_requested.emit()
+
+# Spielerprofil mit Lebenszeit-Stats (PlayerProfile), siehe ProfileScreen.
+func _build_profile_ui() -> void:
+	profile_btn = Button.new()
+	profile_btn.name = "ProfileBtn"
+	profile_btn.text = "PROFIL"
+	profile_btn.tooltip_text = "Deine Werte über alle Partien: Lieblingsheld, K/D, meistgewählte Karte."
+	profile_btn.custom_minimum_size = Vector2(360, 56)
+	profile_btn.pressed.connect(_on_profile_pressed)
+	main_box.add_child(profile_btn)
+	main_box.move_child(profile_btn, quit_btn.get_index())
+	profile_screen = ProfileScreen.new()
+	profile_screen.name = "ProfileScreen"
+	profile_screen.closed.connect(_on_profile_closed)
+	$Panel.add_child(profile_screen)
+
+func _on_profile_pressed() -> void:
+	SoundManager.play_sound("click")
+	main_box.visible = false
+	profile_screen.open()
+
+func _on_profile_closed() -> void:
+	main_box.visible = true
 
 func _build_wiki_button() -> void:
 	wiki_btn = Button.new()
@@ -152,6 +178,8 @@ func open_menu(message: String = "") -> void:
 	network_panel.visible = false
 	if hero_stats_panel != null:
 		hero_stats_panel.visible = false
+	if profile_screen != null:
+		profile_screen.visible = false
 	_set_network_buttons_enabled(true)
 	if not message.is_empty():
 		_show_network_panel(message)
@@ -163,6 +191,8 @@ func close_menu() -> void:
 	main_box.visible = true
 	if hero_stats_panel != null:
 		hero_stats_panel.visible = false
+	if profile_screen != null:
+		profile_screen.visible = false
 
 func _build_hero_stats_ui() -> void:
 	hero_stats_btn = Button.new()
