@@ -114,6 +114,7 @@ Die **Ulti** lädt über eine Abklingzeit, nicht über Schaden. Sie läuft über
 | **Bastion** | Field Engineer | 145 | 270 | 20 | **Aurora**: Doppelte Schild-Regeneration, Schild-Cooldown nur 4 s | **Heilfeld**: 4 s lang 8 HP und 10 Schild alle 0,5 s | Bauhelm mit Lampe |
 | **Phantom** | Shadow Assassin | 100 | 325 | 5 | **Hinterhalt**: +50 % Nahkampfschaden aus der Unsichtbarkeit oder von hinten | **Köder**: Doppelgänger läuft weiter, Phantom wird unsichtbar | Ninja-Stirnband |
 | **Druide** | Grove Warden | 105 | 295 | 10 | **Wurzelkraft**: Regeneriert ständig 2 HP/s | **Wurzelwall**: Rankenwand am Zielpunkt, breite Seite zum Druiden (108 px, 5 s, 150 HP), blockt Bewegung und Kugeln | Blätterkranz mit Geweih |
+| **Blutritter** | Blood Knight (Nahkampf-Vampir, Schwert) | 110 | 300 | 0 | **Blutschild**: Jeder 3. Treffer lässt eine Blutkugel fallen; jede Kugel gibt +25 Schild, bis 200 % der Max-HP (zweite, rote Lage auf der Lebensleiste) | **Blutbersten**: der ganze Schild explodiert, 1 Schaden pro Schildpunkt im Radius 150. Dash **Blutsturm**: legt eine Blutkugel ab, stürmt 40 % weiter und durch Gegner. Ulti **Blutruf** (24 s): bis zu 6 Kugeln im Umkreis 520 px fliegen zu ihm, treffen sie unterwegs einen Gegner: 30 Schaden und +30 HP | Hoher Dracula-Kragen mit rotem Edelstein |
 
 Die genauen Zahlen der Fähigkeiten stehen im Spiel unter **HELDEN** im Hauptmenü und im Tooltip der Heldenwahl. Sie kommen direkt aus den Konstanten in `player.gd`, stimmen also immer.
 

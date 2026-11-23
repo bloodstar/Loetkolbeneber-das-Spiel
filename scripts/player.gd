@@ -121,6 +121,27 @@ const PHANTOM_DECOY_HP: float = 40.0
 const PHANTOM_HUNT_DURATION: float = 6.0
 const PHANTOM_HUNT_SPEED_MULT: float = 1.3
 const PHANTOM_HUNT_FIRST_HIT_MULT: float = 2.0
+# Blutritter (Nahkampf-Vampir, Held "vampire_melee"). Passiv: Blutkugeln
+# laden Schild auf, höchstens SHIELD_CAP x Max-HP.
+const VAMP_MELEE_ORB_SHIELD: float = 25.0
+const VAMP_MELEE_SHIELD_CAP: float = 2.0
+# Fähigkeit "Blutbersten": der ganze Schild explodiert, 1 Schaden je Schild.
+const VAMP_MELEE_BURST_RADIUS: float = 150.0
+const VAMP_MELEE_BURST_DAMAGE_PER_SHIELD: float = 1.0
+const VAMP_MELEE_BURST_KNOCKBACK: float = 380.0
+# Dash "Blutsturm": legt eine Blutkugel ab und stürmt weiter als normal,
+# auch durch Gegner hindurch.
+const VAMP_MELEE_DASH_DURATION_MULT: float = 1.4
+# Ulti "Blutruf": zieht bis zu MAX_ORBS Kugeln im Radius heran. Trifft eine
+# unterwegs einen Gegner, explodiert sie und heilt den Blutritter.
+const VAMP_MELEE_ULT_RADIUS: float = 520.0
+const VAMP_MELEE_ULT_MAX_ORBS: int = 6
+const VAMP_MELEE_ULT_SPEED: float = 620.0
+const VAMP_MELEE_ULT_DAMAGE: float = 30.0
+const VAMP_MELEE_ULT_HEAL: float = 30.0
+const VAMP_MELEE_ULT_HIT_RADIUS: float = 26.0
+const VAMP_MELEE_ULT_BLAST_RADIUS: float = 55.0
+const VAMP_MELEE_ULT_KNOCKBACK: float = 260.0
 
 # Vampire (alle Helden, deren ID mit "vampire" beginnt, siehe
 # Global.is_vampire_hero): jeder dritte Angriffstreffer an einem Gegner lässt
@@ -1658,6 +1679,8 @@ func dash() -> void:
 	elif Global.is_vampire_hero(hero_id):
 		_vampire_dash_hits.clear()
 		_vampire_dash_ghost(true)
+		if hero_id == VAMP_MELEE_ID:
+			_vamp_melee_dash_start()
 
 # Kurzlebige visuelle Effekte werden an Main gehängt. Die Gruppe erlaubt es,
 # beim Rundenstart auch diese Effekte zuverlässig zu entfernen.
@@ -1946,6 +1969,12 @@ func use_ability(target = null) -> void:
 		"vampire":
 			# Blutexplosion: alle Blutkugeln in Reichweite explodieren
 			_vampire_blood_burst()
+		VAMP_MELEE_ID:
+			# Blutbersten: der Schild explodiert. Ohne Schild verpufft nichts,
+			# die Abklingzeit startet dann nicht.
+			if not _vamp_melee_burst():
+				ability_timer = 0.0
+				emit_signal("ability_cooldown_updated", 0.0, ability_max_cooldown)
 
 	# Turm-Talent: Die SpezialfÃƒÂ¤higkeit platziert zusÃƒÂ¤tzlich einen Turm.
 	if tower_enabled:
@@ -2861,6 +2890,100 @@ func _dash_cut() -> void:
 		_ability_hit(p, damage, (to - from).normalized() * 180.0)
 		_spawn_blade_hit_spark(p.global_position)
 
+# --- Blutritter (Nahkampf-Vampir): Blutsturm (Dash), Blutbersten (Fähigkeit),
+# Blutruf (Ulti). Passiv: Blutkugeln laden Schild auf. Die Blutkugeln selbst
+# (BloodOrb) teilen sich alle Vampire. ---
+
+const VAMP_MELEE_ID: String = "vampire_melee"
+
+# Passiv: eine Blutkugel lädt VAMP_MELEE_ORB_SHIELD Schild auf, höchstens bis
+# VAMP_MELEE_SHIELD_CAP x Max-HP. Der Schild darf dabei über max_shield
+# steigen; die normale Aufladung füllt weiter nur bis max_shield nach.
+# Bei vollem Blutschild bleibt die Kugel liegen. true = Kugel verbraucht.
+func _vamp_melee_absorb_orb() -> bool:
+	var cap := max_health * VAMP_MELEE_SHIELD_CAP
+	if current_shield >= cap - 0.5:
+		return false
+	current_shield = minf(current_shield + VAMP_MELEE_ORB_SHIELD, cap)
+	emit_signal("health_changed", current_health, max_health, current_shield, max_shield)
+	return true
+
+func _vamp_melee_dash_start() -> void:
+	dash_timer = dash_duration * VAMP_MELEE_DASH_DURATION_MULT
+	if is_replica:
+		return
+	# Die Kugel bleibt an der Startstelle liegen (z. B. für den Blutruf).
+	# Durch Gegner hindurch geht es wie bei allen Vampiren (_vampire_dash_ghost).
+	spawn_blood_orb(global_position)
+	_fx("ring", NetFx.ring_args(global_position, Color(0.75, 0.05, 0.12, 0.8), 0.6, 3.0, 0.16, 0.25))
+
+# Fähigkeit "Blutbersten": der gesamte Schild explodiert und macht
+# VAMP_MELEE_BURST_DAMAGE_PER_SHIELD Schaden je Schildpunkt an allen Gegnern
+# im Radius. false = kein Schild, nichts passiert.
+func _vamp_melee_burst() -> bool:
+	if is_replica or current_shield < 1.0:
+		return false
+	var shield := current_shield
+	current_shield = 0.0
+	emit_signal("health_changed", current_health, max_health, current_shield, max_shield)
+	var radius := VAMP_MELEE_BURST_RADIUS * ability_radius_mult
+	var damage := shield * VAMP_MELEE_BURST_DAMAGE_PER_SHIELD * ability_damage_mult
+	var pos := global_position
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(pos, Color(0.85, 0.06, 0.16, 0.9),
+		1.0, radius / 8.0, 0.22, 0.32), "explosion", 0.2, 0.0))
+	Seesaw.blast_all(get_tree(), pos, radius, 1.0)
+	for p in _opponents_within(pos, radius):
+		var dir: Vector2 = p.global_position - pos
+		if dir.length_squared() < 1.0:
+			dir = Vector2.UP
+		_ability_hit(p, damage, dir.normalized() * VAMP_MELEE_BURST_KNOCKBACK)
+	return true
+
+# Ulti "Blutruf": die nächsten freien Blutkugeln im Radius fliegen als
+# BloodBolt zum Blutritter. false = keine Kugel in Reichweite.
+func _vamp_melee_call_orbs() -> bool:
+	if is_replica or get_parent() == null:
+		return false
+	var found: Array = []
+	for o in get_tree().get_nodes_in_group("blood_orb"):
+		if not is_instance_valid(o) or o.is_queued_for_deletion() or not o.is_free():
+			continue
+		var d := global_position.distance_to(o.global_position)
+		if d <= VAMP_MELEE_ULT_RADIUS:
+			found.append([d, o])
+	if found.is_empty():
+		return false
+	found.sort_custom(func(a, b): return a[0] < b[0])
+	for i in range(mini(found.size(), VAMP_MELEE_ULT_MAX_ORBS)):
+		var pos: Vector2 = found[i][1].take()
+		var bolt := BloodBolt.new()
+		bolt.setup(self, VAMP_MELEE_ULT_SPEED, VAMP_MELEE_ULT_HIT_RADIUS)
+		bolt.position = pos
+		get_parent().add_child(bolt)
+		bolt.global_position = pos
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(global_position, Color(0.8, 0.05, 0.15, 0.7),
+		VAMP_MELEE_ULT_RADIUS / 8.0, 0.5, 0.35, 0.2), "teleport", 0.08, -2.0))
+	return true
+
+# Ein herangezogener Blutstropfen trifft einen Gegner: kleine Explosion,
+# der Blutritter heilt sich.
+func vamp_melee_bolt_hit(pos: Vector2) -> void:
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(pos, Color(0.9, 0.08, 0.18, 0.9),
+		0.8, VAMP_MELEE_ULT_BLAST_RADIUS / 8.0, 0.14, 0.22), "hit", 0.2, -2.0))
+	for p in _opponents_within(pos, VAMP_MELEE_ULT_BLAST_RADIUS):
+		var dir: Vector2 = p.global_position - pos
+		if dir.length_squared() < 1.0:
+			dir = Vector2.UP
+		_ability_hit(p, VAMP_MELEE_ULT_DAMAGE * ability_damage_mult, dir.normalized() * VAMP_MELEE_ULT_KNOCKBACK)
+	if current_health > 0.0:
+		heal(VAMP_MELEE_ULT_HEAL)
+
+# Ein Tropfen erreicht den Blutritter ohne Treffer: er zählt wie eine
+# aufgesammelte Blutkugel.
+func vamp_melee_bolt_return() -> void:
+	if current_health > 0.0:
+		_vamp_melee_absorb_orb()
+
 # ============================================================
 # Ulti (Taste E)
 # ============================================================
@@ -2901,6 +3024,11 @@ func use_ultimate(_target = null) -> void:
 			_start_hunt()
 		"vampire":
 			_vampire_bat_swarm()
+		VAMP_MELEE_ID:
+			# Ohne Blutkugel in Reichweite bleibt die Ulti geladen.
+			if not _vamp_melee_call_orbs():
+				ult_timer = 0.0
+				_store_ult_timer()
 
 # ============================================================
 # Vampire: Blutkugeln, Blutexplosion, Blutsturm, Fledermausschwarm
@@ -2929,6 +3057,9 @@ func wants_blood_orb() -> bool:
 	match Global.get_player_hero_id(player_index):
 		"vampire":
 			return current_health < max_health - 0.5
+		VAMP_MELEE_ID:
+			# Blutritter: Schild bis VAMP_MELEE_SHIELD_CAP x Max-HP, auch bei voller HP.
+			return current_shield < max_health * VAMP_MELEE_SHIELD_CAP - 0.5
 	return false
 
 # Kugel berührt: true = verbraucht. Jeder Vampir hat hier seine Regel.
@@ -2939,6 +3070,8 @@ func on_blood_orb_pickup(_orb: BloodOrb) -> bool:
 		"vampire":
 			heal(VAMPIRE_ORB_HEAL)
 			return true
+		VAMP_MELEE_ID:
+			return _vamp_melee_absorb_orb()
 	return false
 
 func _vampire_blood_burst() -> void:

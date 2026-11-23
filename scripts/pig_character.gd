@@ -413,6 +413,8 @@ func _cloth(base: Color, shade: float = 0.0) -> Color:
 
 func _draw_outfit_back(head: Vector2, neck: Vector2, run: float) -> void:
 	match outfit_id:
+		"vampire_melee":
+			_draw_vampire_collar(neck)
 		"phantom":
 			var knot := head + Vector2(-7.6, -6.6)
 			var band := _cloth(Color(0.13, 0.13, 0.20, 1.0), 0.15)
@@ -445,6 +447,8 @@ func _draw_outfit_front(head: Vector2, neck: Vector2) -> void:
 			_draw_druid_wreath(head)
 		"vampire":
 			_draw_vampire_top_hat(head)
+		"vampire_melee":
+			_draw_blood_clasp(neck)
 
 # Wehendes Stoffband nach hinten. Im Stand hängt es schlaff herunter, beim
 # Laufen weht es fast waagerecht hinter der Figur her.
@@ -648,6 +652,32 @@ func _draw_hard_hat(head: Vector2) -> void:
 	draw_circle(head + Vector2(0.0, -8.9), 2.6, Color(1.0, 0.95, 0.55, 0.22))
 	draw_rect(Rect2(head + Vector2(-1.8, -10.2), Vector2(3.6, 2.4)), Color(0.22, 0.24, 0.27, 1.0), true)
 	draw_circle(head + Vector2(0.0, -9.0), 1.0, Color(1.0, 0.95, 0.60, 1.0))
+
+# Blutritter: hoher Umhangkragen hinter dem Kopf, schwarz mit rotem Futter.
+func _draw_vampire_collar(neck: Vector2) -> void:
+	var outer := _cloth(Color(0.10, 0.06, 0.10, 1.0), 0.35)
+	var outline := _cloth(Color(0.03, 0.01, 0.03, 1.0), 0.75)
+	var lining := Color(0.70, 0.05, 0.14, 1.0)
+	for side in [-1.0, 1.0]:
+		_draw_closed_polygon(PackedVector2Array([
+			neck + Vector2(1.5 * side, 2.0),
+			neck + Vector2(12.5 * side, 1.6),
+			neck + Vector2(17.5 * side, -14.0),
+			neck + Vector2(9.0 * side, -7.0),
+		]), outer, outline, 0.7)
+		_draw_closed_polygon(PackedVector2Array([
+			neck + Vector2(3.0 * side, 1.0),
+			neck + Vector2(11.4 * side, 0.6),
+			neck + Vector2(15.4 * side, -11.0),
+			neck + Vector2(9.0 * side, -5.2),
+		]), lining, Color(0.35, 0.02, 0.07, 1.0), 0.4)
+
+# Blutritter: Umhangkette mit rotem Edelstein vorn am Hals.
+func _draw_blood_clasp(neck: Vector2) -> void:
+	var chain := Color(0.78, 0.70, 0.45, 1.0)
+	draw_line(neck + Vector2(-7.5, 1.0), neck + Vector2(7.5, 1.0), chain, 0.8, LINE_AA)
+	_draw_ellipse(neck + Vector2(0.0, 1.6), 2.4, 2.2, Color(0.80, 0.06, 0.16, 1.0), Color(0.45, 0.35, 0.15, 1.0), 0.6)
+	draw_circle(neck + Vector2(-0.7, 0.9), 0.7, Color(1.0, 0.65, 0.70, 0.9))
 
 # Druide: Kranz aus Zweigen und Blättern mit zwei kleinen Geweih-Ästen.
 func _draw_druid_wreath(head: Vector2) -> void:

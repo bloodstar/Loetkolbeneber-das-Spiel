@@ -182,6 +182,15 @@ func _build_outfit() -> void:
 			_box(Vector3(18, 5, 20), Vector3(-0.5, top + 3.6, 0), teal, _head)
 			_box(Vector3(18.4, 1.6, 4), Vector3(-0.5, top + 6.6, 0), teal.lightened(0.2), _head)
 			_box(Vector3(3, 4, 5), Vector3(9.5, top + 3.4, 0), Color(1.0, 0.97, 0.75), _head, Color(1.0, 0.95, 0.6), 2.0)
+		"vampire_melee":
+			# Hoher Umhangkragen (schwarz, rot gefüttert) mit Edelstein
+			var cape := accent if Global.is_team_mode() else Color(0.12, 0.06, 0.10)
+			var lining := Color(0.72, 0.05, 0.14)
+			_box(Vector3(4, 10, 24), Vector3(-9, 6.0, 0), cape, _head)
+			_box(Vector3(2, 8, 20), Vector3(-7, 6.5, 0), lining, _head)
+			for sz in [-1.0, 1.0]:
+				_box(Vector3(14, 9, 3), Vector3(-2, 5.5, 11.5 * sz), cape, _head)
+			_box(Vector3(3, 3, 3), Vector3(10.5, -1.0, 0), Color(0.85, 0.08, 0.18), _head, Color(0.9, 0.1, 0.2), 1.2)
 		"phantom":
 			# Ninja-Stirnband mit Bändern
 			var cloth := accent if Global.is_team_mode() else Color(0.16, 0.14, 0.24)

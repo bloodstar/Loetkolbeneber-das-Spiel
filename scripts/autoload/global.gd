@@ -817,6 +817,39 @@ func _setup_heroes() -> void:
 	vampire.version = 1
 	vampire.ability_version = 1
 	heroes["vampire"] = vampire
+	# 9. Blutritter – Nahkampf-Vampir. Teilt sich die Blutkugeln mit allen
+	# Vampiren (Held-IDs mit "vampire" am Anfang).
+	var vamp_melee = HeroData.new()
+	vamp_melee.id = "vampire_melee"
+	vamp_melee.name = "Blutritter"
+	vamp_melee.role = "Blood Knight"
+	vamp_melee.description = "Nahkampf-Vampir, der sich aus Blutkugeln einen gewaltigen Schild baut."
+	vamp_melee.passive_desc = "Blutschild: Jeder 3. Treffer erzeugt eine Blutkugel. Aufgesammelte Blutkugeln geben +%d Schild, bis zu %d %% deiner Max-HP" % [
+		int(Player.VAMP_MELEE_ORB_SHIELD), int(round(Player.VAMP_MELEE_SHIELD_CAP * 100.0))]
+	vamp_melee.ability_name = "Blutbersten"
+	vamp_melee.ability_desc = "Dein ganzer Schild explodiert: 1 Schaden pro Schildpunkt an allen Gegnern in der Nähe!"
+	vamp_melee.ability_cooldown = 7.0
+	vamp_melee.attack_type = "melee"
+	vamp_melee.melee_weapon = "sword"
+	vamp_melee.melee_damage_mult = 1.0
+	vamp_melee.melee_cooldown_mult = 0.9
+	vamp_melee.dash_name = "Blutsturm"
+	vamp_melee.dash_desc = "Lässt eine Blutkugel zurück und stürmt weit nach vorn, auch durch Gegner."
+	vamp_melee.ult_name = "Blutruf"
+	vamp_melee.ult_desc = "Zieht nahe Blutkugeln zu dir. Treffen sie unterwegs einen Gegner, explodieren sie und heilen dich!"
+	vamp_melee.ult_cooldown = 24.0
+	vamp_melee.base_hp = 110
+	vamp_melee.base_shield = 0
+	vamp_melee.base_speed = 300.0
+	vamp_melee.base_jump_force = -495.0
+	vamp_melee.base_ammo = 3
+	vamp_melee.base_fire_rate_cooldown = 0.24
+	vamp_melee.base_reload_time = 1.2
+	vamp_melee.color_tint = Color(0.78, 0.10, 0.20)
+	vamp_melee.sprite_tile_name = "tile_0006.png"
+	vamp_melee.version = 1
+	vamp_melee.ability_version = 1
+	heroes["vampire_melee"] = vamp_melee
 
 func get_hero(id: String) -> HeroData:
 	return heroes.get(id, heroes["ignis"])
@@ -879,6 +912,12 @@ func get_hero_ability_details(hero: HeroData) -> String:
 				Player.DRUID_WALL_DURATION, int(Player.DRUID_WALL_HP),
 				Player.DRUID_WALL_MAX_ACTIVE,
 			]
+		"vampire_melee":
+			return "Verbraucht deinen ganzen Schild: %d Schaden pro Schildpunkt an allen Gegnern im Radius %d px (mit vollem Blutschild von %d %% Max-HP sind das %d Schaden). Ohne Schild passiert nichts und es gibt keinen Cooldown." % [
+				int(Player.VAMP_MELEE_BURST_DAMAGE_PER_SHIELD), int(Player.VAMP_MELEE_BURST_RADIUS),
+				int(round(Player.VAMP_MELEE_SHIELD_CAP * 100.0)),
+				int(round(hero.base_hp * Player.VAMP_MELEE_SHIELD_CAP * Player.VAMP_MELEE_BURST_DAMAGE_PER_SHIELD)),
+			]
 	return hero.ability_desc
 
 # Ausführlicher Text zur Ulti (Taste E). Leer, wenn der Held noch keine hat.
@@ -903,6 +942,11 @@ func get_hero_ult_details(hero: HeroData) -> String:
 				int(Player.VAMPIRE_BAT_HP), Player.VAMPIRE_BAT_DURATION, Player.VAMPIRE_BAT_BITE_INTERVAL,
 				int(Player.VAMPIRE_BAT_DAMAGE),
 			]
+		"vampire_melee":
+			return "Bis zu %d freie Blutkugeln im Radius %d px fliegen zu dir. Trifft eine unterwegs einen Gegner, explodiert sie für %d Schaden und heilt dich um %d HP. Erreicht sie dich, gibt sie Schild wie beim Aufsammeln. Ohne Kugel in Reichweite bleibt die Ulti geladen." % [
+				Player.VAMP_MELEE_ULT_MAX_ORBS, int(Player.VAMP_MELEE_ULT_RADIUS),
+				int(Player.VAMP_MELEE_ULT_DAMAGE), int(Player.VAMP_MELEE_ULT_HEAL),
+			]
 	return hero.ult_desc
 
 # Ausführlicher Text zum Helden-Dash (Shift).
@@ -918,6 +962,8 @@ func get_hero_dash_details(hero: HeroData) -> String:
 			return "Dash in Laufrichtung, kurz unverwundbar. Danach %.1f s unsichtbar." % Player.PHANTOM_STEALTH_DASH
 		"vampire":
 			return "Dash in Laufrichtung, kurz unverwundbar und durch Gegner hindurch. Jeder Getroffene nimmt %d Schaden und lässt sofort eine Blutkugel fallen." % int(Player.VAMPIRE_DASH_DAMAGE)
+		"vampire_melee":
+			return "Legt an der Startstelle eine Blutkugel ab und stürmt %d %% weiter als ein normaler Dash, kurz unverwundbar und durch Gegner hindurch." % int(round(Player.VAMP_MELEE_DASH_DURATION_MULT * 100.0))
 	return "Dash in Laufrichtung, kurz unverwundbar."
 
 # Zeile zum Hauptangriff (Linksklick) für Menü und Tooltips.
