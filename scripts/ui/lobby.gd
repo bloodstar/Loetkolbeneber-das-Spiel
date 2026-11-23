@@ -150,6 +150,10 @@ var wand_tip_picker: ColorPickerButton = null
 var shot_color_picker: ColorPickerButton = null
 var wand_shape_option: OptionButton = null
 var tusk_shape_option: OptionButton = null
+# Titel aus Erfolgen (nur der eigene Slot) und Knopf zur Erfolgsliste.
+var title_option: OptionButton = null
+var _title_option_ids: Array[String] = []
+var _achievements_screen: AchievementsScreen = null
 var player_name_edit: LineEdit = null
 # Vier Waffenkacheln unter der Charaktervorschau, Reihenfolge wie MELEE_WEAPONS.
 var melee_weapon_tiles: Array = []
@@ -207,6 +211,8 @@ func _ready() -> void:
 	Global.lobby_loadouts_changed.connect(_on_lobby_loadouts_changed)
 	Global.lobby_last_loadout_saved.connect(_on_last_loadout_saved)
 	Global.pig_appearance_changed.connect(_on_pig_appearance_changed)
+	AchievementManager.progress_changed.connect(_refresh_character_tab)
+	AchievementManager.title_changed.connect(func(_slot: int): _refresh_character_tab())
 	Global.network_status_changed.connect(_refresh_network_status)
 	NetworkManager.slot_assigned.connect(_on_slot_assigned)
 	NetworkManager.ping_updated.connect(_refresh_network_status)
@@ -583,6 +589,7 @@ func _on_slot_assigned(slot: int) -> void:
 		NetworkManager.request_player_name(Global.get_custom_player_name(slot))
 		NetworkManager.request_melee_weapon(Global.get_melee_weapon(slot))
 		NetworkManager.request_pig_parts(Global.get_pig_parts(slot))
+		AchievementManager.apply_local_title()
 		NetworkManager.request_pig_appearance(
 			look["fur"],
 			look["eyes"],
@@ -801,6 +808,7 @@ func _build_character_tab() -> void:
 	wand_tip_picker = ColorPickerButton.new()
 	shot_color_picker = ColorPickerButton.new()
 	_add_character_name_row(controls)
+	_add_character_title_row(controls)
 	_add_character_color_row(controls, "Fellfarbe", "Grundfarbe von Kopf, Körper und Ohren.", fur_picker)
 	_add_character_color_row(controls, "Augenfarbe", "Farbe der Iris. Die Augen bleiben weiß umrandet.", eye_picker)
 	_add_character_color_row(controls, "Hosenfarbe", "Farbe von Hose oder Rock inklusive Gürtel.", pants_picker)
@@ -917,6 +925,93 @@ func _add_character_name_row(parent: VBoxContainer) -> void:
 	player_name_edit.text_submitted.connect(_on_player_name_submitted)
 	player_name_edit.focus_exited.connect(_commit_player_name)
 	row.add_child(player_name_edit)
+
+func _add_character_title_row(parent: VBoxContainer) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	parent.add_child(row)
+	_add_character_text_column(row, "Titel", "Steht unter deinem Namen. Mehr Titel per Erfolg.")
+
+	title_option = OptionButton.new()
+	title_option.custom_minimum_size = Vector2(180, 38)
+	title_option.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	title_option.item_selected.connect(_on_character_title_selected)
+	row.add_child(title_option)
+
+	var achievements_button := Button.new()
+	achievements_button.text = "ERFOLGE"
+	achievements_button.tooltip_text = "Alle Erfolge, Fortschritt und Belohnungen ansehen."
+	achievements_button.custom_minimum_size = Vector2(110, 38)
+	achievements_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	achievements_button.pressed.connect(_open_achievements_screen)
+	row.add_child(achievements_button)
+
+func _refresh_character_title_option(look_slot: int, can_customize: bool) -> void:
+	if title_option == null:
+		return
+	title_option.clear()
+	_title_option_ids.clear()
+	var own := look_slot == Global.local_player_index and not Global.is_bot_slot(look_slot)
+	if not own:
+		# Fremde Slots (Hot-Seat, Bots) zeigen nur ihren Titel; Titel gehören zum eigenen Profil.
+		var text := Global.get_player_title_text(look_slot)
+		title_option.add_item(text if not text.is_empty() else "– kein Titel –")
+		_title_option_ids.append(Global.get_player_title(look_slot))
+		title_option.disabled = true
+		title_option.tooltip_text = "Titel gehören zum Erfolgsprofil dieses PCs und gelten nur für deinen eigenen Slot (Slot %d)." % Global.local_player_index
+		return
+	title_option.add_item("– kein Titel –")
+	_title_option_ids.append("")
+	for entry in AchievementManager.get_unlocked_titles():
+		title_option.add_item(str(entry[1]))
+		_title_option_ids.append(str(entry[0]))
+	title_option.select(maxi(0, _title_option_ids.find(AchievementManager.selected_title)))
+	title_option.disabled = not can_customize
+	title_option.tooltip_text = "%d von %d Erfolgen freigeschaltet." % [
+		AchievementManager.get_unlocked_count(), AchievementManager.get_achievements().size(),
+	]
+
+func _on_character_title_selected(index: int) -> void:
+	if _updating_character_ui or index < 0 or index >= _title_option_ids.size():
+		return
+	SoundManager.play_sound("click")
+	AchievementManager.set_selected_title(_title_option_ids[index])
+
+func _open_achievements_screen() -> void:
+	SoundManager.play_sound("click")
+	if _achievements_screen == null:
+		_achievements_screen = AchievementsScreen.new()
+		_achievements_screen.name = "AchievementsScreen"
+		add_child(_achievements_screen)
+	_achievements_screen.open_screen()
+
+## Markiert gesperrte Einträge (Erfolge) in einer Auswahlliste: Schloss vor dem
+## Namen, nicht wählbar, Tooltip mit dem nötigen Erfolg.
+func _apply_option_locks(option: OptionButton, category: String, ids: Array, labels: Array) -> void:
+	for i in range(mini(option.item_count, ids.size())):
+		var locked := AchievementManager.is_option_locked(category, str(ids[i]))
+		option.set_item_text(i, ("🔒 " if locked else "") + str(labels[i]))
+		option.set_item_disabled(i, locked)
+		option.set_item_tooltip(i, AchievementManager.get_lock_hint(category, str(ids[i])) if locked else "")
+
+func _refresh_character_locks() -> void:
+	if tusk_shape_option:
+		var tusk_labels: Array = []
+		for shape in Global.TUSK_SHAPES:
+			tusk_labels.append(Global.get_tusk_shape_label(shape))
+		_apply_option_locks(tusk_shape_option, "tusk", Global.TUSK_SHAPES, tusk_labels)
+	if wand_shape_option:
+		var tip_labels: Array = []
+		for shape in Global.WAND_TIP_SHAPES:
+			tip_labels.append(Global.get_wand_tip_shape_label(shape))
+		_apply_option_locks(wand_shape_option, "tip", Global.WAND_TIP_SHAPES, tip_labels)
+	for key in part_options.keys():
+		var ids: Array = []
+		var labels: Array = []
+		for entry in PigModular.PART_OPTIONS[key]:
+			ids.append(str(entry[0]))
+			labels.append(str(entry[1]))
+		_apply_option_locks(part_options[key], str(key), ids, labels)
 
 func _add_character_tusk_row(parent: VBoxContainer) -> void:
 	var row := HBoxContainer.new()
@@ -1111,7 +1206,8 @@ func _on_character_parts_randomize() -> void:
 	if not _can_customize_character_slot(slot):
 		return
 	SoundManager.play_sound("click")
-	Global.set_pig_parts(slot, PigModular.random_parts(Global.get_pig_parts(slot)))
+	# Gesperrte Teile (Erfolge) fallen beim Würfeln auf den Standard zurück.
+	Global.set_pig_parts(slot, AchievementManager.filter_locked_parts(PigModular.random_parts(Global.get_pig_parts(slot))))
 	_refresh_character_tab()
 	if NetworkManager.is_client and slot == Global.local_player_index:
 		_send_character_parts()
@@ -1239,6 +1335,8 @@ func _refresh_character_tab() -> void:
 	_update_melee_weapon_tiles(melee_id)
 	var parts := Global.get_pig_parts(look_slot)
 	_refresh_character_parts_ui(parts, can_customize)
+	_refresh_character_locks()
+	_refresh_character_title_option(look_slot, can_customize)
 	_updating_character_ui = false
 
 	fur_picker.disabled = not can_customize
@@ -1547,7 +1645,11 @@ func _refresh_mode_controls() -> void:
 
 func _slot_name_suffix(slot: int) -> String:
 	var custom := Global.get_custom_player_name(slot)
-	return "" if custom.is_empty() else " · %s" % custom
+	var title := Global.get_player_title_text(slot)
+	var suffix := "" if custom.is_empty() else " · %s" % custom
+	if not title.is_empty():
+		suffix += " «%s»" % title
+	return suffix
 
 func _update_titles() -> void:
 	for i in range(1, Global.MAX_PLAYERS + 1):

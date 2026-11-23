@@ -27,9 +27,10 @@ Vorbilder:
 12. [Bots](#-bots)
 13. [Online & LAN](#-online--lan)
 14. [Hauptmenü & Optionen](#-hauptmenü--optionen)
-15. [Statistiken, HUD & Feedback](#-statistiken-hud--feedback)
-16. [Dateien & Speicherorte](#-dateien--speicherorte)
-17. [Für Entwickler](#-für-entwickler)
+15. [Erfolge, Titel & Freischaltungen](#-erfolge-titel--freischaltungen)
+16. [Statistiken, HUD & Feedback](#-statistiken-hud--feedback)
+17. [Dateien & Speicherorte](#-dateien--speicherorte)
+18. [Für Entwickler](#-für-entwickler)
 
 ---
 
@@ -662,6 +663,7 @@ Das Hauptmenü im **Platinen-Look**: leuchtende Leiterbahnen, zwei Eber mit Löt
 | **SPIEL STARTEN** | Lokale Lobby |
 | **ONLINE SPIELEN** | Hosten oder beitreten (Code oder IP) |
 | **HELDEN** | Übersicht aller Helden mit Werten und Fähigkeiten |
+| **ERFOLGE** | Erfolge, Fortschritt, Titel-Auswahl |
 | **WIKI** | Öffnet dieses Wiki im Browser |
 | **OPTIONEN** | Einstellungen |
 | **BEENDEN** | Spiel schließen |
@@ -674,6 +676,45 @@ Das Hauptmenü im **Platinen-Look**: leuchtende Leiterbahnen, zwei Eber mit Löt
 - **Steuerung**: Feld anklicken, neue Taste drücken. Doppelte Belegungen werden angezeigt, **STANDARD WIEDERHERSTELLEN** setzt alles zurück.
 
 Jede Map-Stilrichtung hat eine eigene, ruhige **Hintergrundmusik**.
+
+---
+
+## 🏅 Erfolge, Titel & Freischaltungen
+
+Über **ERFOLGE** im Hauptmenü (oder im Lobby-Tab **Charakter**) siehst du alle 32 Erfolge mit Fortschrittsbalken, Belohnung und Freischaltdatum. Neu erreichte Erfolge werden oben eingeblendet.
+
+- **Was zählt**: nur dein eigener Slot, nur in Runden mit mindestens einem Gegner (Mensch oder Bot), nicht im Bot-Test. Online rechnet der Host und schickt jedem Mitspieler seine Rundenwerte; gespeichert wird auf deinem PC. Am selben PC mit mehreren Menschen zählt nur Slot 1.
+- **Titel**: Fast jeder Erfolg gibt einen Titel (z. B. *Kartoffelkönig*, *Bollwerk*, *Feuerteufel*). Wähle ihn im Charakter-Tab oder im Erfolge-Fenster. Er steht hinter deinem Namen in der Lobby, im Tab-Charakterblatt und in der Match-Statistik und wird online an alle verteilt.
+- **Freischaltungen**: Einige Aussehens-Teile sind gesperrt (🔒 im Charakter-Tab, Tooltip nennt den Erfolg): Hauer *Säbel* und *Doppelt*, Lötspitzen *Diamant*, *Stern* und *Flamme*, Ohren *Fledermaus*, Frisuren *Irokese* und *Mähne*, Rüssel *Herz*, Körperform *Keiler*, Augen *Wild*, Oberteil *Kleid / Robe*, Schwanz *Quaste*. Was du schon trägst, bleibt. **ZUFÄLLIG** würfelt nur freie Teile.
+- **Test-Schalter**: „Alle Aussehens-Teile freigeben (Test)“ im Erfolge-Fenster macht alles wählbar, ohne Erfolge zu vergeben.
+
+| Erfolg | Ziel | Belohnung |
+| :--- | :--- | :--- |
+| Erstes Blut | 1 Kill | Titel Ersttäter |
+| Erster Sieg | 1 Match gewinnen | Titel Frischling, Hauer Säbel |
+| Stammgast | 10 Matches spielen | Titel, Ohren Fledermaus |
+| Rundenjäger | 25 Runden gewinnen | Titel, Frisur Irokese |
+| Schweinejäger | 50 Kills | Titel, Lötspitze Diamant |
+| Dreifach-Eber | 3 Kills in einer Runde | Titel |
+| Unberührbar | Runde ohne Schaden gewinnen | Titel |
+| Feuerwerker | 10.000 Schaden | Titel, Schwanz Quaste |
+| Feldsanitäter | 3.000 Heilung | Titel, Rüssel Herz |
+| Bollwerk | 150 geblockte Treffer | Titel, Körperform Keiler |
+| Raufbold | 4.000 Nahkampfschaden | Titel, Frisur Mähne |
+| Fähigkeitsfanatiker | 8.000 Fähigkeitsschaden | Titel, Lötspitze Stern |
+| Kartoffelkönig | 3 Rundensiege mit Heißer Kartoffel | Titel |
+| Zonenläufer | 5 Rundensiege mit Zone | Titel |
+| Arenafürst | 10 Rundensiege im Arena-Modus | Titel |
+| Nervenstark | 5 Rundensiege im Sudden Death | Titel |
+| Kartenhai | 12 Karten in einem Match | Titel |
+| Unantastbar | 10 Runden ohne Schaden gewinnen | Titel, Hauer Doppelt |
+| Seriensieger | 10 Matches gewinnen | Titel, Oberteil Kleid / Robe |
+| Keilerkönig | 250 Kills | Titel, Augen Wild |
+| Tausendsassa | Mit jedem Helden ein Match gewinnen | Titel |
+| Urgestein | 100 Matches spielen | Titel |
+| Großmeister | 50 Matches gewinnen | Titel Großmeister des Lötens, Lötspitze Flamme |
+| Legende | 1.000 Kills | Titel Legende vom Lötkolben |
+| *Held*-Profi (×8) | 15 Rundensiege mit dem Helden | Feuerteufel, Blitzableiter, Pilzkönig, Sternenkind, Klingenmeister, Eiserne Wand, Schattenschwein, Waldhüter |
 
 ---
 
@@ -700,6 +741,7 @@ Spieldaten liegen unter `%APPDATA%\Godot\app_userdata\Lötkolbeneber\`. Beim ers
 | :--- | :--- |
 | `settings.cfg` | Optionen: Grafik, Lautstärke, Effekt-Set, Tasten |
 | `character_customization.json` | Dein Charakter, Name, Nahkampfwaffe |
+| `achievements.json` | Erfolge: Zähler, freigeschaltete Erfolge, gewählter Titel |
 | `lobby_loadouts.json` | Eigene Regel-Presets |
 | `card_statistics.json` | Kartenstatistik und Aufwertungen |
 | `round_stats.jsonl` | Eine Zeile pro gespielter Runde |
