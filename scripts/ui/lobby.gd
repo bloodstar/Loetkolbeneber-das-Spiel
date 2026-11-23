@@ -1493,10 +1493,13 @@ func _refresh_game_mode_controls() -> void:
 		return
 	var idx := 1 if Global.is_arena_mode() else 0
 	game_mode_option.selected = idx
-	game_mode_option.disabled = not Global.is_local_host()
+	# Die Horde spielt immer in der Arena.
+	game_mode_option.disabled = not Global.is_local_host() or Global.is_horde_mode()
 	if game_mode_info_label != null:
 		var info := str(Global.GAME_MODES[Global.game_mode].get("description", ""))
-		if Global.is_arena_mode():
+		if Global.is_horde_mode():
+			info = "Horde: immer Arena auf der großen Karte „Wildnis“."
+		elif Global.is_arena_mode():
 			info += " Spielfeld: zufällige Arena-Karte (%s)." % ", ".join(ArenaMaps.MAP_IDS.map(func(m): return ArenaMaps.display_name(m)))
 		game_mode_info_label.text = info
 
@@ -1524,6 +1527,8 @@ func _on_mode_selected(index: int) -> void:
 
 func _refresh_mode_controls() -> void:
 	_refresh_game_mode_controls()
+	# Horde: auch allein spielbar.
+	player_count_spin.min_value = 1 if Global.is_horde_mode() else Global.MIN_PLAYERS
 	if mode_option == null:
 		return
 	var selected := maxi(0, Global.MATCH_MODE_ORDER.find(Global.match_mode))
@@ -1535,7 +1540,7 @@ func _refresh_mode_controls() -> void:
 		var required := Global.get_mode_required_players()
 		if required > 0:
 			info += " Genau %d Spieler." % required
-		if Global.is_team_mode():
+		if Global.is_team_mode() and not Global.is_horde_mode():
 			var groups: Array[String] = []
 			for team in range(1, Global.get_team_count() + 1):
 				var members: Array[String] = []
@@ -1558,7 +1563,7 @@ func _update_titles() -> void:
 		if hero_icon != null:
 			hero_icon.texture = _get_hero_icon(Global.get_player_hero_id(i))
 		var team_prefix := ""
-		if Global.is_team_mode():
+		if Global.is_team_mode() and not Global.is_horde_mode():
 			team_prefix = "[%s] " % Global.get_team_name(Global.get_team_for_slot(i))
 		if i == 1 and Global.is_bot_test_active():
 			title.text = team_prefix + "SPIELER 1 / BOT (BOT-TEST)%s" % (" — HELD WÄHLEN" if not Global.bot_test_random_loadouts else " — HELD ZUFÄLLIG")
@@ -2105,7 +2110,7 @@ func _apply_lobby_loadout(preset_name: String) -> bool:
 	Global.set_match_mode(mode)
 	var desired := Global.get_mode_required_players(mode)
 	if desired <= 0:
-		desired = clampi(int(data.get("player_count", Global.player_count)), Global.MIN_PLAYERS, Global.MAX_PLAYERS)
+		desired = clampi(int(data.get("player_count", Global.player_count)), 1 if mode == Global.MATCH_MODE_HORDE else Global.MIN_PLAYERS, Global.MAX_PLAYERS)
 	if Global.network_mode:
 		for i in range(desired + 1, Global.MAX_PLAYERS + 1):
 			if NetworkManager.has_client_slot(i):

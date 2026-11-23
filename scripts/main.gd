@@ -113,6 +113,10 @@ const BOT_TEST_NEXT_MATCH_DELAY: float = 4.0
 var bot_test_token: int = 0
 var default_physics_ticks: int = 60
 
+# Horden-Modus (Koop gegen Schweinejäger, scripts/horde/).
+var horde_director: HordeDirector = null
+var horde_hud: HordeHud = null
+
 func _ready() -> void:
 	print("--- MAIN.GD: _ready() – Spiel bereit, zeige Hauptmenü. ---")
 	default_physics_ticks = Engine.physics_ticks_per_second
@@ -191,6 +195,7 @@ func _ready() -> void:
 	NetworkManager.zone_spawn_received.connect(_on_network_zone_spawn)
 	NetworkManager.fx_received.connect(_on_network_fx)
 	NetworkManager.kill_cam_received.connect(_on_network_kill_cam)
+	NetworkManager.draft_finished_received.connect(_on_network_draft_finished)
 	level_generator.tile_broken.connect(_on_level_tile_broken)
 	level_generator.tile_regrown.connect(_on_level_tile_regrown)
 
@@ -336,7 +341,8 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 
 	# 1. Level-Modifier deterministisch bestimmen.
 	var active_mods: Array[String] = []
-	if modifier_manager != null:
+	var horde := Global.is_horde_mode()
+	if modifier_manager != null and not horde:
 		active_mods = modifier_manager.roll_configured_modifiers(level_seed)
 
 	# 2. Level regenerieren. Erst danach die Modifier-Hazards spawnen, damit
@@ -348,7 +354,7 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	if modifier_manager != null:
 		modifier_manager.is_replica = is_network_client
 		modifier_manager.start_round_modifiers(active_mods, self, level_generator)
-	if not is_network_client:
+	if not is_network_client and not horde:
 		RoundStats.begin_round(level_seed, map_id, active_mods)
 		CardStats.record_round_start()
 
@@ -363,6 +369,7 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	hud.set_sudden_death(false)
 
 	_spawn_players()
+	_setup_horde(level_seed)
 	if Global.is_tiebreak():
 		hud.show_tiebreak_notice(Global.tiebreak_slots)
 	_start_round_countdown()
@@ -386,6 +393,7 @@ func _update_arena_view() -> void:
 ## Match verlassen (Menü/Lobby): 3D-Ansicht weg, normale Schwerkraft zurück.
 ## Eine Editor-Testrunde endet damit ebenfalls.
 func _leave_arena() -> void:
+	_teardown_horde()
 	ArenaBuilder.deactivate(level_generator)
 	_update_arena_view()
 	ArenaMaps.test_map_id = ""
@@ -533,6 +541,14 @@ func _update_bot_controllers() -> void:
 		if not is_instance_valid(p):
 			continue
 		var existing := p.get_node_or_null("AIController")
+		if Global.is_horde_mode():
+			if existing:
+				existing.queue_free()
+			if p.is_bot and p.get_node_or_null("HordeBotController") == null:
+				var hb := HordeBotController.new()
+				hb.name = "HordeBotController"
+				p.add_child(hb)
+			continue
 		if p.is_bot:
 			if not existing:
 				var ai := AIController.new()
@@ -582,7 +598,10 @@ func _end_round_countdown() -> void:
 			p.control_enabled = true
 
 	hud.show_countdown_go()
-	if not is_network_client:
+	if horde_director != null and is_instance_valid(horde_director):
+		if not is_network_client:
+			horde_director.start(self, match_seed, players.size())
+	elif not is_network_client:
 		sudden_death_timer.start(SUDDEN_DEATH_DELAY)
 		RoundStats.mark_fight_started()
 		if not rising_lava.is_empty():
@@ -704,6 +723,11 @@ func _on_player_died(dead_player_index: int) -> void:
 	if Global.current_state != Global.GameState.PLAYING:
 		return
 	camera.shake(0.55)
+	if horde_director != null and is_instance_valid(horde_director):
+		Global.add_match_stat(dead_player_index, "deaths", 1.0)
+		if not is_network_client:
+			horde_director.on_player_died(dead_player_index)
+		return
 	round_death_order.append(dead_player_index)
 	Global.add_match_stat(dead_player_index, "deaths", 1.0)
 
@@ -1029,6 +1053,10 @@ func _on_card_selected(_p_idx: int, _card: CardData) -> void:
 	pass
 
 func _on_draft_sequence_finished() -> void:
+	if horde_director != null and is_instance_valid(horde_director) and horde_director.over == 0 \
+			and Global.current_state == Global.GameState.PLAYING:
+		_horde_after_levelup()
+		return
 	if is_network_client:
 		# Der Client wartet auf das Signal des Hosts für die nächste Runde.
 		return
@@ -1070,8 +1098,8 @@ func _build_network_config() -> Dictionary:
 	}
 
 func _apply_network_config(config: Dictionary) -> void:
-	Global.set_player_count(int(config.get("player_count", Global.player_count)))
 	Global.set_match_mode(str(config.get("match_mode", Global.MATCH_MODE_FFA)))
+	Global.set_player_count(int(config.get("player_count", Global.player_count)))
 	Global.set_game_mode(str(config.get("game_mode", Global.GAME_MODE_SIDE)))
 	var heroes: Array = config.get("heroes", [])
 	for i in range(mini(heroes.size(), Global.MAX_PLAYERS)):
@@ -1430,6 +1458,7 @@ func _send_snapshot() -> void:
 		"lava": lava_y_pos,
 		"lava_rising": rising_lava_active,
 		"modifiers": modifier_manager.get_network_snapshot() if modifier_manager != null else {},
+		"horde": horde_director.get_network_state() if horde_director != null and is_instance_valid(horde_director) else {},
 	})
 
 func _player_snapshot(player: Player, with_appearance: bool = true) -> Dictionary:
@@ -1557,6 +1586,9 @@ func _on_network_snapshot(data: Dictionary) -> void:
 	var mod_data = data.get("modifiers", {})
 	if modifier_manager != null and mod_data is Dictionary:
 		modifier_manager.apply_network_snapshot(mod_data)
+	var horde_data = data.get("horde", {})
+	if horde_data is Dictionary and not horde_data.is_empty() and horde_director != null and is_instance_valid(horde_director):
+		horde_director.apply_network_state(horde_data)
 
 	var scores = data.get("scores", [])
 	if scores is Array:
@@ -1907,6 +1939,7 @@ func _on_hud_restart_requested() -> void:
 # Draft, Spieler, Effekte). Genutzt von "Zurück ins Menü" und F9-Neustart.
 func _clear_running_round() -> void:
 	_cancel_kill_cam()
+	_teardown_horde()
 	get_tree().paused = false
 	if options_menu != null:
 		options_menu.close_options()
@@ -1918,3 +1951,128 @@ func _clear_running_round() -> void:
 	_clear_remote_towers()
 	_clear_round_effects()
 	hud.reset_for_round()
+
+
+# ============================================================
+# Horden-Modus
+# ============================================================
+
+## Neue Horden-Runde: Director (Host simuliert, Client spiegelt) und HUD.
+## Läuft nach dem Spawnen der Spieler; gestartet wird nach dem Countdown.
+func _setup_horde(level_seed: int) -> void:
+	_teardown_horde()
+	if not Global.is_horde_mode() or not ArenaMode.active:
+		return
+	horde_director = HordeDirector.new()
+	horde_director.name = "HordeDirector"
+	horde_director.is_replica = is_network_client
+	horde_director.main_node = self
+	horde_director.player_count = maxi(1, players.size())
+	add_child(horde_director)
+	horde_director.levelup_ready.connect(_horde_start_levelup)
+	horde_director.run_over.connect(_on_horde_run_over)
+	horde_hud = HordeHud.new()
+	horde_hud.name = "HordeHud"
+	add_child(horde_hud)
+	horde_hud.bind(horde_director)
+	horde_hud.again_requested.connect(_on_horde_again)
+	horde_hud.menu_requested.connect(_on_hud_restart_requested)
+	horde_director.notice.emit("Überlebt die Jagd! Bosse alle 3 Minuten.", Color(0.75, 1.0, 0.8))
+
+func _teardown_horde() -> void:
+	if horde_director != null and is_instance_valid(horde_director):
+		horde_director.queue_free()
+	horde_director = null
+	if horde_hud != null and is_instance_valid(horde_hud):
+		horde_hud.queue_free()
+	horde_hud = null
+	for e in get_tree().get_nodes_in_group(HordeEnemy.GROUP):
+		e.queue_free()
+
+## Stufenaufstieg: Jeder Eber (auch gefallene) wählt eine Karte. Das Spiel
+## pausiert dafür (CardDraftUI), online über den normalen Netzwerk-Draft.
+## Jagd vorbei: offene Kartenwahl schließen, damit der Endbildschirm frei ist.
+func _on_horde_run_over(_victory: bool) -> void:
+	if card_draft_ui.visible:
+		card_draft_ui.close_draft()
+
+func _horde_start_levelup() -> void:
+	if horde_director == null or is_network_client:
+		return
+	var slots: Array[int] = []
+	var sources: Array[String] = []
+	var source := CardDraftUI.HORDE_BONUS_SOURCE if horde_director.pending_bonus > 0 else CardDraftUI.HORDE_SOURCE
+	for i in Global.get_active_player_indices():
+		slots.append(i)
+		sources.append(source)
+	SoundManager.play_sound("reload_done", 0.0, 0.0)
+	card_draft_ui.start_draft_sequence(slots, sources)
+
+## Nach der Kartenwahl: Karten auf die lebenden Eber anwenden (Leben-Anteil
+## bleibt), dann geht die Jagd weiter.
+func _horde_after_levelup() -> void:
+	for p in players:
+		if is_instance_valid(p) and not p.is_dead:
+			_horde_reapply_cards(p)
+	if is_network_client:
+		return
+	horde_director.on_levelup_finished()
+
+func _horde_reapply_cards(p: Player) -> void:
+	var ratio := clampf(p.current_health / maxf(1.0, p.max_health), 0.05, 1.0)
+	var cam_target := camera.targets.has(p)
+	p.apply_stats()
+	p.current_health = p.max_health * ratio
+	p.emit_signal("health_changed", p.current_health, p.max_health, p.current_shield, p.max_shield)
+	if ArenaMode.active and not p.is_replica:
+		ArenaMotion.update_masks(p)
+	if cam_target and not camera.targets.has(p):
+		camera.add_target(p)
+
+## Client: Der Host hat die Kartenwahl beendet (Netzwerk-Draft).
+func _on_network_draft_finished() -> void:
+	if not is_network_client:
+		return
+	if horde_director != null and is_instance_valid(horde_director):
+		card_draft_ui.close_draft()
+		for p in players:
+			if is_instance_valid(p):
+				_horde_reapply_cards(p)
+
+## Wiederbelebung: neuer Eber im Slot an der Stelle eines Teamkollegen.
+func horde_respawn_player(slot: int, pos: Vector2) -> void:
+	if is_network_client:
+		return
+	var old := get_player(slot)
+	if old != null and is_instance_valid(old):
+		players.erase(old)
+		old.queue_free()
+	var p: Player = player_scene.instantiate()
+	p.player_index = slot
+	p.team_id = Global.get_team_for_slot(slot)
+	p.is_bot = Global.is_bot_slot(slot)
+	p.is_replica = false
+	p.is_remote = is_network_host and Global.is_human_slot(slot) and slot != 1
+	p.position = pos
+	add_child(p)
+	p.died.connect(_on_player_died)
+	players.append(p)
+	p.control_enabled = true
+	p.play_spawn_intro()
+	_update_bot_controllers()
+	camera.targets.clear()
+	for q in players:
+		if is_instance_valid(q):
+			camera.add_target(q)
+	_configure_camera_world()
+	hud.setup_players(players)
+	hud.update_all()
+
+## Endbildschirm → NOCHMAL JAGEN: frische Runde mit denselben Einstellungen.
+func _on_horde_again() -> void:
+	if Global.network_mode and not is_network_host:
+		return
+	if is_network_host and NetworkManager.has_clients():
+		NetworkManager.send_start_match(_build_network_config())
+	Global.reset_match()
+	_start_fresh_round()

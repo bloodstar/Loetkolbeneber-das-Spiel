@@ -12,6 +12,9 @@ const BONUS_SOURCE_NAMES := {"pinata": "PINATA", "gold": "GOLD"}
 # Pre-Draft vor der ersten Runde läuft über denselben Quellen-Kanal wie die
 # Bonus-Züge, damit Clients ihn ohne neues RPC erkennen.
 const PRE_DRAFT_SOURCE := "pre_draft"
+# Horden-Modus: Stufenaufstieg, eine Karte pro Eber, kurze Auflösung.
+const HORDE_SOURCE := "horde"
+const HORDE_BONUS_SOURCE := "horde_chest"
 const BOT_RARITY_RANK := {"Common": 1, "Uncommon": 2, "Rare": 3, "Epic": 4, "Legendary": 5}
 
 @onready var main_control: Control = $MainControl
@@ -217,6 +220,8 @@ func _process_next_in_queue() -> void:
 	# Jeder Pick bekommt ein eigenes Angebot, daher begrenzt die Angebotsgröße
 	# die Zahl der Picks nicht mehr.
 	picks_total = maxi(Global.pre_draft_picks if _is_pre_draft() else Global.draft_picks, 1)
+	if _is_horde_draft():
+		picks_total = 1
 	picks_remaining = picks_total
 	
 	# Host schickt das identische Angebot an den Client.
@@ -425,9 +430,20 @@ func _gamble_active() -> bool:
 func _is_pre_draft() -> bool:
 	return current_bonus_source == PRE_DRAFT_SOURCE
 
+func _is_horde_draft() -> bool:
+	return current_bonus_source == HORDE_SOURCE or current_bonus_source == HORDE_BONUS_SOURCE
+
+func _reveal_time() -> float:
+	return 1.1 if _is_horde_draft() else 2.2
+
 func _turn_title(drafter_name: String, pick_number: int) -> String:
 	if _is_pre_draft():
 		return "PRE-DRAFT: %s – PICK %d/%d" % [drafter_name, pick_number, picks_total]
+	if current_bonus_source == HORDE_BONUS_SOURCE:
+		return "TRUHE: %s wählt eine Bonus-Karte" % drafter_name
+	if current_bonus_source == HORDE_SOURCE:
+		var lv := HordeDirector.current.level if HordeDirector.is_active() else 0
+		return "STUFE %d: %s wählt eine Karte" % [lv, drafter_name]
 	if current_bonus_source != "":
 		return "BONUS ZUG (%s): %s – PICK %d/%d" % [_bonus_source_name(), drafter_name, pick_number, picks_total]
 	return "UPGRADE-PHASE: %s – PICK %d/%d" % [drafter_name, pick_number, picks_total]
@@ -523,7 +539,7 @@ func _local_can_manual_pick() -> bool:
 
 func _drafter_name(index: int) -> String:
 	var prefix := ""
-	if Global.is_team_mode():
+	if Global.is_team_mode() and not Global.is_horde_mode():
 		prefix = "[%s] " % Global.get_team_name(Global.get_team_for_slot(index))
 	if Global.is_bot_slot(index):
 		return prefix + "BOT (Slot %d)" % index
@@ -1247,7 +1263,7 @@ func _show_public_reveal(drafter_idx: int, card: CardData) -> void:
 	
 	if blind_hidden:
 		reveal_card_holder.add_child(_create_hidden_reveal_card())
-		reveal_timer.start(2.2)
+		reveal_timer.start(_reveal_time())
 		return
 
 	var framed := _create_framed_card(
@@ -1321,7 +1337,7 @@ func _show_public_reveal(drafter_idx: int, card: CardData) -> void:
 	reveal_card_holder.add_child(reveal_panel)
 	
 	# Auto advance after 2.2 seconds if not skipped
-	reveal_timer.start(2.2)
+	reveal_timer.start(_reveal_time())
 
 func _finish_current_reveal() -> void:
 	reveal_timer.stop()
@@ -1444,12 +1460,18 @@ func _set_bonus_source(source: String) -> void:
 		turn_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25))
 	elif source == PRE_DRAFT_SOURCE:
 		turn_label.add_theme_color_override("font_color", Color(0.45, 0.9, 1.0))
+	elif source == HORDE_SOURCE:
+		turn_label.add_theme_color_override("font_color", Color(0.45, 1.0, 0.55))
+	elif source == HORDE_BONUS_SOURCE:
+		turn_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25))
 	else:
 		turn_label.remove_theme_color_override("font_color")
 	if bonus_rain == null:
 		return
-	if source == "" or source == PRE_DRAFT_SOURCE:
+	if source == "" or source == PRE_DRAFT_SOURCE or source == HORDE_SOURCE:
 		bonus_rain.stop()
+	elif source == HORDE_BONUS_SOURCE:
+		bonus_rain.start("gold")
 	else:
 		bonus_rain.start(source)
 

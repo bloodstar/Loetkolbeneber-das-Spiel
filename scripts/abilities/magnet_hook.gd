@@ -29,7 +29,7 @@ var arena_z: float = 0.0
 var state: int = State.FLY
 var _travelled: float = 0.0
 var _pull_time: float = 0.0
-var _target: Player = null
+var _target = null # Player oder HordeEnemy
 var _ended: bool = false
 var _net_target: Vector2 = Vector2.ZERO
 
@@ -75,7 +75,7 @@ func _physics_process(delta: float) -> void:
 			if not is_instance_valid(_target) or _target.current_health <= 0.0:
 				state = State.RETRACT
 				return
-			var to_owner := owner_player.global_position - _target.global_position
+			var to_owner: Vector2 = owner_player.global_position - _target.global_position
 			if to_owner.length() <= PULL_STOP_DISTANCE or _pull_time >= PULL_MAX_TIME:
 				_target.velocity *= 0.2
 				finish()

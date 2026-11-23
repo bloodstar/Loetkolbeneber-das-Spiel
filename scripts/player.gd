@@ -2204,11 +2204,13 @@ func melee_attack(aim_override: Vector2 = Vector2.ZERO) -> void:
 		melee_echo_dir = dir
 
 # Phantom-Passiv "Hinterhalt" und der erste Treffer der Nachtjagd.
-func _melee_ambush_mult(target: Player, dir: Vector2) -> float:
+func _melee_ambush_mult(target: Node2D, dir: Vector2) -> float:
 	if Global.get_player_hero_id(player_index) != "phantom":
 		return 1.0
+	if not (target is Player):
+		return 1.0 + (PHANTOM_BACKSTAB_BONUS if is_invisible() else 0.0)
 	var mult := 1.0
-	var from_behind := target.aim_direction.dot(dir) > 0.3
+	var from_behind: bool = target.aim_direction.dot(dir) > 0.3
 	if is_invisible() or from_behind:
 		mult += PHANTOM_BACKSTAB_BONUS
 	# Der erste Nachtjagd-Treffer ersetzt den Hinterhalt-Bonus, er stapelt nicht.
@@ -2467,6 +2469,20 @@ func _melee_targets(dir: Vector2) -> Array:
 		if not space.intersect_ray(query).is_empty():
 			continue
 		result.append(p)
+	# Horden-Modus: Gegner (Wölfe, Bären …) treffen wie gegnerische Eber.
+	if HordeDirector.is_active():
+		for node in get_tree().get_nodes_in_group(HordeEnemy.GROUP):
+			var e := node as HordeEnemy
+			if e == null or not e.is_alive() or e.is_replica:
+				continue
+			if not _melee_zone_contains(dir, e.global_position - global_position, e.radius,
+					own_reach, half_arc, thrust, thrust_half_width, own_radius):
+				continue
+			var ray := PhysicsRayQueryParameters2D.create(global_position, e.global_position, 1)
+			ray.exclude = [get_rid()]
+			if not space.intersect_ray(ray).is_empty():
+				continue
+			result.append(e)
 	return result
 
 # Liegt ein Ziel (Abstand to_target, Radius target_radius) in der Schlagfläche?
@@ -2710,6 +2726,8 @@ func _valid_opponent() -> Player:
 
 # Ziel für zielsuchende Kugeln: ein aktiver Köder des Gegners lockt sie an.
 func _homing_target() -> Node2D:
+	if HordeDirector.is_active():
+		return HordeDirector.current.nearest_enemy_to(global_position + aim_direction.normalized() * 220.0, 900.0)
 	var target := _valid_opponent()
 	return target.get_lure_target() if target != null else null
 
@@ -2719,7 +2737,7 @@ func _trigger_rocket_impact() -> void:
 		1.0, 9.0 * ability_radius_mult, 0.3, 0.3), "explosion", 0.2, -2.0))
 	Seesaw.blast_all(get_tree(), global_position, radius, 1.4)
 
-	if opponent and is_instance_valid(opponent):
+	if (opponent and is_instance_valid(opponent)) or HordeDirector.is_active():
 		for p in _opponents_within(global_position, radius):
 			var dist = global_position.distance_to(p.global_position)
 			var falloff = 1.0 - (dist / radius)
@@ -2893,6 +2911,11 @@ func _opponents_within(pos: Vector2, radius: float) -> Array:
 			continue
 		if pos.distance_to(p.global_position) <= radius:
 			result.append(p)
+	if HordeDirector.is_active():
+		for node in get_tree().get_nodes_in_group(HordeEnemy.GROUP):
+			var e := node as HordeEnemy
+			if e != null and e.is_alive() and not e.is_replica and pos.distance_to(e.global_position) <= radius + e.radius:
+				result.append(e)
 	return result
 
 # --- Nova: SingularitÃƒÂ¤t ---
@@ -3593,7 +3616,7 @@ func _throw_boomerang() -> void:
 	active_boomerang = boomerang
 	_fx("sound", {"snd": ["slash", 0.2, 0.0]})
 
-func boomerang_hit(p: Player, damage: float, dir: Vector2) -> void:
+func boomerang_hit(p, damage: float, dir: Vector2) -> void:
 	_ability_hit(p, damage * powerup_damage_mult, dir * 220.0)
 	_spawn_blade_hit_spark(p.global_position)
 	# Evolution "Blutung": Treffer bluten und markieren den Gegner.
@@ -3653,7 +3676,7 @@ func _fire_hook() -> void:
 	active_hook = hook
 	_fx("sound", {"snd": ["shoot", 0.2, -2.0]})
 
-func bastion_hook_hit(p: Player) -> void:
+func bastion_hook_hit(p) -> void:
 	_ability_hit(p, BASTION_HOOK_DAMAGE * ability_damage_mult, Vector2.ZERO)
 	p.apply_stun(BASTION_HOOK_STUN * ability_duration_mult)
 	_spawn_blade_hit_spark(p.global_position)
