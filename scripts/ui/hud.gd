@@ -1007,6 +1007,9 @@ func _fill_tab_overlay(p: Player, is_preview: bool, for_overview: bool = false) 
 		subtitle.text = "%s  ·  Endstand mit allen Karten" % role_text
 	elif is_preview:
 		subtitle.text = "%s  ·  Werte für die nächste Runde  ·  TAB loslassen zum Schließen" % role_text
+	var sheet_title := Global.get_player_title_text(p.player_index)
+	if not sheet_title.is_empty():
+		subtitle.text = "«%s»  ·  %s" % [sheet_title, subtitle.text]
 	subtitle.add_theme_font_size_override("font_size", UiTheme.FS_XS)
 	subtitle.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
 	subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1599,6 +1602,9 @@ func _build_match_stats() -> void:
 		var display := _player_display_name(slot)
 		if slot == mvp_index:
 			display = "★ " + display
+		var title_text := Global.get_player_title_text(slot)
+		if not title_text.is_empty():
+			display += "\n«%s»" % title_text
 		var name_label := Label.new()
 		name_label.text = display
 		name_label.add_theme_font_size_override("font_size", UiTheme.FS_S)

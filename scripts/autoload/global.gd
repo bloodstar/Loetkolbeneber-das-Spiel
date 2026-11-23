@@ -489,6 +489,8 @@ var player_tusk_shapes: Array[String] = ["small", "small", "small", "small", "sm
 var player_pig_parts: Array[Dictionary] = []
 # Selbst gewählte Benutzernamen; leer = Ersatzname wie "Spieler 2".
 var player_names: Array[String] = ["", "", "", "", "", ""]
+# Gewählter Titel pro Slot (Erfolgs-ID aus AchievementManager, "" = keiner).
+var player_titles: Array[String] = ["", "", "", "", "", ""]
 # Gewählte Nahkampfwaffe pro Slot (Schlüssel aus MELEE_WEAPONS).
 var player_melee_weapons: Array[String] = ["iron", "iron", "iron", "iron", "iron", "iron"]
 var player_wand_tip_colors: Array[Color] = [
@@ -1113,6 +1115,29 @@ func set_player_name(index: int, value: String) -> void:
 	player_names[index - 1] = clean
 	if index == local_player_index:
 		save_character_customization(index)
+	lobby_state_changed.emit()
+
+## Titel-ID eines Slots (Bots haben keinen).
+func get_player_title(index: int) -> String:
+	if index < 1 or index > MAX_PLAYERS or is_bot_slot(index):
+		return ""
+	return player_titles[index - 1]
+
+## Angezeigter Titeltext eines Slots, z. B. "Kartoffelkönig" ("" = keiner).
+func get_player_title_text(index: int) -> String:
+	var title_id := get_player_title(index)
+	if title_id.is_empty():
+		return ""
+	var manager := get_node_or_null("/root/AchievementManager")
+	return "" if manager == null else str(manager.get_title_text(title_id))
+
+func set_player_title(index: int, title_id: String) -> void:
+	if index < 1 or index > MAX_PLAYERS:
+		return
+	var clean := title_id.strip_edges().substr(0, 40)
+	if player_titles[index - 1] == clean:
+		return
+	player_titles[index - 1] = clean
 	lobby_state_changed.emit()
 
 func set_pig_appearance(

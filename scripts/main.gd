@@ -349,6 +349,7 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 		modifier_manager.start_round_modifiers(active_mods, self, level_generator)
 	if not is_network_client:
 		RoundStats.begin_round(level_seed, map_id, active_mods)
+		AchievementManager.begin_round(active_mods)
 		CardStats.record_round_start()
 
 	# 3. Reset Sudden Death. Der Timer startet erst nach dem Start-Countdown.
@@ -786,6 +787,7 @@ func _finish_round(winner: int, award_survival: bool) -> void:
 	# Nach award_round, damit Rundensieg und Punkte schon verbucht sind.
 	# Endet damit das Match, hat _on_match_over last_match_winner gesetzt.
 	RoundStats.end_round(winner, round_death_order, last_match_winner)
+	AchievementManager.end_round(winner, round_death_order, last_match_winner, is_sudden_death)
 
 # --- Kill-Cam ---
 
