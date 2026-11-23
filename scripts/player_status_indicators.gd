@@ -128,6 +128,13 @@ func _draw_shield_overlay() -> void:
 	draw_rect(overlay, SHIELD_OVERLAY_COLOR, true)
 	draw_rect(Rect2(overlay.position, Vector2(overlay.size.x, 0.55)), Color(0.85, 0.95, 1.0, 0.45), true)
 	draw_rect(Rect2(overlay.end.x - 0.45, HEALTH_Y - 0.5, 0.45, HEALTH_HEIGHT + 1.0), SHIELD_COLOR, true)
+	# Blutschild des Blutritters: Schild über 100 % Max-HP als zweite,
+	# blutrote Lage darüber (bis 200 %).
+	var extra: float = clampf((player.current_shield - player.max_health) / maxf(1.0, player.max_health), 0.0, 1.0)
+	if extra > 0.0:
+		var top := Rect2(-HEALTH_WIDTH * 0.5, HEALTH_Y, HEALTH_WIDTH * extra, HEALTH_HEIGHT)
+		draw_rect(top, Color(0.85, 0.08, 0.20, 0.85), true)
+		draw_rect(Rect2(top.end.x - 0.45, HEALTH_Y - 0.5, 0.45, HEALTH_HEIGHT + 1.0), Color(1.0, 0.55, 0.6, 1.0), true)
 
 func _draw_status_icons() -> void:
 	var icons: Array[String] = ["block"]

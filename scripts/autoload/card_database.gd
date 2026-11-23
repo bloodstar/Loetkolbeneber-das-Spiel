@@ -2217,6 +2217,105 @@ func _init_database() -> void:
 	vp6.ability_evolution = "vampire_bat_king"
 	_register(vp6)
 
+	# --- Blutritter (Nahkampf-Vampir): Klassenkarten ---
+	var vm1 = CardData.new()
+	vm1.id = "vampm_aderlass"
+	vm1.title = "Aderlass"
+	vm1.description = "Blutritter: +20% Schaden, +10% Lebensraub."
+	vm1.rarity = "Rare"
+	vm1.color = Color(0.70, 0.12, 0.20)
+	vm1.hero_id = "vampire_melee"
+	vm1.damage_mult = 1.20
+	vm1.lifesteal_percent_add = 0.10
+	_register(vm1)
+
+	var vm2 = CardData.new()
+	vm2.id = "vampm_dickes_blut"
+	vm2.title = "Dickes Blut"
+	vm2.description = "Blutritter – Blutschild: Blutkugeln geben 50% mehr Schild, +10% Max HP."
+	vm2.rarity = "Rare"
+	vm2.pool = "Defensive"
+	vm2.color = Color(0.62, 0.10, 0.18)
+	vm2.hero_id = "vampire_melee"
+	vm2.max_hp_mult = 1.10
+	vm2.ability_evolution = "vampm_thick_blood"
+	_register(vm2)
+
+	var vm3 = CardData.new()
+	vm3.id = "vampm_blutgier"
+	vm3.title = "Blutgier"
+	vm3.description = "Blutritter: +30% Schaden, +10% Tempo, -10% Max HP."
+	vm3.rarity = "Epic"
+	vm3.color = Color(0.55, 0.06, 0.14)
+	vm3.hero_id = "vampire_melee"
+	vm3.damage_mult = 1.30
+	vm3.move_speed_mult = 1.10
+	vm3.max_hp_mult = 0.90
+	_register(vm3)
+
+	# Fähigkeits-Familie Blutbersten: Grundkarte + zwei Evolutionen.
+	var vm4 = CardData.new()
+	vm4.id = "vampm_blutbersten"
+	vm4.title = "Weites Bersten"
+	vm4.description = "Blutritter – Blutbersten: +30% Radius, -15% Fähigkeits-Abklingzeit."
+	vm4.rarity = "Rare"
+	vm4.pool = "Offensive"
+	vm4.color = Color(0.70, 0.10, 0.18)
+	vm4.hero_id = "vampire_melee"
+	vm4.family_id = "vampm_burst"
+	vm4.ability_radius_mult = 1.30
+	vm4.ability_cooldown_mult = 0.85
+	_register(vm4)
+
+	var vm4a = CardData.new()
+	vm4a.id = "vampm_blutspende"
+	vm4a.title = "Blutspende"
+	vm4a.description = "Blutbersten-Evolution: Du heilst dich um 30% des verbrauchten Schilds."
+	vm4a.rarity = "Epic"
+	vm4a.color = Color(0.70, 0.10, 0.18)
+	vm4a.hero_id = "vampire_melee"
+	vm4a.family_id = "vampm_burst"
+	vm4a.parent_card_id = "vampm_blutbersten"
+	vm4a.evolution_branch = "A"
+	vm4a.ability_evolution = "vampm_burst_heal"
+	_register(vm4a)
+
+	var vm4b = CardData.new()
+	vm4b.id = "vampm_blutregen"
+	vm4b.title = "Blutregen"
+	vm4b.description = "Blutbersten-Evolution: Jeder getroffene Gegner lässt eine Blutkugel fallen."
+	vm4b.rarity = "Epic"
+	vm4b.color = Color(0.70, 0.10, 0.18)
+	vm4b.hero_id = "vampire_melee"
+	vm4b.family_id = "vampm_burst"
+	vm4b.parent_card_id = "vampm_blutbersten"
+	vm4b.evolution_branch = "B"
+	vm4b.ability_evolution = "vampm_burst_orbs"
+	_register(vm4b)
+
+	var vm5 = CardData.new()
+	vm5.id = "vampm_blutschneise"
+	vm5.title = "Blutschneise"
+	vm5.description = "Blutritter – Blutsturm: Der Dash schneidet alle Gegner auf dem Weg (50% Nahkampfschaden)."
+	vm5.rarity = "Epic"
+	vm5.pool = "Offensive"
+	vm5.color = Color(0.62, 0.08, 0.16)
+	vm5.hero_id = "vampire_melee"
+	vm5.ability_evolution = "vampm_dash_cut"
+	_register(vm5)
+
+	var vm6 = CardData.new()
+	vm6.id = "vampm_blutsog"
+	vm6.title = "Blutsog"
+	vm6.description = "Blutritter – Blutruf: zieht bis zu 10 statt 6 Kugeln aus 40% größerem Umkreis, -10% Ulti-Abklingzeit."
+	vm6.rarity = "Epic"
+	vm6.pool = "Offensive"
+	vm6.color = Color(0.62, 0.08, 0.16)
+	vm6.hero_id = "vampire_melee"
+	vm6.ult_cooldown_mult = 0.90
+	vm6.ability_evolution = "vampm_ult_more"
+	_register(vm6)
+
 	var gu1 = CardData.new()
 	gu1.id = "ulti_akku"
 	gu1.title = "Ulti-Akku"

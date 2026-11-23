@@ -404,6 +404,9 @@ func _handle_combat(_delta: float) -> void:
 				if is_instance_valid(target):
 					wants = not BloodOrb.free_orbs(player.get_tree(), target.global_position,
 						Player.VAMPIRE_BURST_RADIUS * player.ability_radius_mult).is_empty()
+			"vampire_melee":
+				# Blutbersten erst mit genug Schild und nah am Gegner.
+				wants = player.current_shield >= 30.0 and dist < Player.VAMP_MELEE_BURST_RADIUS * 0.85
 		if wants:
 			# Nova-Bots setzen das Schwarze Loch direkt auf den Gegner.
 			if hero_id == "nova" and is_instance_valid(target):

@@ -263,9 +263,11 @@ func _connect_player(player: Player, ui: Dictionary) -> void:
 	player.health_changed.connect(func(cur_h, max_h, cur_s, max_s):
 		ui["hp"].max_value = maxf(max_h, 1.0)
 		ui["hp"].value = cur_h
-		ui["shield"].max_value = maxf(max_s, 1.0)
+		# Blutschild (Blutritter) kann über max_shield steigen, bis 2x Max-HP.
+		var shield_cap: float = max_s if cur_s <= max_s else maxf(max_h * Player.VAMP_MELEE_SHIELD_CAP, cur_s)
+		ui["shield"].max_value = maxf(shield_cap, 1.0)
 		ui["shield"].value = cur_s
-		ui["shield"].visible = max_s > 0.0
+		ui["shield"].visible = max_s > 0.0 or cur_s > 0.0
 	)
 	player.ammo_changed.connect(func(_cur, _max_a):
 		_update_ammo_row(ui, player)

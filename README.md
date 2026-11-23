@@ -115,6 +115,7 @@ Die **Ulti** lädt über eine Abklingzeit, nicht über Schaden. Sie läuft über
 | **Bastion** | Field Engineer | 145 | 270 | 20 | **Aurora**: Doppelte Schild-Regeneration, Schild-Cooldown nur 4 s | **Heilfeld**: 4 s lang 8 HP und 10 Schild alle 0,5 s | Bauhelm mit Lampe |
 | **Phantom** | Shadow Assassin | 100 | 325 | 5 | **Hinterhalt**: +50 % Nahkampfschaden aus der Unsichtbarkeit oder von hinten | **Köder**: Doppelgänger läuft weiter, Phantom wird unsichtbar | Ninja-Stirnband |
 | **Druide** | Grove Warden | 105 | 295 | 10 | **Wurzelkraft**: Regeneriert ständig 2 HP/s | **Wurzelwall**: Rankenwand am Zielpunkt, breite Seite zum Druiden (108 px, 5 s, 150 HP), blockt Bewegung und Kugeln | Blätterkranz mit Geweih |
+| **Blutritter** | Blood Knight (Nahkampf-Vampir, Schwert) | 110 | 300 | 0 | **Blutschild**: Jeder 3. Treffer lässt eine Blutkugel fallen; jede Kugel gibt +25 Schild, bis 200 % der Max-HP (zweite, rote Lage auf der Lebensleiste) | **Blutbersten**: der ganze Schild explodiert, 1 Schaden pro Schildpunkt im Radius 150. Dash **Blutsturm**: legt eine Blutkugel ab, stürmt 40 % weiter und durch Gegner. Ulti **Blutruf** (24 s): bis zu 6 Kugeln im Umkreis 520 px fliegen zu ihm, treffen sie unterwegs einen Gegner: 30 Schaden und +30 HP | Hoher Dracula-Kragen mit rotem Edelstein |
 
 Die genauen Zahlen der Fähigkeiten stehen im Spiel unter **HELDEN** im Hauptmenü und im Tooltip der Heldenwahl. Sie kommen direkt aus den Konstanten in `player.gd`, stimmen also immer.
 
@@ -432,6 +433,7 @@ Kartentexte nutzen für gleiche Effekte immer dieselben Begriffe: **Tempo** (Lau
 | **Klinge** | Wirbelklinge, Klingenreflexe, Duellklinge |
 | **Bastion** | Energieschild, Feldwartung, Bastionsfestung |
 | **Phantom** | Schattenklinge, Schattenlauf, Todeskuss |
+| **Blutritter** | Aderlass, Dickes Blut (Kugeln +50 % Schild), Blutgier |
 
 ### Fähigkeitskarten (je 4 pro Held)
 
@@ -446,6 +448,7 @@ Eine Grundkarte (Rare) mit zwei exklusiven Evolutionen (Epic) und eine Einzelkar
 | **Klinge** | Geschliffene Klingen | Echowirbel | Blutrausch | Tanzschritt |
 | **Bastion** | Verstärkte Emitter | Schutzkuppel | Pulsfeld | Notfallprotokoll |
 | **Phantom** (Köder) | Doppelgänger | Sprengköder | Platztausch (C: Lähmendes Mal) | Lange Schatten |
+| **Blutritter** (Blutbersten) | Weites Bersten | Blutspende (heilt 30 % des Schilds) | Blutregen (Getroffene lassen Blutkugeln fallen) | Blutschneise (Dash, Epic) und Blutsog (Ulti, Epic) |
 
 **Dash- und Ulti-Karten (neu):** Volt: **Dreifachblitz** (Rare, +1 Blitzschritt-Ladung, +20 % Teleportweite) mit den Evolutionen **Kettenblink** (Kettenblitz am Zielpunkt) und **Gewitterspur** (Blitzzone am Zielpunkt); **Starkstrom** (Rare, Überladung +30 % Dauer, −10 % Ulti-Abklingzeit) mit **Dauerblitz** (Blitzschritt lädt in der Überladung dreimal so schnell) und **Schockring** (Schockwelle am Ende). Phantom: **Schattenschnitt** (Epic, der Dash sticht alle Gegner auf dem Weg, 60 % Schaden) und **Blutspur** (Epic, ein Kill in der Nachtjagd gibt die halbe Ulti-Abklingzeit zurück). Für alle Helden mit Ulti: **Ulti-Akku** (Uncommon, −15 % Ulti-Abklingzeit).
 
