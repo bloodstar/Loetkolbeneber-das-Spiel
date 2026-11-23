@@ -157,6 +157,13 @@ extends Resource
 @export var ability_range_mult: float = 1.0 # Teleport-, Sprung- bzw. Wurfweite
 # Druide: zusätzliche Wände, die gleichzeitig stehen dürfen.
 @export var wall_count_add: int = 0
+# --- Ulti (Taste E) und Helden-Dash ---
+@export var ult_cooldown_mult: float = 1.0 # <1.0 = Ulti schneller wieder bereit
+@export var ult_duration_mult: float = 1.0 # Dauer der Ulti (Überladung, Nachtjagd)
+@export var dash_charges_add: int = 0 # Zusätzliche Dash-Ladungen
+# Angriffsart, für die die Karte gedacht ist: "ranged", "melee" oder leer für
+# beide. Leer = wird beim Registrieren aus den Werten abgeleitet (CardDatabase).
+@export var attack_type: String = ""
 # Schaltet einen Evolutionseffekt der Fähigkeit frei, z. B. "ignis_napalm".
 # Die Effekte selbst sind in player.gd hinterlegt.
 @export var ability_evolution: String = ""
@@ -169,7 +176,7 @@ extends Resource
 
 # Werte, die nichts an der Spielstärke ändern bzw. separat protokolliert werden.
 const _FINGERPRINT_IGNORED: Array[String] = [
-	"id", "title", "description", "rarity", "color", "version", "pool", "sub_tags",
+	"id", "title", "description", "rarity", "color", "version", "pool", "sub_tags", "attack_type",
 ]
 
 # Automatischer Fingerabdruck aller Balance-Werte. Ändert sich ein Wert, ohne

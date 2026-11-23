@@ -328,11 +328,12 @@ höher)</td>
 <td style="text-align: left;">Mauszeiger</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">Schießen</td>
+<td style="text-align: left;">Angriff (Schuss oder Nahkampf, je nach
+Held)</td>
 <td style="text-align: left;"><code>Linksklick</code></td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">Dash / Ausweichen</td>
+<td style="text-align: left;">Dash (je nach Held verschieden)</td>
 <td style="text-align: left;"><code>Shift</code> (kurz
 unverwundbar)</td>
 </tr>
@@ -345,7 +346,7 @@ unverwundbar)</td>
 <td style="text-align: left;"><code>R</code></td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">Nahkampf</td>
+<td style="text-align: left;">Ulti</td>
 <td style="text-align: left;"><code>E</code></td>
 </tr>
 <tr class="even">
@@ -355,20 +356,19 @@ unverwundbar)</td>
 </tbody>
 </table>
 <p><strong>Fähigkeiten zielen:</strong> Alle gerichteten Fähigkeiten
-zielen auf den Mauszeiger: Schwarzes Loch (Nova), Wurzelwall (Druide),
-Blink (Volt), Schattensprung (Phantom) und Raketensprung (Ignis, nur die
-Flugrichtung). Fähigkeitstaste <strong>halten</strong> zeigt die
-Vorschau (Reichweitenring, Form am Ziel bzw. Flugbahn),
-<strong>Loslassen</strong> zaubert. Der Zeiger wird auf die Reichweite
-begrenzt. Liegt er in einer Wand, landet der Zauber an der nächsten
-freien Stelle; die Vorschau zeigt sie mit einer gestrichelten Linie an.
-<code>Esc</code> bricht ab (auch Rechtsklick, wenn die Fähigkeit auf
-einer anderen Taste liegt). Der Wurzelwall steht immer mit der breiten
-Seite zum Druiden. Unter <em>Optionen → Steuerung → Fähigkeit
-zielen</em> lässt sich auf <strong>Sofort am Mauszeiger</strong>
-umstellen (ohne Vorschau). Bots und Spieler 2 nutzen weiter die feste
-Entfernung in Zielrichtung. Giftwolke, Klingensturm und Heilfeld wirken
-weiter an der eigenen Position.</p>
+zielen auf den Mauszeiger: Schwarzes Loch (Nova), Wurzelwall (Druide)
+und Raketensprung (Ignis, nur die Flugrichtung). Fähigkeitstaste
+<strong>halten</strong> zeigt die Vorschau (Reichweitenring, Form am
+Ziel bzw. Flugbahn), <strong>Loslassen</strong> zaubert. Der Zeiger wird
+auf die Reichweite begrenzt. Liegt er in einer Wand, landet der Zauber
+an der nächsten freien Stelle; die Vorschau zeigt sie mit einer
+gestrichelten Linie an. <code>Esc</code> bricht ab (auch Rechtsklick,
+wenn die Fähigkeit auf einer anderen Taste liegt). Der Wurzelwall steht
+immer mit der breiten Seite zum Druiden. Unter <em>Optionen → Steuerung
+→ Fähigkeit zielen</em> lässt sich auf <strong>Sofort am
+Mauszeiger</strong> umstellen (ohne Vorschau). Bots und Spieler 2 nutzen
+weiter die feste Entfernung in Zielrichtung. Giftwolke, Klingensturm und
+Heilfeld wirken weiter an der eigenen Position.</p>
 <h3 id="spieler-2-nur-lokaler-2-spieler-modus-am-selben-pc">Spieler 2
 (nur lokaler 2-Spieler-Modus am selben PC)</h3>
 <table>
@@ -412,7 +412,7 @@ weiter an der eigenen Position.</p>
 <td style="text-align: left;"><code>L</code></td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">Nahkampf</td>
+<td style="text-align: left;">Ulti</td>
 <td style="text-align: left;"><code>K</code></td>
 </tr>
 <tr class="even">
@@ -452,7 +452,56 @@ online läuft die Runde weiter</td>
 <h2 id="-helden">🐷 Helden</h2>
 <p>Es gibt <strong>8 Klassen</strong>. Jede hat eigene Werte, ein
 Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am
-Kopf.</p>
+Kopf. Jeder Held ist entweder <strong>Fernkämpfer</strong> (Linksklick
+schießt) oder <strong>Nahkämpfer</strong> (Linksklick schlägt mit seiner
+festen Waffe): Klinge (Schwert), Bastion (Hammer) und Phantom
+(Lötkolben-Stich) sind Nahkämpfer, alle anderen schießen. Im Draft
+erscheinen nur Karten, die zur Angriffsart passen.</p>
+<p><strong>Umbau der Helden-Kits (läuft):</strong> Jeder Held bekommt
+einen eigenen Dash (<code>Shift</code>), eine Fähigkeit (Rechtsklick)
+und eine <strong>Ulti</strong> (<code>E</code>). Fertig sind bisher
+<strong>Volt</strong> und <strong>Phantom</strong>, die übrigen Helden
+behalten vorerst Standard-Dash und ihre bisherige Fähigkeit und haben
+noch keine Ulti.</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Held</th>
+<th style="text-align: left;">Dash (<code>Shift</code>)</th>
+<th style="text-align: left;">Fähigkeit (Rechtsklick)</th>
+<th style="text-align: left;">Ulti (<code>E</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Volt</strong></td>
+<td style="text-align: left;"><strong>Blitzschritt</strong>: Teleport
+130 px, 2 Ladungen, jede lädt einzeln nach</td>
+<td style="text-align: left;"><strong>Kugelblitz</strong>: langsame
+Blitzkugel (3,5 s), schockt alle 0,4 s Gegner im Radius 85 px mit 6
+Schaden und verlangsamt sie</td>
+<td style="text-align: left;"><strong>Überladung</strong> (26 s): 5 s
+lang +40 % Tempo, +50 % Feuerrate, kein Munitionsverbrauch, jeder Schuss
+springt als Kettenblitz weiter</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Phantom</strong></td>
+<td style="text-align: left;"><strong>Schattenschritt</strong>: Dash,
+danach 0,8 s unsichtbar</td>
+<td style="text-align: left;"><strong>Köder</strong>: Doppelgänger (40
+HP, 3,5 s) läuft weiter, Phantom ist 1,5 s unsichtbar. Bots, Türme und
+Zielsuche nehmen den Köder ins Visier</td>
+<td style="text-align: left;"><strong>Nachtjagd</strong> (28 s): 6 s
+unsichtbar und +30 % Tempo, Angriffe lassen nur kurz aufflackern, der
+erste Treffer macht doppelten Schaden</td>
+</tr>
+</tbody>
+</table>
+<p>Die <strong>Ulti</strong> lädt über eine Abklingzeit, nicht über
+Schaden. Sie läuft über Rundenwechsel weiter und startet im Match halb
+geladen. Fähigkeits-Abklingzeit-Karten wirken zur Hälfte auch auf die
+Ulti. Phantoms Passiv <strong>Hinterhalt</strong>: +50 % Nahkampfschaden
+aus der Unsichtbarkeit oder von hinten.</p>
 <table>
 <thead>
 <tr class="header">
@@ -487,8 +536,8 @@ Sprung, 35 Schaden im Einschlag (Radius 140)</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: left;"><strong>Overcharge</strong>: Doppelsprung
 von Anfang an</td>
-<td style="text-align: left;"><strong>Flash Blink</strong>: Teleport 260
-px, 20 Schaden und 1,2 s Frost am Ziel</td>
+<td style="text-align: left;"><strong>Kugelblitz</strong>: wandernde
+Blitzkugel, schockt und verlangsamt</td>
 <td style="text-align: left;">Gelbe Kappe mit Blitz</td>
 </tr>
 <tr class="odd">
@@ -518,7 +567,7 @@ Gegner 2 s lang zur Mitte (kein Schaden)</td>
 <tr class="odd">
 <td style="text-align: left;"><strong>Klinge</strong></td>
 <td style="text-align: left;">Blade Dancer</td>
-<td style="text-align: right;">110</td>
+<td style="text-align: right;">125</td>
 <td style="text-align: right;">315</td>
 <td style="text-align: right;">15</td>
 <td style="text-align: left;"><strong>Klingentanz</strong>: Start-Schild
@@ -530,7 +579,7 @@ Rundumschlag mit Rückstoß, 0,5 s unverwundbar</td>
 <tr class="even">
 <td style="text-align: left;"><strong>Bastion</strong></td>
 <td style="text-align: left;">Field Engineer</td>
-<td style="text-align: right;">125</td>
+<td style="text-align: right;">145</td>
 <td style="text-align: right;">270</td>
 <td style="text-align: right;">20</td>
 <td style="text-align: left;"><strong>Aurora</strong>: Doppelte
@@ -542,13 +591,13 @@ und 10 Schild alle 0,5 s</td>
 <tr class="odd">
 <td style="text-align: left;"><strong>Phantom</strong></td>
 <td style="text-align: left;">Shadow Assassin</td>
-<td style="text-align: right;">90</td>
+<td style="text-align: right;">100</td>
 <td style="text-align: right;">325</td>
 <td style="text-align: right;">5</td>
-<td style="text-align: left;"><strong>Nachtwind</strong>: Sehr schnell,
-kürzestes Feuerintervall</td>
-<td style="text-align: left;"><strong>Schattensprung</strong>: Teleport
-260 px mit Treffer, 0,9 s unverwundbar</td>
+<td style="text-align: left;"><strong>Hinterhalt</strong>: +50 %
+Nahkampfschaden aus der Unsichtbarkeit oder von hinten</td>
+<td style="text-align: left;"><strong>Köder</strong>: Doppelgänger läuft
+weiter, Phantom wird unsichtbar</td>
 <td style="text-align: left;">Ninja-Stirnband</td>
 </tr>
 <tr class="even">
@@ -571,7 +620,7 @@ Bewegung und Kugeln</td>
 kommen direkt aus den Konstanten in <code>player.gd</code>, stimmen also
 immer.</p>
 <h3 id="waffe--munition">Waffe &amp; Munition</h3>
-<p>Alle Eber schießen mit einem <strong>Lötkolben</strong>.
+<p>Fernkämpfer schießen mit einem <strong>Lötkolben</strong>.
 Basis-Schaden pro Schuss ist <strong>22</strong> (in der Lobby
 einstellbar).</p>
 <table>
@@ -609,24 +658,6 @@ einstellbar).</p>
 <td style="text-align: right;">1,35 s</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">Klinge</td>
-<td style="text-align: right;">4</td>
-<td style="text-align: right;">0,20 s</td>
-<td style="text-align: right;">1,25 s</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Bastion</td>
-<td style="text-align: right;">3</td>
-<td style="text-align: right;">0,30 s</td>
-<td style="text-align: right;">1,45 s</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Phantom</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">0,14 s</td>
-<td style="text-align: right;">1,05 s</td>
-</tr>
-<tr class="even">
 <td style="text-align: left;">Druide</td>
 <td style="text-align: right;">3</td>
 <td style="text-align: right;">0,24 s</td>
@@ -753,11 +784,21 @@ darunter und fährt auf beweglichen Plattformen, Wippen und Kisten
 mit.</p>
 <hr />
 <h2 id="-nahkampf">🔨 Nahkampf</h2>
-<p>Jeder Eber hat eine Nahkampfwaffe auf <code>E</code> (P2:
-<code>K</code>). Gewählt wird sie im Lobby-Tab
-<strong>Charakter</strong>, sie wird im Profil gespeichert. Reichweite
-wird in Feldern (36 px) ab dem Körperrand gemessen. Wände blockieren den
-Schlag. Der Schlag trifft auch Blöcke, Kisten, Fässer und Türme.</p>
+<p>Nahkampf gehört fest zum Helden und liegt auf
+<strong>Linksklick</strong>: Klinge schlägt mit dem
+<strong>Schwert</strong> (30 Schaden alle 0,68 s), Bastion mit dem
+<strong>Hammer</strong> (30 Schaden alle 0,88 s), Phantom sticht mit dem
+<strong>Lötkolben</strong> (27 Schaden alle 0,77 s). Fernkämpfer haben
+keinen Nahkampf mehr, die Waffenwahl im Tab Charakter und die
+Lobby-Regel „Nahkampfwaffen“ entfallen. Die Tabelle zeigt die Grundwerte
+der Waffen vor den Helden-Faktoren. Allgemeine Karten für Schaden,
+Feuerrate, Lebensraub und Elemente wirken bei Nahkämpfern auf die
+Schläge (Feuerrate = Angriffstempo, Feuer = 3 Brandstapel, Blitz = 0,1 s
+Betäubung). Reine Projektil-Karten (Munition, Abpraller, Durchschlag,
+Zielsuche, Explosionen, Multishot) bekommen nur Fernkämpfer,
+Nahkampf-Karten nur Nahkämpfer. Reichweite wird in Feldern (36 px) ab
+dem Körperrand gemessen. Wände blockieren den Schlag. Der Schlag trifft
+auch Blöcke, Kisten, Fässer und Türme.</p>
 <table>
 <thead>
 <tr class="header">
@@ -816,11 +857,12 @@ gegnerischen Projektils, sobald es in Reichweite ist und auf dich
 zufliegt, und wirft es zurück. Der Schlag trifft dabei normal und
 startet die Abklingzeit. Ein manueller Schlag pariert ebenfalls. Gilt
 auch für Bots und online.</p>
-<p>Das Powerup <strong>Auto-Angriff</strong> und der Runden-Modifier
-<strong>Brawl</strong> verstärken den Nahkampf. Ist Nahkampf in den
-Lobby-Regeln aus, erscheinen beide nicht.</p>
+<p>Das Powerup <strong>Auto-Angriff</strong> lässt Nahkämpfer von selbst
+zuschlagen und verkürzt bei Fernkämpfern das Feuerintervall um 35 %. Der
+Runden-Modifier <strong>Brawl</strong> verstärkt den Nahkampf und
+erscheint nur, wenn ein Nahkämpfer mitspielt.</p>
 <p>Nahkampf-Karten (Pool <strong>Nahkampf</strong>, 19 Karten) wirken
-nur auf den <code>E</code>-Schlag, siehe <a
+nur auf die Schläge der Nahkämpfer, siehe <a
 href="#nahkampf-karten">Karten-Übersicht</a>.</p>
 <hr />
 <h2 id="-lobby--match-regeln">🏆 Lobby &amp; Match-Regeln</h2>
@@ -1489,7 +1531,7 @@ Bastionsfestung</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Phantom</strong></td>
-<td style="text-align: left;">Schattenklinge, Schattensprung,
+<td style="text-align: left;">Schattenklinge, Schattenlauf,
 Todeskuss</td>
 </tr>
 </tbody>
@@ -1518,10 +1560,10 @@ Grundkarte, und nur ein Zweig ist wählbar.</p>
 <td style="text-align: left;">Kurze Zündschnur</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>Volt</strong></td>
+<td style="text-align: left;"><strong>Volt</strong> (Kugelblitz)</td>
 <td style="text-align: left;">Hochspannung</td>
-<td style="text-align: left;">Kettenblink</td>
-<td style="text-align: left;">Gewitterspur</td>
+<td style="text-align: left;">Sprungziel</td>
+<td style="text-align: left;">Entladung</td>
 <td style="text-align: left;">Restladung</td>
 </tr>
 <tr class="odd">
@@ -1553,14 +1595,27 @@ Grundkarte, und nur ein Zweig ist wählbar.</p>
 <td style="text-align: left;">Notfallprotokoll</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Phantom</strong></td>
-<td style="text-align: left;">Lautlose Klinge</td>
-<td style="text-align: left;">Schattenschnitt</td>
-<td style="text-align: left;">Lähmendes Mal</td>
+<td style="text-align: left;"><strong>Phantom</strong> (Köder)</td>
+<td style="text-align: left;">Doppelgänger</td>
+<td style="text-align: left;">Sprengköder</td>
+<td style="text-align: left;">Platztausch (C: Lähmendes Mal)</td>
 <td style="text-align: left;">Lange Schatten</td>
 </tr>
 </tbody>
 </table>
+<p><strong>Dash- und Ulti-Karten (neu):</strong> Volt:
+<strong>Dreifachblitz</strong> (Rare, +1 Blitzschritt-Ladung, +20 %
+Teleportweite) mit den Evolutionen <strong>Kettenblink</strong>
+(Kettenblitz am Zielpunkt) und <strong>Gewitterspur</strong> (Blitzzone
+am Zielpunkt); <strong>Starkstrom</strong> (Rare, Überladung +30 %
+Dauer, −10 % Ulti-Abklingzeit) mit <strong>Dauerblitz</strong>
+(Blitzschritt lädt in der Überladung dreimal so schnell) und
+<strong>Schockring</strong> (Schockwelle am Ende). Phantom:
+<strong>Schattenschnitt</strong> (Epic, der Dash sticht alle Gegner auf
+dem Weg, 60 % Schaden) und <strong>Blutspur</strong> (Epic, ein Kill in
+der Nachtjagd gibt die halbe Ulti-Abklingzeit zurück). Für alle Helden
+mit Ulti: <strong>Ulti-Akku</strong> (Uncommon, −15 %
+Ulti-Abklingzeit).</p>
 <p><strong>Druide (Wurzelwall)</strong> hat statt 3 Klassen- und 4
 Fähigkeitskarten 4 Wandkarten plus 3 Evolutionen:</p>
 <table>
@@ -2567,8 +2622,11 @@ WIEDERHERSTELLEN</strong> setzt alles zurück.</li>
 Feedback</h2>
 <ul>
 <li><strong>HUD</strong>: Oben rechts das Match-Ziel, pro Spieler ein
-Punktebalken (im Team-Modus in Teamfarbe), Nahkampf-Status
-<code>[E]: BEREIT</code>.</li>
+Punktebalken (im Team-Modus in Teamfarbe), Ulti-Status
+<code>[E]: BEREIT</code>. Am Charakter zeigen Symbole Barriere, Schild,
+Dash (mit Punkten für mehrere Ladungen), Fähigkeit und Ulti (Krone);
+Nahkämpfer haben statt der Munition einen Balken für den nächsten
+Schlag.</li>
 <li><strong>Am Charakter</strong>: Munitionsstriche bzw. Nachlade-Ring,
 Lebensbalken mit Schild-Overlay, Symbole für Barriere (mit
 Abklingzeit-Anzeige), Schild, Dash und Fähigkeit.</li>

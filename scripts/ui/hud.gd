@@ -320,8 +320,15 @@ func _ammo_text(current: int, maximum: int, reloading: bool) -> String:
 	return "Munition: %d / %d" % [current, maximum]
 
 func _update_ammo_row(ui: Dictionary, p: Player) -> void:
-	ui["ammo"].text = _ammo_text(p.current_ammo, p.max_ammo, p.is_reloading)
 	var ring: Control = ui["ammo_ring"]
+	if p.is_melee:
+		var weapon := Global.get_melee_weapon_label(Global.get_melee_weapon(p.player_index))
+		if p.powerup_auto_attack_timer > 0.0:
+			weapon += " (AUTO %ds)" % ceili(p.powerup_auto_attack_timer)
+		ui["ammo"].text = "Nahkampf: %s" % weapon
+		ring.visible = false
+		return
+	ui["ammo"].text = _ammo_text(p.current_ammo, p.max_ammo, p.is_reloading)
 	ring.visible = p.is_reloading
 	if ring.visible:
 		ring.queue_redraw()
@@ -361,13 +368,13 @@ func _block_text(active: bool, cooldown: float) -> String:
 		return "Barriere [Q]: BEREIT"
 	return "Barriere [Q]: %.1fs" % cooldown
 
+# Zeile für die Ulti (Taste E). Helden ohne Ulti zeigen nichts.
 func _melee_text(p: Player) -> String:
-	var label := Global.get_melee_weapon_label(Global.get_melee_weapon(p.player_index))
-	if p.powerup_auto_attack_timer > 0.0:
-		label += " (AUTO %ds)" % ceili(p.powerup_auto_attack_timer)
-	if p.melee_cooldown_timer <= 0.0:
-		return "%s [E]: BEREIT" % label
-	return "%s [E]: %.1fs" % [label, p.melee_cooldown_timer]
+	if not p.has_ult():
+		return ""
+	if p.ult_timer <= 0.0:
+		return "%s [E]: BEREIT!" % p.ult_name
+	return "%s [E]: %.0fs" % [p.ult_name, ceilf(p.ult_timer)]
 
 func _update_score() -> void:
 	# Die aktuellen Punkte stehen direkt neben jedem Fortschrittsbalken.
@@ -1017,18 +1024,26 @@ func _fill_tab_overlay(p: Player, is_preview: bool, for_overview: bool = false) 
 	_add_stat_cell(stats_grid, "SCHILD", "%d / %d" % [int(round(p.current_shield)), int(round(p.max_shield))], Color(0.35, 0.70, 1.0))
 	_add_stat_cell(stats_grid, "RÜSTUNG", "%.0f %%" % (p.armor_percent * 100.0), Color(0.62, 0.86, 0.62))
 	_add_stat_cell(stats_grid, "REFLEXION", "%.0f %%" % (p.damage_reflect_percent * 100.0), Color(0.82, 0.68, 1.0))
-	_add_stat_cell(stats_grid, "SCHADEN", "%.1f" % p.bullet_damage, Color(1.0, 0.65, 0.35))
-	_add_stat_cell(stats_grid, "FEUERRATE", "%.2f / s" % (1.0 / maxf(0.01, p.fire_rate_cooldown)), Color(1.0, 0.82, 0.35))
-	_add_stat_cell(stats_grid, "TEMPO", "%d" % int(round(p.move_speed)), Color(0.55, 0.90, 1.0))
-	_add_stat_cell(stats_grid, "MUNITION", "%d / %d" % [p.current_ammo, p.max_ammo], Color(0.85, 0.85, 0.90))
-	_add_stat_cell(stats_grid, "NACHLADEN", "%.2f s" % p.reload_time, Color(0.85, 0.85, 0.90))
-	_add_stat_cell(stats_grid, "SPRÜNGE", "%d" % p.max_jumps, Color(0.70, 0.85, 1.0))
-	_add_stat_cell(stats_grid, "BARRIERE", "%s · %.1f s / %.1f s" % ["AKTIV" if p.is_blocking else "BEREIT", p.block_cooldown, p.block_duration], Color(0.55, 0.85, 1.0))
 	var melee_id := Global.get_melee_weapon(p.player_index)
 	var melee_data := Global.get_melee_weapon_data(melee_id)
-	if Global.melee_enabled:
-		_add_stat_cell(stats_grid, "NAHKAMPF", "%s · %d · %.1f s" % [Global.get_melee_weapon_label(melee_id), int(round(float(melee_data["damage"]) * p.melee_damage_mult)), p.melee_cooldown], Color(1.0, 0.72, 0.42))
+	if p.is_melee:
+		_add_stat_cell(stats_grid, "NAHKAMPF", "%s · %d" % [Global.get_melee_weapon_label(melee_id), int(round(float(melee_data["damage"]) * p.melee_damage_mult))], Color(1.0, 0.72, 0.42))
+		_add_stat_cell(stats_grid, "ANGRIFFSTEMPO", "%.2f / s" % (1.0 / maxf(0.01, p.melee_cooldown)), Color(1.0, 0.82, 0.35))
+		_add_stat_cell(stats_grid, "TEMPO", "%d" % int(round(p.move_speed)), Color(0.55, 0.90, 1.0))
+	else:
+		_add_stat_cell(stats_grid, "SCHADEN", "%.1f" % p.bullet_damage, Color(1.0, 0.65, 0.35))
+		_add_stat_cell(stats_grid, "FEUERRATE", "%.2f / s" % (1.0 / maxf(0.01, p.fire_rate_cooldown)), Color(1.0, 0.82, 0.35))
+		_add_stat_cell(stats_grid, "TEMPO", "%d" % int(round(p.move_speed)), Color(0.55, 0.90, 1.0))
+		_add_stat_cell(stats_grid, "MUNITION", "%d / %d" % [p.current_ammo, p.max_ammo], Color(0.85, 0.85, 0.90))
+		_add_stat_cell(stats_grid, "NACHLADEN", "%.2f s" % p.reload_time, Color(0.85, 0.85, 0.90))
+	_add_stat_cell(stats_grid, "SPRÜNGE", "%d" % p.max_jumps, Color(0.70, 0.85, 1.0))
+	_add_stat_cell(stats_grid, "BARRIERE", "%s · %.1f s / %.1f s" % ["AKTIV" if p.is_blocking else "BEREIT", p.block_cooldown, p.block_duration], Color(0.55, 0.85, 1.0))
 	_add_stat_cell(stats_grid, "FÄHIGKEIT", "%s (%.1f s)" % [p.ability_name, p.ability_max_cooldown], hero_color)
+	var dash_label: String = Global.get_hero(Global.get_player_hero_id(p.player_index)).dash_name
+	_add_stat_cell(stats_grid, "DASH", "%s%s (%.1f s)" % [dash_label if not dash_label.is_empty() else "Dash",
+		" ×%d" % p.dash_charges_max if p.dash_charges_max > 1 else "", p.dash_cooldown], Color(0.42, 0.88, 1.0))
+	if p.has_ult():
+		_add_stat_cell(stats_grid, "ULTI", "%s (%.0f s)" % [p.ult_name, p.ult_max_cooldown], Color(1.0, 0.42, 0.85))
 	_add_stat_cell(stats_grid, "KILLS", "%d" % int(Global.get_match_stat(p.player_index, "kills")), Color(0.85, 0.90, 1.0))
 	_add_stat_cell(stats_grid, "TODE", "%d" % int(Global.get_match_stat(p.player_index, "deaths")), Color(0.95, 0.55, 0.55))
 	_add_stat_cell(stats_grid, "SCHADEN GESAMT", "%d" % int(Global.get_match_stat(p.player_index, "damage_dealt")), Color(1.0, 0.65, 0.35))

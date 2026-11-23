@@ -391,7 +391,7 @@ func _hero_tooltip(hero: HeroData) -> String:
 		hero.name, hero.role, effective_hp, int(Global.base_damage),
 		hero.base_ammo, hero.base_fire_rate_cooldown, hero.base_reload_time,
 		hero.passive_desc, hero.ability_name, hero.ability_cooldown,
-		Global.get_hero_ability_details(hero), hero.description,
+		Global.get_hero_ability_details(hero), Global.get_hero_kit_text(hero) + "\n" + hero.description,
 	]
 
 func _create_hero_button(hero: HeroData) -> Button:
@@ -1116,7 +1116,12 @@ func _on_character_parts_randomize() -> void:
 	if NetworkManager.is_client and slot == Global.local_player_index:
 		_send_character_parts()
 
-func _add_character_melee_tiles(parent: VBoxContainer) -> void:
+func _add_character_melee_tiles(_parent: VBoxContainer) -> void:
+	# Die Nahkampfwaffe gehört jetzt fest zum Helden (Klinge: Schwert,
+	# Bastion: Hammer, Phantom: Lötkolben). Die Auswahl entfällt.
+	return
+
+func _add_character_melee_tiles_legacy(parent: VBoxContainer) -> void:
 	var caption := Label.new()
 	caption.text = "NAHKAMPFWAFFE [E]"
 	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1602,6 +1607,8 @@ func _build_rules_tab() -> void:
 	melee_enabled_check.add_theme_font_size_override("font_size", UiTheme.FS_M)
 	melee_enabled_check.button_pressed = Global.melee_enabled
 	melee_enabled_check.toggled.connect(_on_melee_enabled_toggled)
+	# Nahkampf hängt jetzt am Helden, die Lobby-Regel entfällt.
+	melee_enabled_check.visible = false
 	body.add_child(melee_enabled_check)
 
 	var rules_grid := GridContainer.new()
