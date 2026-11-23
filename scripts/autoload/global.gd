@@ -161,6 +161,9 @@ var bot_test_matches_played: int = 0
 var _bot_test_backup: Dictionary = {}
 var _bot_test_hero_deck: Array = []
 var _bot_test_weapon_deck: Array = []
+# Testraum (Hauptmenü → TESTRAUM): Du gegen einen Dummy auf einer frei
+# wählbaren Karte, ohne Runden, Punkte und Statistik. Steuerung in TestRoom.
+var test_room_active: bool = false
 # Runden-Modifier: Rate in Prozent (0 = aus, 100 = Standard, 200 = mehr)
 # und die Menge der freigeschalteten Modifier-IDs aus LevelModifierDefs.
 var level_modifier_rate_percent: int = LevelModifierDefsClass.RATE_DEFAULT_PERCENT

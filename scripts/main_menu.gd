@@ -11,6 +11,7 @@ signal network_cancel_requested
 signal host_online_requested
 signal join_online_requested(code: String, as_spectator: bool)
 signal options_requested
+signal test_room_requested
 
 @onready var main_box: VBoxContainer = $Panel/VBox
 @onready var start_btn: Button = $Panel/VBox/StartBtn
@@ -54,6 +55,7 @@ func _ready() -> void:
 	main_box.visible = true
 	_build_epic_section()
 	_build_hero_stats_ui()
+	_build_test_room_button()
 	_build_wiki_button()
 	_build_options_button()
 	_build_version_label()
@@ -62,6 +64,18 @@ func _ready() -> void:
 	var backdrop := get_node_or_null("Panel/Backdrop") as MainMenuBackdrop
 	if backdrop != null:
 		backdrop.frame_target = main_box
+
+func _build_test_room_button() -> void:
+	var btn := Button.new()
+	btn.name = "TestRoomBtn"
+	btn.text = "TESTRAUM"
+	btn.tooltip_text = "Allein gegen einen Dummy: Karte wählen, Karten geben, Schaden ansehen."
+	btn.custom_minimum_size = Vector2(360, 56)
+	btn.pressed.connect(func():
+		SoundManager.play_sound("click")
+		test_room_requested.emit())
+	main_box.add_child(btn)
+	main_box.move_child(btn, quit_btn.get_index())
 
 func _build_options_button() -> void:
 	options_btn = Button.new()

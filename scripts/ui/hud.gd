@@ -260,7 +260,11 @@ func _build_box(index: int) -> Dictionary:
 	return ui
 
 func _connect_player(player: Player, ui: Dictionary) -> void:
+	# Wird die Box neu gebaut, während die Figur weiterlebt (Testraum-Respawn
+	# eines anderen Slots), laufen die alten Verbindungen ins Leere.
 	player.health_changed.connect(func(cur_h, max_h, cur_s, max_s):
+		if not is_instance_valid(ui["hp"]):
+			return
 		ui["hp"].max_value = maxf(max_h, 1.0)
 		ui["hp"].value = cur_h
 		ui["shield"].max_value = maxf(max_s, 1.0)
@@ -268,16 +272,22 @@ func _connect_player(player: Player, ui: Dictionary) -> void:
 		ui["shield"].visible = max_s > 0.0
 	)
 	player.ammo_changed.connect(func(_cur, _max_a):
+		if not is_instance_valid(ui["ammo_ring"]):
+			return
 		_update_ammo_row(ui, player)
 	)
 	ui["ammo_ring"].draw.connect(_draw_hud_reload_ring.bind(ui["ammo_ring"], player))
 	player.ability_cooldown_updated.connect(func(cur, _max_c):
+		if not is_instance_valid(ui["ability"]):
+			return
 		if cur <= 0.0:
 			ui["ability"].text = "%s: BEREIT!" % player.ability_name
 		else:
 			ui["ability"].text = "%s: %.1fs" % [player.ability_name, cur]
 	)
 	player.block_state_changed.connect(func(active, cur, _max_c):
+		if not is_instance_valid(ui["block"]):
+			return
 		ui["block"].text = _block_text(active, cur)
 	)
 
