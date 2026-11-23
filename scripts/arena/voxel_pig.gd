@@ -188,6 +188,16 @@ func _build_outfit() -> void:
 			_box(Vector3(19.8, 3, 21.8), Vector3(0, 15.2, 0), cloth, _head)
 			_box(Vector3(8, 2.4, 3), Vector3(-13, 15.0, 3), cloth, _head)
 			_box(Vector3(8, 2.4, 3), Vector3(-15, 12.5, -2), cloth.lightened(0.1), _head)
+		"zeitschlaeger":
+			# Wecker als Hut: Messinggehäuse, Zifferblatt, zwei Glocken
+			var brass := accent if Global.is_team_mode() else Color(0.86, 0.66, 0.26)
+			_box(Vector3(4, 2, 12), Vector3(0, top + 1.0, 0), brass.darkened(0.3), _head)
+			_box(Vector3(8, 11, 13), Vector3(0, top + 7.0, 0), brass, _head)
+			_box(Vector3(1.2, 8, 9), Vector3(4.5, top + 7.0, 0), Color(0.98, 0.96, 0.88), _head)
+			_box(Vector3(1.4, 3.6, 0.9), Vector3(5.3, top + 8.2, 0.2), Color(0.15, 0.1, 0.06), _head)
+			_box(Vector3(1.4, 0.9, 2.6), Vector3(5.3, top + 7.0, 1.0), Color(0.15, 0.1, 0.06), _head)
+			_box(Vector3(5, 3, 5), Vector3(0, top + 13.5, -4.5), brass.lightened(0.15), _head)
+			_box(Vector3(5, 3, 5), Vector3(0, top + 13.5, 4.5), brass.lightened(0.15), _head)
 
 func _box(size: Vector3, pos: Vector3, color: Color, parent: Node3D, emission: Color = Color(0, 0, 0, 0), energy: float = 0.0) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()

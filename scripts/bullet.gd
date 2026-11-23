@@ -324,6 +324,11 @@ func _physics_process(delta: float) -> void:
 			_resolve_projectile_clashes()
 		if is_queued_for_deletion():
 			return
+		# Zeitschläger: Zeitstopp friert ein, Zeitblase bremst.
+		var time_scale := TimeBubble.bullet_time_scale(self)
+		if time_scale <= 0.0:
+			return
+		delta *= time_scale
 	lifetime += delta
 	if lifetime >= max_lifetime:
 		_explode_and_destroy()

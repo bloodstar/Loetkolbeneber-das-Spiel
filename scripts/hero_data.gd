@@ -59,6 +59,7 @@ const ABILITY_CONSTANT_PREFIXES: Dictionary = {
 	"bastion": ["HEAL_FIELD_"],
 	"phantom": ["PHANTOM_DECOY_", "PHANTOM_HUNT_", "PHANTOM_STEALTH_", "PHANTOM_BACKSTAB_"],
 	"druid": ["DRUID_WALL_"],
+	"zeitschlaeger": ["ZEIT_"],
 }
 # Werte, die nichts an der Spielstärke ändern oder zur Fähigkeit gehören.
 const _FINGERPRINT_IGNORED: Array[String] = [

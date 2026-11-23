@@ -14,6 +14,9 @@ func _ready() -> void:
 	Global.set_match_mode(Global.MATCH_MODE_FFA)
 	Global.set_player_count(4)
 	var heroes := ["volt", "phantom", "klinge", "bastion"]
+	# -- --zeit: Zeitschläger gegen drei andere Helden.
+	if OS.get_cmdline_user_args().has("--zeit"):
+		heroes = ["zeitschlaeger", "volt", "klinge", "zeitschlaeger"]
 	for i in range(4):
 		Global.set_player_hero(i + 1, heroes[i])
 	Global.set_bot_test_random_loadouts(false)
@@ -26,13 +29,14 @@ func _ready() -> void:
 		main.kill_cam_enabled = false
 		add_child(main)
 		Engine.time_scale = 3.0
-		var used := {"ult": 0, "decoy": 0, "orb": 0}
+		var used := {"ult": 0, "decoy": 0, "orb": 0, "bubble": 0}
 		for step in range(60):
 			await _wait(0.25)
 			used["decoy"] += get_tree().get_nodes_in_group("phantom_decoy").size()
 			used["orb"] += get_tree().get_nodes_in_group("ball_lightning").size()
+			used["bubble"] += get_tree().get_nodes_in_group(TimeBubble.GROUP).size()
 			for p in main.players:
-				if is_instance_valid(p) and (p.overcharge_timer > 0.0 or p.hunt_timer > 0.0):
+				if is_instance_valid(p) and (p.overcharge_timer > 0.0 or p.hunt_timer > 0.0 or p.is_time_stopping()):
 					used["ult"] += 1
 			if Global.current_state == Global.GameState.CARD_DRAFT:
 				main._start_fresh_round()

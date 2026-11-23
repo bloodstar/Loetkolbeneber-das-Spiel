@@ -23,4 +23,6 @@ static func create_replica(kind: String) -> Node2D:
 			return PhantomDecoy.new()
 		"orb":
 			return BallLightning.new()
+		"tbubble":
+			return TimeBubble.new()
 	return null

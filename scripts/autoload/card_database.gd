@@ -2117,6 +2117,156 @@ func _init_database() -> void:
 	fa28.ability_cooldown_mult = 0.9
 	_register(fa28)
 
+	# --- Zeitschläger: Taktschlag, Zeitblase, Rückspul, Zeitstopp ---
+	var zs1 = CardData.new()
+	zs1.id = "zeit_taktgeber"
+	zs1.title = "Taktgeber"
+	zs1.description = "Zeitschläger: +15% Nahkampftempo, +10% Lauftempo."
+	zs1.rarity = "Common"
+	zs1.pool = "Bewegung"
+	zs1.color = Color(0.86, 0.68, 0.30)
+	zs1.hero_id = "zeitschlaeger"
+	zs1.melee_cooldown_mult = 0.85
+	zs1.move_speed_mult = 1.1
+	_register(zs1)
+
+	var zs2 = CardData.new()
+	zs2.id = "zeit_schweres_pendel"
+	zs2.title = "Schweres Pendel"
+	zs2.description = "Zeitschläger: +30% Nahkampfschaden, +0,5 Felder Reichweite, -10% Nahkampftempo."
+	zs2.rarity = "Uncommon"
+	zs2.pool = "Offensive"
+	zs2.color = Color(0.86, 0.68, 0.30)
+	zs2.hero_id = "zeitschlaeger"
+	zs2.melee_damage_mult = 1.3
+	zs2.melee_range_add = 0.5
+	zs2.melee_cooldown_mult = 1.1
+	_register(zs2)
+
+	var zs3 = CardData.new()
+	zs3.id = "zeit_stundenschlag"
+	zs3.title = "Stundenschlag"
+	zs3.description = "Zeitschläger – Taktschlag: Schon jeder %d. Treffer verlangsamt, und zwar %.1f s lang." % [Player.ZEITEVO_FAST_HIT_INTERVAL, Player.ZEITEVO_FAST_SLOW_DURATION]
+	zs3.rarity = "Epic"
+	zs3.pool = "Offensive"
+	zs3.color = Color(0.86, 0.68, 0.30)
+	zs3.hero_id = "zeitschlaeger"
+	zs3.ability_evolution = "zeit_passive_fast"
+	_register(zs3)
+
+	var zs4 = CardData.new()
+	zs4.id = "zeit_grosse_blase"
+	zs4.title = "Große Blase"
+	zs4.description = "Zeitschläger – Zeitblase: +30% Radius, +25% Dauer, -10% Fähigkeits-Abklingzeit."
+	zs4.rarity = "Rare"
+	zs4.pool = "Defensive"
+	zs4.color = Color(0.55, 0.72, 0.95)
+	zs4.hero_id = "zeitschlaeger"
+	zs4.family_id = "zeit_bubble"
+	zs4.ability_radius_mult = 1.3
+	zs4.ability_duration_mult = 1.25
+	zs4.ability_cooldown_mult = 0.9
+	_register(zs4)
+
+	var zs4a = CardData.new()
+	zs4a.id = "zeit_zerfall"
+	zs4a.title = "Zerfall"
+	zs4a.description = "Zeitblase-Evolution: Gegner in der Blase verlieren %d HP pro Sekunde." % int(Player.ZEITEVO_DECAY_DPS)
+	zs4a.rarity = "Epic"
+	zs4a.color = Color(0.55, 0.72, 0.95)
+	zs4a.hero_id = "zeitschlaeger"
+	zs4a.family_id = "zeit_bubble"
+	zs4a.parent_card_id = "zeit_grosse_blase"
+	zs4a.evolution_branch = "A"
+	zs4a.ability_evolution = "zeit_bubble_decay"
+	_register(zs4a)
+
+	var zs4b = CardData.new()
+	zs4b.id = "zeit_eigenzeit"
+	zs4b.title = "Eigenzeit"
+	zs4b.description = "Zeitblase-Evolution: In deiner Blase bist du %d%% schneller." % int(round((Player.ZEITEVO_HASTE_MULT - 1.0) * 100.0))
+	zs4b.rarity = "Epic"
+	zs4b.color = Color(0.55, 0.72, 0.95)
+	zs4b.hero_id = "zeitschlaeger"
+	zs4b.family_id = "zeit_bubble"
+	zs4b.parent_card_id = "zeit_grosse_blase"
+	zs4b.evolution_branch = "B"
+	zs4b.ability_evolution = "zeit_bubble_haste"
+	_register(zs4b)
+
+	var zs5 = CardData.new()
+	zs5.id = "zeit_lange_erinnerung"
+	zs5.title = "Lange Erinnerung"
+	zs5.description = "Zeitschläger – Rückspul: reicht %.0f s weiter zurück, -15%% Dash-Abklingzeit." % Player.ZEITEVO_LONG_REWIND_ADD
+	zs5.rarity = "Rare"
+	zs5.pool = "Bewegung"
+	zs5.color = Color(0.86, 0.68, 0.30)
+	zs5.hero_id = "zeitschlaeger"
+	zs5.family_id = "zeit_rewind"
+	zs5.ability_evolution = "zeit_rewind_long"
+	zs5.dash_cooldown_mult = 0.85
+	_register(zs5)
+
+	var zs5a = CardData.new()
+	zs5a.id = "zeit_zeitriss"
+	zs5a.title = "Zeitriss"
+	zs5a.description = "Rückspul-Evolution: An der verlassenen Stelle explodiert die Zeit (%d Schaden, Radius %d px, Rückstoß)." % [int(Player.ZEITEVO_RIFT_DAMAGE), int(Player.ZEITEVO_RIFT_RADIUS)]
+	zs5a.rarity = "Epic"
+	zs5a.color = Color(0.86, 0.68, 0.30)
+	zs5a.hero_id = "zeitschlaeger"
+	zs5a.family_id = "zeit_rewind"
+	zs5a.parent_card_id = "zeit_lange_erinnerung"
+	zs5a.evolution_branch = "A"
+	zs5a.ability_evolution = "zeit_rewind_rift"
+	_register(zs5a)
+
+	var zs5b = CardData.new()
+	zs5b.id = "zeit_reinigung"
+	zs5b.title = "Reinigung"
+	zs5b.description = "Rückspul-Evolution: Entfernt Gift, Brand und Verlangsamung und gibt %d Schild, auch über das Maximum." % int(Player.ZEITEVO_CLEANSE_SHIELD)
+	zs5b.rarity = "Epic"
+	zs5b.color = Color(0.86, 0.68, 0.30)
+	zs5b.hero_id = "zeitschlaeger"
+	zs5b.family_id = "zeit_rewind"
+	zs5b.parent_card_id = "zeit_lange_erinnerung"
+	zs5b.evolution_branch = "B"
+	zs5b.ability_evolution = "zeit_rewind_cleanse"
+	_register(zs5b)
+
+	var zs6 = CardData.new()
+	zs6.id = "zeit_ewige_sekunde"
+	zs6.title = "Ewige Sekunde"
+	zs6.description = "Zeitschläger – Zeitstopp: hält 50% länger."
+	zs6.rarity = "Epic"
+	zs6.pool = "Offensive"
+	zs6.color = Color(0.55, 0.72, 0.95)
+	zs6.hero_id = "zeitschlaeger"
+	zs6.ult_duration_mult = 1.5
+	_register(zs6)
+
+	var zs7 = CardData.new()
+	zs7.id = "zeit_zinseszins"
+	zs7.title = "Zinseszins"
+	zs7.description = "Zeitschläger – Zeitstopp: Gestaute Treffer schlagen mit %d%% Schaden ein." % int(round(Player.ZEITEVO_STOP_AMP * 100.0))
+	zs7.rarity = "Epic"
+	zs7.pool = "Offensive"
+	zs7.color = Color(0.55, 0.72, 0.95)
+	zs7.hero_id = "zeitschlaeger"
+	zs7.ability_evolution = "zeit_stop_amp"
+	_register(zs7)
+
+	var zs8 = CardData.new()
+	zs8.id = "zeit_schnellladung"
+	zs8.title = "Schnellladung"
+	zs8.description = "Zeitschläger: -15% Ulti-Abklingzeit, -10% Fähigkeits-Abklingzeit."
+	zs8.rarity = "Uncommon"
+	zs8.pool = "Defensive"
+	zs8.color = Color(0.86, 0.68, 0.30)
+	zs8.hero_id = "zeitschlaeger"
+	zs8.ult_cooldown_mult = 0.85
+	zs8.ability_cooldown_mult = 0.9
+	_register(zs8)
+
 	var gu1 = CardData.new()
 	gu1.id = "ulti_akku"
 	gu1.title = "Ulti-Akku"

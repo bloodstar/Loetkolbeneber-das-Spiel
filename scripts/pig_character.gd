@@ -443,6 +443,8 @@ func _draw_outfit_front(head: Vector2, neck: Vector2) -> void:
 			_draw_ninja_band(head)
 		"druid":
 			_draw_druid_wreath(head)
+		"zeitschlaeger":
+			_draw_alarm_clock_hat(head)
 
 # Wehendes Stoffband nach hinten. Im Stand hängt es schlaff herunter, beim
 # Laufen weht es fast waagerecht hinter der Figur her.
@@ -600,6 +602,35 @@ func _draw_scarf(neck: Vector2) -> void:
 	]), scarf, scarf_outline, 0.7)
 	draw_line(neck + Vector2(-8.6, 1.6), neck + Vector2(8.6, 1.6), _cloth(Color(1.0, 0.55, 0.60, 0.55), -0.45), 0.5, LINE_AA)
 	_draw_ellipse(neck + Vector2(-8.0, 1.7), 1.9, 1.6, scarf, scarf_outline, 0.6)
+
+# Zeitschläger: Wecker als Hut, mit zwei Glocken und laufenden Zeigern.
+func _draw_alarm_clock_hat(head: Vector2) -> void:
+	var brass := _cloth(Color(0.86, 0.66, 0.26, 1.0))
+	var brass_light := _cloth(Color(1.0, 0.86, 0.48, 1.0), -0.35)
+	var outline := _cloth(Color(0.36, 0.22, 0.06, 1.0), 0.7)
+	var center := head + Vector2(0.5, -16.0)
+	# Füßchen, auf denen der Wecker steht.
+	draw_line(center + Vector2(-3.4, 5.0), center + Vector2(-5.2, 7.6), outline, 1.4, LINE_AA)
+	draw_line(center + Vector2(3.4, 5.0), center + Vector2(5.2, 7.6), outline, 1.4, LINE_AA)
+	# Glocken und Klöppel-Bügel.
+	_draw_closed_polygon(_dome_points(center + Vector2(-4.6, -5.0), 3.1, 2.6, 0.3), brass_light, outline, 0.6)
+	_draw_closed_polygon(_dome_points(center + Vector2(4.6, -5.0), 3.1, 2.6, 0.3), brass_light, outline, 0.6)
+	draw_line(center + Vector2(-2.0, -7.2), center + Vector2(2.0, -7.2), outline, 1.0, LINE_AA)
+	draw_line(center + Vector2(0.0, -7.2), center + Vector2(0.0, -6.0), outline, 1.0, LINE_AA)
+	# Gehäuse und Zifferblatt.
+	_draw_ellipse(center, 6.6, 6.2, brass, outline, 0.8)
+	_draw_ellipse(center, 5.0, 4.7, Color(0.98, 0.96, 0.88, 1.0), Color(0.55, 0.40, 0.16, 1.0), 0.5)
+	for i in range(4):
+		var dir := Vector2.from_angle(TAU * float(i) / 4.0)
+		draw_line(center + dir * 3.7, center + dir * 4.4, Color(0.25, 0.18, 0.10, 1.0), 0.7, LINE_AA)
+	# Die Zeiger laufen sichtbar, der große schneller als der kleine.
+	var big := Vector2.from_angle(-PI * 0.5 + _time * 2.4)
+	var small := Vector2.from_angle(-PI * 0.5 + _time * 0.2)
+	draw_line(center, center + big * 3.6, Color(0.15, 0.10, 0.06, 1.0), 0.7, LINE_AA)
+	draw_line(center, center + small * 2.4, Color(0.15, 0.10, 0.06, 1.0), 1.0, LINE_AA)
+	draw_circle(center, 0.7, Color(0.75, 0.15, 0.12, 1.0))
+	# Glanzlicht auf dem Gehäuse.
+	draw_arc(center, 5.8, PI * 1.05, PI * 1.45, 6, Color(1.0, 0.95, 0.75, 0.7), 0.7, true)
 
 # Bastion: Bauhelm mit Stirnlampe.
 func _draw_hard_hat(head: Vector2) -> void:

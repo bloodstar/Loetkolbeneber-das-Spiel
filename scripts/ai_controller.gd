@@ -168,7 +168,7 @@ func _handle_navigation(_delta: float) -> void:
 	var diff = target_pos() - player.global_position
 	var dist_x = diff.x
 	var dist_y = diff.y
-	var current_spd = player.move_speed
+	var current_spd = player._current_ground_speed()
 	
 	# Horizontal pursuit / spacing. Nahkämpfer gehen auf Schlagdistanz und
 	# weichen bei wenig Leben nicht zurück.
@@ -369,7 +369,11 @@ func _handle_combat(_delta: float) -> void:
 	# Dash: Fernkämpfer weichen aus, Nahkämpfer schließen damit die Lücke.
 	if dash_decision_timer <= 0.0:
 		dash_decision_timer = randf_range(1.5, 3.0)
-		if player.is_melee:
+		if hero_id == "zeitschlaeger":
+			# Rückspul lohnt sich, wenn viel Schaden zurückkäme oder es eng wird.
+			if player.zeit_rewind_heal_amount() >= 25.0 or (player.current_health < player.max_health * 0.35 and randf() < 0.6):
+				player.dash()
+		elif player.is_melee:
 			if dist > player.get_melee_reach() * 1.2 and dist < 420.0 and randf() < 0.7:
 				player.dash()
 		elif dist < 150.0 or (player.current_health < player.max_health * 0.5 and randf() < 0.6):
@@ -385,7 +389,8 @@ func _handle_combat(_delta: float) -> void:
 			player.start_block()
 
 	# Ulti: einsetzen, sobald der Gegner in sinnvoller Nähe ist.
-	if player.has_ult() and player.ult_timer <= 0.0 and dist < 450.0 and randf() < 0.05:
+	var ult_dist := 260.0 if hero_id == "zeitschlaeger" else 450.0
+	if player.has_ult() and player.ult_timer <= 0.0 and dist < ult_dist and randf() < 0.05:
 		player.use_ultimate()
 
 	# Ability Usage
@@ -398,6 +403,9 @@ func _handle_combat(_delta: float) -> void:
 			"phantom":
 				# Köder zum Anschleichen oder zum Entkommen.
 				wants = dist < 320.0
+			"zeitschlaeger":
+				# Zeitblase mitten im Nahkampf aufziehen.
+				wants = dist < Player.ZEIT_BUBBLE_RADIUS * player.ability_radius_mult * 0.8
 		if wants:
 			# Nova-Bots setzen das Schwarze Loch direkt auf den Gegner.
 			if hero_id == "nova" and is_instance_valid(target):

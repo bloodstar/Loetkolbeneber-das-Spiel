@@ -93,7 +93,7 @@ Alle Tasten lassen sich unter **Optionen → Steuerung** neu belegen. Hier steht
 
 ## 🐷 Helden
 
-Es gibt **8 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am Kopf. Jeder Held ist entweder **Fernkämpfer** (Linksklick schießt) oder **Nahkämpfer** (Linksklick schlägt mit seiner festen Waffe): Klinge (Schwert), Bastion (Hammer) und Phantom (Lötkolben-Stich) sind Nahkämpfer, alle anderen schießen. Im Draft erscheinen nur Karten, die zur Angriffsart passen.
+Es gibt **9 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am Kopf. Jeder Held ist entweder **Fernkämpfer** (Linksklick schießt) oder **Nahkämpfer** (Linksklick schlägt mit seiner festen Waffe): Klinge (Schwert), Bastion (Hammer), Phantom (Lötkolben-Stich) und Zeitschläger (Uhrenpendel) sind Nahkämpfer, alle anderen schießen. Im Draft erscheinen nur Karten, die zur Angriffsart passen.
 
 **Umbau der Helden-Kits (läuft):** Jeder Held bekommt einen eigenen Dash (`Shift`), eine Fähigkeit (Rechtsklick) und eine **Ulti** (`E`). Fertig sind bisher **Volt** und **Phantom**, die übrigen Helden behalten vorerst Standard-Dash und ihre bisherige Fähigkeit und haben noch keine Ulti.
 
@@ -101,6 +101,7 @@ Es gibt **8 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit
 | :--- | :--- | :--- | :--- |
 | **Volt** | **Blitzschritt**: Teleport 130 px, 2 Ladungen, jede lädt einzeln nach | **Kugelblitz**: langsame Blitzkugel (3,5 s), schockt alle 0,4 s Gegner im Radius 85 px mit 6 Schaden und verlangsamt sie | **Überladung** (26 s): 5 s lang +40 % Tempo, +50 % Feuerrate, kein Munitionsverbrauch, jeder Schuss springt als Kettenblitz weiter |
 | **Phantom** | **Schattenschritt**: Dash, danach 0,8 s unsichtbar | **Köder**: Doppelgänger (40 HP, 3,5 s) läuft weiter, Phantom ist 1,5 s unsichtbar. Bots, Türme und Zielsuche nehmen den Köder ins Visier | **Nachtjagd** (28 s): 6 s unsichtbar und +30 % Tempo, Angriffe lassen nur kurz aufflackern, der erste Treffer macht doppelten Schaden |
+| **Zeitschläger** | **Rückspul** (6 s Abklingzeit): springt an die Stelle von vor 2 s zurück und bekommt den Schaden aus dieser Zeit als Leben zurück. Ein blasses Nachbild zeigt dir die Stelle | **Zeitblase** (10 s): Kuppel an deiner Position (Radius 150 px, 4 s), Gegner darin 60 % langsamer, gegnerische Kugeln fliegen nur mit 25 % Tempo | **Zeitstopp** (32 s): 2 s lang frieren alle Gegner und ihre Kugeln ein. Deine Treffer an ihnen stauen sich und schlagen am Ende gesammelt ein |
 
 Die **Ulti** lädt über eine Abklingzeit, nicht über Schaden. Sie läuft über Rundenwechsel weiter und startet im Match halb geladen. Fähigkeits-Abklingzeit-Karten wirken zur Hälfte auch auf die Ulti. Phantoms Passiv **Hinterhalt**: +50 % Nahkampfschaden aus der Unsichtbarkeit oder von hinten.
 
@@ -114,6 +115,7 @@ Die **Ulti** lädt über eine Abklingzeit, nicht über Schaden. Sie läuft über
 | **Bastion** | Field Engineer | 145 | 270 | 20 | **Aurora**: Doppelte Schild-Regeneration, Schild-Cooldown nur 4 s | **Heilfeld**: 4 s lang 8 HP und 10 Schild alle 0,5 s | Bauhelm mit Lampe |
 | **Phantom** | Shadow Assassin | 100 | 325 | 5 | **Hinterhalt**: +50 % Nahkampfschaden aus der Unsichtbarkeit oder von hinten | **Köder**: Doppelgänger läuft weiter, Phantom wird unsichtbar | Ninja-Stirnband |
 | **Druide** | Grove Warden | 105 | 295 | 10 | **Wurzelkraft**: Regeneriert ständig 2 HP/s | **Wurzelwall**: Rankenwand am Zielpunkt, breite Seite zum Druiden (108 px, 5 s, 150 HP), blockt Bewegung und Kugeln | Blätterkranz mit Geweih |
+| **Zeitschläger** | Chrono Brawler | 120 | 300 | 10 | **Taktschlag**: Jeder 3. Pendeltreffer verlangsamt den Gegner 1,5 s um 30 % | **Zeitblase**: Kuppel, in der Gegner und ihre Kugeln stark verlangsamt sind | Wecker mit zwei Glocken |
 
 Die genauen Zahlen der Fähigkeiten stehen im Spiel unter **HELDEN** im Hauptmenü und im Tooltip der Heldenwahl. Sie kommen direkt aus den Konstanten in `player.gd`, stimmen also immer.
 
@@ -421,6 +423,8 @@ Eine Grundkarte (Rare) mit zwei exklusiven Evolutionen (Epic) und eine Einzelkar
 | **Klinge** | Geschliffene Klingen | Echowirbel | Blutrausch | Tanzschritt |
 | **Bastion** | Verstärkte Emitter | Schutzkuppel | Pulsfeld | Notfallprotokoll |
 | **Phantom** (Köder) | Doppelgänger | Sprengköder | Platztausch (C: Lähmendes Mal) | Lange Schatten |
+
+**Zeitschläger** (Nahkampf mit Uhrenpendel = Flegel, 30 Schaden, Rundumschlag) hat 7 Klassenkarten und 2 Familien mit je 2 Evolutionen: **Taktgeber** (Common, +15 % Nahkampftempo, +10 % Tempo), **Schweres Pendel** (Uncommon, +30 % Nahkampfschaden, +0,5 Felder, −10 % Tempo), **Schnellladung** (Uncommon, −15 % Ulti- und −10 % Fähigkeits-Abklingzeit), **Stundenschlag** (Epic, Taktschlag schon jeden 2. Treffer, 2,5 s lang), **Ewige Sekunde** (Epic, Zeitstopp +50 % Dauer), **Zinseszins** (Epic, gestaute Treffer schlagen mit 150 % ein). Familie Zeitblase: **Große Blase** (Rare, +30 % Radius, +25 % Dauer) → A **Zerfall** (8 Schaden/s in der Blase) oder B **Eigenzeit** (+30 % Tempo in der eigenen Blase). Familie Rückspul: **Lange Erinnerung** (Rare, 1 s weiter zurück, −15 % Dash-Abklingzeit) → A **Zeitriss** (Explosion an der verlassenen Stelle, 25 Schaden) oder B **Reinigung** (entfernt Gift, Brand und Verlangsamung, +20 Schild).
 
 **Dash- und Ulti-Karten (neu):** Volt: **Dreifachblitz** (Rare, +1 Blitzschritt-Ladung, +20 % Teleportweite) mit den Evolutionen **Kettenblink** (Kettenblitz am Zielpunkt) und **Gewitterspur** (Blitzzone am Zielpunkt); **Starkstrom** (Rare, Überladung +30 % Dauer, −10 % Ulti-Abklingzeit) mit **Dauerblitz** (Blitzschritt lädt in der Überladung dreimal so schnell) und **Schockring** (Schockwelle am Ende). Phantom: **Schattenschnitt** (Epic, der Dash sticht alle Gegner auf dem Weg, 60 % Schaden) und **Blutspur** (Epic, ein Kill in der Nachtjagd gibt die halbe Ulti-Abklingzeit zurück). Für alle Helden mit Ulti: **Ulti-Akku** (Uncommon, −15 % Ulti-Abklingzeit).
 
