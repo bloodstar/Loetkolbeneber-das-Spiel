@@ -65,6 +65,7 @@ var pending_dash: bool = false
 var pending_ability: bool = false
 # Gezielter Punkt der Fähigkeit (Vector2) oder null, geht mit an den Host.
 var pending_ability_target = null
+var pending_ult_target = null
 var pending_block: bool = false
 var pending_reload: bool = false
 var pending_ult: bool = false
@@ -1317,8 +1318,14 @@ func _process_network_client(delta: float) -> void:
 	elif Input.is_action_just_pressed("p1_ability"):
 		pending_ability = true
 		pending_ability_target = null
-	if Input.is_action_just_pressed("p1_ult"):
+	if local and is_instance_valid(local) and local.has_targeted_ult():
+		var ult_point = local.tick_ult_aim(true)
+		if ult_point is Vector2:
+			pending_ult = true
+			pending_ult_target = ult_point
+	elif Input.is_action_just_pressed("p1_ult"):
 		pending_ult = true
+		pending_ult_target = null
 	if Input.is_action_just_pressed("p1_down"):
 		pending_drop = true
 	if Input.is_action_pressed("p1_shoot") and local_shoot_sound_timer <= 0.0:
@@ -1343,7 +1350,7 @@ func _process_network_client(delta: float) -> void:
 
 	NetworkManager.send_input({
 		"move_x": Input.get_axis("p1_left", "p1_right"),
-		"move_y": Input.get_axis("p1_up", "p1_down") if ArenaMode.active else 0.0,
+		"move_y": Input.get_axis("p1_up", "p1_down"),
 		"aim": aim,
 		"shoot": Input.is_action_pressed("p1_shoot"),
 		"jump": pending_jump,
@@ -1354,6 +1361,7 @@ func _process_network_client(delta: float) -> void:
 		"block": pending_block,
 		"reload": pending_reload,
 		"ult": pending_ult,
+		"ult_target": pending_ult_target if pending_ult else null,
 		"drop": pending_drop,
 	})
 	pending_jump = false
@@ -1364,6 +1372,7 @@ func _process_network_client(delta: float) -> void:
 	pending_block = false
 	pending_reload = false
 	pending_ult = false
+	pending_ult_target = null
 	pending_drop = false
 
 # Bricht die Zielvorschau des lokalen Spielers ab. true = es lief eine.
@@ -1372,6 +1381,9 @@ func _cancel_ability_aim() -> bool:
 	for p in get_tree().get_nodes_in_group("player"):
 		if p is Player and p.ability_aiming:
 			p.cancel_ability_aim()
+			cancelled = true
+		if p is Player and p.ult_aiming:
+			p.cancel_ult_aim()
 			cancelled = true
 	return cancelled
 
@@ -1453,6 +1465,8 @@ func _player_snapshot(player: Player, with_appearance: bool = true) -> Dictionar
 		"stealth": player.stealth_timer,
 		"flicker": player.stealth_flicker_timer,
 		"hunt": player.hunt_timer,
+		"boar": player.boar_timer,
+		"storm": player.blade_storm_timer,
 		"blocking": player.is_blocking,
 		"block_cd": player.block_cooldown_timer,
 		"block_cd_max": player.block_cooldown,

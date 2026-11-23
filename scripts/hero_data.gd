@@ -51,14 +51,14 @@ extends Resource
 # Präfixe der Fähigkeitskonstanten in player.gd je Held. Evolutionen aus
 # Klassenkarten (IGNIS_NAPALM_* usw.) gehören zu den Karten, nicht hierher.
 const ABILITY_CONSTANT_PREFIXES: Dictionary = {
-	"ignis": ["ROCKET_"],
+	"ignis": ["ROCKET_", "IGNIS_METEOR_", "AFTERBURNER_"],
 	"volt": ["VOLT_", "FREEZE_SPEED_MULT"],
-	"spore": ["SPORE_CLOUD_"],
-	"nova": ["SINGULARITY_"],
-	"klinge": ["BLADE_STORM_"],
-	"bastion": ["HEAL_FIELD_"],
+	"spore": ["SPORE_CLOUD_", "SPORE_SHROOM_", "SPORE_FOG_"],
+	"nova": ["SINGULARITY_", "NOVA_PUSH_", "NOVA_GLIDE_"],
+	"klinge": ["BLADE_STORM_", "KLINGE_"],
+	"bastion": ["HEAL_FIELD_", "BASTION_DOME_", "BASTION_RAM_", "BASTION_HOOK_"],
 	"phantom": ["PHANTOM_DECOY_", "PHANTOM_HUNT_", "PHANTOM_STEALTH_", "PHANTOM_BACKSTAB_"],
-	"druid": ["DRUID_WALL_"],
+	"druid": ["DRUID_WALL_", "DRUID_VINE_", "DRUID_BOAR_"],
 }
 # Werte, die nichts an der Spielstärke ändern oder zur Fähigkeit gehören.
 const _FINGERPRINT_IGNORED: Array[String] = [

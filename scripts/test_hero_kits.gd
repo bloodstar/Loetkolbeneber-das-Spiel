@@ -28,6 +28,7 @@ func _ready() -> void:
 	# --- Heldendaten ---
 	_check(Global.is_melee_hero("phantom") and Global.is_melee_hero("klinge") and Global.is_melee_hero("bastion"), "Phantom, Klinge, Bastion sind Nahkämpfer")
 	_check(not Global.is_melee_hero("volt") and not Global.is_melee_hero("ignis"), "Volt und Ignis sind Fernkämpfer")
+	_check(CardDatabase.is_card_available_for_player(CardDatabase.get_card("ulti_akku"), "ignis", []), "Ulti-Akku auch für Ignis")
 	_check(Global.get_hero("volt").has_ult() and Global.get_hero("phantom").has_ult(), "Volt und Phantom haben eine Ulti")
 	_check(InputMap.has_action("p1_ult") and not InputMap.has_action("p1_melee"), "E ist die Ulti-Taste")
 
@@ -55,7 +56,6 @@ func _ready() -> void:
 			"phantom_sprengkoeder", "phantom_platztausch", "phantom_blutspur", "ulti_akku"]:
 		_check(CardDatabase.get_card(id) != null, "Karte %s existiert" % id)
 	_check(CardDatabase.is_card_available_for_player(CardDatabase.get_card("ulti_akku"), "volt", []), "Ulti-Akku für Volt verfügbar")
-	_check(not CardDatabase.is_card_available_for_player(CardDatabase.get_card("ulti_akku"), "ignis", []), "Ulti-Akku nicht für Helden ohne Ulti")
 	_check(not CardDatabase.is_card_available_for_player(CardDatabase.get_card("volt_kettenblink"), "volt", []), "Kettenblink braucht die Blitzschritt-Grundkarte")
 	_check(CardDatabase.is_card_available_for_player(CardDatabase.get_card("volt_kettenblink"), "volt", ["volt_doppelladung"]), "Kettenblink mit Grundkarte verfügbar")
 

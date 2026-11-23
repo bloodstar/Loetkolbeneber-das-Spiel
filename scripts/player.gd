@@ -51,10 +51,31 @@ const POISON_TICK_VOLUME_DB: float = -10.0
 
 # Klinge: Klingensturm. Radius und Impuls bestimmen spürbar, ob die Fähigkeit
 # trifft; die Visualisierung nutzt denselben Radius.
+# Seit den Helden-Kits ist der Klingensturm Klinges Ulti: er läuft
+# BLADE_STORM_DURATION lang, trifft alle BLADE_STORM_TICK Sekunden und wehrt
+# Kugeln ab. BLADE_STORM_DAMAGE_MULT/KNOCKBACK gelten für den Schlusswirbel
+# der Evolution "Echowirbel".
 const BLADE_STORM_RADIUS: float = 145.0
 const BLADE_STORM_DAMAGE_MULT: float = 1.2
 const BLADE_STORM_KNOCKBACK: float = 540.0
-const BLADE_STORM_INVULN: float = 0.5
+const BLADE_STORM_DURATION: float = 3.0
+const BLADE_STORM_TICK: float = 0.3
+const BLADE_STORM_TICK_DAMAGE_MULT: float = 0.35
+const BLADE_STORM_TICK_KNOCKBACK: float = 130.0
+
+# Klinge. Schwert: jeder dritte Treffer in Folge ist ein starker Stich.
+const KLINGE_COMBO_WINDOW: float = 1.6
+const KLINGE_COMBO_MULT: float = 1.6
+# Dash "Durchstoß": geht durch Gegner hindurch und trifft sie (Anteil am
+# Schwertschaden). Ein Treffer halbiert die laufende Dash-Abklingzeit.
+const KLINGE_DASH_DAMAGE_MULT: float = 0.7
+const KLINGE_DASH_HIT_RADIUS: float = 26.0
+const KLINGE_DASH_REFUND: float = 0.5
+# Fähigkeit "Klingenbumerang" (siehe BladeBoomerang): Anteil am Schwertschaden.
+const KLINGE_BOOMERANG_RANGE: float = 280.0
+const KLINGE_BOOMERANG_SPEED: float = 620.0
+const KLINGE_BOOMERANG_DAMAGE_MULT: float = 0.9
+const KLINGE_BOOMERANG_RADIUS: float = 24.0
 
 # Werte der übrigen Heldenfähigkeiten. Global.get_hero_ability_details() liest
 # dieselben Konstanten, damit die Beschreibungen im Menü stimmen.
@@ -79,15 +100,61 @@ const VOLT_OVERCHARGE_DURATION: float = 5.0
 const VOLT_OVERCHARGE_SPEED_MULT: float = 1.4
 const VOLT_OVERCHARGE_FIRE_RATE_MULT: float = 1.5
 
+# Ignis. Ulti "Meteorschauer": Meteore schlagen nacheinander auf einer Linie
+# am Zielpunkt ein und hinterlassen Feuer (siehe IgnisMeteor).
+const IGNIS_METEOR_RANGE: float = 460.0
+const IGNIS_METEOR_COUNT: int = 5
+const IGNIS_METEOR_SPACING: float = 62.0
+const IGNIS_METEOR_WARN: float = 0.8
+const IGNIS_METEOR_INTERVAL: float = 0.16
+const IGNIS_METEOR_RADIUS: float = 72.0
+const IGNIS_METEOR_DAMAGE: float = 22.0
+const IGNIS_METEOR_KNOCKBACK: float = 380.0
+const IGNIS_METEOR_FIRE_RADIUS: float = 46.0
+const IGNIS_METEOR_FIRE_DURATION: float = 3.0
+
 const FREEZE_SPEED_MULT: float = 0.6
+# Spore. Dash "Sporenstoß": kleine Giftwolke am Startpunkt.
 const SPORE_CLOUD_RADIUS: float = 45.0
 const SPORE_CLOUD_DURATION: float = 3.5
 const SPORE_CLOUD_DPS: float = 9.0
+# Fähigkeit "Giftpilz" (siehe SporeShroom): liegt am Zielpunkt und platzt zu
+# einer großen Giftwolke, sobald ein Gegner nah kommt oder er getroffen wird.
+const SPORE_SHROOM_RANGE: float = 230.0
+const SPORE_SHROOM_MAX: int = 3
+const SPORE_SHROOM_ARM: float = 0.6
+const SPORE_SHROOM_TRIGGER: float = 55.0
+const SPORE_SHROOM_LIFETIME: float = 18.0
+const SPORE_SHROOM_CLOUD_RADIUS: float = 75.0
+const SPORE_SHROOM_CLOUD_DURATION: float = 3.5
+const SPORE_SHROOM_CLOUD_DPS: float = 11.0
+# Ulti "Seuchennebel" (siehe PlagueFog): wandert mit Spore mit.
+const SPORE_FOG_RADIUS: float = 260.0
+const SPORE_FOG_DURATION: float = 6.0
+const SPORE_FOG_TICK: float = 0.5
+const SPORE_FOG_POISON_STACKS: int = 2
+const SPORE_FOG_SLOW: float = 0.6
+const SPORE_FOG_HEAL: float = 8.0
 
-const SINGULARITY_DISTANCE: float = 220.0
-const SINGULARITY_DURATION: float = 2.08
-const SINGULARITY_PULL_RADIUS: float = 250.0
+# Nova. Dash "Phasengleiten": kurz schweben ohne Schwerkraft, lenkbar.
+const NOVA_GLIDE_DURATION: float = 0.6
+const NOVA_GLIDE_SPEED: float = 330.0
+# Fähigkeit "Gravitationsstoß": Stoßwelle im Kegel nach vorn. Schleudert
+# Gegner weg und lenkt Kugeln ab. Nach unten gezielt hebt sie Nova an.
+const NOVA_PUSH_RANGE: float = 175.0
+const NOVA_PUSH_ANGLE_DEG: float = 80.0
+const NOVA_PUSH_KNOCKBACK: float = 700.0
+const NOVA_PUSH_SELF_LAUNCH: float = 720.0
+
+# Nova-Ulti "Singularität" (bis zu den Helden-Kits ihre Fähigkeit). Die
+# Implosion am Ende gehört jetzt immer dazu.
+const SINGULARITY_DISTANCE: float = 260.0
+const SINGULARITY_DURATION: float = 2.6
+const SINGULARITY_PULL_RADIUS: float = 300.0
 const SINGULARITY_PULL_FORCE: float = 2000.0
+const SINGULARITY_IMPLOSION_RADIUS: float = 170.0
+const SINGULARITY_IMPLOSION_DAMAGE: float = 38.0
+const SINGULARITY_IMPLOSION_KNOCKBACK: float = 650.0
 
 # Bremst Bewegung weg vom Kern, damit Gegner nicht einfach hindurchfliegen.
 const SINGULARITY_OUTWARD_DAMPING: float = 10.0
@@ -103,10 +170,26 @@ const AFTERBURNER_ZONE_DURATION: float = 2.0
 const AFTERBURNER_BURN_STACKS: int = 2
 const AFTERBURNER_BURN_DAMAGE: float = 5.0
 const BURN_TICK_INTERVAL: float = 0.6
-const HEAL_FIELD_DURATION: float = 4.0
+# Bastion-Ulti "Festung" (siehe FortressDome): Kuppel, an der gegnerische
+# Kugeln abprallen. Innen heilen Bastion und Verbündete wie im alten Heilfeld.
+const HEAL_FIELD_DURATION: float = 5.0
 const HEAL_FIELD_TICK_INTERVAL: float = 0.5
 const HEAL_FIELD_TICK_HEAL: float = 8.0
 const HEAL_FIELD_TICK_SHIELD: float = 10.0
+const BASTION_DOME_RADIUS: float = 140.0
+# Dash "Rammbock": wuchtiger Ansturm, Schild voraus. Blockt Kugeln von vorn,
+# schiebt Gegner mit und stößt sie am Ende weg. Nicht unverwundbar.
+const BASTION_RAM_SPEED: float = 640.0
+const BASTION_RAM_DURATION: float = 0.3
+const BASTION_RAM_DAMAGE: float = 10.0
+const BASTION_RAM_KNOCKBACK: float = 620.0
+const BASTION_RAM_FRONT: float = 48.0
+# Fähigkeit "Magnethaken" (siehe MagnetHook).
+const BASTION_HOOK_RANGE: float = 380.0
+const BASTION_HOOK_SPEED: float = 950.0
+const BASTION_HOOK_PULL_SPEED: float = 1000.0
+const BASTION_HOOK_DAMAGE: float = 6.0
+const BASTION_HOOK_STUN: float = 0.3
 # Phantom. Unsichtbarkeit nach dem Dash "Schattenschritt" und beim Köder;
 # FLICKER = so lange ist Phantom nach einem Angriff oder Treffer zu sehen.
 const PHANTOM_STEALTH_DASH: float = 0.8
@@ -130,9 +213,6 @@ const SPORE_CORROSIVE_INTERVAL: float = 0.8
 const SPORE_CORROSIVE_STACKS: int = 3
 const SPORE_SYMBIOSIS_HPS: float = 6.0
 const NOVA_BINARY_OFFSET: float = 110.0
-const NOVA_IMPLOSION_RADIUS: float = 160.0
-const NOVA_IMPLOSION_DAMAGE: float = 30.0
-const NOVA_IMPLOSION_KNOCKBACK: float = 620.0
 const BLADE_ECHO_DELAY: float = 0.45
 const BLADE_ECHO_DAMAGE_MULT: float = 0.6
 const BLADE_BLOODLUST_HEAL: float = 0.35
@@ -159,6 +239,49 @@ const VOLTEVO_RING_RADIUS: float = 150.0
 const VOLTEVO_RING_DAMAGE: float = 25.0
 const VOLTEVO_RING_KNOCKBACK: float = 300.0
 const VOLTEVO_RING_FREEZE: float = 1.5
+# Ignis-Evolutionen: Zündung (Explosion am Dash-Ende), Komet (ein riesiger
+# Einschlag statt vieler), Flächenbrand (Feuer hält länger und ist größer).
+const IGNISEVO_DASH_BLAST_RADIUS: float = 95.0
+const IGNISEVO_DASH_BLAST_DAMAGE: float = 18.0
+const IGNISEVO_DASH_BLAST_KNOCKBACK: float = 420.0
+const IGNISEVO_COMET_RADIUS_MULT: float = 2.2
+const IGNISEVO_COMET_DAMAGE_SHARE: float = 0.6
+const IGNISEVO_COMET_KNOCKBACK: float = 900.0
+const IGNISEVO_WILDFIRE_DURATION_MULT: float = 2.0
+const IGNISEVO_WILDFIRE_RADIUS_MULT: float = 1.5
+# Spore-Evolutionen: Klebsporen (Wolke bremst stark), Sprungpilz (Trampolin
+# für Spore), Pandemie (Gift springt über), Verwesung (keine Heilung).
+const SPOREEVO_STICKY_FREEZE: float = 1.0
+const SPOREEVO_BOUNCE_FORCE: float = -820.0
+const SPOREEVO_PANDEMIC_RADIUS: float = 130.0
+const SPOREEVO_DECAY_TIME: float = 0.7
+# Nova-Evolutionen: Phasenhülle (Kugeln fliegen beim Gleiten durch), Wandschlag,
+# Umkehr (abgelenkte Kugeln gehören Nova), Schwarzes Loch (schluckt Kugeln).
+const NOVAEVO_PHASE_BULLET_SLOW: float = 0.5
+const NOVAEVO_WALLSLAM_DAMAGE: float = 20.0
+const NOVAEVO_WALLSLAM_STUN: float = 0.8
+const NOVAEVO_BLACKHOLE_RADIUS: float = 70.0
+# Druiden-Evolutionen: Fesselranke, Rankenkletterer (Wand lädt den Dash),
+# Raserei (Treffer verlängern die Gestalt), Dornenfell (Reflexion).
+const DRUIDEVO_VINE_SNARE: float = 0.7
+const DRUIDEVO_FRENZY_EXTEND: float = 0.5
+const DRUIDEVO_THORN_REFLECT: float = 0.3
+# Klinge-Evolutionen: Klingenfluss (Treffer setzt den Dash zurück, einmal pro
+# Sperrzeit), Blutung (Treffer bluten und markieren), Fangen.
+const KLINGEEVO_RESET_LOCK: float = 4.0
+const KLINGEEVO_BLEED_STACKS: int = 4
+const KLINGEEVO_BLEED_DAMAGE: float = 4.0
+const KLINGEEVO_MARK_TIME: float = 4.0
+const KLINGEEVO_MARK_BONUS: float = 0.15
+const KLINGEEVO_CATCH_RADIUS: float = 40.0
+# Bastion-Evolutionen: Prellbock (Gegner gegen die Wand gerammt = betäubt,
+# Bastion bekommt Schild), Kettenschlag (nächster Hammer nach Hakentreffer
+# doppelt), Magnetfeld (Haken fängt Kugeln und sammelt Powerups ein).
+const BASTIONEVO_RAM_STUN: float = 1.0
+const BASTIONEVO_RAM_SHIELD: float = 25.0
+const BASTIONEVO_CHAIN_WINDOW: float = 3.0
+const BASTIONEVO_CHAIN_MULT: float = 2.0
+const BASTIONEVO_MAGNET_RADIUS: float = 55.0
 # Druide: Wurzelwall. Eine Rankenwand quer zur Zielrichtung (siehe DruidWall).
 # Länge skaliert mit ability_radius_mult ("Größe"), Dauer mit
 # ability_duration_mult, Wand-HP mit ability_damage_mult.
@@ -179,7 +302,9 @@ const DRUID_WALL_TARGET_SNAP: float = 40.0
 # Helden, deren Fähigkeit an einem Zielpunkt landet. Mit der Maus wird der
 # Punkt gezielt (siehe tick_ability_aim), Bots und Tastatur-Spieler nutzen
 # weiter die feste Entfernung in Zielrichtung.
-const TARGETED_ABILITY_HEROES: Array[String] = ["nova", "druid", "ignis"]
+const TARGETED_ABILITY_HEROES: Array[String] = ["druid", "ignis", "spore"]
+# Helden, deren Ulti an einem Zielpunkt landet (Taste E halten und loslassen).
+const TARGETED_ULT_HEROES: Array[String] = ["ignis", "nova"]
 # Liegt ein Zielpunkt in festem Gelände, rückt er in diesen Schritten zum
 # Spieler zurück (Sofort-Modus und Host-Prüfung).
 const ABILITY_TARGET_PULLBACK_STEP: float = 8.0
@@ -190,6 +315,20 @@ const ABILITY_TARGET_SEARCH_STEP: float = 10.0
 const ABILITY_TARGET_SEARCH_RADIUS: float = 180.0
 const ABILITY_TARGET_SEARCH_DIRS: int = 16
 # Druiden-Passiv "Wurzelkraft": Lebensregeneration pro Sekunde.
+# Druide. Dash "Rankenschwung": trifft die Ranke Gelände, zieht sie den
+# Druiden dorthin, sonst ein normaler kurzer Dash.
+const DRUID_VINE_RANGE: float = 220.0
+const DRUID_VINE_PULL_SPEED: float = 950.0
+# Ulti "Urkeiler": Verwandlung in einen riesigen Keiler. Linksklick wird zum
+# Hauer-Nahkampf (Hammerwerte), der Dash zum Ansturm.
+const DRUID_BOAR_DURATION: float = 7.0
+const DRUID_BOAR_SCALE: float = 1.6
+const DRUID_BOAR_HP_MULT: float = 1.6
+const DRUID_BOAR_MELEE_DAMAGE_MULT: float = 1.6
+const DRUID_BOAR_SPEED_MULT: float = 1.1
+const DRUID_BOAR_CHARGE_DAMAGE: float = 18.0
+const DRUID_BOAR_CHARGE_KNOCKBACK: float = 750.0
+const DRUID_BOAR_CHARGE_SPEED_MULT: float = 1.35
 const DRUID_PASSIVE_REGEN: float = 2.0
 # Druiden-Evolutionen (Karten, nicht Teil der Grundfähigkeit).
 const DRUID_MAX_WALLS: int = 6
@@ -300,6 +439,48 @@ var hunt_timer: float = 0.0
 var hunt_first_hit: bool = false
 var active_decoy: PhantomDecoy = null
 var active_orb: BallLightning = null
+# Stärke des Helden-Dashs aus Karten (Spurdauer, Wolkengröße, Reichweite …).
+var dash_effect_mult: float = 1.0
+# Ulti-Karten der Klassen: zusätzlich zu den allgemeinen Fähigkeitswerten.
+var ult_damage_mult: float = 1.0
+var ult_radius_mult: float = 1.0
+var ult_count_add: int = 0
+# Geschwindigkeit des laufenden Dashs (Rammbock, Rankenzug, Ansturm weichen ab).
+var _dash_speed_now: float = 750.0
+var _dash_kind: String = ""
+var _dash_start: Vector2 = Vector2.ZERO
+var _dash_hit: Array = []
+var _dash_target: Vector2 = Vector2.ZERO
+var _dash_exceptions: Array = []
+# Nova "Phasengleiten".
+var glide_timer: float = 0.0
+# Spore "Seuchennebel", Bastion "Festung", Klinge "Bumerang", Bastion "Haken".
+var active_fog: PlagueFog = null
+var active_dome: FortressDome = null
+var active_boomerang: BladeBoomerang = null
+var active_hook: MagnetHook = null
+# Klinge: Treffer in Folge, Klingensturm, Sperre von "Klingenfluss".
+var klinge_combo: int = 0
+var klinge_combo_timer: float = 0.0
+var blade_storm_timer: float = 0.0
+var blade_storm_tick: float = 0.0
+var klinge_reset_lock: float = 0.0
+# Markierung durch Klinges "Blutung": Wer sie gesetzt hat, macht mehr Schaden.
+var mark_timer: float = 0.0
+var mark_source: Player = null
+# Bastion "Kettenschlag": nächster Hammerschlag macht doppelten Schaden.
+var chain_hit_timer: float = 0.0
+# Druide "Urkeiler".
+var boar_timer: float = 0.0
+var _boar_hp_bonus: float = 0.0
+var _boar_saved: Dictionary = {}
+var _body_scale: float = BASE_CHARACTER_SCALE
+# Wandschlag (Nova) und Prellbock (Bastion): Schaden bzw. Schild beim Aufprall.
+var wall_slam_damage: float = 0.0
+var wall_slam_source: Player = null
+var wall_slam_shield: float = 0.0
+# Verwesung (Spore-Ulti): keine Heilung und kein Schildaufbau.
+var heal_block_timer: float = 0.0
 
 # Ability
 var ability_name: String = ""
@@ -420,11 +601,14 @@ var ability_evolutions: Array[String] = []
 # Zielvorschau (Taste halten) und Zielpunkt des laufenden use_ability()-Aufrufs.
 var ability_aiming: bool = false
 var _ability_aim_preview: AbilityAimPreview = null
+var ult_aiming: bool = false
+var _ult_aim_preview: AbilityAimPreview = null
 var _cast_target: Vector2 = Vector2.ZERO
 var _cast_has_target: bool = false
 var heal_field_pos: Vector2 = Vector2.ZERO       # Bastion: Ort des Heilfelds
 var blade_echo_timer: float = 0.0                # Klinge: verzögerter Echowirbel
 var druid_max_walls: int = 1                     # Druide: gleichzeitige Wände
+var spore_max_shrooms: int = 3                   # Spore: gleichzeitige Giftpilze
 
 # Status Effects
 var poison_ticks_left: int = 0
@@ -604,6 +788,7 @@ var remote_input: Dictionary = {
 	"aim": Vector2.RIGHT,
 	# Zielpunkt der Fähigkeit (Vector2) oder null für die feste Entfernung.
 	"ability_target": null,
+	"ult_target": null,
 }
 # Einweg-Stege, durch die die Figur gerade hindurchfällt (Kollisionsausnahme).
 var _drop_through_bodies: Array = []
@@ -769,6 +954,10 @@ func apply_stats() -> void:
 	var pw_range_tiles := 0.0
 	var ult_cd_mult := 1.0
 	var ult_dur_mult := 1.0
+	var ult_dmg_mult := 1.0
+	var ult_rad_mult := 1.0
+	var ult_cnt_add := 0
+	var dash_eff_mult := 1.0
 	var dash_charges_add := 0
 	ability_evolutions.clear()
 	
@@ -835,6 +1024,10 @@ func apply_stats() -> void:
 		wall_add += c.wall_count_add
 		ult_cd_mult *= c.ult_cooldown_mult
 		ult_dur_mult *= c.ult_duration_mult
+		ult_dmg_mult *= c.ult_damage_mult
+		ult_rad_mult *= c.ult_radius_mult
+		ult_cnt_add += c.ult_count_add
+		dash_eff_mult *= c.dash_effect_mult
 		dash_charges_add += c.dash_charges_add
 		if not c.ability_evolution.is_empty() and not ability_evolutions.has(c.ability_evolution):
 			ability_evolutions.append(c.ability_evolution)
@@ -975,7 +1168,12 @@ func apply_stats() -> void:
 	if hero.has_ult():
 		ult_max_cooldown = maxf(8.0, hero.ult_cooldown * ult_cd_mult * (1.0 - (1.0 - ability_cd_mult) * 0.5))
 	ult_duration_mult = clampf(ult_dur_mult, 0.5, 2.5)
+	ult_damage_mult = clampf(ult_dmg_mult, 0.25, 4.0)
+	ult_radius_mult = clampf(ult_rad_mult, 0.5, 2.5)
+	ult_count_add = clampi(ult_cnt_add, 0, 6)
+	dash_effect_mult = clampf(dash_eff_mult, 0.5, 3.0)
 	_load_ult_timer()
+	_reset_kit_state()
 	overcharge_timer = 0.0
 	stealth_timer = 0.0
 	stealth_flicker_timer = 0.0
@@ -986,6 +1184,7 @@ func apply_stats() -> void:
 	ability_duration_mult = clampf(ab_duration_mult, 0.5, 3.0)
 	ability_range_mult = clampf(ab_range_mult, 0.5, 2.5)
 	druid_max_walls = clampi(DRUID_WALL_MAX_ACTIVE + wall_add, 1, DRUID_MAX_WALLS)
+	spore_max_shrooms = clampi(SPORE_SHROOM_MAX + wall_add, 1, 6)
 	powerup_strength_mult = 1.0 + clampf(pw_strength_add, 0.0, 3.0)
 	powerup_pickup_range = clampf(pw_range_tiles, 0.0, 10.0) * POWERUP_PICKUP_TILE
 	blade_echo_timer = 0.0
@@ -1078,6 +1277,7 @@ func apply_stats() -> void:
 	frost_trail_timer = 0.0
 	fire_trail_timer = 0.0
 	
+	_body_scale = size_mult
 	scale = Vector2(size_mult, size_mult)
 
 	_clear_drones()
@@ -1104,9 +1304,16 @@ func _physics_process(delta: float) -> void:
 			_trigger_rocket_impact()
 		return
 	
+	# Nova "Phasengleiten": schwebt ohne Schwerkraft, die Laufrichtung lenkt.
+	if glide_timer > 0.0:
+		_glide_step(delta)
+		return
+
 	if is_dashing:
-		velocity = dash_dir * dash_speed
+		velocity = dash_dir * _dash_speed_now
 		move_and_slide()
+		if not is_replica:
+			_dash_tick()
 		return
 	
 	# Universeller Block: Schildwabe anzeigen und Projektile reflektieren.
@@ -1199,6 +1406,8 @@ func _current_ground_speed() -> float:
 		current_spd *= VOLT_OVERCHARGE_SPEED_MULT
 	if hunt_timer > 0.0:
 		current_spd *= PHANTOM_HUNT_SPEED_MULT
+	if boar_timer > 0.0:
+		current_spd *= DRUID_BOAR_SPEED_MULT
 	if freeze_timer > 0.0:
 		current_spd *= FREEZE_SPEED_MULT
 	if on_deep_snow:
@@ -1277,7 +1486,11 @@ func _handle_player_input(_delta: float) -> void:
 		manual_reload()
 
 	# Ulti (P1: E, P2: K).
-	if Input.is_action_just_pressed(_act("ult")):
+	if player_index == 1 and has_targeted_ult():
+		var ult_point = tick_ult_aim(true)
+		if ult_point is Vector2:
+			use_ultimate(ult_point)
+	elif Input.is_action_just_pressed(_act("ult")):
 		use_ultimate()
 
 	# KlassenfÃƒÂ¤higkeit (Rechtsklick / E / F).
@@ -1314,6 +1527,8 @@ func set_remote_input(data: Dictionary) -> void:
 		remote_input.reload = true
 	if bool(data.get("ult", false)):
 		remote_input.ult = true
+		var ult_value = data.get("ult_target", null)
+		remote_input.ult_target = ult_value if ult_value is Vector2 else null
 	if bool(data.get("drop", false)):
 		remote_input.drop = true
 
@@ -1399,7 +1614,8 @@ func _handle_remote_input(_delta: float) -> void:
 
 	if remote_input.ult:
 		remote_input.ult = false
-		use_ultimate()
+		use_ultimate(remote_input.ult_target)
+		remote_input.ult_target = null
 
 	if remote_input.ability:
 		remote_input.ability = false
@@ -1460,6 +1676,12 @@ func apply_network_state(data: Dictionary) -> void:
 	stealth_timer = float(data.get("stealth", 0.0))
 	stealth_flicker_timer = float(data.get("flicker", 0.0))
 	hunt_timer = float(data.get("hunt", 0.0))
+	blade_storm_timer = float(data.get("storm", 0.0))
+	# Urkeiler: Clients zeigen die Gestalt (Größe, Hammer-Schwung) selbst.
+	var net_boar := float(data.get("boar", 0.0))
+	if (net_boar > 0.0) != (boar_timer > 0.0):
+		scale = Vector2.ONE * _body_scale * (DRUID_BOAR_SCALE if net_boar > 0.0 else 1.0)
+	boar_timer = net_boar
 	is_blocking = bool(data.get("blocking", is_blocking))
 	block_cooldown_timer = float(data.get("block_cd", block_cooldown_timer))
 	block_cooldown = float(data.get("block_cd_max", block_cooldown))
@@ -1472,7 +1694,7 @@ func apply_network_state(data: Dictionary) -> void:
 		var swing_dir = data.get("melee_aim", aim_direction)
 		if swing_dir is Vector2 and swing_dir.length_squared() > 0.001:
 			melee_swing_dir = swing_dir.normalized()
-		_play_melee_swing(Global.get_melee_weapon(player_index), melee_swing_dir)
+		_play_melee_swing("hammer" if boar_timer > 0.0 else Global.get_melee_weapon(player_index), melee_swing_dir)
 	_last_net_melee_seq = net_melee_seq
 	# Dash und Raketensprung laufen nur auf dem Host. Clients spielen
 	# Geisterspur, Dash-Ton und Funken anhand der Zustände nach.
@@ -1585,7 +1807,7 @@ func apply_jump_pad_boost(force: float) -> void:
 func dash() -> void:
 	if not control_enabled or stun_timer > 0.0:
 		return
-	if dash_charges <= 0 or is_dashing:
+	if dash_charges <= 0 or is_dashing or glide_timer > 0.0:
 		return
 	dash_charges -= 1
 	# Die Abklingzeit lädt immer nur eine Ladung; läuft sie schon, bleibt sie.
@@ -1599,10 +1821,24 @@ func dash() -> void:
 		dash_dir = Vector2(signf(velocity.x), 0.0)
 	else:
 		dash_dir = aim_direction.normalized()
+	if dash_dir.length_squared() < 0.01:
+		dash_dir = Vector2.LEFT if sprite.flip_h else Vector2.RIGHT
 
 	var hero_id: String = Global.get_player_hero_id(player_index)
+	_dash_kind = hero_id
+	_dash_start = global_position
+	_dash_hit.clear()
+	_dash_speed_now = dash_speed
 	if hero_id == "volt":
 		_volt_blink_dash()
+		return
+	# Druide als Urkeiler: Ansturm statt Rankenschwung.
+	if boar_timer > 0.0:
+		_dash_kind = "boar"
+	if hero_id == "nova":
+		_start_glide()
+		return
+	if hero_id == "druid" and _dash_kind == "druid" and _try_vine_swing():
 		return
 
 	is_dashing = true
@@ -1611,15 +1847,35 @@ func dash() -> void:
 	SoundManager.play_sound("dash", 0.12, 0.0)
 	ghost_timer.start(0.04)
 
-	# Ignis Passive: Afterburner – Funken und eine brennende Spur während des Dashs.
-	if hero_id == "ignis":
-		afterburner_timer = 0.0
-		if opponent and is_instance_valid(opponent):
-			_spawn_fire_sparks()
-	# Phantom "Schattenschritt": nach dem Dash kurz unsichtbar.
-	elif hero_id == "phantom":
-		_start_stealth(dash_duration + PHANTOM_STEALTH_DASH * ability_duration_mult)
-		_dash_cut_from = global_position
+	match _dash_kind:
+		"ignis":
+			# Nachbrenner: Funken und eine brennende Spur während des Dashs.
+			afterburner_timer = 0.0
+			if opponent and is_instance_valid(opponent):
+				_spawn_fire_sparks()
+		"phantom":
+			# Schattenschritt: nach dem Dash kurz unsichtbar.
+			_start_stealth(dash_duration + PHANTOM_STEALTH_DASH * ability_duration_mult)
+			_dash_cut_from = global_position
+		"spore":
+			# Sporenstoß: Giftwolke am Startpunkt.
+			_fx("sound", {"snd": ["poison", 0.3, -3.0]})
+			_spawn_spore_cloud(global_position, SPORE_CLOUD_RADIUS * dash_effect_mult, SPORE_CLOUD_DURATION, SPORE_CLOUD_DPS)
+		"klinge":
+			# Durchstoß: geht durch Gegner hindurch.
+			_add_dash_exceptions()
+		"bastion":
+			# Rammbock: langsamer, länger, ohne Unverwundbarkeit.
+			is_invulnerable = _has_temporary_invulnerability_except_dash()
+			_dash_speed_now = BASTION_RAM_SPEED
+			dash_timer = BASTION_RAM_DURATION * clampf(dash_effect_mult, 1.0, 1.6)
+			_fx("sound", {"snd": ["shield", 0.15, -2.0]})
+		"boar":
+			# Urkeiler-Ansturm: schneller, schleudert Gegner weg, bricht Gelände.
+			_dash_speed_now = dash_speed * DRUID_BOAR_CHARGE_SPEED_MULT
+			dash_timer = dash_duration * 1.3
+			_add_dash_exceptions()
+			_fx("sound", {"snd": ["explosion", 0.2, -6.0], "shake": 0.15})
 
 # Kurzlebige visuelle Effekte werden an Main gehängt. Die Gruppe erlaubt es,
 # beim Rundenstart auch diese Effekte zuverlässig zu entfernen.
@@ -1882,18 +2138,17 @@ func use_ability(target = null) -> void:
 			# Kugelblitz: langsame Blitzkugel, die Gegner in der Nähe schockt
 			_spawn_ball_lightning()
 		"spore":
-			# Toxic Gas Cloud: GroÃƒÅ¸e Giftwolke + 4 Sporen-Nadeln
-			_fx("sound", {"snd": ["poison", 0.3, 0.0]})
-			_spawn_spore_cloud()
+			# Giftpilz: Falle, die bei Gegnern oder Kugeln aufplatzt
+			_throw_shroom()
 		"nova":
-			# SingularitÃƒÂ¤t: Gravitationskern, der Gegner heranzieht und schÃƒÂ¤digt
-			_spawn_singularity()
+			# Gravitationsstoß: Kegel, der Gegner und Kugeln wegdrückt
+			_gravity_push()
 		"klinge":
-			# Klingensturm: Rundumschlag mit RÃƒÂ¼ckstoÃƒÅ¸ und kurzer Unverwundbarkeit
-			_blade_storm()
+			# Klingenbumerang: Schwert fliegt hin und zurück
+			_throw_boomerang()
 		"bastion":
-			# Heilfeld: Heilt ÃƒÂ¼ber Zeit und baut Schild auf
-			_deploy_heal_field()
+			# Magnethaken: zieht den ersten Gegner heran
+			_fire_hook()
 		"phantom":
 			# Köder: Doppelgänger läuft weiter, Phantom wird unsichtbar
 			_spawn_decoy()
@@ -1917,6 +2172,9 @@ func melee_attack(aim_override: Vector2 = Vector2.ZERO) -> void:
 		return
 	if melee_cooldown_timer > 0.0:
 		return
+	# Klinge: Solange das Schwert als Bumerang fliegt, gibt es keinen Hieb.
+	if is_instance_valid(active_boomerang) and active_boomerang.is_active():
+		return
 	melee_cooldown_timer = melee_cooldown
 	if powerup_auto_attack_timer > 0.0:
 		melee_cooldown_timer *= POWERUP_AUTO_ATTACK_COOLDOWN_MULT
@@ -1928,7 +2186,17 @@ func melee_attack(aim_override: Vector2 = Vector2.ZERO) -> void:
 	melee_swing_dir = dir
 	melee_swing_seq += 1
 	_play_melee_swing(melee_weapon, dir)
-	_melee_strike(dir, 1.0)
+	var power := 1.0
+	# Klinge: jeder dritte Hieb in Folge ist ein starker Stoß.
+	if Global.get_player_hero_id(player_index) == "klinge" and boar_timer <= 0.0:
+		if klinge_combo >= 2:
+			power = KLINGE_COMBO_MULT
+			klinge_combo = 0
+			_fx("sound", {"snd": ["slash", 0.1, 4.0]})
+		else:
+			klinge_combo += 1
+		klinge_combo_timer = KLINGE_COMBO_WINDOW
+	_melee_strike(dir, power)
 	# Angriffe verraten Unsichtbare: in der Nachtjagd nur kurz, sonst ganz.
 	_reveal_from_stealth(true)
 	if melee_echo:
@@ -1968,6 +2236,9 @@ func _melee_strike(dir: Vector2, power: float) -> void:
 			push = dir
 		push = (push + Vector2(0.0, -MELEE_KNOCKBACK_LIFT)).normalized()
 		var damage := base_damage * _melee_ambush_mult(p, dir)
+		# Bastion-Evolution "Kettenschlag": der Hieb nach dem Haken trifft doppelt.
+		if chain_hit_timer > 0.0:
+			damage *= BASTIONEVO_CHAIN_MULT
 		# Gnadenstoß: Mehrschaden gegen angeschlagene Gegner.
 		if melee_execute_bonus > 0.0 and p.max_health > 0.0 \
 				and p.current_health / p.max_health <= MELEE_EXECUTE_THRESHOLD:
@@ -1987,6 +2258,9 @@ func _melee_strike(dir: Vector2, power: float) -> void:
 			if wall_stun > 0.0:
 				p.melee_wall_stun_timer = MELEE_WALL_STUN_WINDOW
 				p.melee_wall_stun_duration = wall_stun
+				p.wall_slam_damage = 0.0
+				p.wall_slam_shield = 0.0
+				p.wall_slam_source = null
 			if melee_freeze > 0.0:
 				p.apply_freeze(melee_freeze)
 			if melee_poison_stacks > 0:
@@ -1996,6 +2270,9 @@ func _melee_strike(dir: Vector2, power: float) -> void:
 			if melee_stun > 0.0:
 				p.apply_stun(melee_stun)
 		_spawn_blade_hit_spark(p.global_position)
+	if not targets.is_empty():
+		chain_hit_timer = 0.0
+		_on_boar_hit()
 	if melee_chain_lightning and not targets.is_empty():
 		dealt += _melee_chain_lightning(targets, base_damage * MELEE_CHAIN_DAMAGE_MULT)
 	# Match-Statistik: tatsächlich angekommener Nahkampfschaden (inkl. Kettenblitz).
@@ -2300,6 +2577,17 @@ func _check_melee_wall_stun() -> void:
 		return
 	melee_wall_stun_timer = 0.0
 	apply_stun(melee_wall_stun_duration)
+	# Wandschlag (Nova) und Prellbock (Bastion): Schaden bzw. Schild für den Verursacher.
+	var source := wall_slam_source
+	if is_instance_valid(source) and source is Player:
+		if wall_slam_damage > 0.0:
+			source._ability_hit(self, wall_slam_damage, Vector2.ZERO)
+		if wall_slam_shield > 0.0 and source.current_health > 0.0:
+			source.current_shield = minf(source.current_shield + wall_slam_shield, maxf(source.max_shield, wall_slam_shield))
+			source.emit_signal("health_changed", source.current_health, source.max_health, source.current_shield, source.max_shield)
+	wall_slam_damage = 0.0
+	wall_slam_shield = 0.0
+	wall_slam_source = null
 	velocity.x *= -0.15
 	_fx("sound", {"snd": ["bounce", 0.1, -3.0], "shake": 0.2})
 	_spawn_blade_hit_spark(global_position)
@@ -2550,12 +2838,11 @@ func _spawn_fire_sparks() -> void:
 	tw.parallel().tween_property(spark, "modulate:a", 0.0, 0.3)
 	tw.tween_callback(spark.queue_free)
 
-func _spawn_spore_cloud() -> void:
-	var radius := SPORE_CLOUD_RADIUS * ability_radius_mult
-	var duration := SPORE_CLOUD_DURATION * ability_duration_mult
-	var dps := SPORE_CLOUD_DPS * ability_damage_mult
-	var corrosive := _has_ability_evolution("spore_corrosive")
-	var symbiosis := _has_ability_evolution("spore_symbiosis")
+# Giftwolke von Sporenstoß (Dash) und Giftpilz. Ätzender Nebel wirkt nur bei
+# Pilzwolken, Symbiose nur bei der Dash-Wolke.
+func _spawn_spore_cloud(pos: Vector2, radius: float, duration: float, dps: float, from_shroom := false) -> void:
+	var corrosive := from_shroom and _has_ability_evolution("spore_corrosive")
+	var symbiosis := not from_shroom and _has_ability_evolution("spore_symbiosis")
 	var cloud = Area2D.new()
 	cloud.collision_layer = 4
 	cloud.collision_mask = 2
@@ -2566,9 +2853,9 @@ func _spawn_spore_cloud() -> void:
 	cloud.add_child(col)
 
 	_add_round_effect(cloud)
-	cloud.global_position = global_position
+	cloud.global_position = pos
 	# Wolken-Optik als Zone, damit sie auch auf Clients erscheint.
-	spawn_effect_zone(EffectZone.Kind.POISON, global_position, radius, duration, {"visual_only": true})
+	spawn_effect_zone(EffectZone.Kind.POISON, pos, radius, duration, {"visual_only": true})
 
 	# Schaden pro Sekunde statt pro Frame, damit er nicht von der Bildrate abhängt.
 	# progress[1] zählt bis zum nächsten Gift-Tick von "Ätzender Nebel".
@@ -2577,7 +2864,7 @@ func _spawn_spore_cloud() -> void:
 	t.tween_method(func(val: float):
 		var dt: float = (val - progress[0]) * duration
 		progress[0] = val
-		if dt <= 0.0:
+		if dt <= 0.0 or not is_instance_valid(self) or not is_inside_tree():
 			return
 		var poison_now := false
 		if corrosive:
@@ -2609,12 +2896,10 @@ func _opponents_within(pos: Vector2, radius: float) -> Array:
 	return result
 
 # --- Nova: SingularitÃƒÂ¤t ---
-func _spawn_singularity() -> void:
-	_fx("sound", {"snd": ["explosion", 0.2, 2.0]})
-	var point := _cast_target if _cast_has_target \
-		else _clamp_to_map(global_position + aim_direction.normalized() * SINGULARITY_DISTANCE * ability_range_mult)
-	for center in _singularity_centers(point):
-		_add_gravity_well(center)
+func _ult_cast_point(target) -> Vector2:
+	if target is Vector2:
+		return _clamp_ult_point(target)
+	return _clamp_to_map(global_position + aim_direction.normalized() * _ult_default_distance())
 
 # Mittelpunkte der Singularität für einen Zielpunkt. Evolution "Doppelstern":
 # zwei Kerne nebeneinander, quer zur Linie Nova → Ziel.
@@ -2630,44 +2915,34 @@ func _singularity_centers(point: Vector2) -> Array:
 	return [_clamp_to_map(point + side * NOVA_BINARY_OFFSET), _clamp_to_map(point - side * NOVA_BINARY_OFFSET)]
 
 func _add_gravity_well(center: Vector2) -> void:
-	var duration := SINGULARITY_DURATION * ability_duration_mult
+	var duration := SINGULARITY_DURATION * ability_duration_mult * ult_duration_mult
 	# Schwarzes Loch als reine Optik-Zone, damit es auch Clients sehen.
-	spawn_effect_zone(EffectZone.Kind.VOID, center, 60.0 * ability_radius_mult, duration, {"visual_only": true})
+	spawn_effect_zone(EffectZone.Kind.VOID, center, 70.0 * _ult_size(), duration, {"visual_only": true})
 	gravity_wells.append({"pos": center, "time": duration, "tick": 0.0})
 
-# --- Klinge: Klingensturm ---
-func _blade_storm() -> void:
-	is_invulnerable = true
-	ability_invuln_timer = maxf(ability_invuln_timer, BLADE_STORM_INVULN * ability_duration_mult)
-	_blade_storm_strike(1.0)
-	# Evolution "Echowirbel": ein zweiter, schwächerer Wirbel folgt kurz danach.
-	if _has_ability_evolution("klinge_echo"):
-		blade_echo_timer = BLADE_ECHO_DELAY
-
-# Ein einzelner Wirbel. power skaliert Schaden und Rückstoß (Echowirbel < 1.0).
-func _blade_storm_strike(power: float) -> void:
+# Ein Wirbel des Klingensturms. damage_mult skaliert auf den Kugelschaden,
+# knockback ist der Rückstoß in Pixeln pro Sekunde.
+func _blade_storm_strike(damage_mult: float, knockback: float, quiet := false) -> void:
+	var radius := BLADE_STORM_RADIUS * _ult_size()
+	var power := clampf(knockback / BLADE_STORM_KNOCKBACK, 0.3, 1.0)
 	_fx("blade_storm", {
 		"p": global_position,
 		"r": BLADE_STORM_RADIUS,
-		"rm": ability_radius_mult,
+		"rm": _ult_size(),
 		"snd": ["slash", 0.15, 0.0],
 		"shake": 0.22 * power,
 	})
-	Seesaw.blast_all(get_tree(), global_position, BLADE_STORM_RADIUS * ability_radius_mult, 0.8 * power)
+	Seesaw.blast_all(get_tree(), global_position, radius, 0.8 * power)
 
 	var hit_any := false
 	var dealt := 0.0
-	for p in _opponents_within(global_position, BLADE_STORM_RADIUS * ability_radius_mult):
+	for p in _opponents_within(global_position, radius):
 		hit_any = true
 		var dir: Vector2 = p.global_position - global_position
 		if dir.length_squared() < 1.0:
 			dir = aim_direction if aim_direction.length_squared() > 0.01 else Vector2.RIGHT
 		var before: float = p.current_health + p.current_shield
-		_ability_hit(
-			p,
-			bullet_damage * BLADE_STORM_DAMAGE_MULT * ability_damage_mult * power,
-			dir.normalized() * BLADE_STORM_KNOCKBACK * power
-		)
+		_ability_hit(p, bullet_damage * damage_mult * _ult_power(), dir.normalized() * knockback)
 		dealt += maxf(0.0, before - (p.current_health + p.current_shield))
 		_spawn_blade_hit_spark(p.global_position)
 	# Evolution "Blutrausch": heilt um einen Teil des tatsächlich verursachten Schadens.
@@ -2675,20 +2950,11 @@ func _blade_storm_strike(power: float) -> void:
 		heal(dealt * BLADE_BLOODLUST_HEAL)
 	# Auch ohne Treffer bleibt der Wirbel sichtbar; ein leiser Bounce-Ton
 	# bestätigt, dass die Fähigkeit ausgelöst wurde.
-	if not hit_any:
+	if not hit_any and not quiet:
 		_fx("sound", {"snd": ["bounce", 0.15, 4.0]})
 
 func _spawn_blade_hit_spark(pos: Vector2) -> void:
 	_fx("ring", NetFx.ring_args(pos, Color(1.0, 0.8, 0.9, 0.95), 0.7, 3.6, 0.2, 0.2, 8, true))
-
-# --- Bastion: Heilfeld ---
-func _deploy_heal_field() -> void:
-	_fx("sound", {"snd": ["heal", 0.05, 0.0]})
-	var duration := HEAL_FIELD_DURATION * ability_duration_mult
-	heal_field_timer = duration
-	heal_field_tick = 0.0
-	heal_field_pos = global_position
-	spawn_effect_zone(EffectZone.Kind.HEAL, global_position, 55.0 * ability_radius_mult, duration, {"visual_only": true})
 
 # --- Phantom: Schattenschritt (Dash), Köder (Fähigkeit), Nachtjagd (Ulti) ---
 
@@ -2816,6 +3082,743 @@ func _dash_cut() -> void:
 		_spawn_blade_hit_spark(p.global_position)
 
 # ============================================================
+# Helden-Kits Teil 2: Ignis, Spore, Nova, Druide, Klinge, Bastion
+# ============================================================
+
+# Ulti-Werte: allgemeine Fähigkeitskarten wirken mit, Ulti-Klassenkarten
+# zusätzlich (CardData.ult_damage_mult / ult_radius_mult).
+func _ult_power() -> float:
+	return ability_damage_mult * ult_damage_mult
+
+func _ult_size() -> float:
+	return ability_radius_mult * ult_radius_mult
+
+func _reset_kit_state() -> void:
+	glide_timer = 0.0
+	blade_storm_timer = 0.0
+	blade_storm_tick = 0.0
+	klinge_combo = 0
+	klinge_combo_timer = 0.0
+	klinge_reset_lock = 0.0
+	mark_timer = 0.0
+	mark_source = null
+	chain_hit_timer = 0.0
+	heal_block_timer = 0.0
+	wall_slam_damage = 0.0
+	wall_slam_source = null
+	wall_slam_shield = 0.0
+	boar_timer = 0.0
+	_boar_saved.clear()
+	_boar_hp_bonus = 0.0
+	_dash_kind = ""
+	_dash_hit.clear()
+	_remove_dash_exceptions()
+
+# --- Dash-Varianten ---
+
+# Klinge und Urkeiler laufen durch Gegner hindurch.
+func _add_dash_exceptions() -> void:
+	_remove_dash_exceptions()
+	for p in get_tree().get_nodes_in_group("player"):
+		if p is Player and p != self and is_instance_valid(p) and p.team_id != team_id:
+			add_collision_exception_with(p)
+			_dash_exceptions.append(p)
+
+func _remove_dash_exceptions() -> void:
+	for p in _dash_exceptions:
+		if is_instance_valid(p):
+			remove_collision_exception_with(p)
+	_dash_exceptions.clear()
+
+# Läuft jeden Physik-Frame des Dashs (nur Host bzw. offline).
+func _dash_tick() -> void:
+	match _dash_kind:
+		"klinge":
+			_klinge_dash_tick()
+		"bastion":
+			_bastion_ram_tick()
+		"boar":
+			_boar_charge_tick()
+		"druid_vine":
+			# Am Ziel angekommen oder an etwas hängen geblieben: Zug endet.
+			if global_position.distance_to(_dash_target) < 14.0 or (get_slide_collision_count() > 0 and velocity.length() < 40.0):
+				dash_timer = minf(dash_timer, 0.001)
+
+# Ende eines Dashs (Ablauf oder Gummiwand). Nur Host bzw. offline.
+func _on_dash_end() -> void:
+	match _dash_kind:
+		"ignis":
+			if _has_ability_evolution("ignis_dash_blast"):
+				_ignis_dash_blast()
+		"bastion":
+			_bastion_ram_release()
+		"druid_vine":
+			# Etwas Schwung mitnehmen, nach oben ein kleiner Hüpfer auf die Kante.
+			velocity = dash_dir * move_speed * 0.6
+			if not ArenaMode.active and dash_dir.y < -0.3:
+				velocity.y = minf(velocity.y, -260.0)
+	_remove_dash_exceptions()
+	_dash_hit.clear()
+	_dash_kind = ""
+
+# Ignis-Evolution "Zündung": Explosion am Ende des Nachbrenners.
+func _ignis_dash_blast() -> void:
+	var radius := IGNISEVO_DASH_BLAST_RADIUS
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(global_position, Color(1.0, 0.5, 0.15, 0.9),
+		1.0, radius / 8.0, 0.22, 0.28), "explosion", 0.2, -3.0))
+	Seesaw.blast_all(get_tree(), global_position, radius, 1.0)
+	for p in _opponents_within(global_position, radius):
+		var dir: Vector2 = p.global_position - global_position
+		if dir.length_squared() < 1.0:
+			dir = dash_dir
+		p.take_damage(IGNISEVO_DASH_BLAST_DAMAGE * powerup_damage_mult, dir.normalized() * IGNISEVO_DASH_BLAST_KNOCKBACK, self)
+
+# Spore/Ignis-Spuren und Dash-Effekte lesen dash_effect_mult; Ignis nutzt ihn
+# für die Dauer der Feuerspur.
+func _afterburner_duration() -> float:
+	return AFTERBURNER_ZONE_DURATION * dash_effect_mult
+
+# Nova "Phasengleiten".
+func _start_glide() -> void:
+	glide_timer = NOVA_GLIDE_DURATION * dash_effect_mult
+	is_invulnerable = true
+	velocity = dash_dir * NOVA_GLIDE_SPEED
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(global_position, Color(0.7, 0.55, 1.0, 0.7),
+		1.0, 4.5, 0.18, 0.25), "dash", 0.12, -3.0))
+
+func _glide_step(delta: float) -> void:
+	glide_timer -= delta
+	var steer := _glide_input()
+	if steer.length_squared() > 0.01:
+		dash_dir = dash_dir.lerp(steer.normalized(), clampf(8.0 * delta, 0.0, 1.0)).normalized()
+	velocity = dash_dir * NOVA_GLIDE_SPEED
+	move_and_slide()
+	if not is_replica and _has_ability_evolution("nova_phase"):
+		_phase_through_bullets()
+	if glide_timer <= 0.0:
+		glide_timer = 0.0
+		velocity *= 0.6
+		is_invulnerable = _has_temporary_invulnerability()
+
+func _glide_input() -> Vector2:
+	if is_bot or is_replica:
+		return Vector2.ZERO
+	if is_remote:
+		return Vector2(remote_input.move_x, remote_input.move_y)
+	if GameSettings.gameplay_input_blocked:
+		return Vector2.ZERO
+	return Vector2(Input.get_axis(_act("left"), _act("right")), Input.get_axis(_act("up"), _act("down")))
+
+# Nova-Evolution "Phasenhülle": gegnerische Kugeln fliegen durch Nova und
+# werden dabei abgebremst.
+func _phase_through_bullets() -> void:
+	for b in get_tree().get_nodes_in_group("bullet"):
+		if not is_instance_valid(b) or b.is_replica or b.shooter == self:
+			continue
+		if is_instance_valid(b.shooter) and b.shooter is Player and b.shooter.team_id == team_id:
+			continue
+		if b.has_meta("nova_phased") or global_position.distance_to(b.global_position) > 46.0:
+			continue
+		b.set_meta("nova_phased", true)
+		b.add_collision_exception_with(self)
+		b.velocity *= NOVAEVO_PHASE_BULLET_SLOW
+
+# Druide "Rankenschwung". true = die Ranke hat gegriffen und zieht.
+func _try_vine_swing() -> bool:
+	var dir := aim_direction.normalized()
+	if dir.length_squared() < 0.01:
+		return false
+	var from := global_position
+	var reach := DRUID_VINE_RANGE * dash_effect_mult
+	var to := from + dir * reach
+	# Evolution "Fesselranke": Gegner auf der Linie werden festgehalten.
+	if _has_ability_evolution("druid_vine_snare"):
+		for p in _opponents_within(from.lerp(to, 0.5), reach * 0.5 + 24.0):
+			var closest := Geometry2D.get_closest_point_to_segment(p.global_position, from, to)
+			if closest.distance_to(p.global_position) <= 24.0:
+				p.apply_stun(DRUIDEVO_VINE_SNARE)
+				_fx("zap", NetFx.zap_args(from, p.global_position, Color(0.4, 0.85, 0.3, 0.95), 2.5, 0.4, 5, 5.0))
+	var mask := 1
+	if ArenaMode.active:
+		mask = ArenaMode.point_band_mask(arena_z)
+	var query := PhysicsRayQueryParameters2D.create(from, to, mask)
+	query.exclude = [get_rid()]
+	var hit := get_world_2d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		_fx("zap", NetFx.zap_args(from, to, Color(0.4, 0.75, 0.3, 0.6), 2.0, 0.2, 5, 4.0))
+		return false
+	var point: Vector2 = hit["position"]
+	var normal: Vector2 = hit.get("normal", -dir)
+	var target := _free_teleport_target(from, _clamp_to_map(point + normal * 16.0))
+	if from.distance_to(target) < 28.0:
+		return false
+	# Evolution "Rankenkletterer": an der eigenen Wand gibt es die Ladung zurück.
+	var collider = hit.get("collider")
+	if _has_ability_evolution("druid_vine_wall") and collider is DruidWall and collider.owner_player == self:
+		dash_charges = mini(dash_charges_max, dash_charges + 1)
+		if dash_charges >= dash_charges_max:
+			dash_cooldown_timer = 0.0
+	_fx("zap", NetFx.with_sound(NetFx.zap_args(from, point, Color(0.45, 0.85, 0.3, 0.95), 3.0, 0.35, 6, 4.0),
+		"slash", 0.2, -4.0))
+	_dash_kind = "druid_vine"
+	_dash_target = target
+	dash_dir = (target - from).normalized()
+	_dash_speed_now = DRUID_VINE_PULL_SPEED
+	is_dashing = true
+	is_invulnerable = true
+	dash_timer = from.distance_to(target) / DRUID_VINE_PULL_SPEED + 0.05
+	ghost_timer.start(0.04)
+	return true
+
+# Klinge "Durchstoß": trifft jeden Gegner auf dem Weg einmal.
+func _klinge_dash_tick() -> void:
+	var radius := KLINGE_DASH_HIT_RADIUS * _melee_size_factor() + MELEE_BODY_RADIUS
+	for p in _opponents_within(global_position, radius):
+		if _dash_hit.has(p):
+			continue
+		_dash_hit.append(p)
+		var data := Global.get_melee_weapon_data(melee_weapon)
+		var dmg := float(data["damage"]) * melee_damage_mult * powerup_damage_mult * KLINGE_DASH_DAMAGE_MULT * dash_effect_mult
+		p.take_damage(dmg, dash_dir * 160.0, self)
+		_spawn_blade_hit_spark(p.global_position)
+		if _dash_hit.size() == 1:
+			_klinge_dash_refund()
+
+func _klinge_dash_refund() -> void:
+	# Evolution "Klingenfluss": Treffer setzt den Dash ganz zurück.
+	if _has_ability_evolution("klinge_dash_reset") and klinge_reset_lock <= 0.0:
+		klinge_reset_lock = KLINGEEVO_RESET_LOCK
+		dash_charges = dash_charges_max
+		dash_cooldown_timer = 0.0
+		_fx("ring", NetFx.ring_args(global_position, Color(1.0, 0.4, 0.6, 0.8), 1.0, 3.5, 0.15, 0.2))
+	elif dash_cooldown_timer > 0.0:
+		dash_cooldown_timer *= KLINGE_DASH_REFUND
+
+# Bastion "Rammbock": Kugeln von vorn prallen am Schild ab, Gegner werden
+# mitgeschoben.
+func _bastion_ram_tick() -> void:
+	var size := _melee_size_factor()
+	for b in get_tree().get_nodes_in_group("bullet"):
+		if not is_instance_valid(b) or b.is_replica or b.shooter == self:
+			continue
+		if is_instance_valid(b.shooter) and b.shooter is Player and b.shooter.team_id == team_id:
+			continue
+		var to_b: Vector2 = b.global_position - global_position
+		if to_b.length() > BASTION_RAM_FRONT * size or to_b.dot(dash_dir) <= 0.0:
+			continue
+		if b.block_by_drone():
+			_fx("sound", {"snd": ["bounce", 0.3, 2.0]})
+	var front := global_position + dash_dir * 18.0 * size
+	for p in _opponents_within(front, 34.0 * size + MELEE_BODY_RADIUS):
+		if not _dash_hit.has(p):
+			_dash_hit.append(p)
+			p.take_damage(BASTION_RAM_DAMAGE * powerup_damage_mult, Vector2.ZERO, self)
+			_spawn_blade_hit_spark(p.global_position)
+		p.velocity = dash_dir * _dash_speed_now
+		p.knockback_timer = maxf(p.knockback_timer, 0.12)
+
+# Am Ende des Rammbocks fliegen die mitgeschobenen Gegner weg.
+func _bastion_ram_release() -> void:
+	var lift := Vector2.ZERO if ArenaMode.active else Vector2(0.0, -0.25)
+	var push := (dash_dir + lift).normalized()
+	var slam := _has_ability_evolution("bastion_ram_wall")
+	for p in _dash_hit:
+		if not is_instance_valid(p) or p.current_health <= 0.0:
+			continue
+		p.apply_knockback(push * BASTION_RAM_KNOCKBACK * dash_effect_mult * knockback_mult)
+		# Evolution "Prellbock": Aufprall an der Wand betäubt, Bastion bekommt Schild.
+		if slam:
+			p.melee_wall_stun_timer = MELEE_WALL_STUN_WINDOW
+			p.melee_wall_stun_duration = BASTIONEVO_RAM_STUN
+			p.wall_slam_damage = 0.0
+			p.wall_slam_source = self
+			p.wall_slam_shield = BASTIONEVO_RAM_SHIELD
+	if not _dash_hit.is_empty():
+		_fx("sound", {"snd": ["hit", 0.15, 0.0], "shake": 0.2})
+
+# Urkeiler-Ansturm: schleudert Gegner weg und bricht zerstörbares Gelände.
+func _boar_charge_tick() -> void:
+	var lift := Vector2.ZERO if ArenaMode.active else Vector2(0.0, -0.35)
+	for p in _opponents_within(global_position, 16.0 * scale.x):
+		if _dash_hit.has(p):
+			continue
+		_dash_hit.append(p)
+		_ability_hit(p, DRUID_BOAR_CHARGE_DAMAGE * _ult_power(), (dash_dir + lift).normalized() * DRUID_BOAR_CHARGE_KNOCKBACK)
+		_spawn_blade_hit_spark(p.global_position)
+		_on_boar_hit()
+	_melee_hit_objects(dash_dir, 60.0 * _ult_power(), 500.0)
+
+# --- Ignis: Meteorschauer (Ulti) ---
+
+func _start_meteor_shower(target) -> void:
+	if is_replica or get_parent() == null:
+		return
+	var center := _ult_cast_point(target)
+	_fx("sound", {"snd": ["explosion", 0.2, -6.0]})
+	for m in _meteor_plan(center):
+		var meteor := IgnisMeteor.new()
+		meteor.setup(self, m["pos"], m["delay"], m["radius"], m["damage"], m["knockback"])
+		get_parent().add_child(meteor)
+		meteor.global_position = m["pos"]
+
+# Wo und wann die Meteore einschlagen. Die Vorschau zeigt dieselben Punkte.
+func _meteor_plan(center: Vector2) -> Array:
+	var plan: Array = []
+	var radius := IGNIS_METEOR_RADIUS * _ult_size()
+	var damage := IGNIS_METEOR_DAMAGE * _ult_power()
+	var count := IGNIS_METEOR_COUNT + ult_count_add
+	# Evolution "Komet": ein einziger riesiger Einschlag.
+	if _has_ability_evolution("ignis_comet"):
+		plan.append({
+			"pos": _meteor_ground(center), "delay": IGNIS_METEOR_WARN,
+			"radius": radius * IGNISEVO_COMET_RADIUS_MULT,
+			"damage": damage * float(count) * IGNISEVO_COMET_DAMAGE_SHARE,
+			"knockback": IGNISEVO_COMET_KNOCKBACK,
+		})
+		return plan
+	# Seitenansicht: waagerecht über den Boden. Arena: quer zur Zielrichtung.
+	var along := Vector2.RIGHT
+	if ArenaMode.active:
+		var to_c := center - global_position
+		along = to_c.normalized().orthogonal() if to_c.length_squared() > 16.0 else aim_direction.orthogonal()
+	for i in range(count):
+		var offset := (float(i) - float(count - 1) * 0.5) * IGNIS_METEOR_SPACING * _ult_size()
+		plan.append({
+			"pos": _meteor_ground(_clamp_to_map(center + along * offset)),
+			"delay": IGNIS_METEOR_WARN + float(i) * IGNIS_METEOR_INTERVAL,
+			"radius": radius, "damage": damage, "knockback": IGNIS_METEOR_KNOCKBACK,
+		})
+	return plan
+
+# Seitenansicht: Meteore schlagen auf dem Boden unter dem Zielpunkt ein.
+func _meteor_ground(pos: Vector2) -> Vector2:
+	if ArenaMode.active or not is_inside_tree():
+		return pos
+	var query := PhysicsRayQueryParameters2D.create(pos + Vector2(0.0, -20.0), pos + Vector2(0.0, 600.0), 1)
+	query.exclude = [get_rid()]
+	var hit := get_world_2d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return pos
+	return (hit["position"] as Vector2) + Vector2(0.0, -6.0)
+
+func ignis_meteor_impact(pos: Vector2, radius: float, damage: float, knockback: float) -> void:
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(pos, Color(1.0, 0.45, 0.1, 0.95),
+		1.0, radius / 8.0, 0.22, 0.3), "explosion", 0.2, -1.0))
+	_fx("sound", {"snd": ["hit", 0.2, -8.0], "shake": clampf(radius / 400.0, 0.12, 0.4)})
+	Seesaw.blast_all(get_tree(), pos, radius, 1.2)
+	for p in _opponents_within(pos, radius):
+		var dir: Vector2 = p.global_position - pos
+		var falloff := 1.0 - 0.5 * clampf(dir.length() / maxf(1.0, radius), 0.0, 1.0)
+		if dir.length_squared() < 1.0:
+			dir = Vector2.UP
+		_ability_hit(p, damage * falloff, dir.normalized() * knockback)
+	var wildfire := _has_ability_evolution("ignis_wildfire")
+	var fire_radius := IGNIS_METEOR_FIRE_RADIUS * _ult_size() * (IGNISEVO_WILDFIRE_RADIUS_MULT if wildfire else 1.0)
+	if radius > IGNIS_METEOR_RADIUS * _ult_size() * 1.5:
+		fire_radius *= 1.8
+	spawn_effect_zone(EffectZone.Kind.FIRE, pos, fire_radius,
+		IGNIS_METEOR_FIRE_DURATION * ult_duration_mult * (IGNISEVO_WILDFIRE_DURATION_MULT if wildfire else 1.0), {
+		"tick_interval": 0.45,
+		"burn_stacks": 2,
+		"burn_damage": burn_damage_per_tick * _ult_power(),
+	})
+
+# --- Spore: Giftpilz (Fähigkeit), Seuchennebel (Ulti) ---
+
+func _throw_shroom() -> void:
+	if is_replica or get_parent() == null:
+		return
+	var point := _cast_target if _cast_has_target \
+		else _clamp_to_map(global_position + aim_direction.normalized() * SPORE_SHROOM_RANGE * 0.6 * ability_range_mult)
+	point = _shroom_landing(point)
+	var own: Array = []
+	for s in get_tree().get_nodes_in_group("spore_shroom"):
+		if is_instance_valid(s) and s.is_active() and s.owner_player == self:
+			own.append(s)
+	while own.size() >= spore_max_shrooms:
+		own.pop_front().discard()
+	var shroom := SporeShroom.new()
+	shroom.setup(self, SPORE_SHROOM_LIFETIME, SPORE_SHROOM_ARM, SPORE_SHROOM_TRIGGER, _has_ability_evolution("spore_bounce"))
+	if ArenaMode.active:
+		shroom.arena_z = 0.0
+	get_parent().add_child(shroom)
+	shroom.global_position = point
+	_fx("zap", NetFx.with_sound(NetFx.zap_args(muzzle.global_position, point, Color(0.5, 0.95, 0.35, 0.7), 2.0, 0.25, 4, 6.0),
+		"poison", 0.25, -4.0))
+
+# Seitenansicht: Der Pilz fällt auf den Boden unter dem Zielpunkt.
+func _shroom_landing(point: Vector2) -> Vector2:
+	if ArenaMode.active or not is_inside_tree():
+		return point
+	var query := PhysicsRayQueryParameters2D.create(point, point + Vector2(0.0, 500.0), 1)
+	query.exclude = [get_rid()]
+	var hit := get_world_2d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return point
+	return (hit["position"] as Vector2) + Vector2(0.0, -7.0)
+
+func spore_shroom_pop(pos: Vector2) -> void:
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(pos, Color(0.5, 1.0, 0.35, 0.85),
+		1.0, 7.0 * ability_radius_mult, 0.2, 0.3), "poison", 0.3, 0.0))
+	_spawn_spore_cloud(pos, SPORE_SHROOM_CLOUD_RADIUS * ability_radius_mult,
+		SPORE_SHROOM_CLOUD_DURATION * ability_duration_mult, SPORE_SHROOM_CLOUD_DPS * ability_damage_mult, true)
+	# Evolution "Klebsporen": Gegner in der Wolke kleben kurz fest.
+	if _has_ability_evolution("spore_sticky"):
+		for p in _opponents_within(pos, SPORE_SHROOM_CLOUD_RADIUS * ability_radius_mult):
+			p.apply_freeze(SPOREEVO_STICKY_FREEZE)
+			p.apply_stun(SPOREEVO_STICKY_FREEZE * 0.4)
+
+# Evolution "Sprungpilz": Spore springt vom eigenen Pilz hoch.
+func spore_shroom_bounce() -> void:
+	velocity.y = SPOREEVO_BOUNCE_FORCE
+	jumps_remaining = max_jumps
+	_fx("sound", {"snd": ["spring", 0.18, -1.0]})
+
+func _start_plague() -> void:
+	if is_replica or get_parent() == null:
+		return
+	if is_instance_valid(active_fog) and active_fog.is_active():
+		active_fog.finish()
+	var fog := PlagueFog.new()
+	fog.setup(self, SPORE_FOG_RADIUS * _ult_size(), SPORE_FOG_DURATION * ult_duration_mult, SPORE_FOG_TICK)
+	get_parent().add_child(fog)
+	fog.global_position = global_position
+	active_fog = fog
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(global_position, Color(0.45, 0.95, 0.3, 0.6),
+		1.0, fog.radius / 8.0, 0.35, 0.4), "poison", 0.2, 2.0))
+
+# Ein Tick des Seuchennebels: vergiftet und bremst, Spore regeneriert.
+func plague_tick(pos: Vector2, radius: float, tick: float) -> void:
+	var decay := _has_ability_evolution("spore_decay")
+	for p in _opponents_within(pos, radius):
+		p.apply_poison(SPORE_FOG_POISON_STACKS, poison_damage_per_tick * _ult_power())
+		p.apply_freeze(SPORE_FOG_SLOW)
+		# Evolution "Verwesung": keine Heilung und kein Schildaufbau.
+		if decay:
+			p.heal_block_timer = maxf(p.heal_block_timer, SPOREEVO_DECAY_TIME)
+	# Evolution "Pandemie": Vergiftete Gegner stecken andere an.
+	if _has_ability_evolution("spore_pandemic"):
+		for node in get_tree().get_nodes_in_group("player"):
+			var carrier := node as Player
+			if carrier == null or carrier == self or carrier.team_id == team_id or carrier.current_health <= 0.0 \
+					or not carrier.is_poisoned():
+				continue
+			for q in _opponents_within(carrier.global_position, SPOREEVO_PANDEMIC_RADIUS):
+				if q == carrier or q.is_poisoned():
+					continue
+				q.apply_poison(SPORE_FOG_POISON_STACKS, poison_damage_per_tick * _ult_power())
+				_fx("zap", NetFx.zap_args(carrier.global_position, q.global_position, Color(0.5, 1.0, 0.3, 0.8), 2.0, 0.3, 4, 6.0))
+	if current_health > 0.0:
+		heal(SPORE_FOG_HEAL * tick)
+
+# --- Nova: Gravitationsstoß (Fähigkeit) ---
+
+func _gravity_push() -> void:
+	var dir := aim_direction.normalized()
+	if dir.length_squared() < 0.01:
+		dir = Vector2.LEFT if sprite.flip_h else Vector2.RIGHT
+	var reach := NOVA_PUSH_RANGE * ability_range_mult
+	var half := minf(deg_to_rad(NOVA_PUSH_ANGLE_DEG * 0.5) * ability_radius_mult, PI * 0.5)
+	for i in range(3):
+		var t := 0.3 + 0.3 * float(i)
+		_fx("ring", NetFx.ring_args(global_position + dir * reach * t, Color(0.7, 0.5, 1.0, 0.55 - 0.12 * float(i)),
+			1.0, reach * (0.25 + 0.25 * float(i)) / 8.0, 0.16 + 0.05 * float(i), 0.22))
+	_fx("sound", {"snd": ["explosion", 0.25, -4.0], "shake": 0.12})
+	Seesaw.blast_all(get_tree(), global_position + dir * reach * 0.5, reach * 0.6, 0.9)
+	var lift := Vector2.ZERO if ArenaMode.active else Vector2(0.0, -0.25)
+	var wallslam := _has_ability_evolution("nova_wallslam")
+	for p in _opponents_within(global_position, reach + MELEE_BODY_RADIUS * p_scale_hint()):
+		var to_p: Vector2 = p.global_position - global_position
+		if to_p.length() > 14.0 and absf(dir.angle_to(to_p)) > half:
+			continue
+		var push := to_p.normalized() if to_p.length() > 4.0 else dir
+		_ability_hit(p, 0.0, (push + lift).normalized() * NOVA_PUSH_KNOCKBACK)
+		# Evolution "Wandschlag": Aufprall an der Wand macht Schaden und betäubt.
+		if wallslam:
+			p.melee_wall_stun_timer = MELEE_WALL_STUN_WINDOW
+			p.melee_wall_stun_duration = NOVAEVO_WALLSLAM_STUN
+			p.wall_slam_damage = NOVAEVO_WALLSLAM_DAMAGE * ability_damage_mult
+			p.wall_slam_source = self
+			p.wall_slam_shield = 0.0
+	var reverse := _has_ability_evolution("nova_reverse")
+	for b in get_tree().get_nodes_in_group("bullet"):
+		if not is_instance_valid(b) or b.is_replica or b.shooter == self:
+			continue
+		if is_instance_valid(b.shooter) and b.shooter is Player and b.shooter.team_id == team_id:
+			continue
+		var to_b: Vector2 = b.global_position - global_position
+		if to_b.length() > reach or (to_b.length() > 14.0 and absf(dir.angle_to(to_b)) > half):
+			continue
+		var away := to_b.normalized() if to_b.length() > 4.0 else dir
+		b.velocity = away * maxf(b.velocity.length(), bullet_speed * 0.8)
+		# Evolution "Umkehr": abgelenkte Kugeln gehören danach Nova.
+		if reverse:
+			b.shooter = self
+			b.target_enemy = _homing_target()
+			b.modulate = Color(0.8, 0.6, 1.0)
+	# Nach unten gezielt: Nova schleudert sich selbst nach oben.
+	if not ArenaMode.active and dir.y > 0.7:
+		velocity.y = -NOVA_PUSH_SELF_LAUNCH
+		knockback_timer = maxf(knockback_timer, 0.1)
+
+# Körpergröße-Zuschlag für Treffer am Rand (Gegner sind meist normal groß).
+func p_scale_hint() -> float:
+	return BASE_CHARACTER_SCALE
+
+# --- Nova: Singularität (Ulti) ---
+
+func _cast_singularity_ult(target) -> void:
+	var point := _ult_cast_point(target)
+	_fx("sound", {"snd": ["explosion", 0.2, 2.0]})
+	for center in _singularity_centers(point):
+		_add_gravity_well(center)
+
+# --- Klinge: Klingenbumerang (Fähigkeit), Klingensturm (Ulti) ---
+
+func _throw_boomerang() -> void:
+	if is_replica or get_parent() == null:
+		return
+	var dir := aim_direction.normalized()
+	if dir.length_squared() < 0.01:
+		dir = Vector2.LEFT if sprite.flip_h else Vector2.RIGHT
+	var data := Global.get_melee_weapon_data(melee_weapon)
+	var boomerang := BladeBoomerang.new()
+	boomerang.setup(self, dir, KLINGE_BOOMERANG_RANGE * ability_range_mult, KLINGE_BOOMERANG_SPEED,
+		float(data["damage"]) * melee_damage_mult * KLINGE_BOOMERANG_DAMAGE_MULT * ability_damage_mult,
+		KLINGE_BOOMERANG_RADIUS * ability_radius_mult)
+	if ArenaMode.active:
+		boomerang.arena_z = arena_z
+	get_parent().add_child(boomerang)
+	boomerang.global_position = global_position
+	active_boomerang = boomerang
+	_fx("sound", {"snd": ["slash", 0.2, 0.0]})
+
+func boomerang_hit(p: Player, damage: float, dir: Vector2) -> void:
+	_ability_hit(p, damage * powerup_damage_mult, dir * 220.0)
+	_spawn_blade_hit_spark(p.global_position)
+	# Evolution "Blutung": Treffer bluten und markieren den Gegner.
+	if _has_ability_evolution("klinge_bleed"):
+		p.apply_burn(KLINGEEVO_BLEED_STACKS, KLINGEEVO_BLEED_DAMAGE * ability_damage_mult)
+		p.mark_timer = KLINGEEVO_MARK_TIME
+		p.mark_source = self
+
+# Das Schwert ist zurück. Evolution "Fangen": im Dash gefangen = sofort bereit.
+func boomerang_caught() -> void:
+	active_boomerang = null
+	if _has_ability_evolution("klinge_catch") and is_dashing:
+		ability_timer = 0.0
+		emit_signal("ability_cooldown_updated", 0.0, ability_max_cooldown)
+		_fx("ring", NetFx.with_sound(NetFx.ring_args(global_position, Color(1.0, 0.5, 0.7, 0.8),
+			1.0, 3.5, 0.15, 0.2), "powerup", 0.1, -4.0))
+
+func _start_blade_storm() -> void:
+	blade_storm_timer = BLADE_STORM_DURATION * ult_duration_mult
+	blade_storm_tick = 0.0
+
+# Klingensturm: Kugeln, die auf Klinge zufliegen, werden zurückgeschlagen.
+func _blade_storm_deflect() -> void:
+	var radius := BLADE_STORM_RADIUS * _ult_size() * 0.7
+	for b in get_tree().get_nodes_in_group("bullet"):
+		if not is_instance_valid(b) or b.is_replica or b.shooter == self:
+			continue
+		if is_instance_valid(b.shooter) and b.shooter is Player and b.shooter.team_id == team_id:
+			continue
+		var to_b: Vector2 = b.global_position - global_position
+		if to_b.length() > radius or b.velocity.dot(to_b) >= 0.0:
+			continue
+		b.shooter = self
+		b.target_enemy = _homing_target()
+		b.velocity = to_b.normalized() * maxf(b.velocity.length(), bullet_speed) * 1.1
+		b.modulate = Color(1.0, 0.55, 0.7)
+		_fx("sound", {"snd": ["bounce", 0.3, 3.0]})
+
+# --- Bastion: Magnethaken (Fähigkeit), Festung (Ulti) ---
+
+func _fire_hook() -> void:
+	if is_replica or get_parent() == null:
+		return
+	if is_instance_valid(active_hook) and active_hook.is_active():
+		active_hook.finish()
+	var dir := aim_direction.normalized()
+	if dir.length_squared() < 0.01:
+		dir = Vector2.LEFT if sprite.flip_h else Vector2.RIGHT
+	var hook := MagnetHook.new()
+	hook.setup(self, dir, BASTION_HOOK_RANGE * ability_range_mult, BASTION_HOOK_SPEED, BASTION_HOOK_PULL_SPEED)
+	hook.magnet = _has_ability_evolution("bastion_magnet")
+	hook.magnet_radius = BASTIONEVO_MAGNET_RADIUS * ability_radius_mult
+	if ArenaMode.active:
+		hook.arena_z = arena_z
+	get_parent().add_child(hook)
+	hook.global_position = global_position
+	active_hook = hook
+	_fx("sound", {"snd": ["shoot", 0.2, -2.0]})
+
+func bastion_hook_hit(p: Player) -> void:
+	_ability_hit(p, BASTION_HOOK_DAMAGE * ability_damage_mult, Vector2.ZERO)
+	p.apply_stun(BASTION_HOOK_STUN * ability_duration_mult)
+	_spawn_blade_hit_spark(p.global_position)
+	_fx("sound", {"snd": ["hit", 0.15, -2.0]})
+	# Evolution "Kettenschlag": der nächste Hammerschlag trifft doppelt.
+	if _has_ability_evolution("bastion_chain_hit"):
+		chain_hit_timer = BASTIONEVO_CHAIN_WINDOW
+
+func _raise_fortress() -> void:
+	if is_replica or get_parent() == null:
+		return
+	if is_instance_valid(active_dome) and active_dome.is_active():
+		active_dome.finish()
+	var dome := FortressDome.new()
+	dome.setup(self, BASTION_DOME_RADIUS * _ult_size(), HEAL_FIELD_DURATION * ult_duration_mult,
+		HEAL_FIELD_TICK_INTERVAL, _has_ability_evolution("bastion_mobile_dome"))
+	get_parent().add_child(dome)
+	dome.global_position = global_position
+	active_dome = dome
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(global_position, Color(0.35, 0.95, 0.75, 0.7),
+		1.0, dome.radius / 8.0, 0.25, 0.35), "shield", 0.1, 2.0))
+	_fx("sound", {"snd": ["heal", 0.05, 0.0]})
+
+# Heil-Tick der Festung: Bastion und Verbündete in der Kuppel.
+func fortress_tick(pos: Vector2, radius: float) -> void:
+	for node in get_tree().get_nodes_in_group("player"):
+		var ally := node as Player
+		if ally == null or not is_instance_valid(ally) or ally.current_health <= 0.0 or ally.team_id != team_id:
+			continue
+		if ally.global_position.distance_to(pos) > radius:
+			continue
+		ally.heal(HEAL_FIELD_TICK_HEAL * _ult_power())
+		if ally.max_shield > 0.0 and ally.current_shield < ally.max_shield and ally.heal_block_timer <= 0.0:
+			ally.current_shield = minf(ally.current_shield + HEAL_FIELD_TICK_SHIELD * _ult_power(), ally.max_shield)
+			ally.emit_signal("health_changed", ally.current_health, ally.max_health, ally.current_shield, ally.max_shield)
+	# Evolution "Pulsfeld": jeder Tick stößt Gegner an der Kuppel zurück.
+	if _has_ability_evolution("bastion_pulse"):
+		_bastion_pulse(pos)
+
+func _inside_own_dome() -> bool:
+	return is_instance_valid(active_dome) and active_dome.is_active() \
+		and global_position.distance_to(active_dome.global_position) <= active_dome.radius
+
+# --- Druide: Urkeiler (Ulti) ---
+
+func _start_boar() -> void:
+	if boar_timer > 0.0:
+		return
+	boar_timer = DRUID_BOAR_DURATION * ult_duration_mult
+	_boar_saved = {
+		"melee": is_melee, "weapon": melee_weapon, "dmg": melee_damage_mult,
+		"cd": melee_cooldown, "range": melee_range_bonus,
+	}
+	cancel_ability_aim()
+	is_melee = true
+	melee_weapon = "hammer"
+	var hammer := Global.get_melee_weapon_data("hammer")
+	melee_damage_mult = DRUID_BOAR_MELEE_DAMAGE_MULT * (bullet_damage / maxf(1.0, Global.base_damage)) * _ult_power()
+	melee_cooldown = float(hammer["cooldown"]) * 0.8
+	melee_cooldown_timer = 0.0
+	melee_range_bonus = 0.0
+	_boar_hp_bonus = max_health * (DRUID_BOAR_HP_MULT - 1.0)
+	max_health += _boar_hp_bonus
+	current_health += _boar_hp_bonus
+	scale = Vector2.ONE * _body_scale * DRUID_BOAR_SCALE
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(global_position, Color(0.6, 0.4, 0.2, 0.85),
+		1.0, 9.0, 0.3, 0.35), "explosion", 0.15, -2.0))
+	_fx("sound", {"snd": ["hit", 0.1, 0.0], "shake": 0.3})
+	emit_signal("health_changed", current_health, max_health, current_shield, max_shield)
+
+func _end_boar() -> void:
+	boar_timer = 0.0
+	if _boar_saved.is_empty():
+		return
+	is_melee = bool(_boar_saved["melee"])
+	melee_weapon = str(_boar_saved["weapon"])
+	melee_damage_mult = float(_boar_saved["dmg"])
+	melee_cooldown = float(_boar_saved["cd"])
+	melee_range_bonus = float(_boar_saved["range"])
+	_boar_saved.clear()
+	max_health = maxf(1.0, max_health - _boar_hp_bonus)
+	current_health = minf(current_health, max_health)
+	_boar_hp_bonus = 0.0
+	scale = Vector2.ONE * _body_scale
+	if is_inside_tree():
+		_fx("ring", NetFx.ring_args(global_position, Color(0.5, 0.75, 0.35, 0.7), 1.0, 5.0, 0.25, 0.3))
+	emit_signal("health_changed", current_health, max_health, current_shield, max_shield)
+
+# Evolution "Raserei": jeder Treffer in Keilergestalt verlängert sie.
+func _on_boar_hit() -> void:
+	if boar_timer > 0.0 and _has_ability_evolution("druid_frenzy"):
+		boar_timer += DRUIDEVO_FRENZY_EXTEND
+
+
+# Zeitgeber der Helden-Kits (Klingensturm, Keiler, Markierung ...).
+func _tick_kit_timers(delta: float) -> void:
+	if klinge_combo_timer > 0.0:
+		klinge_combo_timer -= delta
+		if klinge_combo_timer <= 0.0:
+			klinge_combo = 0
+	if klinge_reset_lock > 0.0:
+		klinge_reset_lock = maxf(0.0, klinge_reset_lock - delta)
+	if mark_timer > 0.0:
+		mark_timer -= delta
+		if mark_timer <= 0.0:
+			mark_source = null
+	if chain_hit_timer > 0.0:
+		chain_hit_timer = maxf(0.0, chain_hit_timer - delta)
+	if heal_block_timer > 0.0:
+		heal_block_timer = maxf(0.0, heal_block_timer - delta)
+	if boar_timer > 0.0 and not is_replica:
+		boar_timer -= delta
+		if boar_timer <= 0.0:
+			_end_boar()
+	# Klinge-Evolution "Echowirbel": verzögerter zweiter Wirbel.
+	if blade_echo_timer > 0.0:
+		blade_echo_timer -= delta
+		if blade_echo_timer <= 0.0 and current_health > 0.0 and not is_replica:
+			_blade_storm_strike(BLADE_STORM_DAMAGE_MULT * BLADE_ECHO_DAMAGE_MULT, BLADE_STORM_KNOCKBACK)
+	if blade_storm_timer > 0.0 and not is_replica:
+		blade_storm_timer -= delta
+		blade_storm_tick -= delta
+		_blade_storm_deflect()
+		if blade_storm_tick <= 0.0 and current_health > 0.0:
+			blade_storm_tick = BLADE_STORM_TICK
+			_blade_storm_strike(BLADE_STORM_TICK_DAMAGE_MULT, BLADE_STORM_TICK_KNOCKBACK, true)
+		if blade_storm_timer <= 0.0:
+			blade_storm_timer = 0.0
+			# Zum Schluss ein großer Wirbel, mit Echowirbel folgt ein zweiter.
+			_blade_storm_strike(BLADE_STORM_DAMAGE_MULT, BLADE_STORM_KNOCKBACK)
+			if _has_ability_evolution("klinge_echo"):
+				blade_echo_timer = BLADE_ECHO_DELAY
+
+# Nova-Evolution "Schwarzes Loch": Kugeln nahe am Kern werden verschluckt.
+func _blackhole_swallow(well: Dictionary, pos: Vector2) -> void:
+	var radius := NOVAEVO_BLACKHOLE_RADIUS * _ult_size()
+	var eaten: int = int(well.get("eaten", 0))
+	for b in get_tree().get_nodes_in_group("bullet"):
+		if not is_instance_valid(b) or b.is_replica or b.shooter == self:
+			continue
+		if is_instance_valid(b.shooter) and b.shooter is Player and b.shooter.team_id == team_id:
+			continue
+		if b.global_position.distance_to(pos) > radius:
+			continue
+		if b.block_by_drone():
+			eaten += 1
+	well["eaten"] = eaten
+
+# Am Ende spuckt das Schwarze Loch die Kugeln als Novas Kugeln wieder aus.
+func _blackhole_release(well: Dictionary, pos: Vector2) -> void:
+	var eaten: int = mini(int(well.get("eaten", 0)), 24)
+	if eaten <= 0 or get_parent() == null:
+		return
+	for i in range(eaten):
+		var dir := Vector2.RIGHT.rotated(TAU * float(i) / float(eaten))
+		var b = bullet_scene.instantiate()
+		b.shooter = self
+		b.damage = bullet_damage * 0.6 * _ult_power()
+		b.velocity = dir * bullet_speed
+		b.modulate = Color(0.8, 0.6, 1.0)
+		b.from_ability = true
+		b.global_position = pos + dir * 20.0
+		get_parent().add_child(b)
+
+# ============================================================
 # Ulti (Taste E)
 # ============================================================
 
@@ -2841,7 +3844,7 @@ func _store_ult_timer() -> void:
 	if player_index >= 1 and player_index <= Global.player_ult_timers.size():
 		Global.player_ult_timers[player_index - 1] = ult_timer
 
-func use_ultimate(_target = null) -> void:
+func use_ultimate(target = null) -> void:
 	if not control_enabled or stun_timer > 0.0 or is_replica:
 		return
 	if not has_ult() or ult_timer > 0.0:
@@ -2853,6 +3856,18 @@ func use_ultimate(_target = null) -> void:
 			_start_overcharge()
 		"phantom":
 			_start_hunt()
+		"ignis":
+			_start_meteor_shower(target)
+		"nova":
+			_cast_singularity_ult(target)
+		"spore":
+			_start_plague()
+		"klinge":
+			_start_blade_storm()
+		"bastion":
+			_raise_fortress()
+		"druid":
+			_start_boar()
 
 # --- Druide: Wurzelwall ---
 func _place_druid_wall() -> void:
@@ -2936,11 +3951,21 @@ func _druid_wall_placement(point: Vector2, targeted: bool) -> Dictionary:
 func has_targeted_ability() -> bool:
 	return TARGETED_ABILITY_HEROES.has(Global.get_player_hero_id(player_index))
 
-# Größte Entfernung des Zielpunkts zum Spieler.
-func ability_target_range() -> float:
+func has_targeted_ult() -> bool:
+	return has_ult() and TARGETED_ULT_HEROES.has(Global.get_player_hero_id(player_index))
+
+# Größte Entfernung des Zielpunkts zum Spieler. ult = Ziel der Ulti statt der Fähigkeit.
+func ability_target_range(ult := false) -> float:
+	if ult:
+		match Global.get_player_hero_id(player_index):
+			"ignis":
+				return IGNIS_METEOR_RANGE * ability_range_mult
+			"nova":
+				return SINGULARITY_DISTANCE * ability_range_mult
+		return 0.0
 	match Global.get_player_hero_id(player_index):
-		"nova":
-			return SINGULARITY_DISTANCE * ability_range_mult
+		"spore":
+			return SPORE_SHROOM_RANGE * ability_range_mult
 		"druid":
 			return DRUID_WALL_RANGE * ability_range_mult
 		"ignis":
@@ -2948,9 +3973,9 @@ func ability_target_range() -> float:
 	return 0.0
 
 # Klemmt einen Punkt (Mauszeiger) auf Reichweite und Kartenbereich.
-func _clamp_ability_point(raw: Vector2) -> Vector2:
+func _clamp_ability_point(raw: Vector2, ult := false) -> Vector2:
 	var offset := raw - global_position
-	var max_range := ability_target_range()
+	var max_range := ability_target_range(ult)
 	if offset.length() > max_range:
 		offset = offset.normalized() * max_range
 	return _clamp_to_map(global_position + offset)
@@ -2959,13 +3984,13 @@ func _clamp_ability_point(raw: Vector2) -> Vector2:
 # geklemmte Zielpunkt (geht an use_ability bzw. den Host), "pos" die Stelle,
 # an der die Wirkung erscheint, "valid" sagt, ob dort Platz ist. Die übrigen
 # Felder zeichnet AbilityAimPreview.
-func ability_target_info(raw: Vector2) -> Dictionary:
-	var cursor := _clamp_ability_point(raw)
-	var info := _target_info_at(cursor)
+func ability_target_info(raw: Vector2, ult := false) -> Dictionary:
+	var cursor := _clamp_ability_point(raw, ult)
+	var info := _target_info_at(cursor, ult)
 	if bool(info["valid"]):
 		return info
 	# Ziel im Gelände: an die nächste erlaubte Stelle ausweichen.
-	var moved := _nearest_valid_target(cursor)
+	var moved := _nearest_valid_target(cursor, ult)
 	if moved.is_empty():
 		return info
 	moved["cursor"] = cursor
@@ -2973,17 +3998,17 @@ func ability_target_info(raw: Vector2) -> Dictionary:
 
 # Sucht in Ringen um den Punkt die nächste Stelle, an der die Fähigkeit Platz
 # hat (innerhalb der Reichweite). Notfalls rückt sie Richtung Spieler zurück.
-func _nearest_valid_target(cursor: Vector2) -> Dictionary:
+func _nearest_valid_target(cursor: Vector2, ult := false) -> Dictionary:
 	var ring := ABILITY_TARGET_SEARCH_STEP
 	while ring <= ABILITY_TARGET_SEARCH_RADIUS:
 		var best: Dictionary = {}
 		var best_dist := INF
 		for i in range(ABILITY_TARGET_SEARCH_DIRS):
-			var candidate := _clamp_ability_point(cursor + Vector2.RIGHT.rotated(TAU * float(i) / float(ABILITY_TARGET_SEARCH_DIRS)) * ring)
+			var candidate := _clamp_ability_point(cursor + Vector2.RIGHT.rotated(TAU * float(i) / float(ABILITY_TARGET_SEARCH_DIRS)) * ring, ult)
 			var d := candidate.distance_squared_to(cursor)
 			if d >= best_dist:
 				continue
-			var info := _target_info_at(candidate)
+			var info := _target_info_at(candidate, ult)
 			if bool(info["valid"]):
 				best = info
 				best_dist = d
@@ -2992,24 +4017,22 @@ func _nearest_valid_target(cursor: Vector2) -> Dictionary:
 		ring += ABILITY_TARGET_SEARCH_STEP
 	var steps := maxi(1, int(ceil(global_position.distance_to(cursor) / ABILITY_TARGET_PULLBACK_STEP)))
 	for i in range(1, steps + 1):
-		var info := _target_info_at(cursor.lerp(global_position, float(i) / float(steps)))
+		var info := _target_info_at(cursor.lerp(global_position, float(i) / float(steps)), ult)
 		if bool(info["valid"]):
 			return info
 	return {}
 
 # Wirkung der Fähigkeit genau an diesem (bereits geklemmten) Punkt.
-func _target_info_at(point: Vector2) -> Dictionary:
+func _target_info_at(point: Vector2, ult := false) -> Dictionary:
+	if ult:
+		return _ult_target_info_at(point)
 	match Global.get_player_hero_id(player_index):
-		"nova":
-			var centers := _singularity_centers(point)
-			var valid := true
-			for c in centers:
-				if _ability_point_blocked(c):
-					valid = false
+		"spore":
+			var landing := _shroom_landing(point)
 			return {
-				"kind": "circle", "point": point, "pos": point, "points": centers, "valid": valid,
-				"radius": 60.0 * ability_radius_mult,
-				"outer": SINGULARITY_PULL_RADIUS * ability_radius_mult,
+				"kind": "circle", "point": point, "pos": landing, "points": [landing],
+				"valid": not _ability_point_blocked(point),
+				"radius": SPORE_SHROOM_CLOUD_RADIUS * ability_radius_mult,
 			}
 		"druid":
 			var info := _druid_wall_placement(point, true)
@@ -3035,6 +4058,47 @@ func _target_info_at(point: Vector2) -> Dictionary:
 				"radius": ROCKET_IMPACT_RADIUS * ability_radius_mult,
 			}
 	return {"kind": "", "point": point, "pos": point, "valid": true}
+
+# Ulti-Vorschau: Meteor-Einschläge bzw. Singularitätskerne.
+func _ult_target_info_at(point: Vector2) -> Dictionary:
+	match Global.get_player_hero_id(player_index):
+		"ignis":
+			var pts: Array = []
+			var radius := IGNIS_METEOR_RADIUS * _ult_size()
+			for m in _meteor_plan(point):
+				pts.append(m["pos"])
+				radius = float(m["radius"])
+			return {
+				"kind": "circle", "point": point, "pos": point, "points": pts,
+				"valid": not _ability_point_blocked(point), "radius": radius,
+			}
+		"nova":
+			var centers := _singularity_centers(point)
+			var valid := true
+			for c in centers:
+				if _ability_point_blocked(c):
+					valid = false
+			return {
+				"kind": "circle", "point": point, "pos": point, "points": centers, "valid": valid,
+				"radius": 70.0 * _ult_size(),
+				"outer": SINGULARITY_PULL_RADIUS * _ult_size(),
+			}
+	return {"kind": "", "point": point, "pos": point, "valid": true}
+
+func _ult_default_distance() -> float:
+	match Global.get_player_hero_id(player_index):
+		"ignis":
+			return IGNIS_METEOR_RANGE * 0.6 * ability_range_mult
+		"nova":
+			return SINGULARITY_DISTANCE * ability_range_mult
+	return 0.0
+
+# Zielpunkt der Ulti vom Spieler oder Client, vom Host noch einmal geprüft.
+func _clamp_ult_point(raw: Vector2) -> Vector2:
+	var info := ability_target_info(raw, true)
+	if bool(info["valid"]):
+		return info["point"]
+	return _clamp_to_map(global_position + aim_direction.normalized() * _ult_default_distance())
 
 # Steckt der Punkt in festem Gelände? Einweg-Stege und Wurzelwälle zählen nicht.
 func _ability_point_blocked(pos: Vector2) -> bool:
@@ -3123,6 +4187,40 @@ func cancel_ability_aim() -> void:
 	if _ability_aim_preview != null:
 		_ability_aim_preview.hide_preview()
 
+# Wie tick_ability_aim, nur für die gezielte Ulti (Ignis, Nova) auf E.
+func tick_ult_aim(can_act: bool) -> Variant:
+	var action := "p1_ult"
+	var can_cast := can_act and ult_timer <= 0.0 and current_health > 0.0
+	var mouse := get_global_mouse_position()
+	if GameSettings.ability_cast_mode == "instant":
+		cancel_ult_aim()
+		if can_cast and Input.is_action_just_pressed(action):
+			return mouse
+		return null
+	if not ult_aiming:
+		if not (can_cast and Input.is_action_just_pressed(action)):
+			return null
+		ult_aiming = true
+	if not can_cast or _ability_aim_cancel_pressed(action):
+		cancel_ult_aim()
+		return null
+	var info := ability_target_info(mouse, true)
+	if not Input.is_action_pressed(action):
+		cancel_ult_aim()
+		return info["point"]
+	if _ult_aim_preview == null:
+		_ult_aim_preview = AbilityAimPreview.new()
+		_ult_aim_preview.player = self
+		_ult_aim_preview.for_ult = true
+		add_child(_ult_aim_preview)
+	_ult_aim_preview.show_info(global_position, ability_target_range(true), info)
+	return null
+
+func cancel_ult_aim() -> void:
+	ult_aiming = false
+	if _ult_aim_preview != null:
+		_ult_aim_preview.hide_preview()
+
 # Rechtsklick bricht nur ab, wenn die Fähigkeit nicht selbst darauf liegt
 # (Standardbelegung). Esc fängt main.gd ab und ruft cancel_ability_aim().
 func _ability_aim_cancel_pressed(action: String) -> bool:
@@ -3176,9 +4274,9 @@ func _ability_hit(target, amount: float, knockback: Vector2) -> void:
 func _has_ability_evolution(evolution_id: String) -> bool:
 	return ability_evolutions.has(evolution_id)
 
-# --- Nova-Evolution "Implosion": die Singularität kollabiert am Ende ---
+# Die Singularität kollabiert am Ende und schleudert alle weg.
 func _nova_implosion(pos: Vector2) -> void:
-	var radius := NOVA_IMPLOSION_RADIUS * ability_radius_mult
+	var radius := SINGULARITY_IMPLOSION_RADIUS * _ult_size()
 	_fx("ring", NetFx.with_sound(NetFx.ring_args(pos, Color(0.85, 0.65, 1.0, 0.9),
 		1.0, radius / 8.0, 0.25, 0.3), "explosion", 0.25, 0.0))
 	Seesaw.blast_all(get_tree(), pos, radius, 1.2)
@@ -3186,19 +4284,19 @@ func _nova_implosion(pos: Vector2) -> void:
 		var dir: Vector2 = p.global_position - pos
 		if dir.length_squared() < 1.0:
 			dir = Vector2.UP
-		_ability_hit(p, NOVA_IMPLOSION_DAMAGE * ability_damage_mult, dir.normalized() * NOVA_IMPLOSION_KNOCKBACK)
+		_ability_hit(p, SINGULARITY_IMPLOSION_DAMAGE * _ult_power(), dir.normalized() * SINGULARITY_IMPLOSION_KNOCKBACK)
 
-# --- Bastion-Evolution "Pulsfeld": Schadenspuls am Ort des Heilfelds ---
-func _bastion_pulse() -> void:
-	var radius := BASTION_PULSE_RADIUS * ability_radius_mult
-	_fx("ring", NetFx.ring_args(heal_field_pos, Color(0.3, 0.95, 0.7, 0.55),
+# --- Bastion-Evolution "Pulsfeld": Schadenspuls am Ort der Festung ---
+func _bastion_pulse(pos: Vector2) -> void:
+	var radius := BASTION_PULSE_RADIUS * _ult_size()
+	_fx("ring", NetFx.ring_args(pos, Color(0.3, 0.95, 0.7, 0.55),
 		1.0, radius / 8.0, 0.3, 0.35))
-	Seesaw.blast_all(get_tree(), heal_field_pos, radius, 0.8)
-	for p in _opponents_within(heal_field_pos, radius):
-		var dir: Vector2 = p.global_position - heal_field_pos
+	Seesaw.blast_all(get_tree(), pos, radius, 0.8)
+	for p in _opponents_within(pos, radius):
+		var dir: Vector2 = p.global_position - pos
 		if dir.length_squared() < 1.0:
 			dir = Vector2.UP
-		_ability_hit(p, BASTION_PULSE_DAMAGE * ability_damage_mult, dir.normalized() * BASTION_PULSE_KNOCKBACK)
+		_ability_hit(p, BASTION_PULSE_DAMAGE * _ult_power(), dir.normalized() * BASTION_PULSE_KNOCKBACK)
 
 # Begrenzt eine Weltposition auf den spielbaren Kartenbereich.
 func _clamp_to_map(pos: Vector2) -> Vector2:
@@ -3293,8 +4391,11 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null
 	# wird additiv aus allen Tank-Karten gebildet und in apply_stats gedeckelt.
 	var mitigated_amount := amount * (1.0 - clampf(armor_percent, 0.0, MAX_ARMOR_PERCENT))
 	# Bastion-Evolution "Schutzkuppel": weniger Schaden, solange das Heilfeld läuft.
-	if heal_field_timer > 0.0 and _has_ability_evolution("bastion_bulwark"):
+	if _has_ability_evolution("bastion_bulwark") and _inside_own_dome():
 		mitigated_amount *= 1.0 - BASTION_BULWARK_REDUCTION
+	# Klinge-Evolution "Blutung": markierte Gegner nehmen von Klinge mehr Schaden.
+	if mark_timer > 0.0 and is_instance_valid(mark_source) and source == mark_source:
+		mitigated_amount *= 1.0 + KLINGEEVO_MARK_BONUS
 	var effective_damage := minf(mitigated_amount, current_shield + maxf(current_health, 0.0))
 	var damage_source_index := 0
 	if is_instance_valid(source) and source is Player and source != self:
@@ -3352,6 +4453,9 @@ func get_current_reflect_percent() -> float:
 	if powerup_revenge_timer > 0.0:
 		return POWERUP_REVENGE_REFLECT
 	var share := damage_reflect_percent
+	# Druide-Evolution "Dornenfell": in Keilergestalt wirft er Schaden zurück.
+	if boar_timer > 0.0 and _has_ability_evolution("druid_thornhide"):
+		share += DRUIDEVO_THORN_REFLECT
 	if reflect_low_hp_bonus > 0.0 and max_health > 0.0 \
 			and current_health > 0.0 and current_health / max_health <= REFLECT_LOW_HP_THRESHOLD:
 		share += reflect_low_hp_bonus
@@ -3372,6 +4476,9 @@ func _flash_hit(knockback: Vector2 = Vector2.ZERO, strength: float = 1.0, shake:
 	_hit_flash_tween.tween_property(sprite, "modulate", Color.WHITE, 0.16)
 
 func heal(amount: float) -> void:
+	# Spore-Evolution "Verwesung" blockiert jede Heilung.
+	if heal_block_timer > 0.0:
+		return
 	var before := current_health
 	current_health = minf(current_health + amount, max_health)
 	var healed := current_health - before
@@ -3932,7 +5039,11 @@ func interrupt_rush() -> void:
 	if is_dashing:
 		is_dashing = false
 		dash_timer = 0.0
+		if not is_replica:
+			_on_dash_end()
 		is_invulnerable = _has_temporary_invulnerability()
+	if glide_timer > 0.0:
+		glide_timer = 0.0
 	if is_leaping:
 		is_leaping = false
 		leap_timer = 0.0
@@ -3940,8 +5051,12 @@ func interrupt_rush() -> void:
 		_trigger_rocket_impact()
 
 func _has_temporary_invulnerability() -> bool:
-	return is_dashing or is_leaping or ability_invuln_timer > 0.0 or powerup_invuln_timer > 0.0 \
-		or revive_timer > 0.0
+	return (is_dashing and _dash_kind != "bastion") or glide_timer > 0.0 or is_leaping \
+		or ability_invuln_timer > 0.0 or powerup_invuln_timer > 0.0 or revive_timer > 0.0
+
+# Für den Rammbock: Er schützt nur nach vorn und macht nicht unverwundbar.
+func _has_temporary_invulnerability_except_dash() -> bool:
+	return is_leaping or ability_invuln_timer > 0.0 or powerup_invuln_timer > 0.0 or revive_timer > 0.0
 
 func _handle_timers(delta: float) -> void:
 	if last_damage_timer > 0.0:
@@ -3994,13 +5109,15 @@ func _handle_timers(delta: float) -> void:
 			afterburner_timer -= delta
 			if afterburner_timer <= 0.0:
 				afterburner_timer = AFTERBURNER_ZONE_INTERVAL
-				spawn_effect_zone(EffectZone.Kind.FIRE, global_position, AFTERBURNER_ZONE_RADIUS, AFTERBURNER_ZONE_DURATION, {
+				spawn_effect_zone(EffectZone.Kind.FIRE, global_position, AFTERBURNER_ZONE_RADIUS, _afterburner_duration(), {
 					"tick_interval": 0.45,
 					"burn_stacks": AFTERBURNER_BURN_STACKS,
 					"burn_damage": AFTERBURNER_BURN_DAMAGE,
 				})
 		if dash_timer <= 0.0:
 			is_dashing = false
+			if not is_replica:
+				_on_dash_end()
 			is_invulnerable = _has_temporary_invulnerability()
 			if not is_replica:
 				_dash_cut()
@@ -4100,25 +5217,7 @@ func _handle_timers(delta: float) -> void:
 		if parry_dir != Vector2.ZERO:
 			melee_attack(parry_dir)
 
-	# Klinge-Evolution "Echowirbel": verzögerter zweiter Wirbel.
-	if blade_echo_timer > 0.0:
-		blade_echo_timer -= delta
-		if blade_echo_timer <= 0.0 and current_health > 0.0:
-			_blade_storm_strike(BLADE_ECHO_DAMAGE_MULT)
-
-	# Bastion-Heilfeld: heilt und lÃƒÂ¤dt Schild ÃƒÂ¼ber einige Sekunden auf.
-	if heal_field_timer > 0.0:
-		heal_field_timer -= delta
-		heal_field_tick -= delta
-		if heal_field_tick <= 0.0:
-			heal_field_tick = HEAL_FIELD_TICK_INTERVAL
-			heal(HEAL_FIELD_TICK_HEAL * ability_damage_mult)
-			if max_shield > 0.0 and current_shield < max_shield:
-				current_shield = minf(current_shield + HEAL_FIELD_TICK_SHIELD * ability_damage_mult, max_shield)
-				emit_signal("health_changed", current_health, max_health, current_shield, max_shield)
-			# Bastion-Evolution "Pulsfeld": jeder Heil-Tick stößt Gegner am Feld zurück.
-			if _has_ability_evolution("bastion_pulse"):
-				_bastion_pulse()
+	_tick_kit_timers(delta)
 
 	# Nova-SingularitÃƒÂ¤ten: ziehen Gegner heran und schÃƒÂ¤digen sie.
 	if not gravity_wells.is_empty():
@@ -4127,7 +5226,9 @@ func _handle_timers(delta: float) -> void:
 			well["time"] = float(well["time"]) - delta
 			well["tick"] = float(well["tick"]) - delta
 			var well_pos: Vector2 = well["pos"]
-			for p in _opponents_within(well_pos, SINGULARITY_PULL_RADIUS * ability_radius_mult):
+			if _has_ability_evolution("nova_blackhole") and not is_replica:
+				_blackhole_swallow(well, well_pos)
+			for p in _opponents_within(well_pos, SINGULARITY_PULL_RADIUS * _ult_size()):
 				var to_center: Vector2 = well_pos - p.global_position
 				p.knockback_timer = maxf(p.knockback_timer, SINGULARITY_CONTROL_LOCK)
 				if to_center.length() <= SINGULARITY_HOLD_RADIUS:
@@ -4140,8 +5241,9 @@ func _handle_timers(delta: float) -> void:
 				p.velocity += pull_dir * SINGULARITY_PULL_FORCE * delta
 			# Die Singularität zieht nur heran und verursacht selbst keinen Schaden.
 			if float(well["time"]) <= 0.0:
-				if _has_ability_evolution("nova_implosion"):
+				if not is_replica:
 					_nova_implosion(well_pos)
+					_blackhole_release(well, well_pos)
 				gravity_wells.remove_at(i)
 	
 	if freeze_timer > 0.0:
@@ -4218,6 +5320,8 @@ func _handle_timers(delta: float) -> void:
 		else:
 			frost_trail_timer = minf(frost_trail_timer, 0.1)
 	
+	if heal_block_timer > 0.0:
+		return
 	_update_health_regeneration(delta)
 	
 	# Shield passive regeneration

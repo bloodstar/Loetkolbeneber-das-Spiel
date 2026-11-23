@@ -14,6 +14,8 @@ func _ready() -> void:
 	Global.set_match_mode(Global.MATCH_MODE_FFA)
 	Global.set_player_count(4)
 	var heroes := ["volt", "phantom", "klinge", "bastion"]
+	if OS.get_cmdline_user_args().has("--set2"):
+		heroes = ["ignis", "spore", "nova", "druid"]
 	for i in range(4):
 		Global.set_player_hero(i + 1, heroes[i])
 	Global.set_bot_test_random_loadouts(false)
@@ -32,7 +34,8 @@ func _ready() -> void:
 			used["decoy"] += get_tree().get_nodes_in_group("phantom_decoy").size()
 			used["orb"] += get_tree().get_nodes_in_group("ball_lightning").size()
 			for p in main.players:
-				if is_instance_valid(p) and (p.overcharge_timer > 0.0 or p.hunt_timer > 0.0):
+				if is_instance_valid(p) and (p.overcharge_timer > 0.0 or p.hunt_timer > 0.0 or p.boar_timer > 0.0 \
+						or p.blade_storm_timer > 0.0 or is_instance_valid(p.active_fog) or is_instance_valid(p.active_dome)):
 					used["ult"] += 1
 			if Global.current_state == Global.GameState.CARD_DRAFT:
 				main._start_fresh_round()

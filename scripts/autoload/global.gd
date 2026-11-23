@@ -591,6 +591,11 @@ func _setup_heroes() -> void:
 	ignis.ability_name = "Rocket Leap"
 	ignis.ability_desc = "Explosiver Sprung nach vorn mit AOE-Rückstoß!"
 	ignis.ability_cooldown = 5.0
+	ignis.dash_name = "Nachbrenner"
+	ignis.dash_desc = "Dash, der eine brennende Spur hinterlässt."
+	ignis.ult_name = "Meteorschauer"
+	ignis.ult_desc = "Nach kurzer Warnung schlägt eine Reihe Meteore am Zielpunkt ein und hinterlässt Feuer!"
+	ignis.ult_cooldown = 28.0
 	ignis.base_hp = 100
 	ignis.base_shield = 0
 	ignis.base_speed = 310.0
@@ -600,8 +605,8 @@ func _setup_heroes() -> void:
 	ignis.base_reload_time = 1.2
 	ignis.color_tint = Color(1.0, 0.4, 0.2)
 	ignis.sprite_tile_name = "tile_0000.png"
-	ignis.version = 2
-	ignis.ability_version = 1
+	ignis.version = 3 # Nachbrenner-Dash, Ulti Meteorschauer
+	ignis.ability_version = 2
 	heroes["ignis"] = ignis
 
 	# 2. Volt
@@ -641,9 +646,14 @@ func _setup_heroes() -> void:
 	spore.role = "Toxic Alchemist"
 	spore.description = "Zermürbt Feinde mit ätzenden Giften."
 	spore.passive_desc = "Spore Coat: Treffer vergiften Gegner (2 Stapel à 4 Schaden, alle 0,8 s = 8 Schaden)"
-	spore.ability_name = "Spore Burst"
-	spore.ability_desc = "Hinterlässt eine giftige Gaswolke!"
-	spore.ability_cooldown = 6.0
+	spore.ability_name = "Giftpilz"
+	spore.ability_desc = "Wirft einen Giftpilz als Falle. Er platzt bei Gegnern oder Kugeln zu einer Giftwolke!"
+	spore.ability_cooldown = 5.0
+	spore.dash_name = "Sporenstoß"
+	spore.dash_desc = "Dash, der am Start eine Giftwolke zurücklässt."
+	spore.ult_name = "Seuchennebel"
+	spore.ult_desc = "Ein großer Giftnebel wandert mit dir: Gegner darin werden vergiftet und gebremst, du regenerierst!"
+	spore.ult_cooldown = 30.0
 	spore.base_hp = 105
 	spore.base_shield = 10
 	spore.base_speed = 295.0
@@ -653,8 +663,8 @@ func _setup_heroes() -> void:
 	spore.base_reload_time = 1.05
 	spore.color_tint = Color(0.4, 0.9, 0.3)
 	spore.sprite_tile_name = "tile_0002.png"
-	spore.version = 3 # Schild-Cooldown 5 s statt 3 s (Bastion 4 s)
-	spore.ability_version = 1
+	spore.version = 4 # Sporenstoß-Dash, Ulti Seuchennebel
+	spore.ability_version = 2 # Giftpilz statt Spore Burst
 	heroes["spore"] = spore
 
 	# 4. Nova – Gravitationsmagier
@@ -664,9 +674,14 @@ func _setup_heroes() -> void:
 	nova.role = "Gravity Mage"
 	nova.description = "Kontrolliert den Raum und zieht Gegner in ihr Verderben."
 	nova.passive_desc = "Schwerelos: Höchste Sprungkraft (540)"
-	nova.ability_name = "Singularität"
-	nova.ability_desc = "Erzeugt einen Gravitationskern, der Gegner in die Mitte zieht!"
-	nova.ability_cooldown = 6.5
+	nova.ability_name = "Gravitationsstoß"
+	nova.ability_desc = "Drückt Gegner und Kugeln im Kegel weg. Nach unten gezielt schleudert er dich hoch!"
+	nova.ability_cooldown = 6.0
+	nova.dash_name = "Phasengleiten"
+	nova.dash_desc = "Schwebt kurz frei lenkbar durch die Luft."
+	nova.ult_name = "Singularität"
+	nova.ult_desc = "Ein großer Gravitationskern am Zielpunkt zieht alle Gegner heran und implodiert am Ende!"
+	nova.ult_cooldown = 30.0
 	nova.base_hp = 95
 	nova.base_shield = 10
 	nova.base_speed = 290.0
@@ -676,8 +691,8 @@ func _setup_heroes() -> void:
 	nova.base_reload_time = 1.35
 	nova.color_tint = Color(0.6, 0.4, 1.0)
 	nova.sprite_tile_name = "tile_0003.png"
-	nova.version = 3 # Schild-Cooldown 5 s statt 3 s (Bastion 4 s)
-	nova.ability_version = 2
+	nova.version = 4 # Phasengleiten, Singularität als Ulti
+	nova.ability_version = 3 # Gravitationsstoß statt Singularität
 	heroes["nova"] = nova
 
 	# 5. Klinge – Klingentänzer
@@ -687,9 +702,14 @@ func _setup_heroes() -> void:
 	klinge.role = "Blade Dancer"
 	klinge.description = "Schneidet sich nah am Gegner durch die Arena."
 	klinge.passive_desc = "Klingentanz: 15 Start-Schild und hohe Grundgeschwindigkeit"
-	klinge.ability_name = "Klingensturm"
-	klinge.ability_desc = "Wirbelt herum und verletzt alle Gegner in der Nähe mit Rückstoß!"
-	klinge.ability_cooldown = 5.5
+	klinge.ability_name = "Klingenbumerang"
+	klinge.ability_desc = "Wirft das Schwert, das hin und zurück fliegt und dabei alles schneidet!"
+	klinge.ability_cooldown = 6.0
+	klinge.dash_name = "Durchstoß"
+	klinge.dash_desc = "Dash durch Gegner hindurch. Ein Treffer halbiert die Dash-Abklingzeit."
+	klinge.ult_name = "Klingensturm"
+	klinge.ult_desc = "Wirbelt einige Sekunden frei beweglich, schneidet alles in der Nähe und schlägt Kugeln zurück!"
+	klinge.ult_cooldown = 24.0
 	klinge.attack_type = "melee"
 	klinge.melee_weapon = "sword"
 	klinge.melee_cooldown_mult = 0.75
@@ -702,8 +722,8 @@ func _setup_heroes() -> void:
 	klinge.base_reload_time = 1.25
 	klinge.color_tint = Color(1.0, 0.3, 0.5)
 	klinge.sprite_tile_name = "tile_0005.png"
-	klinge.version = 4 # Nahkämpfer: Schwert auf Linksklick, 125 HP
-	klinge.ability_version = 1
+	klinge.version = 5 # Dreierkombo, Durchstoß, Ulti Klingensturm
+	klinge.ability_version = 2 # Klingenbumerang statt Klingensturm
 	heroes["klinge"] = klinge
 
 	# 6. Bastion – Feldtechniker
@@ -713,9 +733,14 @@ func _setup_heroes() -> void:
 	bastion.role = "Field Engineer"
 	bastion.description = "Robuster Unterstützer mit Schildtechnik."
 	bastion.passive_desc = "Aurora: Doppelte Schild-Regeneration (30 statt 15 Schild/s) und kürzerer Schild-Cooldown (startet 4 statt 5 s nach dem letzten Schaden)"
-	bastion.ability_name = "Heilfeld"
-	bastion.ability_desc = "Errichtet ein Feld, das dich über Zeit heilt und Schild aufbaut!"
-	bastion.ability_cooldown = 8.0
+	bastion.ability_name = "Magnethaken"
+	bastion.ability_desc = "Schießt einen Haken, der den ersten Gegner betäubt und zu dir zieht!"
+	bastion.ability_cooldown = 7.0
+	bastion.dash_name = "Rammbock"
+	bastion.dash_desc = "Schild nach vorn: hält Kugeln auf, schiebt Gegner mit und stößt sie weg."
+	bastion.ult_name = "Festung"
+	bastion.ult_desc = "Eine Kuppel, an der gegnerische Kugeln abprallen. Innen heilen du und deine Verbündeten!"
+	bastion.ult_cooldown = 32.0
 	bastion.attack_type = "melee"
 	bastion.melee_weapon = "hammer"
 	bastion.melee_damage_mult = 1.5
@@ -729,8 +754,8 @@ func _setup_heroes() -> void:
 	bastion.base_reload_time = 1.45
 	bastion.color_tint = Color(0.3, 0.9, 0.7)
 	bastion.sprite_tile_name = "tile_0001.png"
-	bastion.version = 4 # Nahkämpfer: Hammer auf Linksklick, 145 HP
-	bastion.ability_version = 1
+	bastion.version = 5 # Rammbock-Dash, Ulti Festung
+	bastion.ability_version = 2 # Magnethaken statt Heilfeld
 	heroes["bastion"] = bastion
 
 	# 7. Phantom – Schattenassassine
@@ -775,6 +800,11 @@ func _setup_heroes() -> void:
 	druid.ability_name = "Wurzelwall"
 	druid.ability_desc = "Lässt quer zur Zielrichtung eine Rankenwand wachsen, die Schüsse und Gegner aufhält!"
 	druid.ability_cooldown = 7.0
+	druid.dash_name = "Rankenschwung"
+	druid.dash_desc = "Eine Ranke zieht dich zur nächsten Wand oder Decke in Zielrichtung."
+	druid.ult_name = "Urkeiler"
+	druid.ult_desc = "Verwandelt dich in einen riesigen Keiler: mehr Leben, Hauer-Nahkampf und ein Ansturm statt Dash!"
+	druid.ult_cooldown = 35.0
 	druid.base_hp = 105
 	druid.base_shield = 10
 	druid.base_speed = 295.0
@@ -784,8 +814,8 @@ func _setup_heroes() -> void:
 	druid.base_reload_time = 1.2
 	druid.color_tint = Color(0.50, 0.72, 0.36)
 	druid.sprite_tile_name = "tile_0004.png"
-	druid.version = 1
-	druid.ability_version = 1
+	druid.version = 2 # Rankenschwung, Ulti Urkeiler
+	druid.ability_version = 2
 	heroes["druid"] = druid
 
 func get_hero(id: String) -> HeroData:
@@ -810,30 +840,23 @@ func get_hero_ability_details(hero: HeroData) -> String:
 				int(round((1.0 - Player.FREEZE_SPEED_MULT) * 100.0)),
 			]
 		"spore":
-			return "Giftwolke an deiner Position: Radius %d px, %.1f s lang %d Schaden pro Sekunde (bis zu %d Schaden gesamt)." % [
-				int(Player.SPORE_CLOUD_RADIUS), Player.SPORE_CLOUD_DURATION,
-				int(Player.SPORE_CLOUD_DPS),
-				int(Player.SPORE_CLOUD_DPS * Player.SPORE_CLOUD_DURATION),
+			return "Wirft einen Giftpilz bis %d px weit. Nach %.1f s scharf, platzt er, wenn ein Gegner näher als %d px kommt oder eine Kugel ihn trifft: Giftwolke mit Radius %d px, %.1f s lang %d Schaden pro Sekunde. Höchstens %d Pilze, der älteste verschwindet." % [
+				int(Player.SPORE_SHROOM_RANGE), Player.SPORE_SHROOM_ARM, int(Player.SPORE_SHROOM_TRIGGER),
+				int(Player.SPORE_SHROOM_CLOUD_RADIUS), Player.SPORE_SHROOM_CLOUD_DURATION,
+				int(Player.SPORE_SHROOM_CLOUD_DPS), Player.SPORE_SHROOM_MAX,
 			]
 		"nova":
-			return "Gravitationskern am Zielpunkt, höchstens %d px entfernt, %.1f s aktiv. Zieht alle Gegner im Radius %d px stark in die Mitte, hält sie im Kern fest und schwächt ihre Laufkontrolle. Macht selbst keinen Schaden." % [
-				int(Player.SINGULARITY_DISTANCE), Player.SINGULARITY_DURATION,
-				int(Player.SINGULARITY_PULL_RADIUS),
+			return "Kegel von %d° und %d px in Zielrichtung: stößt Gegner stark weg und lenkt gegnerische Kugeln ab. Nach unten gezielt schleudert er dich selbst hoch." % [
+				int(Player.NOVA_PUSH_ANGLE_DEG), int(Player.NOVA_PUSH_RANGE),
 			]
 		"klinge":
-			return "Rundumschlag im Radius %d px: %d Schaden (%d%% des Schussschadens) mit starkem Rückstoß. %.1f s unverwundbar." % [
-				int(Player.BLADE_STORM_RADIUS),
-				int(round(base_damage * Player.BLADE_STORM_DAMAGE_MULT)),
-				int(round(Player.BLADE_STORM_DAMAGE_MULT * 100.0)),
-				Player.BLADE_STORM_INVULN,
+			return "Wirft das Schwert bis %d px weit, es kehrt danach zu dir zurück. Hin und zurück je %d Schaden. Solange es fliegt, kannst du nicht zuschlagen." % [
+				int(Player.KLINGE_BOOMERANG_RANGE),
+				int(round(float(get_melee_weapon_data("sword")["damage"]) * hero.melee_damage_mult * Player.KLINGE_BOOMERANG_DAMAGE_MULT)),
 			]
 		"bastion":
-			var ticks := int(ceil(Player.HEAL_FIELD_DURATION / Player.HEAL_FIELD_TICK_INTERVAL))
-			return "%.0f s lang: +%d HP pro Sekunde (%d HP gesamt) und +%d Schild pro Sekunde (bis zum Maximum)." % [
-				Player.HEAL_FIELD_DURATION,
-				int(round(Player.HEAL_FIELD_TICK_HEAL / Player.HEAL_FIELD_TICK_INTERVAL)),
-				int(Player.HEAL_FIELD_TICK_HEAL * ticks),
-				int(round(Player.HEAL_FIELD_TICK_SHIELD / Player.HEAL_FIELD_TICK_INTERVAL)),
+			return "Haken bis %d px weit. Trifft er einen Gegner: %d Schaden, %.1f s betäubt, und der Gegner wird zu dir gezogen. An Gelände rollt die Kette wieder ein." % [
+				int(Player.BASTION_HOOK_RANGE), int(Player.BASTION_HOOK_DAMAGE), Player.BASTION_HOOK_STUN,
 			]
 		"phantom":
 			return "Ein Doppelgänger mit %d HP läuft %.1f s lang in Blickrichtung weiter. Du selbst bist %.1f s unsichtbar. Bots, Türme und Zielsuche fallen auf den Köder herein." % [
@@ -863,13 +886,59 @@ func get_hero_ult_details(hero: HeroData) -> String:
 				Player.PHANTOM_STEALTH_FLICKER,
 				int(round(Player.PHANTOM_HUNT_FIRST_HIT_MULT * 100.0)),
 			]
+		"ignis":
+			return "Gezielt (bis %d px): Nach %.1f s schlagen %d Meteore nebeneinander ein, je Radius %d px und bis zu %d Schaden. Jeder hinterlässt %.0f s lang Feuer." % [
+				int(Player.IGNIS_METEOR_RANGE), Player.IGNIS_METEOR_WARN, Player.IGNIS_METEOR_COUNT,
+				int(Player.IGNIS_METEOR_RADIUS), int(Player.IGNIS_METEOR_DAMAGE), Player.IGNIS_METEOR_FIRE_DURATION,
+			]
+		"spore":
+			return "%.0f s lang wandert ein Giftnebel mit Radius %d px mit dir. Alle %.1f s: %d Giftstapel und Verlangsamung für Gegner darin, du heilst %d HP pro Sekunde." % [
+				Player.SPORE_FOG_DURATION, int(Player.SPORE_FOG_RADIUS), Player.SPORE_FOG_TICK,
+				Player.SPORE_FOG_POISON_STACKS, int(Player.SPORE_FOG_HEAL),
+			]
+		"nova":
+			return "Gezielt (bis %d px): Gravitationskern für %.1f s, zieht Gegner im Radius %d px heran. Am Ende Implosion mit Radius %d px und %d Schaden." % [
+				int(Player.SINGULARITY_DISTANCE), Player.SINGULARITY_DURATION, int(Player.SINGULARITY_PULL_RADIUS),
+				int(Player.SINGULARITY_IMPLOSION_RADIUS), int(Player.SINGULARITY_IMPLOSION_DAMAGE),
+			]
+		"klinge":
+			return "%.0f s lang Wirbel um dich (Radius %d px), du bleibst beweglich. Alle %.1f s %d Schaden, zum Schluss ein großer Wirbel mit %d Schaden. Kugeln, die auf dich zufliegen, prallen zurück." % [
+				Player.BLADE_STORM_DURATION, int(Player.BLADE_STORM_RADIUS), Player.BLADE_STORM_TICK,
+				int(round(base_damage * Player.BLADE_STORM_TICK_DAMAGE_MULT)),
+				int(round(base_damage * Player.BLADE_STORM_DAMAGE_MULT)),
+			]
+		"bastion":
+			return "%.0f s lang Kuppel mit Radius %d px: gegnerische Kugeln prallen von außen ab. Innen alle %.1f s +%d HP und +%d Schild für dich und Verbündete." % [
+				Player.HEAL_FIELD_DURATION, int(Player.BASTION_DOME_RADIUS), Player.HEAL_FIELD_TICK_INTERVAL,
+				int(Player.HEAL_FIELD_TICK_HEAL), int(Player.HEAL_FIELD_TICK_SHIELD),
+			]
+		"druid":
+			return "%.0f s lang Urkeiler: %d%% Größe, +%d%% Leben, Hammer-Nahkampf mit %d%% Schaden. Der Dash wird zum Ansturm (%d Schaden, schleudert Gegner weg, bricht Kisten)." % [
+				Player.DRUID_BOAR_DURATION, int(round(Player.DRUID_BOAR_SCALE * 100.0)),
+				int(round((Player.DRUID_BOAR_HP_MULT - 1.0) * 100.0)),
+				int(round(Player.DRUID_BOAR_MELEE_DAMAGE_MULT * 100.0)), int(Player.DRUID_BOAR_CHARGE_DAMAGE),
+			]
 	return hero.ult_desc
 
 # Ausführlicher Text zum Helden-Dash (Shift).
 func get_hero_dash_details(hero: HeroData) -> String:
 	match hero.id:
 		"ignis":
-			return "Dash in Laufrichtung, kurz unverwundbar, hinterlässt eine Feuerspur."
+			return "Dash in Laufrichtung, kurz unverwundbar, hinterlässt eine Feuerspur (%.0f s, Gegner darin brennen)." % Player.AFTERBURNER_ZONE_DURATION
+		"spore":
+			return "Dash in Laufrichtung, kurz unverwundbar. Am Start bleibt eine Giftwolke (Radius %d px, %d Schaden pro Sekunde)." % [
+				int(Player.SPORE_CLOUD_RADIUS), int(Player.SPORE_CLOUD_DPS),
+			]
+		"nova":
+			return "Schwebt %.1f s lang mit Tempo %d, mit den Bewegungstasten lenkbar, unverwundbar." % [
+				Player.NOVA_GLIDE_DURATION, int(Player.NOVA_GLIDE_SPEED),
+			]
+		"druid":
+			return "Ranke bis %d px in Zielrichtung. Greift sie Gelände, zieht sie dich schnell hin. Ohne Halt ein normaler Dash." % int(Player.DRUID_VINE_RANGE)
+		"klinge":
+			return "Dash durch Gegner hindurch, jeder getroffene bekommt %d%% Schwertschaden. Ein Treffer halbiert die Dash-Abklingzeit." % int(round(Player.KLINGE_DASH_DAMAGE_MULT * 100.0))
+		"bastion":
+			return "Kurzer Rammstoß, nicht unverwundbar. Kugeln von vorn prallen ab, Gegner werden mitgeschoben (%d Schaden) und am Ende weggestoßen." % int(Player.BASTION_RAM_DAMAGE)
 		"volt":
 			return "Teleportiert %d px in Lauf- bzw. Zielrichtung. %d Ladungen, jede lädt einzeln nach." % [
 				int(Player.VOLT_DASH_DISTANCE), hero.dash_charges,
