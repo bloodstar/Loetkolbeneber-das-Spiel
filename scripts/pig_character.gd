@@ -41,6 +41,8 @@ var use_parent_floor_state: bool = true
 var outfit_id: String = ""
 # Hauerform aus der Charakteranpassung (Global.TUSK_SHAPES).
 var tusk_shape: String = "small"
+## true: Figur wird als Voxel-Eber gezeichnet (VoxelSprite-Kind), _draw nur Effekte.
+var voxel_mode: bool = false
 # Teamfarbe für das Klassen-Outfit. Alpha 0 = keine Teams, dann trägt das
 # Outfit seine festen Klassenfarben.
 var team_color: Color = Color(0.0, 0.0, 0.0, 0.0)
@@ -247,6 +249,11 @@ func _update_blood_particles(delta: float) -> void:
 		_blood_particles[i] = particle
 
 func _draw() -> void:
+	# Voxel-Eber zeichnet die Figur (VoxelSprite als Kind); hier nur Staub und Blut.
+	if voxel_mode:
+		_draw_dust()
+		_draw_blood_particles()
+		return
 	var run := _move_energy
 	var idle := 1.0 - run
 	var air := _air_energy

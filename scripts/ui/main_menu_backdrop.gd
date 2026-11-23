@@ -131,11 +131,23 @@ func _build_hero(cfg: Dictionary) -> Dictionary:
 	pig.scale = Vector2.ONE * PIG_SCALE
 	pig.setup(cfg["fur"], cfg["eyes"], cfg["pants"])
 	add_child(pig)
+	# Voxel-Eber statt gezeichnetem Schwein; Lötkolben zielt steil nach oben.
+	pig.voxel_mode = true
+	var voxel := VoxelSprite.new()
+	voxel.px_per_unit = 5.0
+	voxel.aim_pitch = deg_to_rad(65.0)
+	pig.add_child(voxel)
+	var vspec := VoxelBoar.default_spec()
+	vspec["fur"] = cfg["fur"]
+	vspec["pants"] = cfg["pants"]
+	vspec["tip"] = cfg["heat"]
+	voxel.build_spec(vspec)
 
 	var wand := MagicWand.new()
 	var side := -1.0 if flip else 1.0
 	wand.scale = Vector2(WAND_SCALE * side, WAND_SCALE)
 	wand.setup(str(cfg["tip"]), heat)
+	wand.self_modulate = Color(1, 1, 1, 0)   # Lötkolben steckt im Voxel-Arm
 	add_child(wand)
 
 	var sparks := CPUParticles2D.new()

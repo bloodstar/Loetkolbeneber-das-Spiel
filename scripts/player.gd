@@ -455,6 +455,9 @@ const HP_REGEN_DELAY: float = 0.0
 
 # Nodes
 @onready var sprite: PigCharacter = $Sprite2D
+var _voxel_sprite: VoxelSprite = null
+var _ghost_tex: Texture2D = null
+var _ghost_tex_time: int = 0
 @onready var weapon_pivot: Node2D = $WeaponPivot
 @onready var muzzle: Marker2D = $WeaponPivot/Muzzle
 @onready var wand: MagicWand = $WeaponPivot/Wand
@@ -971,6 +974,7 @@ func _ready() -> void:
 		var ground_shadow := GroundShadow.new()
 		ground_shadow.body = self
 		add_child(ground_shadow)
+		_setup_voxel_body()
 
 	if is_replica:
 		collision_layer = 0
@@ -990,6 +994,20 @@ func _setup_arena_body() -> void:
 	arena_grounded = true
 	if not is_replica:
 		ArenaMotion.update_masks(self)
+
+## Seitenansicht: Voxel-Eber statt gezeichnetem 2D-Schwein. Das 2D-Schwein
+## bleibt als Knoten (Position, Skalierung, Tönung, Staub), zeichnet aber die
+## Figur nicht mehr; der Lötkolben steckt im Voxel-Arm.
+func _setup_voxel_body() -> void:
+	if sprite == null or _voxel_sprite != null:
+		return
+	sprite.voxel_mode = true
+	sprite.queue_redraw()
+	_voxel_sprite = VoxelSprite.new()
+	_voxel_sprite.player = self
+	sprite.add_child(_voxel_sprite)
+	if wand != null:
+		wand.self_modulate = Color(1, 1, 1, 0)
 
 func _process(delta: float) -> void:
 	_update_powerup_glow(delta)
@@ -2098,9 +2116,33 @@ func play_network_player_fx(method: String, params) -> void:
 		return
 	callv(method, params)
 
+## Dash-Geist für den Voxel-Eber: Standbild der Figur, alle 0,1 s neu
+## aufgenommen (Bild-Rücklesen ist teuer, deshalb nicht jeden Geist).
+func _spawn_voxel_ghost() -> void:
+	var now := Time.get_ticks_msec()
+	if _ghost_tex == null or now - _ghost_tex_time > 100:
+		_ghost_tex = _voxel_sprite.snapshot_texture()
+		_ghost_tex_time = now
+	if _ghost_tex == null:
+		return
+	var ghost := Sprite2D.new()
+	ghost.texture = _ghost_tex
+	var unit := VoxelSprite.VIEW_SIZE / float(_ghost_tex.get_width())
+	ghost.scale = sprite.scale * scale * unit
+	ghost.offset = Vector2(0.0, (VoxelSprite.FEET_Y - VoxelSprite.VIEW_CENTER_Y) / unit)
+	ghost.modulate = Color(1.0, 1.0, 1.0, 0.6)
+	_add_round_effect(ghost)
+	ghost.global_position = sprite.global_position
+	var tw = ghost.create_tween()
+	tw.tween_property(ghost, "modulate:a", 0.0, 0.2)
+	tw.tween_callback(ghost.queue_free)
+
 func _spawn_ghost_trail() -> void:
 	if not is_dashing:
 		ghost_timer.stop()
+		return
+	if _voxel_sprite != null and is_instance_valid(_voxel_sprite):
+		_spawn_voxel_ghost()
 		return
 	var ghost := PigModular.new()
 	ghost.setup(sprite.fur_color, sprite.eye_color, sprite.pants_color)

@@ -38,6 +38,11 @@ class State extends RefCounted:
 	var tusk_color: Color = Color.BLACK
 
 func _draw() -> void:
+	# Voxel-Eber zeichnet die Figur (VoxelSprite als Kind); hier nur Staub und Blut.
+	if voxel_mode:
+		_draw_dust()
+		_draw_blood_particles()
+		return
 	var run := _move_energy
 	var idle := 1.0 - run
 	var air := _air_energy

@@ -11,14 +11,14 @@ extends Node3D
 
 const CAMERA_DISTANCE: float = 3000.0
 # Voxel-Schwein etwas größer als die Kollisionsbox, damit es gut lesbar ist.
-const PIG_SCALE: float = 1.45
+const PIG_SCALE: float = 1.2
 # Sichtbare Dicke der Stege.
 const STEG_VIS: float = 14.0
 
 var camera_2d: Camera2D = null
 var cam: Camera3D
-var _decoy_pigs: Dictionary = {}  # Köder-Instanz-ID -> VoxelPig
-var _pigs: Dictionary = {}        # Player-Instanz-ID -> VoxelPig
+var _decoy_pigs: Dictionary = {}  # Köder-Instanz-ID -> VoxelBoar
+var _pigs: Dictionary = {}        # Player-Instanz-ID -> VoxelBoar
 var _crates: Dictionary = {}      # Vector2i -> Node3D
 var _druid_walls: Dictionary = {} # DruidWall-Instanz-ID -> MeshInstance3D
 var _beasts: Dictionary = {}      # HordeEnemy-Instanz-ID -> HordeBeast / VoxelPig (Boss)
@@ -519,20 +519,11 @@ func _sync_players(delta: float) -> void:
 			continue
 		var pid := p.get_instance_id()
 		seen[pid] = true
-		var pig: VoxelPig = _pigs.get(pid, null)
+		var pig: VoxelBoar = _pigs.get(pid, null)
 		if pig == null:
-			pig = VoxelPig.new()
+			pig = VoxelBoar.new()
+			pig.xray = true
 			add_child(pig)
-			var fur: Color = Color(0.91, 0.60, 0.67)
-			var pants: Color = Color(0.25, 0.35, 0.8)
-			if p.sprite != null:
-				var f = p.sprite.get("fur_color")
-				if f is Color:
-					fur = f
-				var pc = p.sprite.get("pants_color")
-				if pc is Color:
-					pants = pc
-			pig.build(fur, pants, Global.get_team_color(p.team_id), 1.0, Global.get_player_hero_id(p.player_index), p.wand_tip_color)
 			var shadow := MeshInstance3D.new()
 			shadow.name = "Shadow"
 			shadow.mesh = _shadow_mesh
@@ -540,6 +531,7 @@ func _sync_players(delta: float) -> void:
 			add_child(shadow)
 			pig.set_meta("shadow", shadow)
 			_pigs[pid] = pig
+		pig.sync_with_player(p, delta)
 		var z: float = p.arena_z
 		var pos := p.global_position
 		pig.visible = p.visible and not p.is_dead
@@ -550,16 +542,6 @@ func _sync_players(delta: float) -> void:
 		if aim.length_squared() > 0.001:
 			pig.rotation.y = -atan2(aim.y, aim.x)
 		pig.animate(delta, p.velocity.length() > 30.0, not p.arena_grounded, p.modulate.a, p.velocity, pig.rotation.y, p.arena_vz)
-		# Schuss und Treffer aus dem Spielerzustand ablesen (läuft so auch auf
-		# Clients, die nur Snapshots bekommen).
-		var pool: float = p.current_health + p.current_shield
-		var last: Dictionary = pig.get_meta("last", {})
-		if not last.is_empty():
-			if pool < float(last["pool"]) - 0.5:
-				pig.flash()
-			if p.current_ammo < int(last["ammo"]) or p.fire_timer > float(last["fire"]) + 0.01:
-				pig.recoil(1.0)
-		pig.set_meta("last", {"pool": pool, "ammo": p.current_ammo, "fire": p.fire_timer})
 		var shadow_node := pig.get_meta("shadow") as MeshInstance3D
 		if shadow_node:
 			shadow_node.visible = pig.visible
@@ -572,7 +554,7 @@ func _sync_players(delta: float) -> void:
 			shadow_node.scale = Vector3.ONE * pig.scale.x / PIG_SCALE * lerpf(1.0, 0.6, lift)
 	for pid in _pigs.keys():
 		if not seen.has(pid):
-			var pig: VoxelPig = _pigs[pid]
+			var pig: VoxelBoar = _pigs[pid]
 			var sh = pig.get_meta("shadow")
 			if sh is Node:
 				(sh as Node).queue_free()
@@ -589,27 +571,13 @@ func _sync_decoys(delta: float) -> void:
 			continue
 		var did := d.get_instance_id()
 		seen[did] = true
-		var pig: VoxelPig = _decoy_pigs.get(did, null)
+		var pig: VoxelBoar = _decoy_pigs.get(did, null)
 		if pig == null:
-			pig = VoxelPig.new()
+			# Gleiches Voxel-Modell wie der Besitzer (Baukasten-Teile, Klassenhut).
+			pig = VoxelBoar.new()
 			add_child(pig)
-			var fur: Color = Color(0.91, 0.60, 0.67)
-			var pants: Color = Color(0.25, 0.35, 0.8)
-			var tip: Color = Color.WHITE
-			var hero_id := "phantom"
-			for pn in get_tree().get_nodes_in_group("player"):
-				var p := pn as Player
-				if p != null and p.player_index == d.owner_index:
-					hero_id = Global.get_player_hero_id(p.player_index)
-					tip = p.wand_tip_color
-					if p.sprite != null:
-						var f = p.sprite.get("fur_color")
-						if f is Color:
-							fur = f
-						var pc = p.sprite.get("pants_color")
-						if pc is Color:
-							pants = pc
-			pig.build(fur, pants, Global.get_team_color(d.team_id), 1.0, hero_id, tip)
+			pig.build(VoxelBoar.spec_for_player(d.owner_index, Global.get_team_color(d.team_id),
+				Global.get_player_hero_id(d.owner_index)))
 			_decoy_pigs[did] = pig
 		var size_scale: float = d.scale.x / Player.BASE_CHARACTER_SCALE if Player.BASE_CHARACTER_SCALE > 0.0 else 1.0
 		pig.scale = Vector3.ONE * clampf(size_scale, 0.3, 3.0) * PIG_SCALE
@@ -620,7 +588,7 @@ func _sync_decoys(delta: float) -> void:
 		pig.animate(delta, d.velocity.length() > 30.0, false, 1.0, d.velocity, pig.rotation.y, 0.0)
 	for did in _decoy_pigs.keys():
 		if not seen.has(did):
-			(_decoy_pigs[did] as VoxelPig).queue_free()
+			(_decoy_pigs[did] as VoxelBoar).queue_free()
 			_decoy_pigs.erase(did)
 
 func _sync_crates() -> void:
