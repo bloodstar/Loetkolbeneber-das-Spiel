@@ -148,9 +148,10 @@ func _spawn_sparks() -> void:
 	fx.global_position = global_position
 	fx.z_index = 5
 	parent.add_child(fx)
-	for i in range(5):
+	var spark_count := GameSettings.scaled_count(5, 2)
+	for i in range(spark_count):
 		var spark := Line2D.new()
-		var dir := Vector2.from_angle(float(i) * TAU / 5.0 + rotation)
+		var dir := Vector2.from_angle(float(i) * TAU / float(spark_count) + rotation)
 		spark.points = PackedVector2Array([Vector2.ZERO, dir * 5.0])
 		spark.width = 2.0
 		spark.default_color = Color(1.0, 0.85, 0.45, 1.0)

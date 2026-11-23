@@ -1,6 +1,6 @@
 extends Node
 
-# Spieleinstellungen: Fenstermodus, Lautstärken und Tastenbelegung.
+# Spieleinstellungen: Fenstermodus, Grafikstufe, Lautstärken und Tastenbelegung.
 # Alles landet in user://settings.cfg und wird beim Start angewendet.
 # Dieses Autoload steht in project.godot hinter Global und SoundManager,
 # damit die Standard-Tastenbelegung und die Audio-Busse schon existieren.
@@ -22,6 +22,47 @@ const WINDOW_MODE_LABELS: Dictionary = {
 	"fullscreen": "Vollbild",
 	"borderless": "Vollbild-Fenster (randlos)",
 }
+
+# --- Grafikstufen ---
+# Eine Stufe setzt alle Qualitätswerte auf einmal. Ändert man danach einen
+# Einzelwert, steht die Stufe auf "custom" (Eigene). FPS-Limit, VSync und
+# FPS-Anzeige gehören nicht zur Stufe und bleiben, wie sie sind.
+const GRAPHICS_PRESETS: Array[String] = ["low", "medium", "high", "custom"]
+const GRAPHICS_PRESET_LABELS: Dictionary = {
+	"low": "Niedrig",
+	"medium": "Mittel",
+	"high": "Hoch",
+	"custom": "Eigene",
+}
+const GRAPHICS_KEYS: Array[String] = [
+	"msaa", "render_scale", "shadows", "contact_shadows", "effects", "glow", "horde_limit",
+]
+const GRAPHICS_PRESET_VALUES: Dictionary = {
+	"low": {
+		"msaa": 0, "render_scale": 0.67, "shadows": 0, "contact_shadows": false,
+		"effects": 0, "glow": false, "horde_limit": 90,
+	},
+	"medium": {
+		"msaa": 1, "render_scale": 0.85, "shadows": 1, "contact_shadows": true,
+		"effects": 1, "glow": true, "horde_limit": 150,
+	},
+	"high": {
+		"msaa": 2, "render_scale": 1.0, "shadows": 2, "contact_shadows": true,
+		"effects": 2, "glow": true, "horde_limit": 230,
+	},
+}
+# Kantenglättung: Index -> Viewport.MSAA_*
+const MSAA_LABELS: Array[String] = ["Aus", "2x", "4x"]
+const MSAA_VALUES: Array[int] = [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_4X]
+# Render-Auflösung der 3D-Arena (2D-Grafik bleibt immer scharf).
+const RENDER_SCALES: Array[float] = [0.5, 0.67, 0.75, 0.85, 1.0]
+const SHADOW_LABELS: Array[String] = ["Aus", "Hart", "Weich"]
+const EFFECT_LABELS: Array[String] = ["Wenig", "Mittel", "Voll"]
+const EFFECT_SCALES: Array[float] = [0.35, 0.65, 1.0]
+# Höchstzahl gleichzeitiger Gegner im Horden-Modus (der Modus nimmt das
+# Minimum aus diesem Wert und seiner eigenen Obergrenze; online zählt der Host).
+const HORDE_LIMITS: Array[int] = [60, 90, 120, 150, 190, 230]
+const FPS_LIMITS: Array[int] = [30, 60, 90, 120, 144, 0]
 
 # Lautstärken linear 0..1. "effects" steuert die Busse SFX und UI gemeinsam.
 const VOLUME_KEYS: Array[String] = ["master", "effects", "music"]
@@ -47,6 +88,13 @@ const REBINDABLE_ACTIONS: Array[Dictionary] = [
 ]
 
 var window_mode: String = "windowed"
+var graphics_preset: String = "high"
+var graphics: Dictionary = (GRAPHICS_PRESET_VALUES["high"] as Dictionary).duplicate()
+var max_fps: int = 0
+var vsync: bool = true
+var show_fps: bool = false
+var _fps_layer: CanvasLayer = null
+var _fps_label: Label = null
 var volumes: Dictionary = DEFAULT_VOLUMES.duplicate()
 # Effekt-Set, siehe SoundManager.SOUND_PACKS. Gilt nur auf diesem Rechner.
 var sound_pack: String = "arena"
@@ -74,10 +122,12 @@ func _ready() -> void:
 func load_settings() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SETTINGS_PATH) != OK:
+		_pick_default_preset()
 		return
 	var mode := str(cfg.get_value("display", "window_mode", window_mode))
 	if WINDOW_MODES.has(mode):
 		window_mode = mode
+	_load_graphics(cfg)
 	for key in VOLUME_KEYS:
 		volumes[key] = clampf(float(cfg.get_value("audio", key, DEFAULT_VOLUMES[key])), 0.0, 1.0)
 	# Neuer Schlüssel, damit alle einmal auf das neue Standard-Set "Arena" wechseln.
@@ -94,6 +144,12 @@ func load_settings() -> void:
 func save_settings() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("display", "window_mode", window_mode)
+	cfg.set_value("graphics", "preset", graphics_preset)
+	for key in GRAPHICS_KEYS:
+		cfg.set_value("graphics", key, graphics[key])
+	cfg.set_value("graphics", "max_fps", max_fps)
+	cfg.set_value("graphics", "vsync", vsync)
+	cfg.set_value("graphics", "show_fps", show_fps)
 	for key in VOLUME_KEYS:
 		cfg.set_value("audio", key, volumes[key])
 	cfg.set_value("audio", "sound_set", sound_pack)
@@ -105,6 +161,7 @@ func save_settings() -> void:
 
 func apply_all() -> void:
 	apply_window_mode()
+	apply_graphics()
 	apply_volumes()
 	SoundManager.set_sound_pack(sound_pack)
 	_apply_bindings()
@@ -139,6 +196,177 @@ func apply_window_mode() -> void:
 			DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, false)
 			if was_fullscreen:
 				_center_window()
+
+# --- Grafikstufen ---
+
+func _load_graphics(cfg: ConfigFile) -> void:
+	if not cfg.has_section_key("graphics", "preset"):
+		_pick_default_preset()
+		return
+	var preset := str(cfg.get_value("graphics", "preset", graphics_preset))
+	if not GRAPHICS_PRESETS.has(preset):
+		preset = "high"
+	graphics_preset = preset
+	var base: Dictionary = GRAPHICS_PRESET_VALUES.get(preset, GRAPHICS_PRESET_VALUES["high"])
+	for key in GRAPHICS_KEYS:
+		graphics[key] = _sanitize_graphics_value(key, cfg.get_value("graphics", key, base[key]))
+	var fps := int(cfg.get_value("graphics", "max_fps", max_fps))
+	max_fps = fps if FPS_LIMITS.has(fps) else 0
+	vsync = bool(cfg.get_value("graphics", "vsync", vsync))
+	show_fps = bool(cfg.get_value("graphics", "show_fps", show_fps))
+
+## Erster Start: Auf Grafik im Prozessor (z. B. Intel Iris Xe) mit "Mittel"
+## beginnen, auf einer eigenen Grafikkarte mit "Hoch".
+func _pick_default_preset() -> void:
+	var preset := "high"
+	if DisplayServer.get_name() != "headless":
+		var adapter_type := RenderingServer.get_video_adapter_type()
+		var adapter_name := RenderingServer.get_video_adapter_name().to_lower()
+		if adapter_type == RenderingDevice.DEVICE_TYPE_INTEGRATED_GPU \
+				or adapter_type == RenderingDevice.DEVICE_TYPE_CPU \
+				or adapter_name.contains("intel") or adapter_name.contains("uhd") \
+				or adapter_name.contains("llvmpipe"):
+			preset = "medium"
+	graphics_preset = preset
+	graphics = (GRAPHICS_PRESET_VALUES[preset] as Dictionary).duplicate()
+
+func _sanitize_graphics_value(key: String, value: Variant) -> Variant:
+	match key:
+		"msaa":
+			return clampi(int(value), 0, MSAA_VALUES.size() - 1)
+		"render_scale":
+			var wanted := float(value)
+			var best: float = RENDER_SCALES[RENDER_SCALES.size() - 1]
+			for option in RENDER_SCALES:
+				if absf(option - wanted) < absf(best - wanted):
+					best = option
+			return best
+		"shadows":
+			return clampi(int(value), 0, SHADOW_LABELS.size() - 1)
+		"effects":
+			return clampi(int(value), 0, EFFECT_SCALES.size() - 1)
+		"contact_shadows", "glow":
+			return bool(value)
+		"horde_limit":
+			var n := int(value)
+			return n if HORDE_LIMITS.has(n) else HORDE_LIMITS[HORDE_LIMITS.size() - 1]
+	return value
+
+func set_graphics_preset(preset: String) -> void:
+	if not GRAPHICS_PRESETS.has(preset):
+		return
+	graphics_preset = preset
+	if GRAPHICS_PRESET_VALUES.has(preset):
+		graphics = (GRAPHICS_PRESET_VALUES[preset] as Dictionary).duplicate()
+	apply_graphics()
+	save_settings()
+	settings_changed.emit()
+
+## Einzelwert ändern. Passt das Ergebnis genau zu einer Stufe, wird sie
+## wieder angezeigt, sonst steht die Stufe auf "Eigene".
+func set_graphics_value(key: String, value: Variant) -> void:
+	if not GRAPHICS_KEYS.has(key):
+		return
+	graphics[key] = _sanitize_graphics_value(key, value)
+	graphics_preset = _matching_preset()
+	apply_graphics()
+	save_settings()
+	settings_changed.emit()
+
+func _matching_preset() -> String:
+	for preset in ["low", "medium", "high"]:
+		if GRAPHICS_PRESET_VALUES[preset] == graphics:
+			return preset
+	return "custom"
+
+func get_graphics_value(key: String) -> Variant:
+	return graphics.get(key, GRAPHICS_PRESET_VALUES["high"][key])
+
+func set_max_fps(fps: int) -> void:
+	max_fps = fps if FPS_LIMITS.has(fps) else 0
+	apply_graphics()
+	save_settings()
+	settings_changed.emit()
+
+func set_vsync(enabled: bool) -> void:
+	vsync = enabled
+	apply_graphics()
+	save_settings()
+	settings_changed.emit()
+
+func set_show_fps(enabled: bool) -> void:
+	show_fps = enabled
+	_update_fps_counter()
+	save_settings()
+	settings_changed.emit()
+
+## Faktor 0..1 für die Menge an Funken, Splittern, Blut und Staub.
+func effects_scale() -> float:
+	return EFFECT_SCALES[clampi(int(get_graphics_value("effects")), 0, EFFECT_SCALES.size() - 1)]
+
+## Anzahl für Partikel-Schleifen: nie unter `minimum`.
+func scaled_count(full_count: int, minimum: int = 1) -> int:
+	return maxi(minimum, int(round(float(full_count) * effects_scale())))
+
+func glow_enabled() -> bool:
+	return bool(get_graphics_value("glow"))
+
+## 0 = aus, 1 = hart, 2 = weich (Sonnenschatten in der Arena).
+func shadow_quality() -> int:
+	return int(get_graphics_value("shadows"))
+
+func contact_shadows_enabled() -> bool:
+	return bool(get_graphics_value("contact_shadows"))
+
+## Für den Horden-Modus: höchstens so viele Gegner gleichzeitig.
+func horde_enemy_limit() -> int:
+	return int(get_graphics_value("horde_limit"))
+
+func apply_graphics() -> void:
+	Engine.max_fps = max_fps
+	if DisplayServer.get_name() != "headless":
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
+	var root := get_tree().root if is_inside_tree() else null
+	if root != null:
+		var msaa: int = MSAA_VALUES[clampi(int(get_graphics_value("msaa")), 0, MSAA_VALUES.size() - 1)]
+		# Der Kompatibilitäts-Renderer (OpenGL) kann kein 2D-MSAA.
+		if RenderingServer.get_current_rendering_method() != "gl_compatibility":
+			root.msaa_2d = msaa as Viewport.MSAA
+		root.msaa_3d = msaa as Viewport.MSAA
+		var scale := float(get_graphics_value("render_scale"))
+		root.scaling_3d_scale = scale
+		# FSR 1 schärft beim Hochskalieren nach; bei 100 % reicht bilinear.
+		root.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR if scale < 0.999 else Viewport.SCALING_3D_MODE_BILINEAR
+		root.fsr_sharpness = 0.3
+	var shadows := shadow_quality()
+	RenderingServer.directional_shadow_atlas_set_size(4096 if shadows >= 2 else 2048, true)
+	RenderingServer.directional_soft_shadow_filter_set_quality(
+		RenderingServer.SHADOW_QUALITY_SOFT_LOW if shadows >= 2 else RenderingServer.SHADOW_QUALITY_HARD)
+	_update_fps_counter()
+
+func _update_fps_counter() -> void:
+	if not show_fps:
+		if _fps_layer != null:
+			_fps_layer.visible = false
+		return
+	if _fps_layer == null:
+		_fps_layer = CanvasLayer.new()
+		_fps_layer.layer = 127
+		_fps_layer.name = "FpsCounter"
+		_fps_label = Label.new()
+		_fps_label.position = Vector2(8, 4)
+		_fps_label.add_theme_font_size_override("font_size", 18)
+		_fps_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.7))
+		_fps_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+		_fps_label.add_theme_constant_override("outline_size", 5)
+		_fps_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_fps_layer.add_child(_fps_label)
+		add_child(_fps_layer)
+	_fps_layer.visible = true
+
+func _process(_delta: float) -> void:
+	if show_fps and _fps_label != null:
+		_fps_label.text = "%d FPS" % int(Engine.get_frames_per_second())
 
 func _center_window() -> void:
 	var screen := DisplayServer.window_get_current_screen()

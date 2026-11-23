@@ -1,7 +1,7 @@
 class_name OptionsMenu
 extends CanvasLayer
 
-# Optionsmenü: Grafik (Fenstermodus), Audio (Master/Effekte/Musik) und
+# Optionsmenü: Grafik (Fenstermodus, Grafikstufe, Einzelwerte, FPS), Audio (Master/Effekte/Musik) und
 # Tastenbelegung, dazu der Knopf STATISTIK (StatsScreen). Erreichbar über den Hauptmenü-Knopf und während einer
 # Runde über ESC. Lokal pausiert es das Spiel; online läuft die Simulation
 # des Hosts weiter und nur die eigenen Eingaben werden ignoriert.
@@ -16,6 +16,9 @@ var _awaiting_action: String = ""
 var _awaiting_button: Button = null
 
 var _window_option: OptionButton = null
+var _preset_option: OptionButton = null
+# Callables, die die Grafik-Einzelregler aus GameSettings neu setzen.
+var _graphics_refreshers: Array[Callable] = []
 var _volume_sliders: Dictionary = {}
 var _volume_labels: Dictionary = {}
 var _pack_option: OptionButton = null
@@ -204,8 +207,17 @@ func _row(parent: Control, label_text: String) -> HBoxContainer:
 
 func _build_graphics_tab() -> Control:
 	var page := _tab_page("Grafik")
-	page.add_child(_spacer(6))
-	var row := _row(page, "Anzeigemodus")
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	page.add_child(scroll)
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 10)
+	scroll.add_child(list)
+	list.add_child(_spacer(4))
+
+	var row := _row(list, "Anzeigemodus")
 	_window_option = OptionButton.new()
 	_window_option.custom_minimum_size = Vector2(340, 44)
 	_window_option.add_theme_font_size_override("font_size", UiTheme.FS_L)
@@ -217,7 +229,141 @@ func _build_graphics_tab() -> Control:
 		GameSettings.set_window_mode(GameSettings.WINDOW_MODES[index])
 	)
 	row.add_child(_window_option)
+
+	var preset_row := _row(list, "Grafikstufe")
+	_preset_option = OptionButton.new()
+	_preset_option.custom_minimum_size = Vector2(340, 44)
+	_preset_option.add_theme_font_size_override("font_size", UiTheme.FS_L)
+	for i in range(GameSettings.GRAPHICS_PRESETS.size()):
+		_preset_option.add_item(str(GameSettings.GRAPHICS_PRESET_LABELS[GameSettings.GRAPHICS_PRESETS[i]]), i)
+	# "Eigene" entsteht nur durch Einzeländerungen, auswählen bringt nichts.
+	_preset_option.set_item_disabled(GameSettings.GRAPHICS_PRESETS.find("custom"), true)
+	_preset_option.item_selected.connect(func(index: int):
+		SoundManager.play_sound("click")
+		GameSettings.set_graphics_preset(GameSettings.GRAPHICS_PRESETS[index])
+	)
+	preset_row.add_child(_preset_option)
+	list.add_child(_hint("Niedrig ist für Laptops mit Grafik im Prozessor (z. B. Intel Iris Xe) gedacht. Einzelwerte darunter ändern die Stufe auf „Eigene“."))
+
+	list.add_child(_section_header("Einzelwerte"))
+	var scale_labels: Array[String] = []
+	for v in GameSettings.RENDER_SCALES:
+		scale_labels.append("%d %%" % int(round(v * 100.0)))
+	_graphics_choice(list, "Kantenglättung", GameSettings.MSAA_LABELS, "msaa",
+		func(i: int) -> Variant: return i,
+		func(v: Variant) -> int: return int(v),
+		"Glättet Treppchen an Kanten. Kostet auf schwacher Grafik am meisten.")
+	_graphics_choice(list, "3D-Auflösung", scale_labels, "render_scale",
+		func(i: int) -> Variant: return GameSettings.RENDER_SCALES[i],
+		func(v: Variant) -> int: return GameSettings.RENDER_SCALES.find(float(v)),
+		"Nur die 3D-Arena: rechnet kleiner und skaliert mit FSR hoch. Menüs und Seitenansicht bleiben scharf.")
+	_graphics_choice(list, "Schatten (Arena)", GameSettings.SHADOW_LABELS, "shadows",
+		func(i: int) -> Variant: return i,
+		func(v: Variant) -> int: return int(v),
+		"Sonnenschatten in der Arena: aus, harte Kanten oder weich.")
+	_graphics_toggle(list, "Kontaktschatten", "contact_shadows",
+		"Dunkler Saum am Fuß von Blöcken und Kisten (Ersatz für Umgebungsverdeckung).")
+	_graphics_choice(list, "Effekte", GameSettings.EFFECT_LABELS, "effects",
+		func(i: int) -> Variant: return i,
+		func(v: Variant) -> int: return int(v),
+		"Menge an Funken, Splittern, Blut, Staub und Schweif-Länge.")
+	_graphics_toggle(list, "Glühen", "glow",
+		"Leuchthof um Kugeln und Glühen in der Arena.")
+	var horde_labels: Array[String] = []
+	for n in GameSettings.HORDE_LIMITS:
+		horde_labels.append(str(n))
+	_graphics_choice(list, "Horden-Limit", horde_labels, "horde_limit",
+		func(i: int) -> Variant: return GameSettings.HORDE_LIMITS[i],
+		func(v: Variant) -> int: return GameSettings.HORDE_LIMITS.find(int(v)),
+		"Höchstens so viele Gegner gleichzeitig im Horden-Modus. Online zählt der Wert des Hosts.")
+
+	list.add_child(_section_header("Bildrate"))
+	var fps_row := _row(list, "FPS-Limit")
+	var fps_option := OptionButton.new()
+	fps_option.custom_minimum_size = Vector2(240, 40)
+	fps_option.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
+	for i in range(GameSettings.FPS_LIMITS.size()):
+		var fps: int = GameSettings.FPS_LIMITS[i]
+		fps_option.add_item("Unbegrenzt" if fps == 0 else "%d" % fps, i)
+	fps_option.tooltip_text = "Ein Limit hält Laptops kühler und gleichmäßiger."
+	fps_option.item_selected.connect(func(index: int):
+		SoundManager.play_sound("click")
+		GameSettings.set_max_fps(GameSettings.FPS_LIMITS[index])
+	)
+	fps_row.add_child(fps_option)
+	_graphics_refreshers.append(func(): fps_option.select(maxi(0, GameSettings.FPS_LIMITS.find(GameSettings.max_fps))))
+	var vsync_box := _check_row(list, "VSync", "Gegen Bildreißen. Aus = weniger Eingabeverzögerung, dafür evtl. Streifen.")
+	vsync_box.toggled.connect(func(on: bool):
+		SoundManager.play_sound("click")
+		GameSettings.set_vsync(on)
+	)
+	_graphics_refreshers.append(func(): vsync_box.set_pressed_no_signal(GameSettings.vsync))
+	var fps_box := _check_row(list, "FPS anzeigen", "Bildrate oben links einblenden.")
+	fps_box.toggled.connect(func(on: bool):
+		SoundManager.play_sound("click")
+		GameSettings.set_show_fps(on)
+	)
+	_graphics_refreshers.append(func(): fps_box.set_pressed_no_signal(GameSettings.show_fps))
 	return page
+
+func _hint(text: String) -> Label:
+	var hint := Label.new()
+	hint.text = text
+	hint.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	hint.add_theme_color_override("font_color", WorkshopStyle.TEXT_DIM)
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return hint
+
+func _section_header(text: String) -> Label:
+	var header := Label.new()
+	header.text = text.to_upper()
+	header.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	header.add_theme_color_override("font_color", WorkshopStyle.CYAN)
+	return header
+
+## Auswahlfeld für einen Grafik-Einzelwert. to_value: Index -> Wert,
+## to_index: gespeicherter Wert -> Index.
+func _graphics_choice(parent: Control, label_text: String, labels: Array[String], key: String,
+		to_value: Callable, to_index: Callable, tooltip: String) -> void:
+	var row := _row(parent, label_text)
+	var option := OptionButton.new()
+	option.custom_minimum_size = Vector2(240, 40)
+	option.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
+	option.tooltip_text = tooltip
+	for i in range(labels.size()):
+		option.add_item(labels[i], i)
+	option.item_selected.connect(func(index: int):
+		SoundManager.play_sound("click")
+		GameSettings.set_graphics_value(key, to_value.call(index))
+	)
+	row.add_child(option)
+	row.add_child(_row_hint(tooltip))
+	_graphics_refreshers.append(func():
+		option.select(maxi(0, int(to_index.call(GameSettings.get_graphics_value(key)))))
+	)
+
+func _graphics_toggle(parent: Control, label_text: String, key: String, tooltip: String) -> void:
+	var box := _check_row(parent, label_text, tooltip)
+	box.toggled.connect(func(on: bool):
+		SoundManager.play_sound("click")
+		GameSettings.set_graphics_value(key, on)
+	)
+	_graphics_refreshers.append(func(): box.set_pressed_no_signal(bool(GameSettings.get_graphics_value(key))))
+
+func _check_row(parent: Control, label_text: String, tooltip: String) -> CheckButton:
+	var row := _row(parent, label_text)
+	var box := CheckButton.new()
+	box.custom_minimum_size = Vector2(240, 36)
+	box.tooltip_text = tooltip
+	row.add_child(box)
+	row.add_child(_row_hint(tooltip))
+	return box
+
+func _row_hint(text: String) -> Label:
+	var hint := _hint(text)
+	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	return hint
 
 func _build_audio_tab() -> Control:
 	var page := _tab_page("Audio")
@@ -360,6 +506,10 @@ func _refresh() -> void:
 	if _window_option == null:
 		return
 	_window_option.select(maxi(0, GameSettings.WINDOW_MODES.find(GameSettings.window_mode)))
+	if _preset_option != null:
+		_preset_option.select(maxi(0, GameSettings.GRAPHICS_PRESETS.find(GameSettings.graphics_preset)))
+	for refresher in _graphics_refreshers:
+		refresher.call()
 	if _pack_option != null:
 		var pack_list := SoundManager.get_sound_pack_list()
 		for i in range(mini(pack_list.size(), _pack_option.item_count)):
