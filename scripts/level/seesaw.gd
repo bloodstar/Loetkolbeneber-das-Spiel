@@ -278,6 +278,10 @@ static func blast_all(tree: SceneTree, blast_position: Vector2, radius: float, s
 	for s in tree.get_nodes_in_group("seesaw"):
 		if is_instance_valid(s):
 			s.apply_blast(blast_position, radius, strength)
+	# Hebel (LevelSwitch) werden von Explosionen ebenfalls umgelegt.
+	for sw in tree.get_nodes_in_group("level_switch"):
+		if is_instance_valid(sw):
+			sw.apply_blast(blast_position, radius, strength)
 
 ## Sturmwind: neigt die Planke in Windrichtung, hängende Wippen schwingen mit.
 func apply_wind(wind: float, delta: float) -> void:

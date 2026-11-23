@@ -1100,8 +1100,10 @@ Kistenblöcke und Gruben waagrecht ziehen, Wände als Rechteck, Stacheln,
 Sprungfedern und Mystery-Blöcke anklicken, Röhrenpaare mit zwei Klicks.
 Mit <em>Objekt setzen</em> kommen Wippen, Kettenplattformen,
 Fahrplattformen, Drehbalken, Häuser, Pyramiden, Treppen, Kistenketten,
-Gitterzäune, Schrägen und Kugel-Objekte dazu. Ein ausgewähltes Objekt
-zeigt unter <em>Eigenschaften</em> alle Werte (z. B. Kettenlänge,
+Gitterzäune, Schrägen, Kugel-Objekte sowie Schalter, Türen/Falltüren,
+Laser und Orbitalschläge dazu (verbunden über die Kanalnummer; die
+gespiegelte Seite bekommt Kanal + 100). Ein ausgewähltes Objekt zeigt
+unter <em>Eigenschaften</em> alle Werte (z. B. Kettenlänge,
 Wippenbreite, Drehtempo und Stil, Kistengrößen); Verschieben per Ziehen,
 Löschen per Rechtsklick oder Entf. Gespiegelte Level zeigen die
 automatische Spiegelung blass. <em>Speichern</em> legt eine geänderte
@@ -1870,7 +1872,8 @@ dieselbe.</p>
 <td style="text-align: left;"><strong>Grasarena</strong></td>
 <td style="text-align: left;">Arena</td>
 <td style="text-align: left;">Luftige Balken, zentrale Wippe, Kisten,
-Ranken</td>
+Ranken. Der Mittelbalken hat eine Falltür über den Stacheln, Hebel unter
+den Seitenbalken öffnen sie für 4 s</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>Wüstenruine</strong></td>
@@ -1887,8 +1890,9 @@ Kistenstapel</td>
 <tr class="even">
 <td style="text-align: left;"><strong>Neonfabrik</strong></td>
 <td style="text-align: left;">Arena</td>
-<td style="text-align: left;">Technik-Balken, Ketten, Kisten,
-Powerups</td>
+<td style="text-align: left;">Technik-Balken, Ketten, Kisten, Powerups.
+Hebel unter den Einweg-Stegen schalten 4 s lang einen senkrechten Laser
+durch die Mitte</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Weite Wiese</strong></td>
@@ -1939,7 +1943,8 @@ Einweg-Stege</td>
 <td style="text-align: left;"><strong>Wollhaus</strong></td>
 <td style="text-align: left;">Arena</td>
 <td style="text-align: left;">Haus mit vier Räumen, Luken und begehbarem
-Dach, Kisten an Ketten</td>
+Dach, Kisten an Ketten. Die untere Mitteltür ist zu (Hebel im Raum
+öffnet sie 6 s), die obere steht offen (Hebel schließt sie 5 s)</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Eispyramiden</strong></td>
@@ -2019,24 +2024,51 @@ Mitte schleudern. Leiter aus Einweg-Stegen in der Mitte, Steg-Treppen
 außen</td>
 </tr>
 <tr class="even">
+<td style="text-align: left;"><strong>Falltürburg</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Breite Falltür-Brücke über einer
+Stachelgrube, Hebel darunter öffnen sie für 3 s. Oben je eine
+Falltür-Bastion, deren Hebel auf der Gegenseite hängt. Ganz oben eine
+Druckplatte: Wer sie betritt, ruft einen Orbitalschlag auf die andere
+Kartenseite</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Laserlabor</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Laser in Knöchelhöhe quer über den Boden
+(drüberspringen!), Laser auf den Seitenbalken mit dem Hebel auf der
+Gegenseite. Oben ein Tresor mit Herz-Blöcken hinter zwei Laserwänden:
+Der Hebel schaltet die eigene Wand ab, ein zweiter Treffer wieder
+an</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Schleusenwerk</strong></td>
+<td style="text-align: left;">Arena</td>
+<td style="text-align: left;">Tresor mit zwei Schleusentüren und einer
+Falltür über Stacheln als Boden. Die Druckplatte vor der Tür hält sie
+offen, solange jemand draufsteht (danach 2,5 s), innen öffnet ein Hebel.
+Außen lässt ein Hebel den Boden fallen. Über dem Dach ein Laser, oben
+eine Platte für einen Bodenlaser über die gegnerische Hälfte</td>
+</tr>
+<tr class="odd">
 <td style="text-align: left;"><strong>Pilzpfad</strong></td>
 <td style="text-align: left;">Scrollt seitlich</td>
 <td style="text-align: left;">Gruben, Treppen, Herz-Block, Fähre,
 Portale</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><strong>Gletscherpass</strong></td>
 <td style="text-align: left;">Scrollt seitlich</td>
 <td style="text-align: left;">Aufzüge im Abgrund, Eisfähre, hängende
 Wippe</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><strong>Lavaturm</strong></td>
 <td style="text-align: left;">Scrollt nach oben</td>
 <td style="text-align: left;">Lava steigt schon ab 4 s,
 Gipfel-Arena</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><strong>Himmelsleiter</strong></td>
 <td style="text-align: left;">Scrollt nach oben</td>
 <td style="text-align: left;">Feder, Aufzug, Wolkenfähre,
@@ -2157,6 +2189,42 @@ mit</td>
 (Uhrzeiger, Rührbalken, Windmühlen-Kreuz). Man fährt darauf mit, bis er
 zu steil wird. Kugeln, Kisten und Fässer schiebt und schleudert er weg.
 Schüsse prallen ab wie an einer Wand</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Schalter</strong></td>
+<td style="text-align: left;"><strong>Hebel</strong> (Kasten mit Hebel)
+werden angeschossen, geschlagen oder von Explosionen umgelegt; Spieler
+laufen hindurch. <strong>Druckplatten</strong> reagieren auf Spieler,
+Kisten und Kugeln, solange etwas draufsteht, und bleiben danach noch
+kurz an. Jeder Schalter hat eine Laufzeit: Der Ring (Platte: Balken)
+läuft leer, in der letzten 1,5 s blinkt er rot und tickt, dann fällt er
+zurück. Danach ist er einige Sekunden gesperrt (roter Ring füllt sich),
+damit niemand Türen im Dauerfeuer flattern lässt. <em>Zeitschalter</em>
+lassen sich während der Laufzeit nicht erneut auslösen,
+<em>Kippschalter</em> (Toggle) schaltet ein zweiter Treffer wieder aus.
+Schalter und Ziel tragen dieselbe Farbe. Bots schießen Hebel, wenn es
+dem Gegner schadet (Falltür unter ihm, Laser auf ihm) oder eine Tür im
+Weg ist, laufen zu lohnenden Platten und weichen aktiven Lasern aus</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Tür / Falltür</strong></td>
+<td style="text-align: left;">Gesteuert von Schaltern: Türen fahren nach
+oben auf, Falltüren klappen nach unten weg. Manche sind normal offen und
+schließen per Schalter. Sie schließen nie auf jemandem: Steht etwas im
+Rahmen, warten sie und blinken rot</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Laserschranke</strong></td>
+<td style="text-align: left;">Zwischen zwei Emittern. Beim Einschalten
+erst 0,6 s rote Warnlinie, dann der Strahl: 70 Schaden pro Sekunde und
+leichtes Wegstoßen. Manche Schranken sind normal an und werden per
+Schalter abgeschaltet</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Orbitalschlag</strong></td>
+<td style="text-align: left;">Per Schalter: derselbe Strahl wie beim
+Modifier Orbitallaser entlang einer festen Bahn (Peilmarken in
+Schalterfarbe), 1,8 s Warnung</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>Fass</strong></td>

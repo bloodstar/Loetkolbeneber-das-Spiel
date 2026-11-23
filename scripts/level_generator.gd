@@ -831,6 +831,78 @@ const MAP_PROFILES: Dictionary = {
 		"crate_powerup_chance": 0.6,
 		"powerups": 2,
 	},
+	"falltuerburg": {
+		# Burg über einer Stachelgrube mit Falltüren und Orbitalschlag-Platte (Schalter).
+		"archetype": "layout",
+		"theme": "storybook",
+		"backdrop_variant": "dusk",
+		"ground_top": [0, 2, 3, 20, 21, 22, 23],
+		"ground_bottom": [4, 5, 6, 24, 25, 26],
+		"platform": [1, 24, 25, 26, 30, 40, 42, 130, 131, 146, 147],
+		"destructible": [12, 13, 14, 15],
+		"strong_vine": [],
+		"weak_vine": [],
+		"decoration": [124, 125, 126, 127, 128],
+		"ice": [],
+		"accent": Color(1.0, 0.62, 0.3, 1.0),
+		"ice_patches": 0,
+		"vines": false,
+		"destructibles": 0,
+		"random_platforms": 0,
+		"barrels": 1,
+		"tnt_barrels": 1,
+		"crate_stacks": 1,
+		"crate_powerup_chance": 0.6,
+		"powerups": 2,
+	},
+	"laserlabor": {
+		# Neon-Labor mit Laserschranken, Hebeln und Tresor hinter Laserwänden (Schalter).
+		"archetype": "layout",
+		"theme": "neon",
+		"backdrop_variant": "foundry",
+		"ground_top": [113, 114, 115, 132, 133, 134],
+		"ground_bottom": [132, 133, 134, 113, 114, 115],
+		"platform": [111, 112, 113, 114, 115, 132, 133, 134],
+		"destructible": [12, 13, 14, 15],
+		"strong_vine": [],
+		"weak_vine": [],
+		"decoration": [150, 151, 152, 157, 158, 159],
+		"ice": [],
+		"accent": Color(1.0, 0.3, 0.55, 1.0),
+		"ice_patches": 0,
+		"vines": false,
+		"destructibles": 0,
+		"random_platforms": 0,
+		"barrels": 1,
+		"tnt_barrels": 1,
+		"crate_stacks": 1,
+		"crate_powerup_chance": 0.6,
+		"powerups": 2,
+	},
+	"schleusenwerk": {
+		# Tresor mit Schleusentüren, Druckplatten und Falltür über Stacheln (Schalter).
+		"archetype": "layout",
+		"theme": "platine",
+		"backdrop_variant": "circuit",
+		"ground_top": [113, 114, 115, 132, 133, 134],
+		"ground_bottom": [132, 133, 134, 113, 114, 115],
+		"platform": [111, 112, 113, 114, 115, 132, 133, 134],
+		"destructible": [12, 13, 14, 15],
+		"strong_vine": [],
+		"weak_vine": [],
+		"decoration": [150, 151, 152, 157, 158, 159],
+		"ice": [],
+		"accent": Color(0.45, 1.0, 0.6, 1.0),
+		"ice_patches": 0,
+		"vines": false,
+		"destructibles": 0,
+		"random_platforms": 0,
+		"barrels": 1,
+		"tnt_barrels": 0,
+		"crate_stacks": 1,
+		"crate_powerup_chance": 0.6,
+		"powerups": 2,
+	},
 	"kugelmuehle": {
 		# Zwei gegenläufige Windmühlen-Kreuze schleudern herabfallende Kugeln
 		# zur Mitte.
@@ -905,6 +977,8 @@ var _moving_objects_by_id: Dictionary = {}
 var _mystery_blocks: Array[Node] = []
 var _warp_pipes: Array[Node] = []
 var _next_moving_object_id: int = 1
+# Schalter und ihre Ziele (Türen, Falltüren, Laser, Orbitalschläge).
+var switch_network: SwitchNetwork = SwitchNetwork.new()
 var _spawn_candidates: Array[Dictionary] = []
 var _round_spawn_positions: Array[Vector2] = []
 var _round_spawn_total: int = 0
@@ -1017,6 +1091,7 @@ func generate_level(level_seed: int = 0, map_id: String = "", modifiers: Array[S
 	_moving_objects.clear()
 	_moving_objects_by_id.clear()
 	_next_moving_object_id = 1
+	switch_network.clear()
 	_mystery_blocks.clear()
 	_warp_pipes.clear()
 	_spawn_candidates.clear()
@@ -1405,14 +1480,30 @@ func is_spawn_position_clear(world_position: Vector2) -> bool:
 #  crate_chains: [ax, ay, bx, by, [kistengrößen](, durchhang)]  Kistenkette zwischen zwei
 #             Ankern (Kachel-Koordinaten als Kommazahl, z. B. Plattformkante oder Kartenrand);
 #             bx = -1: hängt frei von A herab, by ist dann die Länge in Kacheln
+#  switches: [x, y, kanal, art, modus, dauer_s(, sperre_s)]  Schalter (Kacheln als Kommazahl).
+#             art "lever" = Hebel, Mitte bei (x, y), wird angeschossen/geschlagen;
+#             art "plate" = Bodenplatte, Mitte x auf der Oberkante von Reihe y, reagiert
+#             auf Spieler/Kisten/Kugeln. modus "timed" (an für dauer_s) oder "toggle"
+#             (erneuter Treffer schaltet aus, spätestens nach dauer_s). Danach sperre_s
+#             gesperrt (Standard 3 s). Gespiegelte Kopie: Kanal + 100.
+#  gates:     [x_start, x_end, y_start, y_end, kanal, art(, invert)]  Tür ("door",
+#             senkrecht) oder Falltür ("hatch", waagrecht) über die Zellen. invert 1 = offen,
+#             Schalter schließt. Liegt sie mittig auf der Achse, hört sie auf beide Seiten.
+#  lasers:    [ax, ay, bx, by, kanal(, invert)]  Laserschranke zwischen zwei Punkten
+#             (Kacheln als Kommazahl). invert 1 = normal an, Schalter schaltet ab.
+#  strikes:   [ax, ay, bx, by, kanal]  Orbitallaser entlang der Linie beim Einschalten.
 #  chain_grids: [[spalten_x], [reihen_y], kistengröße]  Kettengitter: senkrechte Ketten
 #             von der Decke, waagrechte zwischen den äußeren Spalten, an jeder Kreuzung
 #             eine Kiste (nicht gespiegelt, die Spalten liegen selbst symmetrisch)
 const LAYOUTS: Dictionary = {
 	"grasarena": {
+		# Mittelbalken mit Falltür über den Stacheln: Hebel unter den Balken
+		# links und rechts öffnen sie für 4 s.
 		"mirror": true,
-		"platforms": [[3, 10, 20], [8, 13, 17], [18, 25, 17], [3, 7, 14], [12, 16, 14],
+		"platforms": [[3, 10, 20], [8, 13, 17], [18, 19, 17], [3, 7, 14], [12, 16, 14],
 			[2, 6, 8], [12, 16, 8]],
+		"gates": [[20, 23, 17, 17, 0, "hatch"]],
+		"switches": [[14.5, 15.7, 0, "lever", "timed", 4.0, 4.0]],
 		"oneway": [[8, 12, 11]],
 		"pads": [[18, 16]],
 		"mystery": [[4, 4]],
@@ -1452,6 +1543,9 @@ const LAYOUTS: Dictionary = {
 		"spikes": [[13, 22]],
 		"pipes": [[1, 22, 42, 22]],
 		"chains": [[13.0, 0, 6, 4]],
+		# Senkrechter Laser durch die Mitte, Hebel unter den Einweg-Stegen.
+		"lasers": [[22.0, 9.0, 22.0, 23.0, 0]],
+		"switches": [[12.5, 12.6, 0, "lever", "timed", 4.0, 5.0]],
 	},
 	"weite": {
 		"mirror": true,
@@ -1620,6 +1714,10 @@ const LAYOUTS: Dictionary = {
 		# Zwischendecke. Kistenkette vom Rand zur Plattform, Kisten an Fäden.
 		"mirror": true,
 		"houses": [[14, 29, 23]],
+		# Untere Mitteltür ist zu, ein Hebel in jedem unteren Raum öffnet sie
+		# für 6 s. Die obere Tür steht offen; die Hebel oben schließen sie.
+		"gates": [[21, 22, 21, 22, 0, "door"], [21, 22, 15, 16, 1, "door", 1]],
+		"switches": [[20.55, 19.5, 0, "lever", "timed", 6.0, 3.0], [20.55, 14.0, 1, "lever", "timed", 5.0, 4.0]],
 		"platforms": [[2, 6, 20], [7, 10, 17], [7, 10, 11]],
 		"oneway": [[2, 6, 14], [2, 6, 8]],
 		"mystery": [[4, 4]],
@@ -1744,6 +1842,68 @@ const LAYOUTS: Dictionary = {
 		"oneway": [[0, 2, 16], [0, 2, 13], [0, 2, 10], [19, 24, 18]],
 		"ball_chains": [[3.0, 7.15, 41.0, 7.15, 1.0, 0.9, 0.15, 0.4]],
 	},
+	"falltuerburg": {
+		# Burg über einer Stachelgrube: Die breite Brücke in der Mitte ist eine
+		# Falltür. Hebel unter den Seitenbalken öffnen sie für 3 s. Oben je
+		# eine Falltür-Bastion, deren Hebel auf der Gegenseite hängt. Wer auf
+		# der Platte ganz oben steht, ruft einen Orbitalschlag auf die andere
+		# Kartenseite.
+		"mirror": true,
+		"platforms": [[1, 4, 20], [11, 15, 20], [5, 9, 17], [9, 12, 14], [2, 7, 11], [10, 16, 8], [19, 21, 6]],
+		"spikes": [[18, 22], [19, 22], [20, 22], [21, 22]],
+		"gates": [[16, 27, 20, 20, 0, "hatch"], [27, 30, 14, 14, 1, "hatch"]],
+		"switches": [
+			[12.5, 21.7, 0, "lever", "timed", 3.0, 5.0],
+			[4.5, 12.7, 1, "lever", "timed", 4.0, 4.0],
+			[20.5, 6.0, 2, "plate", "timed", 1.0, 8.0],
+		],
+		"strikes": [[38.5, 0.0, 38.5, 23.0, 2]],
+		"mystery": [[5, 4]],
+	},
+	"laserlabor": {
+		# Neon-Labor voller Laserschranken. Am Boden ein langer Laser in
+		# Knöchelhöhe (drüberspringen!), auf den Seitenbalken je ein Laser,
+		# dessen Hebel auf der Gegenseite hängt. Oben ein Tresor mit
+		# Herz-Blöcken hinter zwei Laserwänden: der Hebel schaltet die eigene
+		# Wand ab, ein zweiter Treffer wieder an.
+		"mirror": true,
+		"platforms": [[3, 9, 20], [14, 18, 20], [8, 13, 17], [2, 7, 14], [16, 20, 14], [9, 14, 11],
+			[2, 6, 8], [17, 26, 8], [9, 13, 5]],
+		"lasers": [
+			[15.0, 22.45, 29.0, 22.45, 0],
+			[36.1, 13.65, 42.9, 13.65, 2],
+			[17.0, 0.5, 17.0, 8.0, 1, 1],
+		],
+		"switches": [
+			[11.0, 18.7, 0, "lever", "timed", 3.5, 4.0],
+			[12.0, 12.7, 2, "lever", "timed", 3.0, 4.0],
+			[4.0, 9.7, 1, "lever", "toggle", 8.0, 2.0],
+		],
+		"mystery": [[21, 4]],
+	},
+	"schleusenwerk": {
+		# Tresor in der Mitte mit zwei Schleusentüren und einer Falltür als
+		# Boden über Stacheln. Die Bodenplatte vor der Tür hält sie offen,
+		# solange jemand draufsteht (danach noch 2,5 s). Innen öffnet ein
+		# Hebel die Tür, außen an der Wand lässt ein Hebel den Boden fallen.
+		# Über dem Dach ein Laser, ganz oben eine Platte für einen Bodenlaser
+		# quer über die gegnerische Hälfte.
+		"mirror": true,
+		"platforms": [[11, 17, 20], [4, 9, 17], [10, 14, 14], [3, 8, 11], [10, 15, 8], [19, 21, 8], [17, 26, 12]],
+		"walls": [[17, 17, 13, 17]],
+		"gates": [[17, 17, 18, 19, 1, "door"], [18, 25, 20, 20, 0, "hatch"]],
+		"spikes": [[19, 22], [20, 22], [21, 22]],
+		"lasers": [[17.0, 11.6, 27.0, 11.6, 2]],
+		"strikes": [[24.0, 22.5, 43.5, 22.5, 3]],
+		"switches": [
+			[14.5, 20.0, 1, "plate", "timed", 2.5, 1.0],
+			[18.6, 15.5, 1, "lever", "timed", 3.0, 2.0],
+			[16.4, 15.0, 0, "lever", "timed", 3.0, 6.0],
+			[5.5, 12.7, 2, "lever", "timed", 3.5, 4.0],
+			[20.5, 8.0, 3, "plate", "timed", 1.0, 9.0],
+		],
+		"mystery": [[20, 16]],
+	},
 	"kugelmuehle": {
 		# Zwei Windmühlen-Kreuze drehen sich gegenläufig. Aus Trichtern
 		# neben den Naben fallen alle 5 s Kugeln auf die Flügel; die heben
@@ -1820,6 +1980,7 @@ func _build_layout(layout: Dictionary) -> void:
 				_spawn_moving_platform(mx0, int(entry[1]), width, -float(entry[3]), float(entry[4]), float(entry[5]), float(entry[6]))
 	for entry in layout.get("rotators", []):
 		_spawn_rotator_mirrored(entry, mirror)
+	_build_switch_layout(layout, mirror)
 
 func _for_mirrored(x: int, mirror: bool, action: Callable) -> void:
 	action.call(x)
@@ -3433,6 +3594,131 @@ func _spawn_rotator(center: Vector2, arm: float, tail: float, period: float, pha
 			if nearest.distance_to(c) <= reach:
 				_reserved_cells[Vector2i(x, y)] = true
 				_object_cells[Vector2i(x, y)] = true
+
+# --- Schalter -------------------------------------------------------------------
+
+## Schalter, Türen, Laser und Orbitalschläge aus dem Bauplan. Ziele werden
+## vor den Schaltern erzeugt; die Reihenfolge der net_ids ist auf Host und
+## Client gleich, weil beide denselben Bauplan abarbeiten.
+func _build_switch_layout(layout: Dictionary, mirror: bool) -> void:
+	for entry in layout.get("gates", []):
+		_spawn_gate_mirrored(entry, mirror)
+	for entry in layout.get("lasers", []):
+		_spawn_line_target_mirrored(entry, mirror, "laser")
+	for entry in layout.get("strikes", []):
+		_spawn_line_target_mirrored(entry, mirror, "strike")
+	for entry in layout.get("switches", []):
+		var cx := float(entry[0])
+		_spawn_switch(entry, cx, int(entry[2]), 1.0)
+		if mirror and absf(float(map_w) - cx - cx) > 0.01:
+			_spawn_switch(entry, float(map_w) - cx, int(entry[2]) + SwitchNetwork.MIRROR_OFFSET, -1.0)
+
+func _spawn_switch(entry: Array, cx: float, channel: int, facing: float) -> void:
+	var sw := LevelSwitch.new()
+	sw.kind = str(entry[3])
+	sw.mode = str(entry[4]) if entry.size() > 4 else "timed"
+	sw.duration = float(entry[5]) if entry.size() > 5 else 6.0
+	sw.cooldown = float(entry[6]) if entry.size() > 6 else 3.0
+	sw.channel = channel
+	sw.facing = facing
+	var cy := float(entry[1])
+	sw.position = Vector2(cx, cy) * TILE_SIZE
+	_register_moving_object(sw)
+	switch_network.add_switch(sw)
+	add_child(sw)
+	var cell := Vector2i(int(floor(cx)), int(floor(cy)))
+	if sw.kind == "plate":
+		# Platte liegt auf der Oberkante von Reihe cy: die Zelle darüber und
+		# die Nachbarn freihalten (keine Kisten, Deko oder Spawns darauf).
+		for dx in [-1, 0, 1]:
+			var c := Vector2i(cell.x + dx, int(round(cy)) - 1)
+			_object_cells[c] = true
+			_reserved_cells[c] = true
+	else:
+		_object_cells[cell] = true
+
+func _spawn_gate_mirrored(entry: Array, mirror: bool) -> void:
+	var x0 := int(entry[0])
+	var x1 := int(entry[1])
+	var ch := int(entry[4])
+	var mx0 := _layout_mirror_x(x1)
+	var mx1 := _layout_mirror_x(x0)
+	if mirror and mx0 == x0:
+		_spawn_gate(x0, x1, entry, [ch, ch + SwitchNetwork.MIRROR_OFFSET])
+		return
+	_spawn_gate(x0, x1, entry, [ch])
+	if mirror and (mx0 > x1 or mx1 < x0):
+		_spawn_gate(mx0, mx1, entry, [ch + SwitchNetwork.MIRROR_OFFSET])
+
+func _spawn_gate(x0: int, x1: int, entry: Array, channels: Array) -> void:
+	var y0 := int(entry[2])
+	var y1 := int(entry[3])
+	var gate := SwitchGate.new()
+	gate.kind = str(entry[5])
+	gate.invert = entry.size() > 6 and int(entry[6]) == 1
+	gate.channels = channels
+	gate.size_px = Vector2(float(x1 - x0 + 1), float(y1 - y0 + 1)) * TILE_SIZE
+	if gate.kind == "hatch":
+		# Falltür: so dick wie ein Einweg-Steg, oben in der Zelle.
+		gate.size_px.y = 16.0
+	if not platform_textures.is_empty():
+		gate.tile_texture = platform_textures[0]
+	gate.position = Vector2(float(x0), float(y0)) * TILE_SIZE
+	_register_moving_object(gate)
+	switch_network.add_target(gate)
+	add_child(gate)
+	for x in range(x0, x1 + 1):
+		for y in range(y0 - (1 if gate.kind == "hatch" else 0), y1 + 1):
+			_object_cells[Vector2i(x, y)] = true
+			_reserved_cells[Vector2i(x, y)] = true
+
+## Laser und Orbitalschläge: Linie zwischen zwei Punkten (Kacheln). Eine
+## Linie, die auf sich selbst gespiegelt wird, entsteht nur einmal und hört
+## auf beide Seiten.
+func _spawn_line_target_mirrored(entry: Array, mirror: bool, what: String) -> void:
+	var a := Vector2(float(entry[0]), float(entry[1]))
+	var b := Vector2(float(entry[2]), float(entry[3]))
+	var ch := int(entry[4])
+	if not mirror:
+		_spawn_line_target(a, b, entry, [ch], what)
+		return
+	var ma := Vector2(float(map_w) - a.x, a.y)
+	var mb := Vector2(float(map_w) - b.x, b.y)
+	var self_mirrored := (ma.distance_to(b) < 0.01 and mb.distance_to(a) < 0.01) \
+		or (ma.distance_to(a) < 0.01 and mb.distance_to(b) < 0.01)
+	if self_mirrored:
+		_spawn_line_target(a, b, entry, [ch, ch + SwitchNetwork.MIRROR_OFFSET], what)
+		return
+	_spawn_line_target(a, b, entry, [ch], what)
+	_spawn_line_target(ma, mb, entry, [ch + SwitchNetwork.MIRROR_OFFSET], what)
+
+func _spawn_line_target(a: Vector2, b: Vector2, entry: Array, channels: Array, what: String) -> void:
+	var pa := a * TILE_SIZE
+	var pb := b * TILE_SIZE
+	if what == "laser":
+		var laser := SwitchLaser.new()
+		laser.point_a = pa
+		laser.point_b = pb
+		laser.invert = entry.size() > 5 and int(entry[5]) == 1
+		laser.channels = channels
+		_register_moving_object(laser)
+		switch_network.add_target(laser)
+		add_child(laser)
+		# Strahlbahn freihalten: keine Kisten, Spawns oder Zufallsbalken.
+		var steps := maxi(1, int(ceil(pa.distance_to(pb) / (TILE_SIZE * 0.5))))
+		for i in range(steps + 1):
+			var p := pa.lerp(pb, float(i) / float(steps))
+			var c := Vector2i(int(floor(p.x / TILE_SIZE)), int(floor(p.y / TILE_SIZE)))
+			_object_cells[c] = true
+			_reserved_cells[c] = true
+	else:
+		var strike := SwitchStrike.new()
+		strike.point_a = pa
+		strike.point_b = pb
+		strike.channels = channels
+		strike.is_replica = Global.network_mode and not Global.is_local_host()
+		switch_network.add_target(strike)
+		add_child(strike)
 
 # --- Kletterhilfe für Bots ----------------------------------------------------
 

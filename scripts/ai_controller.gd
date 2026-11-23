@@ -30,6 +30,17 @@ const DEVIL_LINE_MARGIN: float = 34.0
 var _devil: Dictionary = {}
 var _devil_aim: Vector2 = Vector2.INF
 
+# Schalter: Lohnt sich ein Hebel (Falltür unter dem Gegner, Laser auf ihm,
+# Tür im Weg), schießt der Bot darauf; eine lohnende Bodenplatte in der Nähe
+# läuft er an. Aktive Laser und Warnlinien meidet er.
+const SWITCH_SCAN_TIME: float = 0.35
+const SWITCH_SHOOT_RANGE: float = 620.0
+const SWITCH_MIN_VALUE: float = 0.9
+const LASER_ESCAPE_DIST: float = 70.0
+var _switch_aim: Vector2 = Vector2.INF
+var _plate_goal: Vector2 = Vector2.INF
+var _switch_scan_timer: float = 0.0
+
 func _ready() -> void:
 	if not player:
 		player = get_parent() as Player
@@ -61,6 +72,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	_update_devil_aim()
+	_update_switch_goal(delta)
 	_handle_aim(delta)
 	_handle_navigation(delta)
 	_handle_combat(delta)
@@ -82,7 +94,15 @@ func _find_nearest_opponent() -> Player:
 	return best
 
 func _handle_aim(delta: float) -> void:
-	var goal: Vector2 = _devil_aim if _devil_aim != Vector2.INF else target.global_position
+	var goal: Vector2 = target.global_position
+	if _devil_aim != Vector2.INF:
+		goal = _devil_aim
+	elif _switch_aim != Vector2.INF:
+		# Kleine Ziele: von der Waffe aus zielen, nicht von der Körpermitte,
+		# sonst geht die Kugel knapp über den Hebel hinweg.
+		goal = _switch_aim
+		if player.muzzle != null:
+			goal += player.global_position - player.muzzle.get_parent().global_position
 	var to_target = (_drop_compensated_aim_point(goal) - player.global_position).normalized()
 	# Add slight noisy deviation
 	var noise = Vector2(randf_range(-aim_spread, aim_spread), randf_range(-aim_spread, aim_spread))
@@ -154,6 +174,10 @@ func _handle_navigation(_delta: float) -> void:
 	if _handle_lava_escape(_delta):
 		return
 	if _handle_zone_escape():
+		return
+	if _handle_laser_escape():
+		return
+	if _handle_plate_goal():
 		return
 
 	var diff = target.global_position - player.global_position
@@ -347,6 +371,8 @@ func _handle_combat(_delta: float) -> void:
 		var shot_dist: float = dist
 		if _devil_aim != Vector2.INF:
 			shot_dist = player.global_position.distance_to(_devil_aim)
+		elif _switch_aim != Vector2.INF:
+			shot_dist = player.global_position.distance_to(_switch_aim)
 		var line_clear := not ArenaMode.active or _devil_aim != Vector2.INF or ArenaBot.has_line_of_sight(player, target)
 		if shot_dist < 650.0 and line_clear and not _devil_in_line_of_fire():
 			player.shoot()
@@ -374,3 +400,103 @@ func _handle_combat(_delta: float) -> void:
 	if player.ability_timer <= 0.0:
 		if dist < 220.0 or player.current_health < player.max_health * 0.6:
 			player.use_ability()
+
+# --- Schalter ------------------------------------------------------------------
+
+func _switch_network() -> SwitchNetwork:
+	var main := player.get_parent()
+	var level = main.get("level_generator") if main != null else null
+	if level == null or not is_instance_valid(level):
+		return null
+	return level.get("switch_network") as SwitchNetwork
+
+func _update_switch_goal(delta: float) -> void:
+	if ArenaMode.active:
+		_switch_aim = Vector2.INF
+		_plate_goal = Vector2.INF
+		return
+	_switch_scan_timer -= delta
+	if _switch_scan_timer > 0.0:
+		return
+	_switch_scan_timer = SWITCH_SCAN_TIME * randf_range(0.8, 1.3)
+	_switch_aim = Vector2.INF
+	_plate_goal = Vector2.INF
+	var net := _switch_network()
+	if net == null:
+		return
+	var best_score := -INF
+	var best_plate := -INF
+	var space := player.get_world_2d().direct_space_state
+	for sw in net.get_switches():
+		var value := float(sw.bot_value(player, target))
+		if value < SWITCH_MIN_VALUE:
+			continue
+		var point: Vector2 = sw.get_aim_point()
+		var d := player.global_position.distance_to(point)
+		if sw.kind == "lever":
+			if d > SWITCH_SHOOT_RANGE:
+				continue
+			var ray := PhysicsRayQueryParameters2D.create(player.global_position, point, 1)
+			ray.exclude = [player.get_rid()]
+			if not space.intersect_ray(ray).is_empty():
+				continue
+			var score := value - d / 600.0
+			if score > best_score:
+				best_score = score
+				_switch_aim = point
+		else:
+			var dy := point.y - (player.global_position.y + BODY_FOOT_OFFSET * player.scale.y)
+			if absf(point.x - player.global_position.x) > 340.0 or absf(dy) > 50.0:
+				continue
+			var plate_score := value - d / 400.0
+			if plate_score > best_plate:
+				best_plate = plate_score
+				_plate_goal = point
+
+## Läuft zu einer lohnenden Bodenplatte (gleiche Ebene, nicht zu weit).
+func _handle_plate_goal() -> bool:
+	if _plate_goal == Vector2.INF or not player.is_on_floor():
+		return false
+	var dx := _plate_goal.x - player.global_position.x
+	if absf(dx) < 10.0:
+		player.velocity.x = move_toward(player.velocity.x, 0.0, player.move_speed * 0.3)
+		return true
+	var move_input := _avoid_ground_hazards(signf(dx))
+	player.velocity.x = move_toward(player.velocity.x, move_input * player.move_speed, player.move_speed * 0.25)
+	if player.is_on_wall() and jump_cooldown <= 0.0:
+		player.jump()
+		jump_cooldown = 0.4
+	return true
+
+## Weicht aktiven Lasern und Warnlinien aus: von senkrechten Strahlen
+## seitlich weg, aus waagrechten zum näheren Ende hinaus (und hoch, wenn der
+## Strahl unter dem Bot liegt).
+func _handle_laser_escape() -> bool:
+	var pos := player.global_position
+	for laser in get_tree().get_nodes_in_group("switch_laser"):
+		if not is_instance_valid(laser) or not laser.is_dangerous():
+			continue
+		if laser.distance_to(pos) > LASER_ESCAPE_DIST:
+			continue
+		var a: Vector2 = laser.point_a
+		var b: Vector2 = laser.point_b
+		var dir := (b - a).normalized()
+		var speed := player.move_speed
+		var move_input := 0.0
+		if absf(dir.y) > 0.7:
+			var closest := Geometry2D.get_closest_point_to_segment(pos, a, b)
+			move_input = signf(pos.x - closest.x)
+			if move_input == 0.0:
+				move_input = 1.0 if randf() < 0.5 else -1.0
+		else:
+			var to_a := absf(pos.x - a.x)
+			var to_b := absf(pos.x - b.x)
+			move_input = signf((a.x if to_a < to_b else b.x) - pos.x)
+			var beam_y := Geometry2D.get_closest_point_to_segment(pos, a, b).y
+			if beam_y > pos.y and player.is_on_floor() and jump_cooldown <= 0.0:
+				player.jump()
+				jump_cooldown = 0.4
+		move_input = _avoid_ground_hazards(move_input)
+		player.velocity.x = move_toward(player.velocity.x, move_input * speed, speed * 0.3)
+		return true
+	return false
