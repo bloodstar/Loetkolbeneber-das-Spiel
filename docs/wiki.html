@@ -457,12 +457,12 @@ schießt) oder <strong>Nahkämpfer</strong> (Linksklick schlägt mit seiner
 festen Waffe): Klinge (Schwert), Bastion (Hammer) und Phantom
 (Lötkolben-Stich) sind Nahkämpfer, alle anderen schießen. Im Draft
 erscheinen nur Karten, die zur Angriffsart passen.</p>
-<p><strong>Umbau der Helden-Kits (läuft):</strong> Jeder Held bekommt
-einen eigenen Dash (<code>Shift</code>), eine Fähigkeit (Rechtsklick)
-und eine <strong>Ulti</strong> (<code>E</code>). Fertig sind bisher
-<strong>Volt</strong> und <strong>Phantom</strong>, die übrigen Helden
-behalten vorerst Standard-Dash und ihre bisherige Fähigkeit und haben
-noch keine Ulti.</p>
+<p><strong>Helden-Kits:</strong> Jeder Held hat einen eigenen Dash
+(<code>Shift</code>), eine Fähigkeit (Rechtsklick) und eine
+<strong>Ulti</strong> (<code>E</code>). Meteorschauer (Ignis) und
+Singularität (Nova) werden wie gezielte Fähigkeiten mit der Maus
+gezielt: <code>E</code> halten zeigt die Vorschau, Loslassen löst aus
+(oder sofort, je nach Option „Fähigkeit auslösen“).</p>
 <table>
 <thead>
 <tr class="header">
@@ -495,8 +495,77 @@ Zielsuche nehmen den Köder ins Visier</td>
 unsichtbar und +30 % Tempo, Angriffe lassen nur kurz aufflackern, der
 erste Treffer macht doppelten Schaden</td>
 </tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Ignis</strong></td>
+<td style="text-align: left;"><strong>Nachbrenner</strong>: Dash mit
+Feuerspur</td>
+<td style="text-align: left;"><strong>Rocket Leap</strong>: explosiver
+Sprung (unverändert)</td>
+<td style="text-align: left;"><strong>Meteorschauer</strong> (28 s,
+gezielt bis 460 px): nach 0,8 s Warnung schlagen 5 Meteore nebeneinander
+ein (je Radius 72 px, bis 22 Schaden) und hinterlassen 3 s Feuer</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Spore</strong></td>
+<td style="text-align: left;"><strong>Sporenstoß</strong>: Dash, am
+Start bleibt eine Giftwolke</td>
+<td style="text-align: left;"><strong>Giftpilz</strong> (gezielt bis 230
+px): Falle am Boden, nach 0,6 s scharf. Platzt bei Gegnern in 55 px oder
+bei Kugeltreffern zu einer Giftwolke (75 px, 3,5 s, 11 Schaden/s).
+Höchstens 3 Pilze</td>
+<td style="text-align: left;"><strong>Seuchennebel</strong> (30 s): 6 s
+lang wandert ein Giftnebel (Radius 260 px) mit Spore, vergiftet und
+bremst Gegner, Spore heilt 8 HP/s</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Nova</strong></td>
+<td style="text-align: left;"><strong>Phasengleiten</strong>: 0,6 s frei
+lenkbar schweben, unverwundbar</td>
+<td style="text-align: left;"><strong>Gravitationsstoß</strong>: Kegel
+(80°, 175 px) stößt Gegner weg und lenkt Kugeln ab. Nach unten gezielt
+schleudert er Nova hoch</td>
+<td style="text-align: left;"><strong>Singularität</strong> (30 s,
+gezielt): Kern zieht Gegner im Radius 300 px heran und implodiert nach
+2,6 s (Radius 170 px, 38 Schaden)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Klinge</strong></td>
+<td style="text-align: left;"><strong>Durchstoß</strong>: Dash durch
+Gegner hindurch, trifft jeden einmal (70 % Schwertschaden). Ein Treffer
+halbiert die Dash-Abklingzeit</td>
+<td style="text-align: left;"><strong>Klingenbumerang</strong>: Schwert
+fliegt 280 px und zurück, trifft hin und zurück. Solange es fliegt, kein
+Hieb</td>
+<td style="text-align: left;"><strong>Klingensturm</strong> (24 s): 3 s
+lang frei beweglicher Wirbel (145 px), alle 0,3 s Schaden, großer
+Schlusswirbel, schlägt Kugeln zurück</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Bastion</strong></td>
+<td style="text-align: left;"><strong>Rammbock</strong>: nicht
+unverwundbar, Kugeln von vorn prallen ab, Gegner werden mitgeschoben und
+am Ende weggestoßen</td>
+<td style="text-align: left;"><strong>Magnethaken</strong>: Haken bis
+380 px, betäubt den ersten Gegner kurz und zieht ihn heran</td>
+<td style="text-align: left;"><strong>Festung</strong> (32 s): 5 s
+Kuppel (140 px), gegnerische Kugeln prallen von außen ab, innen heilen
+Bastion und Verbündete</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Druide</strong></td>
+<td style="text-align: left;"><strong>Rankenschwung</strong>: Ranke bis
+220 px zieht den Druiden an Wände und Decken. Ohne Halt normaler
+Dash</td>
+<td style="text-align: left;"><strong>Wurzelwall</strong>
+(unverändert)</td>
+<td style="text-align: left;"><strong>Urkeiler</strong> (35 s): 7 s
+riesiger Keiler, +60 % Leben, Hammer-Nahkampf, der Dash wird zum Ansturm
+(schleudert weg, bricht Kisten)</td>
+</tr>
 </tbody>
 </table>
+<p>Klinge schlägt in Kombos: Jeder <strong>dritte Hieb</strong> in Folge
+(innerhalb 1,6 s) ist ein starker Stoß mit 160 % Schaden.</p>
 <p>Die <strong>Ulti</strong> lädt über eine Abklingzeit, nicht über
 Schaden. Sie läuft über Rundenwechsel weiter und startet im Match halb
 geladen. Fähigkeits-Abklingzeit-Karten wirken zur Hälfte auch auf die
@@ -548,8 +617,8 @@ Blitzkugel, schockt und verlangsamt</td>
 <td style="text-align: right;">10</td>
 <td style="text-align: left;"><strong>Spore Coat</strong>: Treffer
 vergiften (2 Stapel)</td>
-<td style="text-align: left;"><strong>Spore Burst</strong>: Giftwolke, 9
-Schaden/s für 3,5 s</td>
+<td style="text-align: left;"><strong>Giftpilz</strong>: Falle, platzt
+zu einer Giftwolke</td>
 <td style="text-align: left;">Pilzhut</td>
 </tr>
 <tr class="even">
@@ -560,8 +629,8 @@ Schaden/s für 3,5 s</td>
 <td style="text-align: right;">10</td>
 <td style="text-align: left;"><strong>Schwerelos</strong>: Höchste
 Sprungkraft</td>
-<td style="text-align: left;"><strong>Singularität</strong>: Kern zieht
-Gegner 2 s lang zur Mitte (kein Schaden)</td>
+<td style="text-align: left;"><strong>Gravitationsstoß</strong>: stößt
+Gegner und Kugeln im Kegel weg</td>
 <td style="text-align: left;">Zauberhut mit Mini-Planet</td>
 </tr>
 <tr class="odd">
@@ -572,8 +641,8 @@ Gegner 2 s lang zur Mitte (kein Schaden)</td>
 <td style="text-align: right;">15</td>
 <td style="text-align: left;"><strong>Klingentanz</strong>: Start-Schild
 und hohes Tempo</td>
-<td style="text-align: left;"><strong>Klingensturm</strong>:
-Rundumschlag mit Rückstoß, 0,5 s unverwundbar</td>
+<td style="text-align: left;"><strong>Klingenbumerang</strong>: Schwert
+fliegt hin und zurück</td>
 <td style="text-align: left;">Roter Schal</td>
 </tr>
 <tr class="even">
@@ -584,8 +653,8 @@ Rundumschlag mit Rückstoß, 0,5 s unverwundbar</td>
 <td style="text-align: right;">20</td>
 <td style="text-align: left;"><strong>Aurora</strong>: Doppelte
 Schild-Regeneration, Schild-Cooldown nur 4 s</td>
-<td style="text-align: left;"><strong>Heilfeld</strong>: 4 s lang 8 HP
-und 10 Schild alle 0,5 s</td>
+<td style="text-align: left;"><strong>Magnethaken</strong>: zieht den
+ersten Gegner heran</td>
 <td style="text-align: left;">Bauhelm mit Lampe</td>
 </tr>
 <tr class="odd">
@@ -1567,32 +1636,35 @@ Grundkarte, und nur ein Zweig ist wählbar.</p>
 <td style="text-align: left;">Restladung</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Spore</strong></td>
-<td style="text-align: left;">Dichter Nebel</td>
+<td style="text-align: left;"><strong>Spore</strong> (Giftpilz)</td>
+<td style="text-align: left;">Pilzgarten</td>
 <td style="text-align: left;">Ätzender Nebel</td>
-<td style="text-align: left;">Symbiose</td>
+<td style="text-align: left;">Klebsporen (C: Sprungpilz)</td>
 <td style="text-align: left;">Sporenvorrat</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>Nova</strong></td>
-<td style="text-align: left;">Ereignishorizont</td>
-<td style="text-align: left;">Implosion</td>
-<td style="text-align: left;">Doppelstern</td>
-<td style="text-align: left;">Massenanziehung</td>
+<td style="text-align: left;"><strong>Nova</strong>
+(Gravitationsstoß)</td>
+<td style="text-align: left;">Druckwelle</td>
+<td style="text-align: left;">Wandschlag</td>
+<td style="text-align: left;">Umkehr</td>
+<td style="text-align: left;">–</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Klinge</strong></td>
-<td style="text-align: left;">Geschliffene Klingen</td>
-<td style="text-align: left;">Echowirbel</td>
-<td style="text-align: left;">Blutrausch</td>
-<td style="text-align: left;">Tanzschritt</td>
+<td style="text-align: left;"><strong>Klinge</strong>
+(Klingenbumerang)</td>
+<td style="text-align: left;">Wurfklinge</td>
+<td style="text-align: left;">Blutung</td>
+<td style="text-align: left;">Fangen</td>
+<td style="text-align: left;">–</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>Bastion</strong></td>
-<td style="text-align: left;">Verstärkte Emitter</td>
-<td style="text-align: left;">Schutzkuppel</td>
-<td style="text-align: left;">Pulsfeld</td>
-<td style="text-align: left;">Notfallprotokoll</td>
+<td style="text-align: left;"><strong>Bastion</strong>
+(Magnethaken)</td>
+<td style="text-align: left;">Langer Haken</td>
+<td style="text-align: left;">Kettenschlag</td>
+<td style="text-align: left;">Magnetfeld</td>
+<td style="text-align: left;">–</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Phantom</strong> (Köder)</td>
@@ -1616,6 +1688,68 @@ dem Weg, 60 % Schaden) und <strong>Blutspur</strong> (Epic, ein Kill in
 der Nachtjagd gibt die halbe Ulti-Abklingzeit zurück). Für alle Helden
 mit Ulti: <strong>Ulti-Akku</strong> (Uncommon, −15 %
 Ulti-Abklingzeit).</p>
+<p><strong>Dash- und Ulti-Karten der übrigen Helden</strong> (Grundkarte
+Rare, Evolutionen Epic):</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Held</th>
+<th style="text-align: left;">Dash-Grundkarte → Evolutionen</th>
+<th style="text-align: left;">Ulti-Grundkarte → Evolutionen</th>
+<th style="text-align: left;">Einzelkarte</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Ignis</strong></td>
+<td style="text-align: left;">Glutspur → Zündung (Explosion am
+Dash-Ende)</td>
+<td style="text-align: left;">Meteorregen (+2 Meteore) → Komet (ein
+riesiger Einschlag) / Flächenbrand (größeres, längeres Feuer)</td>
+<td style="text-align: left;">–</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Spore</strong></td>
+<td style="text-align: left;">Sporenschleier → Symbiose (Heilung in der
+Dash-Wolke)</td>
+<td style="text-align: left;">Seuchenherd → Pandemie (Gift springt über)
+/ Verwesung (keine Heilung im Nebel)</td>
+<td style="text-align: left;">–</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Nova</strong></td>
+<td style="text-align: left;">Schwebeflug → Phasenhülle (Kugeln fliegen
+beim Gleiten durch Nova)</td>
+<td style="text-align: left;">Ereignishorizont → Schwarzes Loch
+(verschluckt Kugeln, spuckt sie als eigene aus) / Doppelstern</td>
+<td style="text-align: left;">Massenanziehung</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Klinge</strong></td>
+<td style="text-align: left;">Stoßklinge → Klingenfluss (Treffer lädt
+den Dash ganz auf, alle 4 s)</td>
+<td style="text-align: left;">Geschliffene Klingen → Echowirbel /
+Blutrausch</td>
+<td style="text-align: left;">Tanzschritt</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Bastion</strong></td>
+<td style="text-align: left;">Schwerer Rammbock → Prellbock
+(Wandaufprall betäubt, +25 Schild)</td>
+<td style="text-align: left;">Verstärkte Emitter → Schutzkuppel /
+Pulsfeld (C: Wanderfestung)</td>
+<td style="text-align: left;">Notfallprotokoll</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Druide</strong></td>
+<td style="text-align: left;">Lange Ranke → Fesselranke /
+Rankenkletterer</td>
+<td style="text-align: left;">Urkraft → Raserei (Treffer verlängern) /
+Dornenfell (Schaden zurückwerfen)</td>
+<td style="text-align: left;">–</td>
+</tr>
+</tbody>
+</table>
 <p><strong>Druide (Wurzelwall)</strong> hat statt 3 Klassen- und 4
 Fähigkeitskarten 4 Wandkarten plus 3 Evolutionen:</p>
 <table>

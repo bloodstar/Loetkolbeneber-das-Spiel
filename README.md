@@ -95,12 +95,20 @@ Alle Tasten lassen sich unter **Optionen → Steuerung** neu belegen. Hier steht
 
 Es gibt **8 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am Kopf. Jeder Held ist entweder **Fernkämpfer** (Linksklick schießt) oder **Nahkämpfer** (Linksklick schlägt mit seiner festen Waffe): Klinge (Schwert), Bastion (Hammer) und Phantom (Lötkolben-Stich) sind Nahkämpfer, alle anderen schießen. Im Draft erscheinen nur Karten, die zur Angriffsart passen.
 
-**Umbau der Helden-Kits (läuft):** Jeder Held bekommt einen eigenen Dash (`Shift`), eine Fähigkeit (Rechtsklick) und eine **Ulti** (`E`). Fertig sind bisher **Volt** und **Phantom**, die übrigen Helden behalten vorerst Standard-Dash und ihre bisherige Fähigkeit und haben noch keine Ulti.
+**Helden-Kits:** Jeder Held hat einen eigenen Dash (`Shift`), eine Fähigkeit (Rechtsklick) und eine **Ulti** (`E`). Meteorschauer (Ignis) und Singularität (Nova) werden wie gezielte Fähigkeiten mit der Maus gezielt: `E` halten zeigt die Vorschau, Loslassen löst aus (oder sofort, je nach Option „Fähigkeit auslösen“).
 
 | Held | Dash (`Shift`) | Fähigkeit (Rechtsklick) | Ulti (`E`) |
 | :--- | :--- | :--- | :--- |
 | **Volt** | **Blitzschritt**: Teleport 130 px, 2 Ladungen, jede lädt einzeln nach | **Kugelblitz**: langsame Blitzkugel (3,5 s), schockt alle 0,4 s Gegner im Radius 85 px mit 6 Schaden und verlangsamt sie | **Überladung** (26 s): 5 s lang +40 % Tempo, +50 % Feuerrate, kein Munitionsverbrauch, jeder Schuss springt als Kettenblitz weiter |
 | **Phantom** | **Schattenschritt**: Dash, danach 0,8 s unsichtbar | **Köder**: Doppelgänger (40 HP, 3,5 s) läuft weiter, Phantom ist 1,5 s unsichtbar. Bots, Türme und Zielsuche nehmen den Köder ins Visier | **Nachtjagd** (28 s): 6 s unsichtbar und +30 % Tempo, Angriffe lassen nur kurz aufflackern, der erste Treffer macht doppelten Schaden |
+| **Ignis** | **Nachbrenner**: Dash mit Feuerspur | **Rocket Leap**: explosiver Sprung (unverändert) | **Meteorschauer** (28 s, gezielt bis 460 px): nach 0,8 s Warnung schlagen 5 Meteore nebeneinander ein (je Radius 72 px, bis 22 Schaden) und hinterlassen 3 s Feuer |
+| **Spore** | **Sporenstoß**: Dash, am Start bleibt eine Giftwolke | **Giftpilz** (gezielt bis 230 px): Falle am Boden, nach 0,6 s scharf. Platzt bei Gegnern in 55 px oder bei Kugeltreffern zu einer Giftwolke (75 px, 3,5 s, 11 Schaden/s). Höchstens 3 Pilze | **Seuchennebel** (30 s): 6 s lang wandert ein Giftnebel (Radius 260 px) mit Spore, vergiftet und bremst Gegner, Spore heilt 8 HP/s |
+| **Nova** | **Phasengleiten**: 0,6 s frei lenkbar schweben, unverwundbar | **Gravitationsstoß**: Kegel (80°, 175 px) stößt Gegner weg und lenkt Kugeln ab. Nach unten gezielt schleudert er Nova hoch | **Singularität** (30 s, gezielt): Kern zieht Gegner im Radius 300 px heran und implodiert nach 2,6 s (Radius 170 px, 38 Schaden) |
+| **Klinge** | **Durchstoß**: Dash durch Gegner hindurch, trifft jeden einmal (70 % Schwertschaden). Ein Treffer halbiert die Dash-Abklingzeit | **Klingenbumerang**: Schwert fliegt 280 px und zurück, trifft hin und zurück. Solange es fliegt, kein Hieb | **Klingensturm** (24 s): 3 s lang frei beweglicher Wirbel (145 px), alle 0,3 s Schaden, großer Schlusswirbel, schlägt Kugeln zurück |
+| **Bastion** | **Rammbock**: nicht unverwundbar, Kugeln von vorn prallen ab, Gegner werden mitgeschoben und am Ende weggestoßen | **Magnethaken**: Haken bis 380 px, betäubt den ersten Gegner kurz und zieht ihn heran | **Festung** (32 s): 5 s Kuppel (140 px), gegnerische Kugeln prallen von außen ab, innen heilen Bastion und Verbündete |
+| **Druide** | **Rankenschwung**: Ranke bis 220 px zieht den Druiden an Wände und Decken. Ohne Halt normaler Dash | **Wurzelwall** (unverändert) | **Urkeiler** (35 s): 7 s riesiger Keiler, +60 % Leben, Hammer-Nahkampf, der Dash wird zum Ansturm (schleudert weg, bricht Kisten) |
+
+Klinge schlägt in Kombos: Jeder **dritte Hieb** in Folge (innerhalb 1,6 s) ist ein starker Stoß mit 160 % Schaden.
 
 Die **Ulti** lädt über eine Abklingzeit, nicht über Schaden. Sie läuft über Rundenwechsel weiter und startet im Match halb geladen. Fähigkeits-Abklingzeit-Karten wirken zur Hälfte auch auf die Ulti. Phantoms Passiv **Hinterhalt**: +50 % Nahkampfschaden aus der Unsichtbarkeit oder von hinten.
 
@@ -108,10 +116,10 @@ Die **Ulti** lädt über eine Abklingzeit, nicht über Schaden. Sie läuft über
 | :--- | :--- | ---: | ---: | ---: | :--- | :--- | :--- |
 | **Ignis** | Pyro Skirmisher | 100 | 310 | 0 | **Afterburner**: Dash hinterlässt eine echte Feuerspur, Gegner darin brennen | **Rocket Leap**: Explosiver Sprung, 35 Schaden im Einschlag (Radius 140) | Schweißerbrille |
 | **Volt** | Hyper Speedster | 85 | 350 | 0 | **Overcharge**: Doppelsprung von Anfang an | **Kugelblitz**: wandernde Blitzkugel, schockt und verlangsamt | Gelbe Kappe mit Blitz |
-| **Spore** | Toxic Alchemist | 105 | 295 | 10 | **Spore Coat**: Treffer vergiften (2 Stapel) | **Spore Burst**: Giftwolke, 9 Schaden/s für 3,5 s | Pilzhut |
-| **Nova** | Gravity Mage | 95 | 290 | 10 | **Schwerelos**: Höchste Sprungkraft | **Singularität**: Kern zieht Gegner 2 s lang zur Mitte (kein Schaden) | Zauberhut mit Mini-Planet |
-| **Klinge** | Blade Dancer | 125 | 315 | 15 | **Klingentanz**: Start-Schild und hohes Tempo | **Klingensturm**: Rundumschlag mit Rückstoß, 0,5 s unverwundbar | Roter Schal |
-| **Bastion** | Field Engineer | 145 | 270 | 20 | **Aurora**: Doppelte Schild-Regeneration, Schild-Cooldown nur 4 s | **Heilfeld**: 4 s lang 8 HP und 10 Schild alle 0,5 s | Bauhelm mit Lampe |
+| **Spore** | Toxic Alchemist | 105 | 295 | 10 | **Spore Coat**: Treffer vergiften (2 Stapel) | **Giftpilz**: Falle, platzt zu einer Giftwolke | Pilzhut |
+| **Nova** | Gravity Mage | 95 | 290 | 10 | **Schwerelos**: Höchste Sprungkraft | **Gravitationsstoß**: stößt Gegner und Kugeln im Kegel weg | Zauberhut mit Mini-Planet |
+| **Klinge** | Blade Dancer | 125 | 315 | 15 | **Klingentanz**: Start-Schild und hohes Tempo | **Klingenbumerang**: Schwert fliegt hin und zurück | Roter Schal |
+| **Bastion** | Field Engineer | 145 | 270 | 20 | **Aurora**: Doppelte Schild-Regeneration, Schild-Cooldown nur 4 s | **Magnethaken**: zieht den ersten Gegner heran | Bauhelm mit Lampe |
 | **Phantom** | Shadow Assassin | 100 | 325 | 5 | **Hinterhalt**: +50 % Nahkampfschaden aus der Unsichtbarkeit oder von hinten | **Köder**: Doppelgänger läuft weiter, Phantom wird unsichtbar | Ninja-Stirnband |
 | **Druide** | Grove Warden | 105 | 295 | 10 | **Wurzelkraft**: Regeneriert ständig 2 HP/s | **Wurzelwall**: Rankenwand am Zielpunkt, breite Seite zum Druiden (108 px, 5 s, 150 HP), blockt Bewegung und Kugeln | Blätterkranz mit Geweih |
 
@@ -416,13 +424,24 @@ Eine Grundkarte (Rare) mit zwei exklusiven Evolutionen (Epic) und eine Einzelkar
 | :--- | :--- | :--- | :--- | :--- |
 | **Ignis** | Raketentriebwerk | Napalm-Landung | Splitterlandung | Kurze Zündschnur |
 | **Volt** (Kugelblitz) | Hochspannung | Sprungziel | Entladung | Restladung |
-| **Spore** | Dichter Nebel | Ätzender Nebel | Symbiose | Sporenvorrat |
-| **Nova** | Ereignishorizont | Implosion | Doppelstern | Massenanziehung |
-| **Klinge** | Geschliffene Klingen | Echowirbel | Blutrausch | Tanzschritt |
-| **Bastion** | Verstärkte Emitter | Schutzkuppel | Pulsfeld | Notfallprotokoll |
+| **Spore** (Giftpilz) | Pilzgarten | Ätzender Nebel | Klebsporen (C: Sprungpilz) | Sporenvorrat |
+| **Nova** (Gravitationsstoß) | Druckwelle | Wandschlag | Umkehr | – |
+| **Klinge** (Klingenbumerang) | Wurfklinge | Blutung | Fangen | – |
+| **Bastion** (Magnethaken) | Langer Haken | Kettenschlag | Magnetfeld | – |
 | **Phantom** (Köder) | Doppelgänger | Sprengköder | Platztausch (C: Lähmendes Mal) | Lange Schatten |
 
 **Dash- und Ulti-Karten (neu):** Volt: **Dreifachblitz** (Rare, +1 Blitzschritt-Ladung, +20 % Teleportweite) mit den Evolutionen **Kettenblink** (Kettenblitz am Zielpunkt) und **Gewitterspur** (Blitzzone am Zielpunkt); **Starkstrom** (Rare, Überladung +30 % Dauer, −10 % Ulti-Abklingzeit) mit **Dauerblitz** (Blitzschritt lädt in der Überladung dreimal so schnell) und **Schockring** (Schockwelle am Ende). Phantom: **Schattenschnitt** (Epic, der Dash sticht alle Gegner auf dem Weg, 60 % Schaden) und **Blutspur** (Epic, ein Kill in der Nachtjagd gibt die halbe Ulti-Abklingzeit zurück). Für alle Helden mit Ulti: **Ulti-Akku** (Uncommon, −15 % Ulti-Abklingzeit).
+
+**Dash- und Ulti-Karten der übrigen Helden** (Grundkarte Rare, Evolutionen Epic):
+
+| Held | Dash-Grundkarte → Evolutionen | Ulti-Grundkarte → Evolutionen | Einzelkarte |
+| :--- | :--- | :--- | :--- |
+| **Ignis** | Glutspur → Zündung (Explosion am Dash-Ende) | Meteorregen (+2 Meteore) → Komet (ein riesiger Einschlag) / Flächenbrand (größeres, längeres Feuer) | – |
+| **Spore** | Sporenschleier → Symbiose (Heilung in der Dash-Wolke) | Seuchenherd → Pandemie (Gift springt über) / Verwesung (keine Heilung im Nebel) | – |
+| **Nova** | Schwebeflug → Phasenhülle (Kugeln fliegen beim Gleiten durch Nova) | Ereignishorizont → Schwarzes Loch (verschluckt Kugeln, spuckt sie als eigene aus) / Doppelstern | Massenanziehung |
+| **Klinge** | Stoßklinge → Klingenfluss (Treffer lädt den Dash ganz auf, alle 4 s) | Geschliffene Klingen → Echowirbel / Blutrausch | Tanzschritt |
+| **Bastion** | Schwerer Rammbock → Prellbock (Wandaufprall betäubt, +25 Schild) | Verstärkte Emitter → Schutzkuppel / Pulsfeld (C: Wanderfestung) | Notfallprotokoll |
+| **Druide** | Lange Ranke → Fesselranke / Rankenkletterer | Urkraft → Raserei (Treffer verlängern) / Dornenfell (Schaden zurückwerfen) | – |
 
 **Druide (Wurzelwall)** hat statt 3 Klassen- und 4 Fähigkeitskarten 4 Wandkarten plus 3 Evolutionen:
 
