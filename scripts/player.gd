@@ -6,6 +6,9 @@ signal health_changed(current: float, max_h: float, shield: float, max_s: float)
 signal ammo_changed(current: int, max_a: int)
 signal ability_cooldown_updated(current: float, max_c: float)
 signal block_state_changed(is_blocking: bool, cooldown: float, max_cooldown: float)
+# Jeder Treffer, der take_damage erreicht (für Schadenszahlen im Testraum).
+# kind: "hit" (Leben/Schild), "block" (Barriere hält), "immune" (unverwundbar).
+signal damage_received(amount: float, source: Variant, kind: String)
 
 @export var player_index: int = 1
 @export var team_id: int = 0
@@ -4732,6 +4735,7 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null
 	# Dash, Sprung und kurze FÃƒÂ¤higkeits-Unverwundbarkeit negieren Schaden komplett.
 	if is_invulnerable:
 		_fx("sound", {"snd": ["bounce", 0.2, 2.0]})
+		damage_received.emit(amount, source, "immune")
 		return
 
 	# Universeller Block verhindert Schaden vollstÃƒÂ¤ndig; Projektile werden in
@@ -4741,6 +4745,7 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null
 		Global.add_match_stat(player_index, "blocked_hits", 1.0)
 		Global.shake_camera(0.16)
 		_pulse_block_shield(0.16)
+		damage_received.emit(amount, source, "block")
 		return
 	
 	shield_regen_timer = shield_regen_delay
@@ -4789,6 +4794,7 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null
 		source.register_vampire_hit(self)
 
 	if effective_damage > 0.0:
+		damage_received.emit(effective_damage, source, "hit")
 		Global.add_match_stat(player_index, "damage_taken", effective_damage)
 		if damage_source_index > 0:
 			Global.add_match_stat(damage_source_index, "damage_dealt", effective_damage)

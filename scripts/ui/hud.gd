@@ -274,7 +274,7 @@ func _connect_player(player: Player, ui: Dictionary) -> void:
 		ui["shield"].visible = max_s > 0.0 or cur_s > 0.0
 	)
 	player.ammo_changed.connect(func(_cur, _max_a):
-		if not is_instance_valid(ui["ammo"]):
+		if not is_instance_valid(ui["ammo"]) or not is_instance_valid(ui["ammo_ring"]):
 			return
 		_update_ammo_row(ui, player)
 	)

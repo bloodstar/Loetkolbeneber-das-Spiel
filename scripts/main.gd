@@ -24,6 +24,8 @@ var options_menu: OptionsMenu = null
 var map_editor: ArenaMapEditor = null
 var side_editor: SideLevelEditor = null
 var _last_editor: String = "arena"
+# Testraum (Hauptmenü → TESTRAUM): eigene Oberfläche, nur solange er läuft.
+var test_room: TestRoom = null
 
 # Alle aktiven Spieler (Index 1..player_count). Slot = player_index.
 var players: Array[Player] = []
@@ -147,6 +149,7 @@ func _ready() -> void:
 	options_menu.closed.connect(func(): card_draft_ui.set_timers_paused(false))
 	card_draft_ui.options_requested.connect(_open_ingame_options)
 	main_menu.options_requested.connect(func(): options_menu.open_options(false))
+	main_menu.test_room_requested.connect(_start_test_room)
 	map_editor = ArenaMapEditor.new()
 	map_editor.name = "ArenaMapEditor"
 	add_child(map_editor)
@@ -265,6 +268,9 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("restart_game") and not event.is_echo():
 		if Global.network_mode:
 			return
+		if Global.test_room_active:
+			test_room.reload_map()
+			return
 		# Laufende Runde komplett aufräumen (Spieler, Overlays, Countdown, Draft,
 		# ESC-Menü), dann den gesamten Setup-Prozess neu starten (inkl. Lobby).
 		_clear_running_round()
@@ -340,10 +346,10 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	round_death_order.clear()
 	card_stats_match_recorded = false
 
-	# 1. Level-Modifier deterministisch bestimmen.
+	# 1. Level-Modifier deterministisch bestimmen (im Testraum keine).
 	var active_mods: Array[String] = []
 	var horde := Global.is_horde_mode()
-	if modifier_manager != null and not horde:
+	if modifier_manager != null and not horde and not Global.test_room_active:
 		active_mods = modifier_manager.roll_configured_modifiers(level_seed)
 
 	# 2. Level regenerieren. Erst danach die Modifier-Hazards spawnen, damit
@@ -356,7 +362,7 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 		modifier_manager.is_replica = is_network_client
 		modifier_manager.start_round_modifiers(active_mods, self, level_generator)
 	PlayerProfile.begin_round(map_id)
-	if not is_network_client and not horde:
+	if not is_network_client and not horde and not Global.test_room_active:
 		RoundStats.begin_round(level_seed, map_id, active_mods)
 		AchievementManager.begin_round(active_mods)
 		MatchHonors.begin_round(Global.get_round_player_indices())
@@ -377,6 +383,12 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	if Global.is_tiebreak():
 		hud.show_tiebreak_notice(Global.tiebreak_slots)
 	_start_round_countdown()
+	if Global.test_room_active:
+		# Kein Countdown, kein Sudden Death: Testraum läuft sofort und endlos.
+		_end_round_countdown()
+		sudden_death_timer.stop()
+		rising_lava_wait = -1.0
+		test_room.on_round_started()
 
 	if is_network_host and NetworkManager.has_clients():
 		net_snapshot_count = 0
@@ -442,6 +454,69 @@ func _on_map_editor_test(map_id: String) -> void:
 	ArenaMaps.test_map_id = map_id
 	main_menu.close_menu()
 	_start_fresh_round(0, map_id)
+
+# --- Testraum ---
+
+## Hauptmenü → TESTRAUM: lokal Slot 1 (du) gegen Slot 2 (Dummy). Die Lobby-
+## Einstellungen werden gesichert und beim Verlassen wiederhergestellt, damit
+## "Last" und das nächste normale Match unberührt bleiben.
+func _start_test_room() -> void:
+	_prepare_editor_test()
+	if test_room == null:
+		test_room = TestRoom.new()
+		test_room.name = "TestRoom"
+		add_child(test_room)
+	test_room.begin(self)
+	main_menu.close_menu()
+	_leave_arena()
+	_start_fresh_round(0, test_room.map_id)
+
+## Startet die Testraum-Karte neu (Kartenwahl, F9). Karten bleiben erhalten.
+func restart_test_room_round(map_id: String) -> void:
+	_cancel_kill_cam()
+	_cancel_round_countdown()
+	_clear_players()
+	_clear_remote_bullets()
+	_clear_remote_towers()
+	_clear_round_effects()
+	_leave_arena()
+	_start_fresh_round(0, map_id)
+
+## Ersetzt die Figur eines Slots durch eine frische Instanz (neue Karten oder
+## neuer Held wirken so vollständig). at = Vector2.INF → Spawnpunkt.
+func respawn_test_player(slot: int, at: Vector2 = Vector2.INF) -> Player:
+	var old := get_player(slot)
+	if old != null:
+		players.erase(old)
+		if old.died.is_connected(_on_player_died):
+			old.died.disconnect(_on_player_died)
+		old.queue_free()
+	var p: Player = player_scene.instantiate()
+	p.player_index = slot
+	p.team_id = Global.get_team_for_slot(slot)
+	p.is_bot = Global.is_bot_slot(slot)
+	p.position = at if at != Vector2.INF else level_generator.get_spawn_position(slot, 2)
+	add_child(p)
+	p.died.connect(_on_player_died)
+	players.append(p)
+	for q in players:
+		if is_instance_valid(q):
+			q.opponent = _nearest_other(q)
+	_update_bot_controllers()
+	camera.targets.clear()
+	for q in players:
+		camera.add_target(q)
+	_configure_camera_world()
+	hud.setup_players(players)
+	hud.update_all()
+	p.control_enabled = true
+	return p
+
+func _end_test_room() -> void:
+	if not Global.test_room_active:
+		return
+	if test_room != null:
+		test_room.end()
 
 # Liefert den Spieler mit dem gegebenen Slot-Index (1..6) oder null.
 func get_player(index: int) -> Player:
@@ -553,7 +628,8 @@ func _update_bot_controllers() -> void:
 				hb.name = "HordeBotController"
 				p.add_child(hb)
 			continue
-		if p.is_bot:
+		# Testraum-Dummy im Stand-Modus hat seine eigene Steuerung.
+		if p.is_bot and not p.has_node("TestDummyController"):
 			if not existing:
 				var ai := AIController.new()
 				ai.name = "AIController"
@@ -725,6 +801,11 @@ func _compute_sudden_death_lava_stop_y() -> float:
 
 func _on_player_died(dead_player_index: int) -> void:
 	if Global.current_state != Global.GameState.PLAYING:
+		return
+	# Testraum: keine Runden und Punkte, die Figur steht einfach wieder auf.
+	if Global.test_room_active:
+		camera.shake(0.3)
+		test_room.on_player_died(dead_player_index)
 		return
 	camera.shake(0.55)
 	if horde_director != null and is_instance_valid(horde_director):
@@ -1951,6 +2032,7 @@ func _on_hud_restart_requested() -> void:
 		return
 	# In-Place-Neustart: kein reload_current_scene(), sondern sauberes Aufräumen.
 	bot_test_token += 1
+	_end_test_room()
 	Global.reset_match()
 	Global.current_state = Global.GameState.MENU
 	_clear_running_round()
