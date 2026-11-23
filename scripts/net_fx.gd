@@ -135,13 +135,14 @@ static func _plasma(parent: Node, args: Dictionary) -> void:
 	var along := Vector2(-inward.y, inward.x)
 	_ring(parent, ring_args(pos, Color(1.0, 0.12, 0.2, 0.8), 0.6, 4.2, 0.22, 0.3, 7, true))
 	_ring(parent, ring_args(pos, Color(1.0, 0.8, 0.82, 0.95), 0.4, 1.8, 0.1, 0.14, 8))
+	var arcs := GameSettings.scaled_count(2, 1)
 	for side: float in [-1.0, 1.0]:
-		for i in range(2):
+		for i in range(arcs):
 			var arc_end := pos + along * side * randf_range(40.0, 85.0) + inward * randf_range(-6.0, 14.0)
 			var arc := zap_args(pos, arc_end, Color(1.0, 0.25, 0.3, 0.95), 3.0 - float(i), 0.22, 5, 9.0)
 			arc["z"] = 7
 			_zap(parent, arc)
-	for i in range(3):
+	for i in range(GameSettings.scaled_count(3, 1)):
 		var dir := (inward + along * randf_range(-0.8, 0.8)).normalized()
 		var spark := zap_args(pos, pos + dir * randf_range(22.0, 44.0), Color(1.0, 0.75, 0.6, 0.9), 2.0, 0.16, 3, 5.0)
 		spark["z"] = 7

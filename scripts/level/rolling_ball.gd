@@ -348,7 +348,7 @@ func _spawn_shards(at: Vector2) -> void:
 	fx.global_position = at
 	fx.z_index = 5
 	parent.add_child(fx)
-	var count := int(_size_mult(10.0, 6.0, 4.0))
+	var count := GameSettings.scaled_count(int(_size_mult(10.0, 6.0, 4.0)), 3)
 	for i in range(count):
 		var shard := Polygon2D.new()
 		var s := (3.0 + float(i % 3) * 1.5) * _size_mult(1.5, 1.0, 0.6)

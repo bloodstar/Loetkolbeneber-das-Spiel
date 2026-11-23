@@ -183,7 +183,8 @@ func _spawn_splinters(impact_position: Vector2) -> void:
 	fx.global_position = impact_position
 	fx.z_index = 5
 	parent.add_child(fx)
-	for i in range(6):
+	var shard_count := GameSettings.scaled_count(6, 3)
+	for i in range(shard_count):
 		var shard := Polygon2D.new()
 		var shard_size := 3.0 + float(i % 3) * 1.5
 		shard.polygon = PackedVector2Array([
@@ -192,9 +193,9 @@ func _spawn_splinters(impact_position: Vector2) -> void:
 			Vector2(-shard_size, shard_size),
 		])
 		shard.color = Color(0.58, 0.34, 0.15, 1.0)
-		shard.rotation = float(i) * TAU / 6.0
+		shard.rotation = float(i) * TAU / float(shard_count)
 		fx.add_child(shard)
-		var direction := Vector2.from_angle(float(i) * TAU / 6.0 + 0.35)
+		var direction := Vector2.from_angle(float(i) * TAU / float(shard_count) + 0.35)
 		var tw := shard.create_tween()
 		tw.tween_property(shard, "position", direction * (22.0 + float(i % 3) * 9.0), 0.22)
 		tw.parallel().tween_property(shard, "modulate:a", 0.0, 0.24)

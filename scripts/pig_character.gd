@@ -171,6 +171,9 @@ func _update_motion(delta: float) -> void:
 func _spawn_dust(local_pos: Vector2, direction: float) -> void:
 	if not animate:
 		return
+	# Niedrige Effektstufe: nur jede zweite Staubwolke.
+	if GameSettings.effects_scale() < 0.5 and _dust.size() % 2 == 1:
+		return
 	_dust.append({
 		"pos": local_pos,
 		"vel": Vector2(direction * 14.0, -6.0),
@@ -206,7 +209,7 @@ func _draw_dust() -> void:
 func _spawn_blood_particles() -> void:
 	if not animate or _hit_strength < BLOOD_MIN_STRENGTH:
 		return
-	var count := 5 + int(round(_hit_strength * 4.0))
+	var count := GameSettings.scaled_count(5 + int(round(_hit_strength * 4.0)), 2)
 	var hit_angle := _hit_direction.angle() if _hit_direction.length_squared() > 0.001 else 0.0
 	for i in range(count):
 		var phase := float(i) * 2.399963

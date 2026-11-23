@@ -25,6 +25,10 @@ var _beasts: Dictionary = {}      # HordeEnemy-Instanz-ID -> HordeBeast / VoxelP
 var _shadow_mat: StandardMaterial3D
 var _shadow_mesh: PlaneMesh
 var _contact_mat: StandardMaterial3D
+# Für die Grafikstufen (GameSettings): live umschaltbar.
+var _env: Environment = null
+var _sun: DirectionalLight3D = null
+var _contact_shadows: Array[Node3D] = []
 var _rng := RandomNumberGenerator.new()
 
 func setup(map_data: Dictionary, grid: ArenaGrid, cam2d: Camera2D) -> void:
@@ -48,6 +52,21 @@ func setup(map_data: Dictionary, grid: ArenaGrid, cam2d: Camera2D) -> void:
 	_shadow_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_shadow_mat.albedo_texture = ArenaTextures.get_soft_blob()
 	_shadow_mat.albedo_color = Color(0.02, 0.04, 0.1, 0.55)
+	_apply_graphics_settings()
+	GameSettings.settings_changed.connect(_apply_graphics_settings)
+
+## Grafikstufe: Glühen, Sonnenschatten und Kontaktschatten (statt AO).
+func _apply_graphics_settings() -> void:
+	if _env != null:
+		_env.glow_enabled = GameSettings.glow_enabled()
+	if _sun != null:
+		var q := GameSettings.shadow_quality()
+		_sun.shadow_enabled = q > 0
+		_sun.shadow_blur = 1.2 if q >= 2 else 0.0
+	var contact := GameSettings.contact_shadows_enabled()
+	for node in _contact_shadows:
+		if is_instance_valid(node):
+			node.visible = contact
 
 func _build_environment(_map_data: Dictionary) -> void:
 	var env := Environment.new()
@@ -67,6 +86,7 @@ func _build_environment(_map_data: Dictionary) -> void:
 	env.adjustment_enabled = true
 	env.adjustment_contrast = 1.1
 	env.adjustment_saturation = 1.12
+	_env = env
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
@@ -80,6 +100,7 @@ func _build_environment(_map_data: Dictionary) -> void:
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	sun.rotation_degrees = Vector3(-52.0, -38.0, 0.0)
 	add_child(sun)
+	_sun = sun
 
 func _voxel_multimesh(count: int, size: Vector3, mat: Material) -> MultiMeshInstance3D:
 	var mm := MultiMesh.new()
@@ -171,6 +192,7 @@ func _build_blocks(map_data: Dictionary, grid: ArenaGrid) -> void:
 		skirt.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		skirt.position = Vector3(0.0, -ArenaMode.BAND_H * 0.5 + 0.5, 0.0)
 		crate.add_child(skirt)
+		_contact_shadows.append(skirt)
 
 ## Kontaktschatten: weicher dunkler Saum am Fuß jedes Blocks. Erdet die
 ## Würfel auf dem Boden (ersetzt Ambient Occlusion, die der mobile Renderer
@@ -210,6 +232,7 @@ func _build_contact_shadows(grid: ArenaGrid, entries: Array) -> void:
 	mmi.material_override = _contact_material()
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mmi)
+	_contact_shadows.append(mmi)
 
 func _floor_material(map_data: Dictionary, grid: ArenaGrid) -> Material:
 	var floor_col: Color = map_data.get("floor", Color(0.4, 0.6, 0.3))
