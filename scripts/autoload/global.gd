@@ -219,6 +219,7 @@ const MAP_PLAYABLE: Array[String] = [
 	"gitterzaun", "truemmerfeld", "schrottplatz", "schneefeld", "wollmarkt",
 	"kugellawine", "kugelbahn", "kugelkette", "kugelmuehle",
 	"turbotrasse", "asteroidenfeld", "kometenjagd",
+	"falltuerburg", "laserlabor", "schleusenwerk",
 ]
 const MAPS: Dictionary = {
 	"zufall": {
@@ -340,6 +341,18 @@ const MAPS: Dictionary = {
 	"kugelbahn": {
 		"name": "Kugelbahn",
 		"description": "Doppelte Zickzack-Kugelbahn: Alle 5 Sekunden rollen neue Kugeln herab bis auf den Boden.",
+	},
+	"falltuerburg": {
+		"name": "Falltürburg",
+		"description": "Brücke über Stacheln ist eine Falltür: Hebel öffnen sie. Oben ruft eine Druckplatte einen Orbitalschlag.",
+	},
+	"laserlabor": {
+		"name": "Laserlabor",
+		"description": "Laserschranken am Boden und auf den Balken, per Hebel scharf geschaltet. Oben ein Tresor hinter Laserwänden.",
+	},
+	"schleusenwerk": {
+		"name": "Schleusenwerk",
+		"description": "Tresor mit Schleusentüren: Druckplatten öffnen, Hebel lassen den Boden über den Stacheln fallen.",
 	},
 	"kugelmuehle": {
 		"name": "Kugelmühle",
