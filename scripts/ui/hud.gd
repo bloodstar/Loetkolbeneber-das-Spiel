@@ -1505,9 +1505,9 @@ func _on_match_over(winner_idx: int) -> void:
 	if _upgrade_bar != null:
 		_upgrade_bar.visible = false
 	game_over_panel.offset_left = -540.0
-	game_over_panel.offset_top = -320.0
+	game_over_panel.offset_top = -420.0
 	game_over_panel.offset_right = 540.0
-	game_over_panel.offset_bottom = 320.0
+	game_over_panel.offset_bottom = 420.0
 	var hero: HeroData = Global.get_hero(Global.get_player_hero_id(winner_idx)) if winner_idx > 0 else null
 	var kind := ""
 	if winner_idx <= 0 or hero == null:
@@ -1626,13 +1626,107 @@ func _build_match_stats() -> void:
 				value_label.add_theme_color_override("font_color", UiTheme.GOLD)
 			grid.add_child(value_label)
 
-	var summary := Label.new()
-	summary.text = _match_summary_text(mvp_index)
-	summary.add_theme_font_size_override("font_size", UiTheme.FS_S)
-	summary.add_theme_color_override("font_color", Color(0.86, 0.78, 0.52, 1.0))
-	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	block.add_child(summary)
+	block.add_child(_build_honors_block())
+
+# MVP-Ehrungen (MatchHonors): Kacheln mit Symbol, Titel, Spieler und Wert.
+# Sie erscheinen nacheinander, damit der Win-Screen wie eine kleine Gala wirkt.
+func _build_honors_block() -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	var honors := MatchHonors.get_honors()
+	if honors.is_empty():
+		return box
+
+	var heading := Label.new()
+	heading.text = "EHRUNGEN"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
+	heading.add_theme_color_override("font_color", UiTheme.GOLD)
+	box.add_child(heading)
+
+	var grid := GridContainer.new()
+	grid.columns = mini(4, honors.size())
+	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	box.add_child(grid)
+
+	var delay := 0.35
+	for honor in honors:
+		var tile := _make_honor_tile(honor)
+		grid.add_child(tile)
+		tile.modulate.a = 0.0
+		var tween := tile.create_tween()
+		tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		tween.set_ignore_time_scale(true)
+		tween.tween_interval(delay)
+		tween.tween_property(tile, "modulate:a", 1.0, 0.25)
+		delay += 0.18
+	return box
+
+func _make_honor_tile(honor: Dictionary) -> Control:
+	var info := MatchHonors.describe(honor)
+	var slot := int(honor.get("slot", 0))
+	var accent: Color = info["color"]
+	var is_mvp := str(honor.get("id", "")) == "mvp"
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(250, 92)
+	panel.tooltip_text = str(info["flavor"])
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.06, 0.08, 0.11, 0.95) if not is_mvp else Color(0.14, 0.11, 0.04, 0.95)
+	style.set_corner_radius_all(10)
+	style.set_border_width_all(3 if is_mvp else 2)
+	style.border_color = UiTheme.with_alpha(accent, 0.9 if is_mvp else 0.6)
+	style.content_margin_left = 10
+	style.content_margin_right = 10
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
+	panel.add_theme_stylebox_override("panel", style)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	panel.add_child(row)
+
+	var icon := Label.new()
+	icon.text = str(info["icon"])
+	icon.custom_minimum_size = Vector2(40, 0)
+	icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	icon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	icon.add_theme_font_size_override("font_size", 34)
+	icon.add_theme_color_override("font_color", accent)
+	row.add_child(icon)
+
+	var texts := VBoxContainer.new()
+	texts.add_theme_constant_override("separation", 0)
+	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	texts.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_child(texts)
+
+	var title := Label.new()
+	title.text = str(info["title"]).to_upper()
+	title.add_theme_font_override("font", UiTheme.FONT_BOLD)
+	title.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	title.add_theme_color_override("font_color", accent)
+	texts.add_child(title)
+
+	var who := Label.new()
+	who.text = _player_display_name(slot) if slot > 0 else "—"
+	who.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	if slot > 0:
+		who.add_theme_color_override("font_color", Global.get_hero(Global.get_player_hero_id(slot)).color_tint)
+	who.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	who.custom_minimum_size = Vector2(180, 0)
+	texts.add_child(who)
+
+	var detail := Label.new()
+	detail.text = str(info["detail"])
+	detail.add_theme_font_size_override("font_size", UiTheme.FS_XS)
+	detail.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	detail.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	detail.custom_minimum_size = Vector2(180, 0)
+	texts.add_child(detail)
+	return panel
 
 func _player_display_name(slot: int) -> String:
 	var hero: HeroData = Global.get_hero(Global.get_player_hero_id(slot))
@@ -1655,40 +1749,6 @@ func _format_accuracy(stats: Dictionary) -> String:
 	if shots <= 0.0:
 		return "0%"
 	return "%d%%" % int(round(hits / shots * 100.0))
-
-func _match_summary_text(mvp_index: int) -> String:
-	var damage_leader := Global.get_match_stat_leader("damage_dealt")
-	var block_leader := Global.get_match_stat_leader("blocked_hits")
-	var heal_leader := Global.get_match_stat_leader("healing_done")
-	var melee_leader := Global.get_match_stat_leader("melee_damage")
-	var lines: Array[String] = []
-	lines.append("★ Bester Spieler: %s" % _leader_text(mvp_index, "gesamtwert"))
-	lines.append("Meister Schaden: %s" % _leader_text(damage_leader, "damage_dealt"))
-	lines.append("Meiste Barriere-Treffer: %s (%d Treffer · %d Schaden)" % [
-		_leader_text(block_leader, "blocked_hits"),
-		int(Global.get_match_stat(block_leader, "blocked_hits")),
-		int(Global.get_match_stat(block_leader, "damage_blocked")),
-	])
-	lines.append("Meiste Heilung: %s" % _leader_text(heal_leader, "healing_done"))
-	if melee_leader > 0 and Global.get_match_stat(melee_leader, "melee_damage") > 0.0:
-		lines.append("Meister Nahkampf: %s" % _leader_text(melee_leader, "melee_damage"))
-	return "\n".join(lines)
-
-func _leader_text(slot: int, key: String) -> String:
-	if slot <= 0:
-		return "—"
-	var value := ""
-	if key == "damage_dealt":
-		value = " · %d Schaden" % int(Global.get_match_stat(slot, key))
-	elif key == "healing_done":
-		value = " · %d HP" % int(Global.get_match_stat(slot, key))
-	elif key == "melee_damage":
-		value = " · %d Schaden mit %s" % [int(Global.get_match_stat(slot, key)), Global.get_melee_weapon_label(Global.get_melee_weapon(slot))]
-	elif key == "blocked_hits":
-		value = ""
-	elif key == "gesamtwert":
-		value = " · %d Punkte" % Global.player_scores[slot - 1]
-	return _player_display_name(slot) + value
 
 func _on_restart_pressed() -> void:
 	if _overview != null:
