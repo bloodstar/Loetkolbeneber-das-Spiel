@@ -94,9 +94,9 @@ Alle Tasten lassen sich unter **Optionen → Steuerung** neu belegen. Hier steht
 
 ## 🐷 Helden
 
-Es gibt **9 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am Kopf. Jeder Held ist entweder **Fernkämpfer** (Linksklick schießt) oder **Nahkämpfer** (Linksklick schlägt mit seiner festen Waffe): Klinge (Schwert), Bastion (Hammer), Phantom (Lötkolben-Stich) und Zeitschläger (Uhrenpendel) sind Nahkämpfer, alle anderen schießen. Im Draft erscheinen nur Karten, die zur Angriffsart passen.
+Es gibt **10 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit (Rechtsklick) und ein festes Outfit am Kopf. Jeder Held ist entweder **Fernkämpfer** (Linksklick schießt) oder **Nahkämpfer** (Linksklick schlägt mit seiner festen Waffe): Klinge (Schwert), Bastion (Hammer), Phantom (Lötkolben-Stich) und Zeitschläger (Uhrenpendel) sind Nahkämpfer, alle anderen schießen. Im Draft erscheinen nur Karten, die zur Angriffsart passen.
 
-**Helden-Kits:** Jeder Held hat einen eigenen Dash (`Shift`), eine Fähigkeit (Rechtsklick) und eine **Ulti** (`E`). Meteorschauer (Ignis) und Singularität (Nova) werden wie gezielte Fähigkeiten mit der Maus gezielt: `E` halten zeigt die Vorschau, Loslassen löst aus (oder sofort, je nach Option „Fähigkeit auslösen“).
+**Helden-Kits:** Jeder Held hat einen eigenen Dash (`Shift`), eine Fähigkeit (Rechtsklick) und eine **Ulti** (`E`). Meteorschauer (Ignis), Singularität (Nova) und Blizzard (Flocke) werden wie gezielte Fähigkeiten mit der Maus gezielt: `E` halten zeigt die Vorschau, Loslassen löst aus (oder sofort, je nach Option „Fähigkeit auslösen“).
 
 | Held | Dash (`Shift`) | Fähigkeit (Rechtsklick) | Ulti (`E`) |
 | :--- | :--- | :--- | :--- |
@@ -108,6 +108,7 @@ Es gibt **9 Klassen**. Jede hat eigene Werte, ein Passiv, eine aktive Fähigkeit
 | **Klinge** | **Durchstoß**: Dash durch Gegner hindurch, trifft jeden einmal (70 % Schwertschaden). Ein Treffer halbiert die Dash-Abklingzeit | **Klingenbumerang**: Schwert fliegt 280 px und zurück, trifft hin und zurück. Solange es fliegt, kein Hieb | **Klingensturm** (24 s): 3 s lang frei beweglicher Wirbel (145 px), alle 0,3 s Schaden, großer Schlusswirbel, schlägt Kugeln zurück |
 | **Bastion** | **Rammbock**: nicht unverwundbar, Kugeln von vorn prallen ab, Gegner werden mitgeschoben und am Ende weggestoßen | **Magnethaken**: Haken bis 380 px, betäubt den ersten Gegner kurz und zieht ihn heran | **Festung** (32 s): 5 s Kuppel (140 px), gegnerische Kugeln prallen von außen ab, innen heilen Bastion und Verbündete |
 | **Druide** | **Rankenschwung**: Ranke bis 220 px zieht den Druiden an Wände und Decken. Ohne Halt normaler Dash | **Wurzelwall** (unverändert) | **Urkeiler** (35 s): 7 s riesiger Keiler, +60 % Leben, Hammer-Nahkampf, der Dash wird zum Ansturm (schleudert weg, bricht Kisten) |
+| **Flocke** | **Schlitterschritt**: Dash, hinterlässt eine 3 s lange Eisbahn, auf der Gegner verlangsamt werden | **Gletscherlanze** (7 s): Eisstrahl in Zielrichtung bis zur ersten Wand (480 px), 26 Schaden an jedem Gegner auf der Linie, 1,6 s verlangsamt, am Ende eine Eisnova | **Blizzard** (28 s, gezielt bis 520 px): 5 s Schneesturm (Radius 120 px), 10 Schaden/s und starke Verlangsamung. Wer 2 s am Stück darin steht, friert 0,8 s ein |
 | **Zeitschläger** | **Rückspul** (6 s Abklingzeit): springt an die Stelle von vor 2 s zurück und bekommt den Schaden aus dieser Zeit als Leben zurück. Ein blasses Nachbild zeigt dir die Stelle | **Zeitblase** (10 s): Kuppel an deiner Position (Radius 150 px, 4 s), Gegner darin 60 % langsamer, gegnerische Kugeln fliegen nur mit 25 % Tempo | **Zeitstopp** (32 s): 2 s lang frieren alle Gegner und ihre Kugeln ein. Deine Treffer an ihnen stauen sich und schlagen am Ende gesammelt ein |
 
 Klinge schlägt in Kombos: Jeder **dritte Hieb** in Folge (innerhalb 1,6 s) ist ein starker Stoß mit 160 % Schaden.
@@ -125,6 +126,7 @@ Die **Ulti** lädt über eine Abklingzeit, nicht über Schaden. Sie läuft über
 | **Phantom** | Shadow Assassin | 100 | 325 | 5 | **Hinterhalt**: +50 % Nahkampfschaden aus der Unsichtbarkeit oder von hinten | **Köder**: Doppelgänger läuft weiter, Phantom wird unsichtbar | Ninja-Stirnband |
 | **Druide** | Grove Warden | 105 | 295 | 10 | **Wurzelkraft**: Regeneriert ständig 2 HP/s | **Wurzelwall**: Rankenwand am Zielpunkt, breite Seite zum Druiden (108 px, 5 s, 150 HP), blockt Bewegung und Kugeln | Blätterkranz mit Geweih |
 | **Blutritter** | Blood Knight (Nahkampf-Vampir, Schwert) | 110 | 300 | 0 | **Blutschild**: Jeder 3. Treffer an einem Gegner (Eber oder Horden-Gegner, auch verschiedene; Kisten und Objekte zählen nicht) lässt eine Blutkugel fallen; jede Kugel gibt +25 Schild, bis 200 % der Max-HP (zweite, rote Lage auf der Lebensleiste) | **Blutbersten**: der ganze Schild explodiert, 1 Schaden pro Schildpunkt im Radius 150. Dash **Blutsturm**: legt eine Blutkugel ab, stürmt 40 % weiter und durch Gegner. Ulti **Blutruf** (24 s): bis zu 6 Kugeln im Umkreis 520 px fliegen zu ihm, treffen sie unterwegs einen Gegner: 30 Schaden und +30 HP | Hoher Dracula-Kragen mit rotem Edelstein |
+| **Flocke** | Frost Mage (Grundelement Frost) | 95 | 300 | 10 | **Kältehauch**: Jeder Treffer verlangsamt 0,8 s. Jeder 4. Schuss ist ein Eissplitter (+20 % Schaden, durchschlägt einen Gegner) | **Gletscherlanze**: durchbohrender Eisstrahl mit Eisnova | Türkiser Strickschal und Eiskristall-Diadem |
 | **Zeitschläger** | Chrono Brawler | 120 | 300 | 10 | **Taktschlag**: Jeder 3. Pendeltreffer verlangsamt den Gegner 1,5 s um 30 % | **Zeitblase**: Kuppel, in der Gegner und ihre Kugeln stark verlangsamt sind | Wecker mit zwei Glocken |
 
 Die genauen Zahlen der Fähigkeiten stehen im Spiel unter **HELDEN** im Hauptmenü und im Tooltip der Heldenwahl. Sie kommen direkt aus den Konstanten in `player.gd`, stimmen also immer.
@@ -481,6 +483,7 @@ Kartentexte nutzen für gleiche Effekte immer dieselben Begriffe: **Tempo** (Lau
 | **Bastion** | Energieschild, Feldwartung, Bastionsfestung |
 | **Phantom** | Schattenklinge, Schattenlauf, Todeskuss |
 | **Blutritter** | Aderlass, Dickes Blut (Kugeln +50 % Schild), Blutgier |
+| **Flocke** | Frostatem, Eiszapfenhagel (jeder 3. Schuss ein Splitter), Lange Lanze (Evolutionen Lanzenfächer / Frostbahn), Glatteis, Ewiger Winter |
 
 ### Fähigkeitskarten (je 4 pro Held)
 

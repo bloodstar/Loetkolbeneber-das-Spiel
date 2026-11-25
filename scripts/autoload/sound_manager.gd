@@ -118,6 +118,7 @@ const SOUND_TABLE: Dictionary = {
 	"grunt_vampire": {"files": ["grunt_vampire"], "vol": -6.0, "max": 1, "gap": 0.15, "bus": BUS_UI},
 	"grunt_vampire_melee": {"files": ["grunt_vampire_melee"], "vol": -6.0, "max": 1, "gap": 0.15, "bus": BUS_UI},
 	"grunt_zeitschlaeger": {"files": ["grunt_zeitschlaeger"], "vol": -6.0, "max": 1, "gap": 0.15, "bus": BUS_UI},
+	"grunt_flocke": {"files": ["grunt_flocke"], "vol": -6.0, "max": 1, "gap": 0.15, "bus": BUS_UI},
 }
 
 # Ältere Schlüssel, die noch im Code vorkommen können.

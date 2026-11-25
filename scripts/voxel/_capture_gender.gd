@@ -30,7 +30,7 @@ func _ready() -> void:
 		{"gender": "female", "top": "robe", "top_color": Color(0.35, 0.75, 0.95)},
 		{"gender": "female", "body": "slim", "bottom": "skirt", "top": "muscle", "top_color": Color(0.95, 0.85, 0.3)},
 		{"gender": "female", "body": "strong", "outfit": "bastion", "top": "bikini", "top_color": Color(0.9, 0.3, 0.4)},
-		{"gender": "female", "outfit": "ignis", "head": "big", "pants": Color(0.6, 0.2, 0.5)},
+		{"gender": "female", "outfit": "flocke", "top": "robe", "top_color": Color(0.55, 0.82, 0.98), "fur": Color(0.96, 0.78, 0.84), "pants": Color(0.85, 0.92, 1.0), "ears": "flop"},
 	]
 	for m in models:
 		m.queue_free()
@@ -55,11 +55,13 @@ func _ready() -> void:
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png("%s/gender_nah.png" % out_dir)
 	# Großaufnahmen: nur Grundkörper männlich/weiblich, vorn und im Profil.
+	# Großaufnahme: männlich, weiblich und Flocke.
+	var close_ids := [0, 1, models.size() - 1]
 	for k in range(models.size()):
-		models[k].visible = k < 3
+		models[k].visible = close_ids.has(k)
 	for v in [["front", -80.0, Vector3(0.0, 0.2, 1.0)], ["profil_nah", 0.0, Vector3(0.0, 0.05, 1.0)], ["dreiviertel", -45.0, Vector3(0.0, 0.25, 1.0)]]:
 		for k in range(3):
-			var m: Node3D = models[k]
+			var m: Node3D = models[close_ids[k]]
 			m.position = Vector3(-70.0 + 70.0 * k, 0, 0)
 			m.rotation = Vector3(0, deg_to_rad(v[1]), 0)
 		cam.size = 120.0

@@ -556,6 +556,9 @@ func _handle_combat(_delta: float) -> void:
 				wants = dist < 300.0 and dist > player.get_melee_reach()
 			"bastion":
 				wants = dist < 380.0 and dist > player.get_melee_reach() * 1.3
+			"flocke":
+				# Gletscherlanze, sobald der Gegner in Reichweite des Strahls ist.
+				wants = dist < Player.FLOCKE_LANCE_RANGE * player.ability_range_mult * 0.85
 			"zeitschlaeger":
 				# Zeitblase mitten im Nahkampf aufziehen.
 				wants = dist < Player.ZEIT_BUBBLE_RADIUS * player.ability_radius_mult * 0.8

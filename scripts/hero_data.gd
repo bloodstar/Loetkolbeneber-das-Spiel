@@ -62,6 +62,7 @@ const ABILITY_CONSTANT_PREFIXES: Dictionary = {
 	"vampire": ["VAMPIRE_"],
 	"vampire_melee": ["VAMP_MELEE_"],
 	"zeitschlaeger": ["ZEIT_"],
+	"flocke": ["FLOCKE_"],
 }
 # Werte, die nichts an der Spielstärke ändern oder zur Fähigkeit gehören.
 const _FINGERPRINT_IGNORED: Array[String] = [

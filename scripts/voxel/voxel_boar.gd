@@ -144,6 +144,12 @@ static func spec_from_look(look: Dictionary, parts: Dictionary) -> Dictionary:
 static func spec_for_player(index: int, accent: Color, hero_id: String) -> Dictionary:
 	var s := spec_from_look(Global.get_pig_appearance(index), Global.get_pig_parts(index))
 	s["outfit"] = hero_id
+	# Flocke als Bot ist immer die Eismagierin; Menschen wählen den Körperbau selbst.
+	if hero_id == "flocke" and Global.is_bot_slot(index):
+		s["gender"] = "female"
+		if str(s.get("top", "none")) == "none":
+			s["top"] = "robe"
+			s["top_color"] = Color(0.55, 0.82, 0.98)
 	s["accent"] = accent
 	return s
 
@@ -712,6 +718,28 @@ func _build_outfit(hero: String, hr: Vector3, hc: Vector3) -> Grid:
 			g.fill(Vector3i(cx + 3, top + 3, 0), Vector3i(cx + 3, top + 3, 0), Color(0.15, 0.1, 0.06))
 			g.fill(Vector3i(cx - 2, top + 8, -5), Vector3i(cx, top + 9, -3), brass.lightened(0.15))
 			g.fill(Vector3i(cx - 2, top + 8, 2), Vector3i(cx, top + 9, 4), brass.lightened(0.15))
+		"flocke":
+			# Türkiser Strickschal mit Streifen und wehendem Ende, dazu ein
+			# Eiskristall-Diadem zwischen den Ohren.
+			var wool := Color(0.2, 0.75, 0.78)
+			var stripe := Color(0.93, 0.97, 1.0)
+			for p in _ring(cx, xr + 1, zr + 1):
+				g.put(Vector3i(p.x, -1, p.y), wool if posmod(p.x + p.y, 4) != 0 else stripe)
+				g.put(Vector3i(p.x, 0, p.y), wool.darkened(0.1))
+			g.fill(Vector3i(cx - xr - 3, -2, 2), Vector3i(cx - xr - 1, 0, 3), wool)
+			g.fill(Vector3i(cx - xr - 4, -4, 3), Vector3i(cx - xr - 3, -3, 4), wool.darkened(0.08))
+			g.fill(Vector3i(cx - xr - 4, -5, 3), Vector3i(cx - xr - 3, -5, 4), stripe)
+			# Diadem: silbernes Band vorn auf der Stirn, drei leuchtende Zacken.
+			var silver := Color(0.82, 0.88, 0.95)
+			var ice := Color(0.7, 0.93, 1.0)
+			g.fill(Vector3i(fx - 3, top - 1, -3), Vector3i(fx - 2, top - 1, 2), silver)
+			g.put(Vector3i(fx - 2, top, -1), ice, 1.2)
+			g.put(Vector3i(fx - 2, top, 0), ice, 1.2)
+			g.put(Vector3i(fx - 2, top + 1, -1), ice.lightened(0.2), 1.4)
+			g.put(Vector3i(fx - 2, top + 1, 0), ice.lightened(0.2), 1.4)
+			g.put(Vector3i(fx - 2, top + 2, -1), Color(0.95, 1.0, 1.0), 1.6)
+			g.put(Vector3i(fx - 2, top, -3), ice, 1.0)
+			g.put(Vector3i(fx - 2, top, 2), ice, 1.0)
 	return g
 
 ## Ring aus (x, z)-Positionen um einen Kopf mit Halbachsen xr, zr.

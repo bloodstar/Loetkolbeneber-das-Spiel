@@ -21,6 +21,7 @@ enum Kind {
 	PLASMA,      # Plasmafeld: Blitz trifft Feuer
 	RIME,        # Giftreif: Frost trifft Giftwolke, liegt am Boden
 	TOXIC_STORM, # Giftgewitter: Blitz trifft Giftwolke
+	BLIZZARD,    # Flockes Ulti (nur Optik, Logik in FlockeBlizzard)
 }
 
 # Arten, die wie Feuer auf den Boden darunter fallen (Seitenansicht).
@@ -82,7 +83,7 @@ var _sparks: PackedVector2Array = PackedVector2Array()
 var _rim: PackedVector2Array = PackedVector2Array()
 
 func _ready() -> void:
-	z_index = 4 if kind == Kind.STEAM else -2
+	z_index = 4 if kind == Kind.STEAM else (3 if kind == Kind.BLIZZARD else -2)
 	add_to_group("effect_zone")
 	if no_react:
 		set_meta("reacted", true)
@@ -327,6 +328,8 @@ func _draw() -> void:
 		Kind.TOXIC_STORM:
 			_draw_poison()
 			_draw_storm_bolts()
+		Kind.BLIZZARD:
+			_draw_blizzard()
 		_:
 			_draw_ice()
 	if also_burn and kind == Kind.POISON:
@@ -571,6 +574,39 @@ func _draw_steam() -> void:
 		var r := radius * (0.28 + 0.18 * sin(s * PI)) * grow
 		draw_circle(c, r, Color(0.92, 0.95, 1.0, 0.36 * sin(s * PI) + 0.12))
 	draw_circle(Vector2.ZERO, radius * 0.75 * grow, Color(0.95, 0.97, 1.0, 0.16))
+
+# Blizzard: kalter Schleier, wirbelnde Schneeflocken und Windböen.
+func _draw_blizzard() -> void:
+	var t := _anim_time
+	var grow := clampf(_elapsed / 0.4, 0.2, 1.0)
+	var r := radius * grow
+	draw_circle(Vector2.ZERO, r, Color(0.78, 0.9, 1.0, 0.16))
+	draw_circle(Vector2.ZERO, r * 0.7, Color(0.9, 0.96, 1.0, 0.1))
+	draw_arc(Vector2.ZERO, r, t * 0.8, t * 0.8 + TAU * 0.8, 40, Color(0.85, 0.95, 1.0, 0.55), 2.0)
+	# Windböen: Bogenstücke, die um die Mitte kreisen.
+	for i in 5:
+		var a := t * 2.2 + float(i) * TAU / 5.0
+		var rr := r * (0.35 + 0.12 * float(i % 3))
+		draw_arc(Vector2.ZERO, rr, a, a + 0.9, 10, Color(0.95, 0.98, 1.0, 0.35), 2.5)
+	# Flocken: fallen schräg und wirbeln mit (Seitenansicht), kreisen in der Draufsicht.
+	var flakes := 26 + clampi(int(radius / 6.0), 0, 30)
+	var fall := 0.0 if ArenaMode.active else 1.0
+	for i in flakes:
+		var ph: float = _phase[i % _phase.size()] + float(i) * 0.137
+		var u: float = _offset[i % _offset.size()]
+		var s := fposmod(t * (0.5 + 0.3 * fposmod(ph, 1.0)) + ph, 1.0)
+		var ang := ph * TAU + t * (1.2 + 0.4 * u)
+		var dist := r * (0.15 + 0.8 * fposmod(ph * 3.1, 1.0))
+		var p := Vector2(cos(ang), sin(ang)) * dist * (1.0 - fall * 0.4)
+		p += Vector2(sin(t * 3.0 + ph * 9.0) * 6.0 - s * 18.0, -r * 0.8 + s * r * 1.6) * fall
+		if p.length() > r:
+			continue
+		var size := 1.2 + 1.3 * fposmod(ph * 7.3, 1.0)
+		var alpha := 0.85 * sin(s * PI)
+		draw_circle(p, size, Color(1.0, 1.0, 1.0, alpha))
+		if size > 2.0:
+			draw_line(p - Vector2(size + 1.0, 0.0), p + Vector2(size + 1.0, 0.0), Color(1, 1, 1, alpha * 0.8), 1.0)
+			draw_line(p - Vector2(0.0, size + 1.0), p + Vector2(0.0, size + 1.0), Color(1, 1, 1, alpha * 0.8), 1.0)
 
 # Giftreif: grünlich gefrorene Schicht am Boden mit kleinen Eiszacken.
 func _draw_rime() -> void:

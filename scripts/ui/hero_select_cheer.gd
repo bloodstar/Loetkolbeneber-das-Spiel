@@ -48,6 +48,7 @@ func play(hero_id: String, tint: Color) -> void:
 		"vampire": _anim_vampire(tint)
 		"vampire_melee": _anim_blood_knight(tint)
 		"zeitschlaeger": _anim_time(tint)
+		"flocke": _anim_nova(tint)
 		_: _anim_hop(tint)
 	_tween.finished.connect(_reset_pose)
 

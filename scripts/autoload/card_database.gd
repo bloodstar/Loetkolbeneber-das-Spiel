@@ -3985,6 +3985,7 @@ func _init_database() -> void:
 	_register(nk19)
 
 	_register_frost_cards()
+	_register_flocke_cards()
 	_register_element_cards()
 
 	# Ausbaukarten, die vor ihrer Grundkarte registriert wurden, übernehmen
@@ -3995,6 +3996,98 @@ func _init_database() -> void:
 
 # --- Frost-Karten (Element-System 2026-11-25) ---
 # Frost hatte am wenigsten Karten. Alle verlangen das Element Frost.
+# --- Flocke: Kältehauch, Gletscherlanze, Schlitterschritt, Blizzard ---
+func _register_flocke_cards() -> void:
+	var ice := Color(0.55, 0.86, 1.0)
+	var f1 = CardData.new()
+	f1.id = "flocke_frostatem"
+	f1.title = "Frostatem"
+	f1.description = "Flocke: Kältehauch verlangsamt 0,4 s länger, +10% Schussschaden."
+	f1.rarity = "Common"
+	f1.pool = "Offensive"
+	f1.color = ice
+	f1.hero_id = "flocke"
+	f1.freeze_duration_add = 0.4
+	f1.damage_mult = 1.1
+	_register(f1)
+
+	var f2 = CardData.new()
+	f2.id = "flocke_eiszapfenhagel"
+	f2.title = "Eiszapfenhagel"
+	f2.description = "Flocke – Kältehauch: Schon jeder %d. Schuss ist ein durchschlagender Eissplitter, +1 Munition." % Player.FLOCKEEVO_FAST_SHARD_INTERVAL
+	f2.rarity = "Epic"
+	f2.pool = "Offensive"
+	f2.color = ice
+	f2.hero_id = "flocke"
+	f2.ability_evolution = "flocke_passive_fast"
+	f2.max_ammo_add = 1
+	_register(f2)
+
+	var f3 = CardData.new()
+	f3.id = "flocke_lange_lanze"
+	f3.title = "Lange Lanze"
+	f3.description = "Flocke – Gletscherlanze: +30% Reichweite, +20% Schaden, -10% Fähigkeits-Abklingzeit."
+	f3.rarity = "Rare"
+	f3.pool = "Offensive"
+	f3.color = ice
+	f3.hero_id = "flocke"
+	f3.family_id = "flocke_lance"
+	f3.ability_range_mult = 1.3
+	f3.ability_damage_mult = 1.2
+	f3.ability_cooldown_mult = 0.9
+	_register(f3)
+
+	var f3a = CardData.new()
+	f3a.id = "flocke_lanzenfaecher"
+	f3a.title = "Lanzenfächer"
+	f3a.description = "Gletscherlanze-Evolution: %d Lanzen im Fächer, jede mit %d%% Schaden." % [Player.FLOCKEEVO_FAN_COUNT, int(round(Player.FLOCKEEVO_FAN_DAMAGE_SHARE * 100.0))]
+	f3a.rarity = "Epic"
+	f3a.color = ice
+	f3a.hero_id = "flocke"
+	f3a.family_id = "flocke_lance"
+	f3a.parent_card_id = "flocke_lange_lanze"
+	f3a.evolution_branch = "A"
+	f3a.ability_evolution = "flocke_lance_fan"
+	_register(f3a)
+
+	var f3b = CardData.new()
+	f3b.id = "flocke_frostbahn"
+	f3b.title = "Frostbahn"
+	f3b.description = "Gletscherlanze-Evolution: Entlang der Lanze bleibt 3 s lang eine Eisbahn liegen."
+	f3b.rarity = "Epic"
+	f3b.color = ice
+	f3b.hero_id = "flocke"
+	f3b.family_id = "flocke_lance"
+	f3b.parent_card_id = "flocke_lange_lanze"
+	f3b.evolution_branch = "B"
+	f3b.ability_evolution = "flocke_lance_trail"
+	_register(f3b)
+
+	var f4 = CardData.new()
+	f4.id = "flocke_glatteis"
+	f4.title = "Glatteis"
+	f4.description = "Flocke – Schlitterschritt: breitere, länger haltende Eisbahn, -15% Dash-Abklingzeit."
+	f4.rarity = "Uncommon"
+	f4.pool = "Bewegung"
+	f4.color = ice
+	f4.hero_id = "flocke"
+	f4.dash_effect_mult = 1.4
+	f4.dash_cooldown_mult = 0.85
+	_register(f4)
+
+	var f5 = CardData.new()
+	f5.id = "flocke_ewiger_winter"
+	f5.title = "Ewiger Winter"
+	f5.description = "Flocke – Blizzard: +30% Dauer, +20% Radius, -10% Ulti-Abklingzeit."
+	f5.rarity = "Rare"
+	f5.pool = "Offensive"
+	f5.color = ice
+	f5.hero_id = "flocke"
+	f5.ult_duration_mult = 1.3
+	f5.ult_radius_mult = 1.2
+	f5.ult_cooldown_mult = 0.9
+	_register(f5)
+
 func _register_frost_cards() -> void:
 	var f1 = CardData.new()
 	f1.id = "frost_eissplitter"
