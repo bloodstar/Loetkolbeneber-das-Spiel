@@ -62,6 +62,7 @@ const HERO_COLUMNS: Array = [
 
 var humans_only: bool = false
 var source_filter: int = BalanceReport.Source.ALL
+var mode_filter: int = BalanceReport.Mode.NO_HORDE
 var current_only: bool = false
 var min_rounds: int = BalanceReport.DEFAULT_MIN_ROUNDS
 
@@ -260,6 +261,21 @@ func _build_filter_row() -> Control:
 	)
 	row.add_child(source_option)
 
+	var mode_option := OptionButton.new()
+	mode_option.add_item("Ohne Horde", BalanceReport.Mode.NO_HORDE)
+	mode_option.add_item("Nur Horde", BalanceReport.Mode.HORDE_ONLY)
+	mode_option.add_item("Alle Modi", BalanceReport.Mode.ALL_MODES)
+	mode_option.tooltip_text = "Horden-Modus: Stufenaufstiege und Boss-Truhen sind keine normalen Drafts und bleiben standardmäßig draußen."
+	mode_option.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
+	mode_option.custom_minimum_size = Vector2(150, 36)
+	mode_option.select(mode_option.get_item_index(mode_filter))
+	mode_option.item_selected.connect(func(index: int):
+		SoundManager.play_sound("click")
+		mode_filter = mode_option.get_item_id(index)
+		_rebuild()
+	)
+	row.add_child(mode_option)
+
 	var current_box := CheckBox.new()
 	current_box.text = "Nur aktuelle Versionen"
 	current_box.tooltip_text = "Ältere Versionen ausblenden. Sie zählen trotzdem zum Vergleichswert ihrer Seltenheit."
@@ -342,7 +358,7 @@ func _make_tree(tab_name: String, columns: Array) -> Tree:
 # --- Inhalt ---
 
 func _rebuild() -> void:
-	_report = BalanceReport.build(_lines, humans_only, min_rounds, source_filter)
+	_report = BalanceReport.build(_lines, humans_only, min_rounds, source_filter, mode_filter)
 	var path := RoundStats.get_log_path()
 	_path_label.text = "Quelle: %s" % path
 	if not _load_error.is_empty():

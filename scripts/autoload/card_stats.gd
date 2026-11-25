@@ -112,6 +112,10 @@ func _entry(card_id: String) -> Dictionary:
 	return statistics[card_id]
 
 func record_offer(cards: Array) -> void:
+	# Horden-Modus: Stufenaufstiege sind keine normalen Drafts (keine Sieger),
+	# sie würden Pickraten und Seltenheits-Aufstiege verfälschen.
+	if Global.is_horde_mode():
+		return
 	if _ignored_run():
 		return
 	var changed := false
@@ -131,6 +135,8 @@ func record_offer(cards: Array) -> void:
 		statistics_changed.emit()
 
 func record_pick(card_id: String) -> void:
+	if Global.is_horde_mode():
+		return
 	if _ignored_run():
 		return
 	var entry := _entry(card_id)

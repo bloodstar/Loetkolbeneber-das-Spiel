@@ -351,6 +351,8 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	var horde := Global.is_horde_mode()
 	if modifier_manager != null and not horde and not Global.test_room_active:
 		active_mods = modifier_manager.roll_configured_modifiers(level_seed)
+	elif modifier_manager != null and horde:
+		active_mods = _roll_horde_modifiers(level_seed)
 
 	# 2. Level regenerieren. Erst danach die Modifier-Hazards spawnen, damit
 	#    Münzen, Meteore und Heilzonen die neue Karte als Grundlage nutzen.
@@ -681,6 +683,8 @@ func _end_round_countdown() -> void:
 			p.control_enabled = true
 
 	hud.show_countdown_go()
+	if Global.is_horde_mode():
+		sudden_death_timer.stop()
 	if horde_director != null and is_instance_valid(horde_director):
 		if not is_network_client:
 			horde_director.start(self, match_seed, players.size())
@@ -779,6 +783,10 @@ func _start_rising_lava() -> void:
 func _start_sudden_death() -> void:
 	# Nach Runden- oder Matchende (Draft, Statistik) kein Sudden Death mehr.
 	if Global.current_state != Global.GameState.PLAYING:
+		return
+	# Horden-Modus: nie Sudden Death (die Jagd endet über Bosse oder Tod).
+	if Global.is_horde_mode():
+		sudden_death_timer.stop()
 		return
 	is_sudden_death = true
 	# Im Lavaturm steigt die Lava schon; sie zieht nur an, statt neu zu starten.
@@ -2139,7 +2147,12 @@ func _horde_after_levelup() -> void:
 func _horde_reapply_cards(p: Player) -> void:
 	var ratio := clampf(p.current_health / maxf(1.0, p.max_health), 0.05, 1.0)
 	var cam_target := camera.targets.has(p)
+	var shield_ratio := clampf(p.current_shield / maxf(1.0, p.max_shield), 0.0, 1.0) if p.max_shield > 0.0 else 1.0
 	p.apply_stats()
+	# Level-Modifier des Gebiets wieder drauf (apply_stats setzt alles zurück).
+	if modifier_manager != null:
+		modifier_manager.apply_player_modifiers(p)
+	p.current_shield = p.max_shield * shield_ratio
 	p.current_health = p.max_health * ratio
 	p.emit_signal("health_changed", p.current_health, p.max_health, p.current_shield, p.max_shield)
 	if ArenaMode.active and not p.is_replica:
@@ -2175,6 +2188,8 @@ func horde_respawn_player(slot: int, pos: Vector2) -> void:
 	add_child(p)
 	p.died.connect(_on_player_died)
 	players.append(p)
+	if modifier_manager != null:
+		modifier_manager.apply_player_modifiers(p)
 	p.control_enabled = true
 	p.play_spawn_intro()
 	_update_bot_controllers()
@@ -2185,6 +2200,62 @@ func horde_respawn_player(slot: int, pos: Vector2) -> void:
 	_configure_camera_world()
 	hud.setup_players(players)
 	hud.update_all()
+
+## Level-Modifier für ein Horden-Gebiet: Lobby-Auswahl und -Rate, aber nur
+## die Modifier aus HordeDefs.MODIFIERS. Host und Clients würfeln gleich.
+func _roll_horde_modifiers(seed_value: int) -> Array[String]:
+	var ids: Array[String] = []
+	for m in Global.get_enabled_level_modifiers():
+		if HordeDefs.MODIFIERS.has(str(m)):
+			ids.append(str(m))
+	if ids.is_empty() or modifier_manager == null:
+		return ids
+	return modifier_manager._roll_with_config(seed_value, Global.level_modifier_rate_percent, ids)
+
+## Host: Nach einem Boss geht es in ein neues Gebiet. Clients folgen über
+## den Horden-Snapshot (horde_apply_map).
+func horde_change_map(map_id: String, seed_value: int) -> void:
+	if is_network_client:
+		return
+	_horde_build_stage(map_id, seed_value)
+	if horde_director != null and is_instance_valid(horde_director):
+		horde_director.on_map_changed()
+
+func horde_apply_map(map_id: String, seed_value: int) -> void:
+	if not is_network_client:
+		return
+	_horde_build_stage(map_id, seed_value)
+
+func _horde_build_stage(map_id: String, seed_value: int) -> void:
+	SceneFader.fade_from_black(0.7)
+	match_map_id = map_id
+	for group in ["bullet", "tower", "effect_zone", "powerup_pickup"]:
+		for node in get_tree().get_nodes_in_group(group):
+			if is_instance_valid(node):
+				node.queue_free()
+	_clear_remote_bullets()
+	_clear_remote_towers()
+	var mods := _roll_horde_modifiers(seed_value)
+	level_generator.generate_level(seed_value, map_id, mods)
+	_update_arena_view()
+	if modifier_manager != null:
+		modifier_manager.is_replica = is_network_client
+		modifier_manager.start_round_modifiers(mods, self, level_generator)
+	var total := players.size()
+	var idx := 0
+	for p in players:
+		if not is_instance_valid(p):
+			continue
+		idx += 1
+		p.global_position = level_generator.get_spawn_position(idx, total)
+		p.velocity = Vector2.ZERO
+		p.arena_z = 0.0
+		p.arena_vz = 0.0
+		if not p.is_dead:
+			_horde_reapply_cards(p)
+	_configure_camera_world()
+	if hud != null:
+		hud.update_all()
 
 ## Endbildschirm → NOCHMAL JAGEN: frische Runde mit denselben Einstellungen.
 func _on_horde_again() -> void:

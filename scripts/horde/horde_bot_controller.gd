@@ -66,6 +66,9 @@ func _physics_process(delta: float) -> void:
 	var mate := _nearest_mate(pos)
 	if mate != null and pos.distance_to(mate.global_position) > TEAM_LEASH:
 		dir = (dir * 0.3 + (mate.global_position - pos).normalized()).normalized()
+	# Treibjagd: vor der Feuerwalze bleiben.
+	if d.scroll_x >= 0.0 and pos.x < d.scroll_x + 280.0:
+		dir = (dir * 0.4 + Vector2(1.0, 0.0)).normalized()
 	dir = _avoid_walls(pos, dir)
 	ArenaMotion.apply_planar(player, dir)
 	if target == null:

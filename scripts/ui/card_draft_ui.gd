@@ -245,14 +245,16 @@ func _draw_offer() -> Array[CardData]:
 	var exclude: Array = owned_ids.duplicate()
 	exclude.append_array(Global.banned_card_ids)
 	var drafter_hero_id: String = Global.get_player_hero_id(current_drafter)
+	# Boss-Truhe im Horden-Modus: fast nur epische, selten legendäre Karten.
+	var rarities: Dictionary = HordeDefs.CHEST_RARITY if current_bonus_source == HORDE_BONUS_SOURCE else {}
 	if not draft_offered_history.is_empty():
 		var fresh_exclude: Array = exclude.duplicate()
 		for c in draft_offered_history:
 			fresh_exclude.append(c.id)
-		var fresh := CardDatabase.get_draft_offer(Global.cards_per_draft, fresh_exclude, drafter_hero_id, owned_ids)
+		var fresh := CardDatabase.get_draft_offer(Global.cards_per_draft, fresh_exclude, drafter_hero_id, owned_ids, rarities)
 		if not fresh.is_empty():
 			return fresh
-	return CardDatabase.get_draft_offer(Global.cards_per_draft, exclude, drafter_hero_id, owned_ids)
+	return CardDatabase.get_draft_offer(Global.cards_per_draft, exclude, drafter_hero_id, owned_ids, rarities)
 
 func _record_offer(cards: Array[CardData]) -> void:
 	CardStats.record_offer(cards)
@@ -335,7 +337,7 @@ func _show_waiting_for_offer() -> void:
 
 func _finish_drafter() -> void:
 	if not picked_this_draft.is_empty():
-		RoundStats.record_draft(current_drafter, draft_offered_history, picked_this_draft)
+		RoundStats.record_draft(current_drafter, draft_offered_history, picked_this_draft, current_bonus_source)
 	picks_remaining = 0
 	_process_next_in_queue()
 
@@ -1202,7 +1204,7 @@ func _commit_pick(card: CardData, from_network: bool = false) -> void:
 	picked_this_draft.append(card)
 	picks_remaining -= 1
 	if picks_remaining <= 0:
-		RoundStats.record_draft(current_drafter, draft_offered_history, picked_this_draft)
+		RoundStats.record_draft(current_drafter, draft_offered_history, picked_this_draft, current_bonus_source)
 	if gamble_aftermath and gamble_cards.has(card):
 		_show_gamble_aftermath(card, gamble_cards)
 	else:
