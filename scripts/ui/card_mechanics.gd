@@ -104,7 +104,8 @@ static func mechanic_notes(card: CardData) -> Array[String]:
 		notes.append("GIFT: Jeder Giftstapel verursacht alle 0,8 s einen Schadens-Tick. Mehr Stapel halten länger; höherer Giftschaden verstärkt jeden Tick.")
 	if card.freeze_duration_add > 0.0 or card.frost_nova or card.frost_trail:
 		notes.append("FROST: Getroffene Gegner werden für die angegebene Dauer um 40% verlangsamt. Eisnova und Eisbahn erzeugen zusätzliche Kälteflächen.")
-	if card.fire_shot or card.fire_impact_zone or card.fire_trail:
+	if card.fire_shot or card.fire_impact_zone or card.fire_trail \
+			or card.fire_damage_mult > 1.0 or card.fire_zone_radius_mult > 1.0:
 		notes.append("FEUER: Entzündete Gegner brennen über mehrere Ticks. Feuerflächen entzünden Gegner beim Betreten.")
 	if card.lightning_shot or card.chain_lightning or card.lightning_zone:
 		notes.append("BLITZ: Blitzschüsse betäuben kurz. Kettenblitz springt auf nahe Gegner über; Blitzzonen betäuben beim Betreten.")
