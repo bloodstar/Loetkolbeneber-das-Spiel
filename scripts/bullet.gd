@@ -475,14 +475,16 @@ func _handle_collision(collision: KinematicCollision2D) -> void:
 				Global.add_match_stat(shooter.player_index, "shots_hit", 1.0)
 			_deal_damage(collider, damage, calculate_knockback())
 			
+			# Der Schütze geht mit, damit die Synergie-Matrix (ElementReactions) greift.
+			var element_src = shooter if shooter_is_player else null
 			if poison_stacks > 0 and collider.has_method("apply_poison"):
-				collider.apply_poison(poison_stacks, poison_damage)
+				collider.apply_poison(poison_stacks, poison_damage, element_src)
 			if freeze_duration > 0 and collider.has_method("apply_freeze"):
-				collider.apply_freeze(freeze_duration)
+				collider.apply_freeze(freeze_duration, element_src)
 			if stun_duration > 0.0 and collider.has_method("apply_stun"):
-				collider.apply_stun(stun_duration)
+				collider.apply_stun(stun_duration, element_src)
 			if burn_stacks > 0 and collider.has_method("apply_burn"):
-				collider.apply_burn(burn_stacks, burn_damage)
+				collider.apply_burn(burn_stacks, burn_damage, element_src)
 			if chain_lightning and is_instance_valid(shooter) and shooter.has_method("trigger_chain_lightning"):
 				shooter.trigger_chain_lightning(collider, global_position)
 			if lifesteal_percent > 0.0 and is_instance_valid(shooter) and shooter.has_method("heal"):
@@ -805,8 +807,23 @@ func _try_pierce_terrain(collision: KinematicCollision2D) -> bool:
 func _explode_and_destroy() -> void:
 	if explosion_radius > 0.0:
 		_trigger_aoe_explosion()
+	# Element-Geschoss schlägt in einer Fläche ein (Feuer in Giftwolke ...).
+	if not is_replica and is_instance_valid(shooter) and shooter is Player and is_inside_tree():
+		ElementReactions.on_impact(global_position, impact_elements(), shooter, get_tree())
 	_spawn_impact_effects()
 	queue_free()
+
+func impact_elements() -> Array:
+	var result: Array = []
+	if burn_stacks > 0 or fire_shot or fire_impact_zone:
+		result.append(ElementSystem.FIRE)
+	if poison_stacks > 0 or poison_impact_cloud:
+		result.append(ElementSystem.POISON)
+	if freeze_duration > 0.0 or frost_nova:
+		result.append(ElementSystem.FROST)
+	if stun_duration > 0.0 or chain_lightning or lightning_zone:
+		result.append(ElementSystem.LIGHTNING)
+	return result
 
 func _spawn_impact_effects() -> void:
 	if not is_instance_valid(shooter):

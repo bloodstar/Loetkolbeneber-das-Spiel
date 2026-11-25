@@ -197,6 +197,7 @@ func _ready() -> void:
 	NetworkManager.tile_broken_received.connect(_on_network_tile_broken)
 	NetworkManager.tile_regrown_received.connect(_on_network_tile_regrown)
 	NetworkManager.zone_spawn_received.connect(_on_network_zone_spawn)
+	NetworkManager.zone_end_received.connect(_on_network_zone_end)
 	NetworkManager.fx_received.connect(_on_network_fx)
 	NetworkManager.kill_cam_received.connect(_on_network_kill_cam)
 	NetworkManager.draft_finished_received.connect(_on_network_draft_finished)
@@ -1196,6 +1197,7 @@ func _build_network_config() -> Dictionary:
 		"gamble_enabled": Global.gamble_enabled,
 		"pre_draft_picks": Global.pre_draft_picks,
 		"pre_draft_random": Global.pre_draft_random,
+		"element_reactions_enabled": Global.element_reactions_enabled,
 		"level_modifier_rate_percent": Global.level_modifier_rate_percent,
 		"enabled_level_modifiers": Global.get_enabled_level_modifiers(),
 		"bans": Global.banned_card_ids.duplicate(),
@@ -1238,6 +1240,7 @@ func _apply_network_config(config: Dictionary) -> void:
 	Global.set_gamble_enabled(bool(config.get("gamble_enabled", Global.gamble_enabled)))
 	Global.set_pre_draft_picks(int(config.get("pre_draft_picks", Global.pre_draft_picks)))
 	Global.set_pre_draft_random(bool(config.get("pre_draft_random", Global.pre_draft_random)))
+	Global.set_element_reactions_enabled(bool(config.get("element_reactions_enabled", Global.element_reactions_enabled)))
 	Global.set_level_modifier_rate_percent(
 		int(config.get("level_modifier_rate_percent", Global.level_modifier_rate_percent))
 	)
@@ -1949,6 +1952,22 @@ func _on_network_zone_spawn(data: Dictionary) -> void:
 	var owner := get_player(owner_index)
 	if owner and is_instance_valid(owner):
 		owner.spawn_network_zone(data)
+
+func _on_network_zone_end(kind: int, pos: Vector2) -> void:
+	if not is_network_client:
+		return
+	var best: EffectZone = null
+	var best_d := 24.0
+	for node in get_tree().get_nodes_in_group("effect_zone"):
+		var z := node as EffectZone
+		if z == null or not z.is_replica or int(z.kind) != kind or z.is_queued_for_deletion():
+			continue
+		var d := z.global_position.distance_to(pos)
+		if d < best_d:
+			best_d = d
+			best = z
+	if best != null:
+		best.queue_free()
 
 # Optik und Ton von Fähigkeiten und Explosionen, die der Host abgespielt hat.
 func _on_network_fx(fx: String, args: Dictionary) -> void:

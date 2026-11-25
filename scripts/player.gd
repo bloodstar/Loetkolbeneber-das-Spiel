@@ -119,6 +119,11 @@ const IGNIS_METEOR_FIRE_RADIUS: float = 46.0
 const IGNIS_METEOR_FIRE_DURATION: float = 3.0
 
 const FREEZE_SPEED_MULT: float = 0.6
+# Splitternova (Frost-Karte): Schaden an jedem Gegner in der Eisnova.
+const FROST_NOVA_SHARD_DAMAGE: float = 8.0
+# Gletscherhaut (Frost-Karte): auf der eigenen Eisbahn schneller und Heilung.
+const GLACIER_SKIN_SPEED_MULT: float = 1.2
+const GLACIER_SKIN_HEAL: float = 2.0
 # Spore. Dash "Sporenstoß": kleine Giftwolke am Startpunkt.
 const SPORE_CLOUD_RADIUS: float = 45.0
 const SPORE_CLOUD_DURATION: float = 3.5
@@ -859,6 +864,17 @@ var tower_spawn_timer: float = 5.0
 var towers: Array[Companion] = []
 
 var poison_impact_cloud: bool = false
+# --- Element-System ---
+var elements: Array[String] = []
+var element_combos: Array[String] = []
+var chill_damage_bonus: float = 0.0
+var chill_strength: float = 0.0 # zusätzliche Verlangsamung, die dieser Spieler verursacht
+var frost_nova_shards: bool = false
+var frost_trail_haste: bool = false
+var chill_on_melee_hit: float = 0.0
+# Erlittene Verlangsamung: Tempo-Faktor der aktuell stärksten Kälte (0.6 = 60 %).
+var freeze_speed_mult: float = FREEZE_SPEED_MULT
+var _on_own_ice: bool = false
 var poison_trail: bool = false
 var poison_trail_timer: float = 0.0
 
@@ -1089,6 +1105,11 @@ func apply_stats() -> void:
 	var mine_dmg_add := 0.0
 	var mine_radius_tiles_add := 0.0
 	var mine_instant_enabled := false
+	var chill_bonus_total := 0.0
+	var chill_strength_total := 0.0
+	var nova_shards := false
+	var trail_haste := false
+	var chill_melee_total := 0.0
 	var m_dmg_mult := 1.0
 	var m_range_add := 0.0
 	var m_cd_mult := 1.0
@@ -1249,6 +1270,11 @@ func apply_stats() -> void:
 		fire_dmg_mult *= c.fire_damage_mult
 		fire_radius_mult *= c.fire_zone_radius_mult
 		freeze_duration += c.freeze_duration_add
+		chill_bonus_total += c.chill_damage_bonus_add
+		chill_strength_total += c.chill_strength_add
+		nova_shards = nova_shards or c.frost_nova_shards
+		trail_haste = trail_haste or c.frost_trail_haste
+		chill_melee_total += c.chill_on_melee_hit_add
 		lifesteal_percent += c.lifesteal_percent_add
 		multishot += c.multishot_add
 		spread_angle += c.spread_angle_deg
@@ -1436,6 +1462,15 @@ func apply_stats() -> void:
 	melee_echo = m_echo
 	melee_parry = m_parry
 	melee_echo_timer = 0.0
+	# Element-System: Elemente und Kombination aus Held + Karten (auf allen
+	# Rechnern gleich). Frost-Karten (Element-System 2026-11-25).
+	elements = Global.get_player_elements(player_index)
+	element_combos = ElementSystem.combos_of(elements)
+	chill_damage_bonus = chill_bonus_total
+	chill_strength = clampf(chill_strength_total, 0.0, 0.3)
+	frost_nova_shards = nova_shards
+	frost_trail_haste = trail_haste
+	chill_on_melee_hit = chill_melee_total
 	hp_regen_timer = 0.0
 	powerup_invuln_timer = 0.0
 	powerup_damage_timer = 0.0
@@ -1603,7 +1638,9 @@ func _current_ground_speed() -> float:
 	if boar_timer > 0.0:
 		current_spd *= DRUID_BOAR_SPEED_MULT
 	if freeze_timer > 0.0:
-		current_spd *= FREEZE_SPEED_MULT
+		current_spd *= freeze_speed_mult
+	if _on_own_ice:
+		current_spd *= GLACIER_SKIN_SPEED_MULT
 	if time_slow_timer > 0.0:
 		current_spd *= time_slow_mult
 	if time_haste_timer > 0.0:
@@ -2528,13 +2565,16 @@ func _melee_strike(dir: Vector2, power: float) -> void:
 				p.wall_slam_shield = 0.0
 				p.wall_slam_source = null
 			if melee_freeze > 0.0:
-				p.apply_freeze(melee_freeze)
+				p.apply_freeze(melee_freeze, self)
 			if melee_poison_stacks > 0:
-				p.apply_poison(melee_poison_stacks, poison_damage_per_tick)
+				p.apply_poison(melee_poison_stacks, poison_damage_per_tick, self)
 			if melee_burn_stacks > 0:
-				p.apply_burn(melee_burn_stacks, burn_damage_per_tick)
+				p.apply_burn(melee_burn_stacks, burn_damage_per_tick, self)
 			if melee_stun > 0.0:
-				p.apply_stun(melee_stun)
+				p.apply_stun(melee_stun, self)
+			# Kältepanzer des Getroffenen: Der Angreifer wird verlangsamt.
+			if p is Player and (p as Player).chill_on_melee_hit > 0.0:
+				apply_freeze((p as Player).chill_on_melee_hit)
 		if (landed or p.is_time_frozen()) and Global.get_player_hero_id(player_index) == "zeitschlaeger":
 			_zeit_register_hit(p)
 		_spawn_blade_hit_spark(p.global_position)
@@ -2565,7 +2605,7 @@ func _melee_chain_lightning(hit_targets: Array, damage: float) -> float:
 		return 0.0
 	var before: float = best.current_health + best.current_shield
 	best.take_damage(damage, Vector2.ZERO, self)
-	best.apply_stun(maxf(0.15, melee_stun))
+	best.apply_stun(maxf(0.15, melee_stun), self)
 	# Rücksprung aufs selbe Ziel: Bogen vom Eber aus, sonst wäre er unsichtbar.
 	var arc_from: Vector2 = global_position if best == origin else origin.global_position
 	_spawn_lightning_arc(arc_from, best.global_position)
@@ -5132,16 +5172,16 @@ func apply_druid_wall_elements(target: Player, wall_pos: Vector2) -> void:
 	var any := false
 	var strength := ability_damage_mult
 	if poison_stacks > 0 or poison_impact_cloud or poison_trail:
-		target.apply_poison(maxi(poison_stacks, DRUID_ELEMENT_POISON_STACKS), poison_damage_per_tick * strength)
+		target.apply_poison(maxi(poison_stacks, DRUID_ELEMENT_POISON_STACKS), poison_damage_per_tick * strength, self)
 		any = true
 	if fire_shot or fire_impact_zone or fire_trail:
-		target.apply_burn(DRUID_ELEMENT_BURN_STACKS, burn_damage_per_tick * strength)
+		target.apply_burn(DRUID_ELEMENT_BURN_STACKS, burn_damage_per_tick * strength, self)
 		any = true
 	if freeze_duration > 0.0 or frost_nova or frost_trail:
-		target.apply_freeze(maxf(freeze_duration, DRUID_ELEMENT_FREEZE) * ability_duration_mult)
+		target.apply_freeze(maxf(freeze_duration, DRUID_ELEMENT_FREEZE) * ability_duration_mult, self)
 		any = true
 	if lightning_shot or chain_lightning or lightning_zone:
-		target.apply_stun(DRUID_ELEMENT_STUN * ability_duration_mult)
+		target.apply_stun(DRUID_ELEMENT_STUN * ability_duration_mult, self)
 		_spawn_lightning_arc(wall_pos, target.global_position)
 		any = true
 	if not any:
@@ -5292,6 +5332,9 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null
 		# Rückstoß-Karten des Angreifers verstärken alle von ihm verursachten
 		# Treffer, nicht nur direkte Projektile.
 		knockback *= maxf(0.1, source.knockback_mult)
+
+	# Element-System: Supraleiter, Zersplittern und Eissplitter-Karte.
+	amount *= ElementReactions.damage_taken_mult(self, source if is_instance_valid(source) else null)
 
 	# Rüstung reduziert den eingehenden Schaden vor Schild und Leben. Der Wert
 	# wird additiv aus allen Tank-Karten gebildet und in apply_stats gedeckelt.
@@ -5546,10 +5589,14 @@ func _flash_powerup(flash_color: Color) -> void:
 	tw.tween_property(sprite, "modulate", flash_color, 0.08)
 	tw.tween_property(sprite, "modulate", Color.WHITE, 0.2)
 
-func apply_poison(stacks: int, damage_per_tick: float = 4.0) -> void:
-	# StÃƒÂ¤rkeres Gift ÃƒÂ¼berschreibt schwÃƒÂ¤cheres, schwÃƒÂ¤cheres Gift verlÃƒÂ¤ngert nur.
+# `source` = der Spieler, dessen Element-Treffer das ist. Nur dann prüft
+# ElementReactions die Synergie-Matrix (Reaktionen am Ziel).
+func apply_poison(stacks: int, damage_per_tick: float = 4.0, source = null) -> void:
+	if source != null and ElementReactions.on_element(self, ElementSystem.POISON, source):
+		return
+	# Stärkeres Gift überschreibt schwächeres, schwächeres Gift verlängert nur.
 	poison_damage_per_tick = maxf(poison_damage_per_tick, damage_per_tick)
-	poison_ticks_left = maxi(poison_ticks_left, stacks)
+	poison_ticks_left = ElementReactions.stacked_poison_ticks(poison_ticks_left, stacks, source)
 	_refresh_poison_visual()
 
 func is_poisoned() -> bool:
@@ -5627,13 +5674,24 @@ func _update_powerup_glow(delta: float) -> void:
 			glow_color.b * POWERUP_GLOW_BOOST, 1.0)
 	sprite.self_modulate = _base_body_tint() * Color.WHITE.lerp(lit, strength)
 
-func apply_freeze(duration: float) -> void:
+func apply_freeze(duration: float, source = null) -> void:
+	if source != null and ElementReactions.on_element(self, ElementSystem.FROST, source, duration):
+		return
+	# Tiefkühlung: Die Kälte dieses Angreifers bremst stärker.
+	var mult := FREEZE_SPEED_MULT
+	if source is Player and is_instance_valid(source):
+		mult -= (source as Player).chill_strength
+	freeze_speed_mult = mult if freeze_timer <= 0.0 else minf(freeze_speed_mult, mult)
 	freeze_timer = maxf(freeze_timer, duration)
 
-func apply_stun(duration: float) -> void:
+func apply_stun(duration: float, source = null) -> void:
+	if source != null:
+		ElementReactions.on_element(self, ElementSystem.LIGHTNING, source, duration)
 	stun_timer = maxf(stun_timer, duration)
 
-func apply_burn(stacks: int, damage_per_tick: float = 5.0) -> void:
+func apply_burn(stacks: int, damage_per_tick: float = 5.0, source = null) -> void:
+	if source != null and ElementReactions.on_element(self, ElementSystem.FIRE, source):
+		return
 	# Erlittener Brand hat einen eigenen Wert. burn_damage_per_tick ist der
 	# Brandschaden, den dieser Spieler selbst verursacht (Feuersturm-Fusion A),
 	# und darf durch fremdes Feuer nicht steigen.
@@ -5641,7 +5699,7 @@ func apply_burn(stacks: int, damage_per_tick: float = 5.0) -> void:
 		burn_taken_per_tick = damage_per_tick
 	else:
 		burn_taken_per_tick = maxf(burn_taken_per_tick, damage_per_tick)
-	burn_ticks_left = maxi(burn_ticks_left, stacks)
+	burn_ticks_left = ElementReactions.stacked_burn_ticks(burn_ticks_left, stacks, source)
 
 # Rundenstart: Der eigene Charakter erscheint aus einem Portal und wächst
 # dabei sichtbar aus der Portalmitte heraus.
@@ -5769,7 +5827,7 @@ func spawn_effect_zone(kind: int, pos: Vector2, radius: float, duration: float, 
 	# Feuer brennt wie Benzin auf dem Boden darunter; Treffer- und Optikfläche
 	# wandern gemeinsam dorthin.
 	var fire_hit := {}
-	if kind == EffectZone.Kind.FIRE:
+	if EffectZone.is_floor_kind(kind):
 		fire_hit = EffectZone.floor_hit(get_world_2d().direct_space_state, pos)
 		# Kein Boden darunter (Abgrund): das Feuer fällt ins Leere. In der
 		# Draufsicht (Arena, Horde) liefert floor_hit absichtlich nichts, dort
@@ -5795,11 +5853,16 @@ func spawn_effect_zone(kind: int, pos: Vector2, radius: float, duration: float, 
 	zone.freeze_duration = float(params.get("freeze_duration", 1.2))
 	zone.stun_duration = float(params.get("stun_duration", 0.25))
 	zone.from_ability = bool(params.get("from_ability", false))
+	zone.also_burn = bool(params.get("also_burn", false))
+	zone.no_react = bool(params.get("no_react", false))
 	get_parent().add_child(zone)
 	zone.global_position = pos
 	# Auf Plattformen und Wippen fährt das Feuer mit.
-	if kind == EffectZone.Kind.FIRE:
+	if EffectZone.is_floor_kind(kind):
 		zone.setup_fire_host(fire_hit)
+	# Element-Reaktionen: trifft die neue Fläche eine andere (Gift + Feuer ...)?
+	if not visual_only:
+		ElementReactions.on_zone_spawned(zone)
 
 	if Global.network_mode and NetworkManager.is_host:
 		var net_data := {
@@ -5816,8 +5879,9 @@ func spawn_effect_zone(kind: int, pos: Vector2, radius: float, duration: float, 
 			"freeze_duration": zone.freeze_duration,
 			"stun_duration": zone.stun_duration,
 			"owner_index": player_index,
+			"also_burn": zone.also_burn,
 		}
-		if kind == EffectZone.Kind.FIRE:
+		if EffectZone.is_floor_kind(kind):
 			net_data.merge(zone.fire_network_data())
 		NetworkManager.send_zone_spawn(net_data)
 
@@ -5828,20 +5892,26 @@ func spawn_network_zone(data: Dictionary) -> void:
 	zone.radius = float(data.get("radius", 40.0))
 	zone.duration = float(data.get("duration", 2.0))
 	zone.tick_interval = float(data.get("tick_interval", 0.55))
+	zone.also_burn = bool(data.get("also_burn", false))
 	get_parent().add_child(zone)
 	zone.global_position = data.get("pos", global_position)
-	if zone.kind == EffectZone.Kind.FIRE:
+	if EffectZone.is_floor_kind(zone.kind):
 		zone.apply_fire_network_data(data)
 
 func spawn_poison_cloud(pos: Vector2) -> void:
-	spawn_effect_zone(EffectZone.Kind.POISON, pos, 52.0, 3.2, {
+	# Seuche (rein Gift): größere Wolken. Gasbrand: die Wolke brennt mit.
+	var r := 52.0 * (ElementReactions.PLAGUE_CLOUD_RADIUS_MULT if element_combos.has("seuche") else 1.0)
+	spawn_effect_zone(EffectZone.Kind.POISON, pos, r, 3.2, {
 		"tick_interval": 0.55,
 		"poison_stacks": 1,
 		"poison_damage": poison_damage_per_tick,
+		"also_burn": element_combos.has("gasbrand"),
 	})
 
 func spawn_fire_zone(pos: Vector2) -> void:
-	spawn_effect_zone(EffectZone.Kind.FIRE, pos, 56.0 * fire_zone_radius_mult, 3.0, {
+	# Lauffeuer (rein Feuer): Feuerflächen brennen länger.
+	var dur := 3.0 * (ElementReactions.WILDFIRE_ZONE_DURATION_MULT if element_combos.has("lauffeuer") else 1.0)
+	spawn_effect_zone(EffectZone.Kind.FIRE, pos, 56.0 * fire_zone_radius_mult, dur, {
 		"tick_interval": 0.5,
 		"burn_stacks": 1,
 		"burn_damage": burn_damage_per_tick,
@@ -5852,11 +5922,20 @@ func spawn_frost_nova(pos: Vector2) -> void:
 		"tick_interval": 0.2,
 		"freeze_duration": 1.4,
 	})
+	# Splitternova: Die Nova zerspringt und trifft jeden Gegner darin.
+	if frost_nova_shards and not is_replica:
+		for e in _opponents_within(pos, 66.0):
+			e.take_damage(FROST_NOVA_SHARD_DAMAGE, Vector2.ZERO, self)
+			_fx("zap", NetFx.zap_args(pos, e.global_position, Color(0.75, 0.95, 1.0, 0.95), 2.5, 0.18, 3, 4.0))
+		_fx("ring", NetFx.ring_args(pos, Color(0.8, 0.97, 1.0, 0.9), 1.0, 9.0, 0.18, 0.28, 3, true))
 
 func spawn_lightning_zone(pos: Vector2, from_ability: bool = false) -> void:
 	# Zonen aus der Heldenfähigkeit wachsen mit Fähigkeitsgröße und -schaden.
 	var size_mult := ability_radius_mult if from_ability else 1.0
 	var dmg_mult := ability_damage_mult if from_ability else 1.0
+	# Hochspannung (rein Blitz): größere Blitzzonen.
+	if element_combos.has("hochspannung"):
+		size_mult *= ElementReactions.HIGH_VOLTAGE_ZONE_MULT
 	spawn_effect_zone(EffectZone.Kind.LIGHTNING, pos, 52.0 * size_mult, 4.0, {
 		"from_ability": from_ability,
 		"tick_interval": 0.45,
@@ -5876,6 +5955,7 @@ func _spawn_trail_zone(kind: int) -> void:
 				"tick_interval": 0.45,
 				"poison_stacks": 1,
 				"poison_damage": poison_damage_per_tick,
+				"also_burn": element_combos.has("gasbrand"),
 			})
 		EffectZone.Kind.FIRE:
 			spawn_effect_zone(kind, pos, 32.0 * fire_zone_radius_mult, 2.0, {
@@ -5884,7 +5964,9 @@ func _spawn_trail_zone(kind: int) -> void:
 				"burn_damage": burn_damage_per_tick,
 			})
 		EffectZone.Kind.ICE:
-			spawn_effect_zone(kind, pos, 30.0, 2.5, {
+			# Permafrost (rein Frost): Die Eisbahn hält doppelt so lang.
+			var ice_dur := 2.5 * (ElementReactions.PERMA_TRAIL_DURATION_MULT if element_combos.has("permafrost") else 1.0)
+			spawn_effect_zone(kind, pos, 30.0, ice_dur, {
 				"tick_interval": 0.3,
 				"freeze_duration": 1.0,
 			})
@@ -5913,8 +5995,24 @@ func trigger_chain_lightning(primary: Node2D, from_position: Vector2) -> void:
 	if dealing_ability_damage:
 		chain_damage *= ability_damage_mult
 	chain_target.take_damage(chain_damage, Vector2.ZERO, self)
-	chain_target.apply_stun(0.1)
+	chain_target.apply_stun(0.1, self)
+	# Element-Kombinationen im eigenen Build: Plasma entzündet, Neurotoxin vergiftet.
+	if element_combos.has("plasma"):
+		chain_target.apply_burn(2, burn_damage_per_tick)
+	if element_combos.has("neurotoxin"):
+		chain_target.apply_poison(maxi(1, poison_ticks_from_chain()), poison_damage_per_tick)
 	_spawn_lightning_arc(from_position, chain_target.global_position)
+
+func _standing_on_own_ice() -> bool:
+	for node in get_tree().get_nodes_in_group("effect_zone"):
+		var z := node as EffectZone
+		if z != null and z.owner_player == self and z.kind == EffectZone.Kind.ICE \
+				and z.global_position.distance_to(global_position) <= z.radius + 10.0:
+			return true
+	return false
+
+func poison_ticks_from_chain() -> int:
+	return 1 + (1 if poison_stacks > 2 else 0)
 
 func _spawn_lightning_arc(from_pos: Vector2, to_pos: Vector2) -> void:
 	_fx("zap", NetFx.zap_args(from_pos, to_pos, Color(1.0, 0.95, 0.3, 0.95), 3.0, 0.18, 7, 14.0))
@@ -5949,6 +6047,9 @@ func _die() -> void:
 		return
 	is_dead = true
 	_end_time_stop()
+	# Seuche: Vergiftete platzen beim Tod zu einer Giftwolke.
+	if not is_replica:
+		ElementReactions.on_death(self)
 	_refresh_poison_visual()
 	if kamikaze:
 		_trigger_kamikaze()
@@ -6188,6 +6289,13 @@ func _handle_timers(delta: float) -> void:
 	
 	if freeze_timer > 0.0:
 		freeze_timer -= delta
+		if freeze_timer <= 0.0:
+			freeze_speed_mult = FREEZE_SPEED_MULT
+
+	# Gletscherhaut: auf der eigenen Eisbahn schneller und Heilung.
+	_on_own_ice = frost_trail_haste and not is_replica and _standing_on_own_ice()
+	if _on_own_ice and current_health > 0.0:
+		heal(GLACIER_SKIN_HEAL * delta)
 
 	if time_slow_timer > 0.0:
 		time_slow_timer -= delta
@@ -6221,10 +6329,11 @@ func _handle_timers(delta: float) -> void:
 	# Poison ticks
 	if poison_ticks_left > 0:
 		poison_tick_timer += delta
-		if poison_tick_timer >= POISON_TICK_INTERVAL:
+		if poison_tick_timer >= ElementReactions.poison_tick_interval(self, POISON_TICK_INTERVAL):
 			poison_tick_timer = 0.0
+			var plague_bonus := ElementReactions.poison_tick_bonus(self)
 			poison_ticks_left -= 1
-			take_damage(poison_damage_per_tick)
+			take_damage(poison_damage_per_tick + plague_bonus)
 			_fx("sound", {"snd": ["poison", 0.2, POISON_TICK_VOLUME_DB]})
 			_refresh_poison_visual()
 
@@ -6235,6 +6344,7 @@ func _handle_timers(delta: float) -> void:
 			burn_tick_timer = 0.0
 			burn_ticks_left -= 1
 			take_damage(burn_taken_per_tick)
+			ElementReactions.on_burn_tick(self)
 
 	# Turm-Talent: automatisch neue TÃƒÂ¼rme erzeugen.
 	if tower_enabled and tower_auto_spawn:

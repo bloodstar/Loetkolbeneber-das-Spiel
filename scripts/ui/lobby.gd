@@ -59,6 +59,7 @@ var blind_pick_check: CheckButton
 var melee_enabled_check: CheckButton
 var random_pick_check: CheckButton
 var gamble_check: CheckButton
+var element_reactions_check: CheckButton
 var pre_draft_spin: SpinBox
 var pre_draft_random_check: CheckButton
 var bot_test_section: VBoxContainer = null
@@ -2129,6 +2130,8 @@ func _refresh_host_controls() -> void:
 		random_pick_check.disabled = not is_host
 	if gamble_check != null:
 		gamble_check.disabled = not is_host
+	if element_reactions_check != null:
+		element_reactions_check.disabled = not is_host
 	if pre_draft_random_check != null:
 		pre_draft_random_check.disabled = not is_host or Global.pre_draft_picks <= 0
 	_refresh_modifier_controls()
@@ -2488,6 +2491,21 @@ func _build_rules_tab() -> void:
 	gamble_hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	gamble_hint.autowrap_mode = 2
 	modifier_grid.add_child(gamble_hint)
+
+	element_reactions_check = CheckButton.new()
+	element_reactions_check.text = "Element-Reaktionen"
+	element_reactions_check.tooltip_text = "Elemente verschiedener Spieler reagieren miteinander, zum Beispiel Feuer von A in der Giftwolke von B = Gasexplosion. Aus: Nur wer beide Elemente selbst hat, bekommt die Kombination."
+	element_reactions_check.button_pressed = Global.element_reactions_enabled
+	element_reactions_check.toggled.connect(_on_element_reactions_toggled)
+	modifier_grid.add_child(element_reactions_check)
+
+	var element_hint := Label.new()
+	element_hint.text = "Synergie-Matrix auch zwischen Spielern (Gasbrand, Dampf, Plasma ...). Eigene Kombinationen wirken immer."
+	element_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	element_hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	element_hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	element_hint.autowrap_mode = 2
+	modifier_grid.add_child(element_hint)
 
 	var info := Label.new()
 	info.text = "Kills geben sofort Punkte. In FFA erhält der Überlebende den Bonus, in Team-Modi alle Mitglieder des Siegerteams. Bei einem Doppel-KO gibt es keinen Überlebensbonus."
@@ -4277,6 +4295,14 @@ func _on_random_pick_toggled(pressed: bool) -> void:
 	SoundManager.play_sound("click")
 	_update_status()
 
+func _on_element_reactions_toggled(pressed: bool) -> void:
+	if not Global.is_local_host():
+		_sync_from_global()
+		return
+	Global.set_element_reactions_enabled(pressed)
+	SoundManager.play_sound("click")
+	_update_status()
+
 func _on_gamble_toggled(pressed: bool) -> void:
 	if not Global.is_local_host():
 		_sync_from_global()
@@ -4389,6 +4415,8 @@ func _sync_from_global() -> void:
 		random_pick_check.set_pressed_no_signal(Global.random_pick_enabled)
 	if gamble_check != null:
 		gamble_check.set_pressed_no_signal(Global.gamble_enabled)
+	if element_reactions_check != null:
+		element_reactions_check.set_pressed_no_signal(Global.element_reactions_enabled)
 	if pre_draft_spin != null:
 		pre_draft_spin.set_value_no_signal(Global.pre_draft_picks)
 	if pre_draft_random_check != null:

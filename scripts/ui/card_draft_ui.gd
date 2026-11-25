@@ -209,7 +209,7 @@ func _process_next_in_queue() -> void:
 	is_bot_drafting = Global.is_bot_slot(current_drafter)
 	local_owner = (not network_mode) or current_drafter == Global.local_player_index
 
-	offered_cards = _draw_offer()
+	offered_cards = _with_element_pick(_draw_offer())
 	
 	if offered_cards.is_empty():
 		# Keine Karten verfügbar (z. B. alles gesperrt) -> diesen Drafter überspringen.
@@ -256,6 +256,68 @@ func _draw_offer() -> Array[CardData]:
 			return fresh
 	return CardDatabase.get_draft_offer(Global.cards_per_draft, exclude, drafter_hero_id, owned_ids, rarities)
 
+# Element-System: Solange ein Element-Slot frei ist, liegt die Karte "Element"
+# zusätzlich (als letzte Karte) im Angebot. Sie kostet den Pick erst, wenn im
+# Unter-Draft ein Element gewählt wird. Im Gamble bleibt sie weg, dort würde
+# sie das verdeckte Aufdecken stören.
+func _with_element_pick(cards: Array[CardData]) -> Array[CardData]:
+	if cards.is_empty() or _gamble_active():
+		return cards
+	var pick := CardDatabase.get_card(ElementSystem.PICK_CARD_ID)
+	if pick == null or cards.has(pick):
+		return cards
+	var owned_ids := Global.get_owned_card_ids(current_drafter)
+	if not CardDatabase.is_card_available_for_player(pick, Global.get_player_hero_id(current_drafter), owned_ids):
+		return cards
+	var result: Array[CardData] = cards.duplicate()
+	result.append(pick)
+	return result
+
+# Wechselt das Angebot auf die vier Elementkarten. Host und Clients machen das
+# jeweils selbst, sobald die Wahl von "Element" bestätigt ist: Das Angebot hängt
+# nur von Held und Kartenliste ab und ist darum überall gleich.
+func _open_element_subdraft() -> void:
+	SoundManager.play_sound("card_pick", 0.03, 0.0)
+	offered_cards = CardDatabase.get_element_offer(Global.get_player_hero_id(current_drafter), Global.get_owned_card_ids(current_drafter))
+	if offered_cards.is_empty():
+		if network_mode and not NetworkManager.is_host:
+			_show_waiting_for_offer()
+		else:
+			_start_next_offer()
+		return
+	_start_current_pick()
+
+func _is_element_subdraft() -> bool:
+	for c in offered_cards:
+		if c.element.is_empty():
+			return false
+	return not offered_cards.is_empty()
+
+# Fußzeile der Elementkarten: was die Wahl mit dem schon vorhandenen Element ergibt.
+func _element_footer(card: CardData) -> String:
+	if card.element_pick:
+		var free := ElementSystem.free_slots(Global.get_player_hero_id(current_drafter), Global.get_owned_card_ids(current_drafter))
+		return "%d ELEMENT-SLOT%s FREI" % [free, "S" if free != 1 else ""]
+	if card.element.is_empty():
+		return ""
+	var have := Global.get_player_elements(current_drafter)
+	var combo := ElementSystem.preview_combo(have, card.element)
+	if combo.is_empty():
+		return "ERSTES ELEMENT"
+	var combo_name: String = str(ElementSystem.COMBO_NAMES.get(combo, combo)).to_upper()
+	if card.element_pure:
+		return "REIN: %s" % combo_name
+	return "ERGIBT: %s" % combo_name
+
+func _element_footer_tooltip(card: CardData) -> String:
+	if card.element.is_empty():
+		return ""
+	var have := Global.get_player_elements(current_drafter)
+	var combo := ElementSystem.preview_combo(have, card.element)
+	if combo.is_empty():
+		return ""
+	return "%s: %s" % [ElementSystem.COMBO_NAMES.get(combo, combo), ElementSystem.COMBO_DESCRIPTIONS.get(combo, "")]
+
 func _record_offer(cards: Array[CardData]) -> void:
 	CardStats.record_offer(cards)
 	for c in cards:
@@ -275,7 +337,7 @@ func _set_offer_from_ids(card_ids: Array) -> void:
 func _start_next_offer() -> void:
 	# Wahlen zum alten Angebot sind ab hier ungültig.
 	pending_remote_picks.clear()
-	offered_cards = _draw_offer()
+	offered_cards = _with_element_pick(_draw_offer())
 	if offered_cards.is_empty():
 		_finish_drafter()
 		return
@@ -369,6 +431,8 @@ func _start_current_pick() -> void:
 		subtitle_label.text = "BLIND PICK: Deine Auswahl bleibt vor anderen Spielern verborgen (Pick %d/%d)." % [pick_number, picks_total]
 	else:
 		subtitle_label.text = "Wähle 1 von %d Karten (Pick %d/%d). Alle sehen die Auswahl live!" % [offered_cards.size(), pick_number, picks_total]
+	if _is_element_subdraft() and not blind_hidden:
+		subtitle_label.text = "ELEMENT: Wähle ein Element für deinen Build. Unten auf der Karte steht, was es mit deinem vorhandenen Element ergibt (Pick %d/%d)." % [pick_number, picks_total]
 	if _gamble_active() and not blind_hidden:
 		var gamble_prefix := "BLIND PICK + " if _blind_pick_active() else ""
 		subtitle_label.text = "%sGAMBLE: Karten verdeckt, die Rückseite zeigt die Seltenheit. Von links aufdecken: Nimm die offene Karte oder dreh die nächste um, dann verkohlt die offene (Pick %d/%d)." % [gamble_prefix, pick_number, picks_total]
@@ -665,7 +729,12 @@ func _fill_cards() -> void:
 			cards_container.add_child(_create_hidden_card(i + 1))
 		return
 	for i in range(remaining.size()):
-		var card_panel = _create_card_button(remaining[i], i + 1)
+		var footer := _element_footer(remaining[i])
+		var card_panel = _create_card_button(remaining[i], i + 1, true, footer,
+				ElementSystem.element_color(remaining[i].element) if not remaining[i].element.is_empty() else Color(0.95, 0.85, 0.55))
+		var combo_tip := _element_footer_tooltip(remaining[i])
+		if not combo_tip.is_empty():
+			card_panel.tooltip_text = combo_tip
 		cards_container.add_child(card_panel)
 
 func _create_framed_card(card: CardData, min_size: Vector2, outer_bg: Color, inner_bg: Color) -> Dictionary:
@@ -1191,6 +1260,14 @@ func _commit_pick(card: CardData, from_network: bool = false) -> void:
 		bot_status_label.visible = true
 		_populate_cards()
 		return
+
+	# "Element" kostet keinen Pick und wird nicht besessen: Es öffnet den
+	# Unter-Draft mit den Elementkarten.
+	if card.element_pick:
+		if network_mode and NetworkManager.is_host:
+			NetworkManager.send_draft_pick(card.id)
+		_open_element_subdraft()
+		return
 	
 	# Gamble: Angebot vor dem Pick merken, um danach alles aufzudecken.
 	var gamble_aftermath := _gamble_active() and not _blind_pick_hidden()
@@ -1426,6 +1503,13 @@ func _on_bot_auto_pick() -> void:
 	_commit_pick(chosen)
 
 func _bot_card_score(card: CardData, rarity_rank: Dictionary) -> int:
+	# Element-System: Bots nehmen gern ein Element. Im Unter-Draft bevorzugen sie
+	# die reine Form ihres Grundelements oder eine Kombination, sonst Zufall.
+	if card.element_pick:
+		return 40 + randi_range(0, 25)
+	if not card.element.is_empty():
+		var bias := 30 if card.element_pure else (20 if not Global.get_player_elements(current_drafter).is_empty() else 0)
+		return bias + randi_range(0, 30)
 	var score := int(rarity_rank.get(card.rarity, 0)) * 10
 	# Der Bot baut vorhandene Talentbäume bevorzugt weiter aus.
 	if not card.parent_card_id.is_empty():

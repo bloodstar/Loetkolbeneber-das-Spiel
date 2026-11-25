@@ -37,6 +37,7 @@ signal kill_cam_received(point: Vector2, killer_slot: int, duration: float)
 signal tile_broken_received(tile_id: int)
 signal tile_regrown_received(tile_id: int)
 signal zone_spawn_received(data: Dictionary)
+signal zone_end_received(kind: int, pos: Vector2)
 signal fx_received(fx: String, args: Dictionary)
 
 const DEFAULT_PORT: int = 7777
@@ -644,6 +645,7 @@ func build_lobby_sync() -> Dictionary:
 		"pre_draft_picks": Global.pre_draft_picks,
 		"pre_draft_random": Global.pre_draft_random,
 		"melee_enabled": Global.melee_enabled,
+		"element_reactions_enabled": Global.element_reactions_enabled,
 		"level_modifier_rate_percent": Global.level_modifier_rate_percent,
 		"enabled_level_modifiers": Global.get_enabled_level_modifiers(),
 		"bans": Global.banned_card_ids.duplicate(),
@@ -763,6 +765,7 @@ func _apply_lobby_sync(data: Dictionary) -> void:
 	Global.set_pre_draft_picks(int(data.get("pre_draft_picks", Global.pre_draft_picks)))
 	Global.set_pre_draft_random(bool(data.get("pre_draft_random", Global.pre_draft_random)))
 	Global.set_melee_enabled(bool(data.get("melee_enabled", Global.melee_enabled)))
+	Global.set_element_reactions_enabled(bool(data.get("element_reactions_enabled", Global.element_reactions_enabled)))
 	Global.set_level_modifier_rate_percent(
 		int(data.get("level_modifier_rate_percent", Global.level_modifier_rate_percent))
 	)
@@ -973,6 +976,18 @@ func send_zone_spawn(data: Dictionary) -> void:
 @rpc("authority", "call_remote", "reliable")
 func receive_zone_spawn(data: Dictionary) -> void:
 	zone_spawn_received.emit(data)
+
+# Element-Reaktion hat eine Zone vorzeitig verbraucht (Gasexplosion, Dampf ...).
+# Clients finden ihre Replik über Art und Position.
+func send_zone_end(kind: int, pos: Vector2) -> void:
+	if not is_host:
+		return
+	for peer_id in _broadcast_targets():
+		receive_zone_end.rpc_id(int(peer_id), kind, pos)
+
+@rpc("authority", "call_remote", "reliable")
+func receive_zone_end(kind: int, pos: Vector2) -> void:
+	zone_end_received.emit(kind, pos)
 
 # --- Kurze Effekte: Optik und Ton von Fähigkeiten und Explosionen (NetFx) ---
 

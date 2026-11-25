@@ -369,6 +369,31 @@ Lobby-Regel unter **Tab Regeln → Karten-Draft**. Steht **Pre-Draft** auf mehr 
 - **Random pick**: Es wird automatisch eine Zufallskarte gezogen. Online zieht der Host.
 - **Gamble**: Die Karten liegen verdeckt, die Rückseite zeigt die Farbe der Seltenheit. Von links nach rechts wird einzeln aufgedeckt: Entweder nimmt man die offene Karte oder dreht die nächste um. Dann läuft ein Feuerbalken von unten nach oben über die offene Karte, danach ist sie verkohlt und weg. Die letzte Karte muss man nehmen. Steuerung: Mit A/D markiert man die offene Karte oder die nächste Rückseite, die Leertaste nimmt bzw. dreht um. Enter nimmt direkt die offene Karte, Klick und Zifferntasten gehen auch. Nach dem Pick werden kurz alle übrigen Karten aufgedeckt. Bots sehen die Rückseiten auch und drehen weiter, wenn rechts eine seltenere Karte liegt. Mit Random pick ohne Wirkung. Bei mehreren Picks gilt das für jedes neue Angebot.
 
+### Elemente & Synergien
+
+Es gibt vier Elemente: **Feuer**, **Gift** (Gift-Ticks und Giftwolken), **Frost** und **Blitz**. Jeder Eber hat **2 Element-Slots**. Ignis (Feuer), Volt (Blitz) und Spore (Gift) haben ihr Grundelement schon in Slot 1.
+
+- **Karte „Element“**: Solange ein Slot frei ist, liegt im Draft zusätzlich eine 4. Karte „Element“. Sie öffnet einen Unter-Draft mit den vier Elementkarten. Jede Karte zeigt unten, was sie ergibt (**ERSTES ELEMENT**, **ERGIBT: Plasma**, **REIN: Lauffeuer**). Die Wahl zählt als Pick. Im Gamble-Modus gibt es die Element-Karte nicht.
+- **Grundkarte**: Die erste Karte eines Elements bringt die passende Schusskarte mit (Feuersturm, Giftschuss, Frostschuss, Blitzschuss), Nahkämpfer bekommen das Nahkampf-Gegenstück.
+- **Element-Boni**: Kleine Elementkarten (z. B. Giftklinge, Frostartig) erscheinen erst, wenn du das Element hast (orange **BENÖTIGT**-Zeile).
+
+| Kombination | Elemente | Wirkung im eigenen Build |
+| :--- | :--- | :--- |
+| Gasbrand | Feuer + Gift | Giftwolken brennen mit, Feuer auf Vergiftete lässt das Gift explodieren |
+| Dampf | Feuer + Frost | Brand verlangsamt kurz, Thermoschock wird stärker |
+| Plasma | Feuer + Blitz | Kettenblitze entzünden, Blitz auf Brennende schleudert Funken |
+| Giftreif | Gift + Frost | Gift verlangsamt kurz, vergiftet + verlangsamt tickt 40 % schneller |
+| Neurotoxin | Gift + Blitz | Kettenblitze vergiften, Blitz auf Vergiftete verdoppelt die Betäubung |
+| Supraleiter | Frost + Blitz | Blitz auf Verlangsamte: 5 s lang 30 % verwundbarer |
+| Lauffeuer | Feuer rein | Brand stapelt bis dreifach und springt über, Feuerböden halten länger |
+| Seuche | Gift rein | Giftstapel addieren sich, größere Wolken, Vergiftete platzen beim Tod |
+| Permafrost | Frost rein | 3 Frost-Treffer in 2 s frieren ein, der nächste Treffer zersplittert (+50 %), Eisspuren halten doppelt |
+| Hochspannung | Blitz rein | Treffer laden auf, bei 5 Ladungen Entladung (20 Schaden, 0,4 s Betäubung), Blitzzonen 40 % größer |
+
+**Welt-Reaktionen** (Lobby-Regel **Element-Reaktionen**, Standard an): Elemente verschiedener Spieler reagieren auch miteinander, am Ziel (z. B. Feuer auf Vergiftete) und in Flächen (Feuer + Giftwolke = Gasexplosion, Feuer + Eis = Dampfwolke, Blitz + Feuer = Plasmafeld, Frost + Gift = Giftreif, Blitz + Gift = Giftgewitter, Blitz + Eis = Strom über die Eisfläche). Pro Ziel gibt es eine Abklingzeit von 1,5 s, Einfrieren macht danach kurz immun. Ist die Regel aus, wirken nur die Kombinationen im eigenen Build.
+
+**Neue Frost-Karten**: Eissplitter (+15 % Schaden gegen Verlangsamte), Tiefkühlung (stärkere Verlangsamung), Splitternova (Frostnova verschießt Splitter), Gletscherhaut (schneller und Heilung auf eigenem Eis), Kältepanzer (Rüstung, Nahkampf-Angreifer werden verlangsamt).
+
 ### Kartenstatistik & automatische Aufwertung
 
 Das Spiel führt im Hintergrund `card_statistics.json` mit **Pickrate**, **Killrate** und **Winrate** jeder Karte, inklusive Nahkampfschaden. Alle 3 abgeschlossenen Matches wird ausgewertet. Eine Karte steigt um eine Seltenheit auf, wenn sie:

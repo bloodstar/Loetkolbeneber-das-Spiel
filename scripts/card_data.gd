@@ -22,6 +22,31 @@ extends Resource
 # "frost", "fire", "lightning", "tower", "drone" und "bounce".
 @export var required_mechanic: String = ""
 
+# --- Element-System ---
+# Elementkarte aus dem Unter-Draft: belegt einen der zwei Element-Slots.
+# Werte: "fire", "poison", "frost", "lightning" (siehe ElementSystem).
+@export var element: String = ""
+# Reine Form: zweites Mal dasselbe Element (Diagonale der Synergie-Matrix).
+@export var element_pure: bool = false
+# Die Karte "Element" im Angebot: öffnet den Unter-Draft, wird nie besessen.
+@export var element_pick: bool = false
+# Grundkarte eines Elements (Feuersturm, Giftschuss ...): kommt nur noch über
+# die Elementkarte, nicht mehr im normalen Kartenangebot.
+@export var element_core: bool = false
+# Karte erscheint nur, wenn der Spieler dieses Element hat (Klasse oder Slot).
+# Leer = wird beim Registrieren aus den Werten abgeleitet (CardDatabase).
+@export var required_element: String = ""
+# Frost-Karten: Mehrschaden gegen verlangsamte Ziele (0.15 = +15 %).
+@export var chill_damage_bonus_add: float = 0.0
+# Frost-Karten: Verlangsamung stärker. 0.1 = Tempo der Getroffenen 10 Prozentpunkte niedriger.
+@export var chill_strength_add: float = 0.0
+# Eisnova zerfällt in Splitter (Schaden je getroffenem Gegner).
+@export var frost_nova_shards: bool = false
+# Auf der eigenen Eisbahn: Tempo-Bonus und Heilung pro Sekunde.
+@export var frost_trail_haste: bool = false
+# Nahkampf-Angreifer werden verlangsamt (Sekunden).
+@export var chill_on_melee_hit_add: float = 0.0
+
 # --- Talentbaum ---
 # Grundkarten haben kein parent_card_id. Ausbaukarten erscheinen nur, wenn der
 # Spieler die Grundkarte bereits besitzt. family_id gruppiert die Zweige.

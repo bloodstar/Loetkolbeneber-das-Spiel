@@ -551,16 +551,18 @@ func _clamp_to_map() -> void:
 func _tick_status(delta: float) -> void:
 	if poison_ticks_left > 0:
 		_poison_t += delta
-		if _poison_t >= POISON_TICK:
+		if _poison_t >= ElementReactions.poison_tick_interval(self, POISON_TICK):
 			_poison_t = 0.0
+			var plague_bonus := ElementReactions.poison_tick_bonus(self)
 			poison_ticks_left -= 1
-			_apply_damage(poison_damage_per_tick, _kill_credit)
+			_apply_damage(poison_damage_per_tick + plague_bonus, _kill_credit)
 	if burn_ticks_left > 0:
 		_burn_t += delta
 		if _burn_t >= BURN_TICK:
 			_burn_t = 0.0
 			burn_ticks_left -= 1
 			_apply_damage(burn_damage_per_tick, _kill_credit)
+			ElementReactions.on_burn_tick(self)
 
 # --- Schnittstelle wie Player ---
 
@@ -577,6 +579,8 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null
 		last_damage_source = source
 	if mark_timer > 0.0 and source != null and source == mark_source:
 		amount *= 1.25
+	# Element-System: Supraleiter, Zersplittern, Eissplitter-Karte.
+	amount *= ElementReactions.damage_taken_mult(self, source)
 	var resist := 0.25 if is_boss else (0.6 if riese else 1.0)
 	_knock += knockback * resist * 0.6
 	_apply_damage(amount, source)
@@ -610,22 +614,32 @@ func _die(killer) -> void:
 		return
 	is_dead = true
 	current_health = 0.0
+	ElementReactions.on_death(self)
 	if director != null:
 		director.on_enemy_killed(self, killer if is_instance_valid(killer) else null)
 	queue_free()
 
-func apply_stun(duration: float) -> void:
+# `source` wie bei Player: nur Element-Treffer bringen ihn mit (ElementReactions).
+func apply_stun(duration: float, source = null) -> void:
+	if source != null:
+		ElementReactions.on_element(self, ElementSystem.LIGHTNING, source, duration)
 	stun_timer = maxf(stun_timer, duration * (0.3 if is_boss else 1.0))
 
-func apply_freeze(duration: float) -> void:
+func apply_freeze(duration: float, source = null) -> void:
+	if source != null and ElementReactions.on_element(self, ElementSystem.FROST, source, duration):
+		return
 	freeze_timer = maxf(freeze_timer, duration * (0.3 if is_boss else 0.8))
 
-func apply_poison(stacks: int, damage_per_tick: float = 4.0) -> void:
+func apply_poison(stacks: int, damage_per_tick: float = 4.0, source = null) -> void:
+	if source != null and ElementReactions.on_element(self, ElementSystem.POISON, source):
+		return
 	poison_damage_per_tick = maxf(poison_damage_per_tick, damage_per_tick)
-	poison_ticks_left = maxi(poison_ticks_left, stacks)
+	poison_ticks_left = ElementReactions.stacked_poison_ticks(poison_ticks_left, stacks, source)
 
-func apply_burn(stacks: int, damage_per_tick: float = 5.0) -> void:
-	burn_ticks_left = maxi(burn_ticks_left, stacks)
+func apply_burn(stacks: int, damage_per_tick: float = 5.0, source = null) -> void:
+	if source != null and ElementReactions.on_element(self, ElementSystem.FIRE, source):
+		return
+	burn_ticks_left = ElementReactions.stacked_burn_ticks(burn_ticks_left, stacks, source)
 	burn_damage_per_tick = maxf(burn_damage_per_tick, damage_per_tick)
 
 func apply_knockback(force: Vector2) -> void:

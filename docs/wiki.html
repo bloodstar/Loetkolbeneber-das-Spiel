@@ -1464,6 +1464,111 @@ auch und drehen weiter, wenn rechts eine seltenere Karte liegt. Mit
 Random pick ohne Wirkung. Bei mehreren Picks gilt das für jedes neue
 Angebot.</li>
 </ul>
+<h3 id="elemente--synergien">Elemente &amp; Synergien</h3>
+<p>Es gibt vier Elemente: <strong>Feuer</strong>, <strong>Gift</strong>
+(Gift-Ticks und Giftwolken), <strong>Frost</strong> und
+<strong>Blitz</strong>. Jeder Eber hat <strong>2 Element-Slots</strong>.
+Ignis (Feuer), Volt (Blitz) und Spore (Gift) haben ihr Grundelement
+schon in Slot 1.</p>
+<ul>
+<li><strong>Karte „Element“</strong>: Solange ein Slot frei ist, liegt
+im Draft zusätzlich eine 4. Karte „Element“. Sie öffnet einen
+Unter-Draft mit den vier Elementkarten. Jede Karte zeigt unten, was sie
+ergibt (<strong>ERSTES ELEMENT</strong>, <strong>ERGIBT:
+Plasma</strong>, <strong>REIN: Lauffeuer</strong>). Die Wahl zählt als
+Pick. Im Gamble-Modus gibt es die Element-Karte nicht.</li>
+<li><strong>Grundkarte</strong>: Die erste Karte eines Elements bringt
+die passende Schusskarte mit (Feuersturm, Giftschuss, Frostschuss,
+Blitzschuss), Nahkämpfer bekommen das Nahkampf-Gegenstück.</li>
+<li><strong>Element-Boni</strong>: Kleine Elementkarten (z. B.
+Giftklinge, Frostartig) erscheinen erst, wenn du das Element hast
+(orange <strong>BENÖTIGT</strong>-Zeile).</li>
+</ul>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Kombination</th>
+<th style="text-align: left;">Elemente</th>
+<th style="text-align: left;">Wirkung im eigenen Build</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Gasbrand</td>
+<td style="text-align: left;">Feuer + Gift</td>
+<td style="text-align: left;">Giftwolken brennen mit, Feuer auf
+Vergiftete lässt das Gift explodieren</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Dampf</td>
+<td style="text-align: left;">Feuer + Frost</td>
+<td style="text-align: left;">Brand verlangsamt kurz, Thermoschock wird
+stärker</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Plasma</td>
+<td style="text-align: left;">Feuer + Blitz</td>
+<td style="text-align: left;">Kettenblitze entzünden, Blitz auf
+Brennende schleudert Funken</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Giftreif</td>
+<td style="text-align: left;">Gift + Frost</td>
+<td style="text-align: left;">Gift verlangsamt kurz, vergiftet +
+verlangsamt tickt 40 % schneller</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Neurotoxin</td>
+<td style="text-align: left;">Gift + Blitz</td>
+<td style="text-align: left;">Kettenblitze vergiften, Blitz auf
+Vergiftete verdoppelt die Betäubung</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Supraleiter</td>
+<td style="text-align: left;">Frost + Blitz</td>
+<td style="text-align: left;">Blitz auf Verlangsamte: 5 s lang 30 %
+verwundbarer</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Lauffeuer</td>
+<td style="text-align: left;">Feuer rein</td>
+<td style="text-align: left;">Brand stapelt bis dreifach und springt
+über, Feuerböden halten länger</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Seuche</td>
+<td style="text-align: left;">Gift rein</td>
+<td style="text-align: left;">Giftstapel addieren sich, größere Wolken,
+Vergiftete platzen beim Tod</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Permafrost</td>
+<td style="text-align: left;">Frost rein</td>
+<td style="text-align: left;">3 Frost-Treffer in 2 s frieren ein, der
+nächste Treffer zersplittert (+50 %), Eisspuren halten doppelt</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Hochspannung</td>
+<td style="text-align: left;">Blitz rein</td>
+<td style="text-align: left;">Treffer laden auf, bei 5 Ladungen
+Entladung (20 Schaden, 0,4 s Betäubung), Blitzzonen 40 % größer</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Welt-Reaktionen</strong> (Lobby-Regel
+<strong>Element-Reaktionen</strong>, Standard an): Elemente
+verschiedener Spieler reagieren auch miteinander, am Ziel (z. B. Feuer
+auf Vergiftete) und in Flächen (Feuer + Giftwolke = Gasexplosion, Feuer
++ Eis = Dampfwolke, Blitz + Feuer = Plasmafeld, Frost + Gift = Giftreif,
+Blitz + Gift = Giftgewitter, Blitz + Eis = Strom über die Eisfläche).
+Pro Ziel gibt es eine Abklingzeit von 1,5 s, Einfrieren macht danach
+kurz immun. Ist die Regel aus, wirken nur die Kombinationen im eigenen
+Build.</p>
+<p><strong>Neue Frost-Karten</strong>: Eissplitter (+15 % Schaden gegen
+Verlangsamte), Tiefkühlung (stärkere Verlangsamung), Splitternova
+(Frostnova verschießt Splitter), Gletscherhaut (schneller und Heilung
+auf eigenem Eis), Kältepanzer (Rüstung, Nahkampf-Angreifer werden
+verlangsamt).</p>
 <h3 id="kartenstatistik--automatische-aufwertung">Kartenstatistik &amp;
 automatische Aufwertung</h3>
 <p>Das Spiel führt im Hintergrund <code>card_statistics.json</code> mit
