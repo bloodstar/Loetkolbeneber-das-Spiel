@@ -206,11 +206,13 @@ func _init_database() -> void:
 	# 10. Toxic Spores
 	var c10 = CardData.new()
 	c10.id = "toxic_spores"
+	c10.version = 2 # nur noch Fernkampf
 	c10.title = "Toxic Spores"
 	c10.description = "Kugeln vergiften den Gegner.\n+3 Giftstapel."
 	c10.rarity = "Rare"
 	c10.color = Color(0.4, 0.9, 0.3)
 	c10.poison_stacks_add = 3
+	c10.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(c10)
 
 	# 11. Frostbite
@@ -226,7 +228,7 @@ func _init_database() -> void:
 	# 12. Vampiric Leech
 	var c12 = CardData.new()
 	c12.id = "vampiric_leech"
-	c12.version = 2 # Evolution A von blutdurst
+	c12.version = 3 # Evolution A von blutdurst; nur noch Fernkampf
 	c12.title = "Vampiric Leech"
 	c12.description = "Lebensraub-Ausbau: Saugt Leben aus jedem Treffer.\n+15% Lebensraub."
 	c12.rarity = "Rare"
@@ -235,6 +237,7 @@ func _init_database() -> void:
 	c12.parent_card_id = "blutdurst"
 	c12.evolution_branch = "A"
 	c12.lifesteal_percent_add = 0.15
+	c12.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(c12)
 
 	# 13. Kinetic Barrier
@@ -393,11 +396,13 @@ func _init_database() -> void:
 
 	var n5 = CardData.new()
 	n5.id = "scharfe_munition"
+	n5.version = 2 # nur noch Fernkampf
 	n5.title = "Scharfe Munition"
 	n5.description = "Mehr Durchschlagskraft.\n+20% Schaden."
 	n5.rarity = "Common"
 	n5.color = Color(0.95, 0.45, 0.25)
 	n5.damage_mult = 1.20
+	n5.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(n5)
 
 	var n6 = CardData.new()
@@ -449,16 +454,18 @@ func _init_database() -> void:
 
 	var n11 = CardData.new()
 	n11.id = "blutdurst"
+	n11.version = 2 # nur noch Fernkampf
 	n11.title = "Blutdurst"
 	n11.description = "Heilt dich um 12% des verursachten Projektil-Schadens."
 	n11.rarity = "Uncommon"
 	n11.color = Color(0.85, 0.20, 0.35)
 	n11.lifesteal_percent_add = 0.12
+	n11.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(n11)
 
 	var n12 = CardData.new()
 	n12.id = "vampirklinge"
-	n12.version = 2 # Evolution B von blutdurst
+	n12.version = 3 # Evolution B von blutdurst; nur noch Fernkampf
 	n12.title = "Vampirklinge"
 	n12.description = "Lebensraub-Ausbau: Starker Lebensraub.\n+20% Lebensraub, -10% Max HP."
 	n12.rarity = "Rare"
@@ -468,6 +475,7 @@ func _init_database() -> void:
 	n12.evolution_branch = "B"
 	n12.lifesteal_percent_add = 0.20
 	n12.max_hp_mult = 0.90
+	n12.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(n12)
 
 	var n13 = CardData.new()
@@ -744,6 +752,7 @@ func _init_database() -> void:
 	# --- Giftschuss ---
 	var gb1 = CardData.new()
 	gb1.id = "giftschuss"
+	gb1.version = 2 # nur noch Fernkampf
 	gb1.title = "Giftschuss"
 	gb1.description = "Geschosse vergiften Gegner.\n+2 Giftstapel, +25% Giftschaden."
 	gb1.rarity = "Rare"
@@ -751,6 +760,7 @@ func _init_database() -> void:
 	gb1.family_id = "giftschuss"
 	gb1.poison_stacks_add = 2
 	gb1.poison_damage_mult = 1.25
+	gb1.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(gb1)
 
 	var gb2 = CardData.new()
@@ -767,6 +777,7 @@ func _init_database() -> void:
 
 	var gb3 = CardData.new()
 	gb3.id = "giftschuss_spur"
+	gb3.version = 2 # nur noch Fernkampf
 	gb3.title = "Giftspur"
 	gb3.description = "Giftschuss-Ausbau: Hinterlässt eine Giftspur. Sie schadet dir selbst nicht."
 	gb3.rarity = "Epic"
@@ -775,11 +786,13 @@ func _init_database() -> void:
 	gb3.parent_card_id = "giftschuss"
 	gb3.evolution_branch = "B"
 	gb3.poison_trail = true
+	gb3.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(gb3)
 
 	# --- Blitzschuss ---
 	var lb1 = CardData.new()
 	lb1.id = "blitzschuss"
+	lb1.version = 2 # nur noch Fernkampf
 	lb1.title = "Blitzschuss"
 	lb1.description = "Blitzangriff, der Gegner für 0,1 Sekunden betäubt."
 	lb1.rarity = "Rare"
@@ -787,10 +800,12 @@ func _init_database() -> void:
 	lb1.family_id = "blitzschuss"
 	lb1.lightning_shot = true
 	lb1.damage_mult = 1.05
+	lb1.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(lb1)
 
 	var lb2 = CardData.new()
 	lb2.id = "blitzschuss_kette"
+	lb2.version = 2 # nur noch Fernkampf
 	lb2.title = "Kettenblitz"
 	lb2.description = "Blitzschuss-Ausbau: Der Blitz springt auf nahe Gegner über und betäubt sie erneut."
 	lb2.rarity = "Epic"
@@ -799,6 +814,7 @@ func _init_database() -> void:
 	lb2.parent_card_id = "blitzschuss"
 	lb2.evolution_branch = "A"
 	lb2.chain_lightning = true
+	lb2.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(lb2)
 
 	var lb3 = CardData.new()
@@ -816,12 +832,14 @@ func _init_database() -> void:
 	# --- Frostschuss ---
 	var fb1 = CardData.new()
 	fb1.id = "frostschuss"
+	fb1.version = 2 # nur noch Fernkampf
 	fb1.title = "Frostschuss"
 	fb1.description = "Geschosse verlangsamen Gegner für 0,8 Sekunden."
 	fb1.rarity = "Uncommon"
 	fb1.color = Color(0.35, 0.85, 1.00)
 	fb1.family_id = "frostschuss"
 	fb1.freeze_duration_add = 0.8
+	fb1.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(fb1)
 
 	var fb2 = CardData.new()
@@ -839,6 +857,7 @@ func _init_database() -> void:
 
 	var fb3 = CardData.new()
 	fb3.id = "frostschuss_spur"
+	fb3.version = 2 # nur noch Fernkampf
 	fb3.title = "Eisbahn"
 	fb3.description = "Frostschuss-Ausbau: Hinterlässt eine Eisbahn, die Gegner verlangsamt."
 	fb3.rarity = "Rare"
@@ -847,6 +866,7 @@ func _init_database() -> void:
 	fb3.parent_card_id = "frostschuss"
 	fb3.evolution_branch = "B"
 	fb3.frost_trail = true
+	fb3.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(fb3)
 
 	# --- Explosivschuss ---
@@ -889,6 +909,7 @@ func _init_database() -> void:
 	# --- Feuersturm ---
 	var rb1 = CardData.new()
 	rb1.id = "feuersturm"
+	rb1.version = 2 # nur noch Fernkampf
 	rb1.title = "Feuersturm"
 	rb1.description = "Geschosse entzünden Gegner und verursachen Brennschaden."
 	rb1.rarity = "Rare"
@@ -896,6 +917,7 @@ func _init_database() -> void:
 	rb1.family_id = "feuersturm"
 	rb1.fire_shot = true
 	rb1.damage_mult = 1.05
+	rb1.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(rb1)
 
 	var rb2 = CardData.new()
@@ -912,6 +934,7 @@ func _init_database() -> void:
 
 	var rb3 = CardData.new()
 	rb3.id = "feuersturm_spur"
+	rb3.version = 2 # nur noch Fernkampf
 	rb3.title = "Feuerspur"
 	rb3.description = "Feuersturm-Ausbau: Hinterlässt eine brennende Spur. Sie schadet dir selbst nicht."
 	rb3.rarity = "Epic"
@@ -920,6 +943,7 @@ func _init_database() -> void:
 	rb3.parent_card_id = "feuersturm"
 	rb3.evolution_branch = "B"
 	rb3.fire_trail = true
+	rb3.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(rb3)
 
 	# --- Wächterdrohne ---
@@ -1286,11 +1310,13 @@ func _init_database() -> void:
 
 	var bc18 = CardData.new()
 	bc18.id = "schnellfeuer"
+	bc18.version = 2 # nur noch Fernkampf
 	bc18.title = "Schnellfeuer"
 	bc18.description = "Dauerfeuer.\n+18% Feuerrate."
 	bc18.rarity = "Common"
 	bc18.color = Color(0.95, 0.70, 0.20)
 	bc18.fire_rate_mult = 0.82
+	bc18.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(bc18)
 
 	var bc19 = CardData.new()
@@ -3594,6 +3620,7 @@ func _init_database() -> void:
 	# Common, Stufe 2 Uncommon, Stufe 3 Rare.
 	var sm1 = CardData.new()
 	sm1.id = "schlagkraft_1"
+	sm1.version = 2 # nur noch Fernkampf
 	sm1.title = "Schlagkraft I"
 	sm1.description = "Deine Schüsse treffen härter.\n+30% Schaden."
 	sm1.rarity = "Common"
@@ -3601,10 +3628,12 @@ func _init_database() -> void:
 	sm1.color = Color(1.00, 0.55, 0.45)
 	sm1.family_id = "schlagkraft_1"
 	sm1.damage_mult = 1.30
+	sm1.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(sm1)
 
 	var sm2 = CardData.new()
 	sm2.id = "schlagkraft_2"
+	sm2.version = 2 # nur noch Fernkampf
 	sm2.title = "Schlagkraft II"
 	sm2.description = "Schlagkraft-Ausbau: Noch mehr Wucht.\n+30% Schaden."
 	sm2.rarity = "Uncommon"
@@ -3614,10 +3643,12 @@ func _init_database() -> void:
 	sm2.parent_card_id = "schlagkraft_1"
 	sm2.evolution_branch = "A"
 	sm2.damage_mult = 1.30
+	sm2.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(sm2)
 
 	var sm3 = CardData.new()
 	sm3.id = "schlagkraft_3"
+	sm3.version = 2 # nur noch Fernkampf
 	sm3.title = "Schlagkraft III"
 	sm3.description = "Schlagkraft-Ausbau: Maximale Wucht.\n+30% Schaden."
 	sm3.rarity = "Rare"
@@ -3627,6 +3658,7 @@ func _init_database() -> void:
 	sm3.parent_card_id = "schlagkraft_2"
 	sm3.evolution_branch = "A"
 	sm3.damage_mult = 1.30
+	sm3.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(sm3)
 
 	var sm4 = CardData.new()
@@ -3992,7 +4024,9 @@ func _infer_required_mechanic(card: CardData) -> String:
 # Abpraller, Zielsuche, Explosion, Mehrfachschuss, Durchschlag, Flugbahn),
 # nützen nur Fernkämpfern. Schaden, Feuerrate, Rückstoß, Lebensraub und die
 # Elementkarten wirken bei Nahkämpfern auf die Schläge (Player.apply_stats)
-# und bleiben deshalb für beide. Klassenkarten folgen ihrem Helden.
+# und bleiben deshalb für beide. Ausnahme: Schuss-Karten mit eigenem
+# Nahkampf-Gegenstück (Giftschuss, Frostschuss, Schnellfeuer, Blutdurst ...)
+# setzen attack_type = "ranged" ausdrücklich. Klassenkarten folgen ihrem Helden.
 func _infer_attack_type(card: CardData) -> String:
 	if not card.hero_id.is_empty():
 		return ""
