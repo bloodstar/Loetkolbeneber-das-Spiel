@@ -390,7 +390,7 @@ Insgesamt gibt es über **230 Karten**: rund 210 in den Pools Offensive, Defensi
 
 | Pool | Inhalt | Beispiele |
 | :--- | :--- | :--- |
-| **Offensive** | Schaden, Munition, Projektile, Elemente | Splittergeschoss, Panzerbrecher, Brandkapsel, Kettenreaktion, Leichtes/Schweres Geschoss, Mörser, Notvorrat, Fokuskristall, Weitstrahler, Kraftladung, Schlagkraft, Munitionsgurt, Gefechtsbereit |
+| **Offensive** | Schaden, Munition, Projektile, Elemente | Splittergeschoss, Panzerbrecher, Kettenreaktion, Leichtes/Schweres Geschoss, Mörser, Notvorrat, Fokuskristall, Weitstrahler, Kraftladung, Schlagkraft, Munitionsgurt, Gefechtsbereit |
 | **Defensive** | Leben, Schild, Rüstung, Reflexion, Barriere, Größe | Sanitäter, Bollwerk, Zweites Herz, Tank-Panzerung, Stachelweste, Dornenthron, Riese, Wandelnder Koloss |
 | **Bewegung** | Tempo, Sprünge, Dash, Größe | Federstiefel, Windschatten |
 | **Nahkampf** | Nur für den `E`-Schlag | Schleifstein, Frostklinge, Parade, Meister der Werkbank |
@@ -512,7 +512,7 @@ Eine Ausbaukarte erscheint erst, wenn die Grundkarte im Deck liegt. Wer einen Zw
 | **Blitzschuss** | 0,1 s Betäubung | Kettenblitz | Blitz-Orb am Einschlag |
 | **Frostschuss** | 0,8 s Verlangsamung | Eisnova am Einschlag | Eisbahn hinter dir |
 | **Explosivschuss** | +30 px Explosion | Großer Knall (+60 px) | Splitterbomben |
-| **Feuersturm** | Geschosse entzünden | Brandherd am Einschlag | Feuerspur hinter dir |
+| **Feuersturm** | Geschosse entzünden Gegner und den Boden am Einschlag (früher Brandkapsel) | Brandherd: +60 % Feuerschaden | Brandkapsel: +60 % Feuerreichweite (Zweig C: Feuerspur hinter dir) |
 | **Wächterdrohne** | Drohne schießt mit | Zwillingsdrohne | Regenerationsdrohne |
 | **Schutzdrohne** | Drohne fängt Schüsse ab | Heilende Schutzdrohne | Schutzdrohnen-Schwarm |
 | **Mörser** | Steiler Bogen, mehr Schaden | Präzisionsmörser | Belagerungsmörser |

@@ -104,6 +104,8 @@ extends Resource
 @export var fire_shot: bool = false
 @export var fire_impact_zone: bool = false
 @export var fire_trail: bool = false
+@export var fire_damage_mult: float = 1.0 # Multiplikator auf Brandschaden pro Tick (Treffer, Feuerflächen, Spur)
+@export var fire_zone_radius_mult: float = 1.0 # Größere Feuerflächen (Einschlag und Spur)
 # Wächterdrohne
 @export var drone_count_add: int = 0
 @export var drone_guardian: bool = false

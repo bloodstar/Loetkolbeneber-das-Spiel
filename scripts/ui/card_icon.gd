@@ -72,7 +72,8 @@ func _resolve_kind(c: CardData) -> String:
 		return "lightning"
 	if c.poison_impact_cloud or c.poison_trail or c.poison_stacks_add > 0 or c.poison_damage_mult > 1.0:
 		return "poison"
-	if c.fire_shot or c.fire_impact_zone or c.fire_trail:
+	if c.fire_shot or c.fire_impact_zone or c.fire_trail \
+			or c.fire_damage_mult > 1.0 or c.fire_zone_radius_mult > 1.0:
 		return "fire"
 	if c.freeze_duration_add > 0.0 or c.frost_nova or c.frost_trail:
 		return "frost"

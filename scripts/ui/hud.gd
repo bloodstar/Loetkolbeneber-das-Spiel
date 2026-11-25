@@ -1233,6 +1233,11 @@ func _add_modifier_totals(p: Player) -> void:
 		rows.append(["LEBENSRAUB", "%.0f %%" % (p.lifesteal_percent * 100.0), effect])
 	if p.poison_stacks > 0:
 		rows.append(["GIFT", "%d Stapel · %.1f / Tick" % [p.poison_stacks, p.poison_damage_per_tick], effect])
+	if p.fire_shot or p.fire_impact_zone or p.fire_trail:
+		var fire_text := "%.1f / Tick" % p.burn_damage_per_tick
+		if not is_equal_approx(p.fire_zone_radius_mult, 1.0):
+			fire_text += " · Fläche x%.1f" % p.fire_zone_radius_mult
+		rows.append(["FEUER", fire_text, effect])
 	if p.freeze_duration > 0.0:
 		rows.append(["EINFRIEREN", "%.1f s" % p.freeze_duration, effect])
 	if p.max_shield > 0.0 and not is_equal_approx(p.shield_regen_delay, \

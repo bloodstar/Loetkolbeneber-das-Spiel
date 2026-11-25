@@ -907,41 +907,59 @@ func _init_database() -> void:
 	_register(eb3)
 
 	# --- Feuersturm ---
+	# Seit v3 mit der früheren Einzelkarte Brandkapsel verschmolzen: Die
+	# Grundkarte entzündet Gegner und den Boden. Ausbau A = mehr Feuerschaden,
+	# B (Brandkapsel) = größere Feuerflächen, C = Feuerspur.
 	var rb1 = CardData.new()
 	rb1.id = "feuersturm"
-	rb1.version = 2 # nur noch Fernkampf
+	rb1.version = 3 # mit Brandkapsel verschmolzen: +Feuerzone, Episch, +10% Schaden
 	rb1.title = "Feuersturm"
-	rb1.description = "Geschosse entzünden Gegner und verursachen Brennschaden."
-	rb1.rarity = "Rare"
+	rb1.description = "Geschosse entzünden Gegner und setzen beim Einschlag den Boden in Brand.\n+Feuerzone, +10% Schaden."
+	rb1.rarity = "Epic"
 	rb1.color = Color(1.00, 0.35, 0.10)
 	rb1.family_id = "feuersturm"
 	rb1.fire_shot = true
-	rb1.damage_mult = 1.05
+	rb1.fire_impact_zone = true
+	rb1.damage_mult = 1.10
 	rb1.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(rb1)
 
 	var rb2 = CardData.new()
 	rb2.id = "feuersturm_brandherd"
+	rb2.version = 2 # jetzt Ausbau A: mehr Feuerschaden statt Feuerzone
 	rb2.title = "Brandherd"
-	rb2.description = "Feuersturm-Ausbau: Beim Einschlag entsteht ein brennender Boden, der Gegner entzündet."
+	rb2.description = "Feuersturm-Ausbau: Das Feuer brennt heißer. +60% Feuerschaden (Treffer, Feuerflächen, Spur)."
 	rb2.rarity = "Epic"
 	rb2.color = Color(1.00, 0.20, 0.05)
 	rb2.family_id = "feuersturm"
 	rb2.parent_card_id = "feuersturm"
 	rb2.evolution_branch = "A"
-	rb2.fire_impact_zone = true
+	rb2.fire_damage_mult = 1.6
 	_register(rb2)
+
+	var rb_b = CardData.new()
+	rb_b.id = "brandkapsel" # frühere Einzelkarte, seit 2026-11-25 Ausbau B von Feuersturm
+	rb_b.version = 2 # Ausbau B: größere Feuerflächen
+	rb_b.title = "Brandkapsel"
+	rb_b.description = "Feuersturm-Ausbau: Das Feuer breitet sich weiter aus. +60% Feuerreichweite (Feuerflächen und Spur)."
+	rb_b.rarity = "Epic"
+	rb_b.color = Color(1.00, 0.40, 0.10)
+	rb_b.family_id = "feuersturm"
+	rb_b.parent_card_id = "feuersturm"
+	rb_b.evolution_branch = "B"
+	rb_b.fire_zone_radius_mult = 1.6
+	_register(rb_b)
 
 	var rb3 = CardData.new()
 	rb3.id = "feuersturm_spur"
-	rb3.version = 2 # nur noch Fernkampf
+	rb3.version = 3 # Zweig C (A/B sind jetzt Feuerschaden/Feuerreichweite)
 	rb3.title = "Feuerspur"
 	rb3.description = "Feuersturm-Ausbau: Hinterlässt eine brennende Spur. Sie schadet dir selbst nicht."
 	rb3.rarity = "Epic"
 	rb3.color = Color(1.00, 0.50, 0.10)
 	rb3.family_id = "feuersturm"
 	rb3.parent_card_id = "feuersturm"
-	rb3.evolution_branch = "B"
+	rb3.evolution_branch = "C"
 	rb3.fire_trail = true
 	rb3.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(rb3)
@@ -3239,17 +3257,7 @@ func _init_database() -> void:
 	of2.version = 2 # Durchschlag wirkt jetzt auch durch Wände
 	_register(of2)
 
-	var of3 = CardData.new()
-	of3.id = "brandkapsel"
-	of3.title = "Brandkapsel"
-	of3.description = "Treffer entzünden den Boden.\n+Feuerzone, +10% Schaden."
-	of3.rarity = "Epic"
-	of3.pool = "Offensive"
-	of3.color = Color(1.00, 0.40, 0.10)
-	of3.fire_shot = true
-	of3.fire_impact_zone = true
-	of3.damage_mult = 1.10
-	_register(of3)
+	# Brandkapsel ist seit 2026-11-25 Ausbau B von Feuersturm (siehe dort).
 
 	var of4 = CardData.new()
 	of4.id = "kettenreaktion"
@@ -4269,7 +4277,8 @@ func _infer_sub_tags(card: CardData) -> Array[String]:
 	add.call("Element", card.poison_stacks_add > 0 or card.poison_damage_mult > 1.0 or card.poison_impact_cloud \
 		or card.poison_trail or card.freeze_duration_add > 0.0 or card.frost_nova or card.frost_trail \
 		or card.fire_shot or card.fire_impact_zone or card.fire_trail or card.lightning_shot \
-		or card.chain_lightning or card.lightning_zone)
+		or card.chain_lightning or card.lightning_zone or card.fire_damage_mult > 1.0 \
+		or card.fire_zone_radius_mult > 1.0)
 	add.call("Begleiter", card.tower_enabled or card.tower_auto_spawn or card.tower_follow \
 		or card.tower_max_health_add > 0 or card.tower_fire_rate_mult < 1.0 or card.drone_count_add > 0 \
 		or card.drone_guardian or card.blocker_drone_count_add > 0 or card.blocker_drone_heal)

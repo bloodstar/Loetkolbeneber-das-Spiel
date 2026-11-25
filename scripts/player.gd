@@ -766,7 +766,8 @@ var freeze_timer: float = 0.0
 var stun_timer: float = 0.0
 var burn_ticks_left: int = 0
 var burn_tick_timer: float = 0.0
-var burn_damage_per_tick: float = 5.0
+var burn_damage_per_tick: float = 5.0 # selbst verursachter Brandschaden pro Tick
+var burn_taken_per_tick: float = 5.0 # erlittener Brandschaden pro Tick
 var shield_regen_timer: float = 0.0
 var shield_regen_mult: float = 1.0
 var shield_regen_delay: float = SHIELD_REGEN_DELAY
@@ -874,6 +875,7 @@ var cluster_bomblets: bool = false
 var fire_shot: bool = false
 var fire_impact_zone: bool = false
 var fire_trail: bool = false
+var fire_zone_radius_mult: float = 1.0 # Feuersturm-Fusion B: größere Feuerflächen
 var fire_trail_timer: float = 0.0
 var afterburner_timer: float = 0.0               # Ignis: Feuerspur beim Dash
 
@@ -1105,6 +1107,8 @@ func apply_stats() -> void:
 	var m_parry := false
 	var size_mult = BASE_CHARACTER_SCALE
 	var poison_dmg_mult = 1.0
+	var fire_dmg_mult := 1.0
+	var fire_radius_mult := 1.0
 	var tower_health_add = 0
 	var tower_fire_rate_mult_stack = 1.0
 	var ab_dmg_mult = 1.0
@@ -1242,6 +1246,8 @@ func apply_stats() -> void:
 		explosion_radius += c.explosion_radius_add
 		poison_stacks += c.poison_stacks_add
 		poison_dmg_mult *= c.poison_damage_mult
+		fire_dmg_mult *= c.fire_damage_mult
+		fire_radius_mult *= c.fire_zone_radius_mult
 		freeze_duration += c.freeze_duration_add
 		lifesteal_percent += c.lifesteal_percent_add
 		multishot += c.multishot_add
@@ -1443,6 +1449,8 @@ func apply_stats() -> void:
 	revive_timer = 0.0
 	_set_revive_visual(false)
 	poison_damage_per_tick = 4.0 * poison_dmg_mult
+	burn_damage_per_tick = 5.0 * fire_dmg_mult
+	fire_zone_radius_mult = fire_radius_mult
 
 	tower_spawn_timer = 5.0
 	poison_trail_timer = 0.0
@@ -5626,8 +5634,14 @@ func apply_stun(duration: float) -> void:
 	stun_timer = maxf(stun_timer, duration)
 
 func apply_burn(stacks: int, damage_per_tick: float = 5.0) -> void:
+	# Erlittener Brand hat einen eigenen Wert. burn_damage_per_tick ist der
+	# Brandschaden, den dieser Spieler selbst verursacht (Feuersturm-Fusion A),
+	# und darf durch fremdes Feuer nicht steigen.
+	if burn_ticks_left <= 0:
+		burn_taken_per_tick = damage_per_tick
+	else:
+		burn_taken_per_tick = maxf(burn_taken_per_tick, damage_per_tick)
 	burn_ticks_left = maxi(burn_ticks_left, stacks)
-	burn_damage_per_tick = maxf(burn_damage_per_tick, damage_per_tick)
 
 # Rundenstart: Der eigene Charakter erscheint aus einem Portal und wächst
 # dabei sichtbar aus der Portalmitte heraus.
@@ -5757,10 +5771,13 @@ func spawn_effect_zone(kind: int, pos: Vector2, radius: float, duration: float, 
 	var fire_hit := {}
 	if kind == EffectZone.Kind.FIRE:
 		fire_hit = EffectZone.floor_hit(get_world_2d().direct_space_state, pos)
-		# Kein Boden darunter (Abgrund): das Feuer fällt ins Leere.
-		if fire_hit.is_empty():
+		# Kein Boden darunter (Abgrund): das Feuer fällt ins Leere. In der
+		# Draufsicht (Arena, Horde) liefert floor_hit absichtlich nichts, dort
+		# brennt das Feuer an Ort und Stelle.
+		if not fire_hit.is_empty():
+			pos = fire_hit["position"]
+		elif not ArenaMode.active:
 			return
-		pos = fire_hit["position"]
 	var visual_only := bool(params.get("visual_only", false))
 	var zone := EffectZone.new()
 	zone.kind = kind
@@ -5824,7 +5841,7 @@ func spawn_poison_cloud(pos: Vector2) -> void:
 	})
 
 func spawn_fire_zone(pos: Vector2) -> void:
-	spawn_effect_zone(EffectZone.Kind.FIRE, pos, 56.0, 3.0, {
+	spawn_effect_zone(EffectZone.Kind.FIRE, pos, 56.0 * fire_zone_radius_mult, 3.0, {
 		"tick_interval": 0.5,
 		"burn_stacks": 1,
 		"burn_damage": burn_damage_per_tick,
@@ -5850,6 +5867,9 @@ func spawn_lightning_zone(pos: Vector2, from_ability: bool = false) -> void:
 func _spawn_trail_zone(kind: int) -> void:
 	var behind_x := -signf(velocity.x) * 18.0
 	var pos := global_position + Vector2(behind_x, 10.0)
+	# Draufsicht: hinter dem Spieler in Laufrichtung statt unter den Füßen.
+	if ArenaMode.active:
+		pos = global_position - velocity.normalized() * 18.0
 	match kind:
 		EffectZone.Kind.POISON:
 			spawn_effect_zone(kind, pos, 30.0, 2.2, {
@@ -5858,7 +5878,7 @@ func _spawn_trail_zone(kind: int) -> void:
 				"poison_damage": poison_damage_per_tick,
 			})
 		EffectZone.Kind.FIRE:
-			spawn_effect_zone(kind, pos, 32.0, 2.0, {
+			spawn_effect_zone(kind, pos, 32.0 * fire_zone_radius_mult, 2.0, {
 				"tick_interval": 0.45,
 				"burn_stacks": 1,
 				"burn_damage": burn_damage_per_tick,
@@ -6214,7 +6234,7 @@ func _handle_timers(delta: float) -> void:
 		if burn_tick_timer >= BURN_TICK_INTERVAL:
 			burn_tick_timer = 0.0
 			burn_ticks_left -= 1
-			take_damage(burn_damage_per_tick)
+			take_damage(burn_taken_per_tick)
 
 	# Turm-Talent: automatisch neue TÃƒÂ¼rme erzeugen.
 	if tower_enabled and tower_auto_spawn:
