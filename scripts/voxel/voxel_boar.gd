@@ -16,8 +16,10 @@ extends Node3D
 ##   tusks   none | small | big             Hauer
 ##   mane    bool                           Borstenkamm über Kopf und Rücken
 ##   tail    curly | straight | tuft        Schwanz
-##   bottom  shorts | pants | none          Hose
-##   top     none | muscle | robe           Oberteil
+##   gender  male | female                  Körperbau (weiblich: Taille, Hüfte,
+##                                          Oberweite mit Ausschnitt, Wimpern)
+##   bottom  shorts | pants | skirt | none  Hose oder Minirock
+##   top     none | muscle | robe | tank    Oberteil (tank = Top mit Ausschnitt)
 ##   outfit  Helden-ID (ignis, volt, ...)   feste Klassen-Kopfbedeckung
 ##   fur, pants, accent, tip, top_color     Farben
 ##
@@ -77,7 +79,7 @@ var _was_airborne: bool = false
 
 static func default_spec() -> Dictionary:
 	return {
-		"body": "normal", "head": "normal", "snout": "normal", "ears": "up", "tusks": "small",
+		"gender": "male", "body": "normal", "head": "normal", "snout": "normal", "ears": "up", "tusks": "small",
 		"mane": false, "tail": "curly", "bottom": "shorts", "top": "none", "outfit": "",
 		"fur": Color(0.91, 0.60, 0.67), "pants": Color(0.25, 0.35, 0.8),
 		"accent": Color(1.0, 0.85, 0.3), "tip": Color(0.6, 0.85, 1.0), "top_color": Color(0.9, 0.9, 0.92),
@@ -125,7 +127,9 @@ static func spec_from_look(look: Dictionary, parts: Dictionary) -> Dictionary:
 		_: s["tail"] = "curly"
 	match str(parts.get("bottom", "shorts")):
 		"pants", "long_skirt": s["bottom"] = "pants"
+		"mini_skirt": s["bottom"] = "skirt"
 		_: s["bottom"] = "shorts"
+	s["gender"] = "female" if str(parts.get("gender", "male")) == "female" else "male"
 	match str(parts.get("top", "none")):
 		"muscle", "bikini": s["top"] = "muscle"
 		"robe": s["top"] = "robe"
@@ -251,6 +255,11 @@ func build(p_spec: Dictionary) -> void:
 		"strong":
 			leg_len = 5; leg_w = 5; hip_half = 4
 			torso_r = Vector3(7.0, 6.5, 8.5); shoulder = 9.0
+	# Weiblicher Körperbau: schmalere Schultern und Brust, breitere Hüfte (unten).
+	var female: bool = str(spec.get("gender", "male")) == "female"
+	if female:
+		shoulder -= 1.0
+		torso_r.z -= 1.0
 	_hip_y = float(leg_len) * VOX
 
 	# Beine (Drehpunkt Hüfte)
@@ -274,6 +283,9 @@ func build(p_spec: Dictionary) -> void:
 	var torso := Grid.new()
 	var tc := Vector3(0.0, torso_r.y - 0.5, 0.0)
 	torso.round_box(tc, torso_r, 3.2, _fur_fn(fur, true))
+	var bust_y := int(round(torso_r.y * 1.15))
+	if female:
+		_add_female_shape(torso, torso_r, bust_y, fur)
 	# Hose bis knapp unter die Mitte, Gürtel in Akzentfarbe
 	var belt_y := int(round(torso_r.y * 0.55))
 	if spec["bottom"] != "none":
@@ -282,13 +294,21 @@ func build(p_spec: Dictionary) -> void:
 		var bx := torso.front_x(belt_y, 0)
 		torso.put(Vector3i(bx, belt_y, 0), spec["accent"])
 		torso.put(Vector3i(bx, belt_y, -1), spec["accent"])
-	match spec["top"]:
-		"muscle":
-			var tcol: Color = spec["top_color"]
-			torso.recolor(func(p: Vector3i) -> bool: return p.y > belt_y and p.y < int(torso_r.y * 1.75) and absi(p.z) < int(torso_r.z * 0.75), _shade_fn(tcol))
-		"robe":
-			var rcol: Color = spec["top_color"]
-			torso.recolor(func(p: Vector3i) -> bool: return p.y >= 0, _shade_fn(rcol))
+	if spec["bottom"] == "skirt":
+		_add_skirt(torso, torso_r, female)
+	var top: String = spec["top"]
+	if female and top == "none":
+		top = "tank" # Weiblich immer mit Oberteil
+	if female:
+		_add_female_top(torso, torso_r, top, belt_y, bust_y)
+	else:
+		match top:
+			"muscle":
+				var tcol: Color = spec["top_color"]
+				torso.recolor(func(p: Vector3i) -> bool: return p.y > belt_y and p.y < int(torso_r.y * 1.75) and absi(p.z) < int(torso_r.z * 0.75), _shade_fn(tcol))
+			"robe":
+				var rcol: Color = spec["top_color"]
+				torso.recolor(func(p: Vector3i) -> bool: return p.y >= 0, _shade_fn(rcol))
 	if spec["mane"]:
 		_add_mane(torso, int(torso_r.x), int(torso_r.y * 2.0))
 	_add_mesh(torso, _body, Vector3.ZERO, Vector3(0, leg_len, 0))
@@ -321,6 +341,8 @@ func build(p_spec: Dictionary) -> void:
 
 	# Kopf (Drehpunkt Hals)
 	_head_y = float(leg_len) + torso_r.y * 1.75
+	if female:
+		_head_y += 1.0 # etwas mehr Hals: Ausschnitt bleibt unter dem Rüssel sichtbar
 	_head = Node3D.new()
 	_head.position = Vector3(1.0, _head_y, 0) * VOX
 	_body.add_child(_head)
@@ -403,11 +425,23 @@ func _build_head(fur: Color) -> void:
 					c = Color(0.92, 0.92, 0.96)
 				g.put(Vector3i(fx, y, z), c)
 				lids.put(Vector3i(fx + 1, y, z), fur.darkened(0.15))
-		# Braue: eine Reihe über dem Auge, steht 1 Voxel vor
+		# Braue: eine Reihe über dem Auge, steht 1 Voxel vor. Weiblich: Wimpern
+		# statt Braue, außen nach oben geschwungen.
+		var lashes: bool = str(spec.get("gender", "male")) == "female"
 		for dz in eye_z:
 			var z2: int = dz * sz if sz > 0 else -dz - 1
 			var fx2 := g.front_x(ey + 3, z2)
-			if fx2 != -999:
+			if fx2 == -999:
+				continue
+			if lashes:
+				# Nur am äußeren Augenrand, schräg nach oben-außen: wirkt wie
+				# Wimpern und nicht wie eine finstere Braue.
+				if dz == eye_z[eye_z.size() - 1]:
+					var zo: int = z2 + sz
+					g.put(Vector3i(fx2 + 1, ey + 2, zo), ink)
+					g.put(Vector3i(fx2 + 1, ey + 3, zo), ink)
+					g.put(Vector3i(fx2 + 1, ey + 3, z2), ink)
+			else:
 				var tilt: int = 1 if (spec["mane"] or spec["body"] == "strong") and dz == eye_z[0] else 0
 				g.put(Vector3i(fx2 + 1, ey + 3 - tilt, z2), fur.darkened(0.45))
 	# Wangen: rosa Flecken neben dem Rüssel
@@ -437,6 +471,72 @@ func _build_head(fur: Color) -> void:
 		hat.name = "Outfit"
 		_head.add_child(hat)
 		_add_mesh(_build_outfit(String(spec["outfit"]), hr, hc), hat)
+
+# --- Weiblicher Körperbau ---
+
+## Breitere Hüfte unten am Rumpf und eine runde Oberweite vorn auf Brusthöhe.
+## Comic-Proportionen: zwei weiche Rundungen, die zu einer Form verschmelzen.
+func _add_female_shape(torso: Grid, torso_r: Vector3, bust_y: int, fur: Color) -> void:
+	var fur_fn := _fur_fn(fur, true)
+	torso.round_box(Vector3(0.0, torso_r.y * 0.35, 0.0), Vector3(torso_r.x + 0.3, torso_r.y * 0.42, torso_r.z + 2.0), 2.4, fur_fn)
+	# Oberweite: eine weiche Wölbung über die ganze Brustbreite, die Mitte
+	# (Dekolleté) zeichnet _add_female_top als feine Linie.
+	torso.round_box(Vector3(torso_r.x, float(bust_y) + 0.3, 0.0), Vector3(2.3, 2.0, 3.6), 1.7, fur_fn)
+
+## Oberteil für den weiblichen Körperbau mit rundem Ausschnitt (Dekolleté).
+## tank = Top, muscle/bikini = kurzes Top, robe = Kleid bis zum Rumpfende.
+func _add_female_top(torso: Grid, torso_r: Vector3, top: String, belt_y: int, bust_y: int) -> void:
+	if top == "none":
+		return
+	var col: Color = spec["top_color"]
+	var neck_top := int(torso_r.y * 1.75)
+	var low := belt_y + 1
+	if top == "bikini":
+		low = bust_y - 2
+	elif top == "robe":
+		low = 0
+	var front := int(torso_r.x) - 3
+	# Ausschnitt: vorn ein U, in der Mitte am tiefsten, außen wie Träger höher.
+	var in_neckline := func(p: Vector3i) -> bool:
+		if p.x < front:
+			return false
+		var zc := absf(float(p.z) + 0.5)
+		return float(p.y) > float(bust_y) + 1.0 + zc * 0.6
+	torso.recolor(func(p: Vector3i) -> bool:
+		if p.y < low or p.y >= neck_top:
+			return false
+		if top == "bikini" and p.y > bust_y + 2:
+			return false
+		return not in_neckline.call(p), _shade_fn(col))
+	# Saum unter der Brust etwas dunkler, sitzt das Top weich auf.
+	var hem := col.darkened(0.18)
+	if top != "robe":
+		for p in torso.cells.keys():
+			if p.y == low and p.x >= front:
+				torso.cells[p] = [hem, 0.0]
+	# Dekolleté: kurze, weiche Linie in der Mitte, vom Ausschnitt in die Wölbung.
+	for z in [0, -1]:
+		for y in [bust_y + 1, bust_y + 2]:
+			var fx := torso.front_x(y, z)
+			if fx >= int(torso_r.x):
+				var c: Color = torso.cells[Vector3i(fx, y, z)][0]
+				torso.cells[Vector3i(fx, y, z)] = [c.darkened(0.1), 0.0]
+
+## Minirock: ausgestellter Ring unter der Hüfte, Beine bleiben frei.
+func _add_skirt(torso: Grid, torso_r: Vector3, female: bool) -> void:
+	var col: Color = spec["pants"]
+	var shade := _shade_fn(col)
+	var rz := torso_r.z + (1.5 if female else 0.0)
+	for y in range(-3, 0):
+		var flare := 0.8 + float(-y) * 0.45
+		var rx := torso_r.x + flare
+		var zr := rz + flare
+		for x in range(floori(-rx), ceili(rx) + 1):
+			for z in range(floori(-zr), ceili(zr) + 1):
+				var d := Vector2((float(x) + 0.5) / rx, (float(z) + 0.5) / zr)
+				if d.length_squared() <= 1.0:
+					var p := Vector3i(x, y, z)
+					torso.put(p, col.darkened(0.12) if y == -3 else shade.call(p))
 
 func _build_ear(fur: Color, sz: int) -> Grid:
 	var g := Grid.new()
