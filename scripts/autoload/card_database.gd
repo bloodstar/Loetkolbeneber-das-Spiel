@@ -3984,11 +3984,177 @@ func _init_database() -> void:
 	nk19.melee_echo = true
 	_register(nk19)
 
+	_register_frost_cards()
+	_register_element_cards()
+
 	# Ausbaukarten, die vor ihrer Grundkarte registriert wurden, übernehmen
 	# hier nachträglich deren Pool.
 	for card in all_cards:
 		if not card.parent_card_id.is_empty() and cards_by_id.has(card.parent_card_id):
 			card.pool = cards_by_id[card.parent_card_id].pool
+
+# --- Frost-Karten (Element-System 2026-11-25) ---
+# Frost hatte am wenigsten Karten. Alle verlangen das Element Frost.
+func _register_frost_cards() -> void:
+	var f1 = CardData.new()
+	f1.id = "frost_eissplitter"
+	f1.title = "Eissplitter"
+	f1.description = "Kälte macht spröde.\n+15% Schaden gegen verlangsamte Gegner."
+	f1.rarity = "Rare"
+	f1.color = Color(0.55, 0.88, 1.0)
+	f1.pool = "Offensive"
+	f1.required_element = ElementSystem.FROST
+	f1.chill_damage_bonus_add = 0.15
+	_register(f1)
+
+	var f2 = CardData.new()
+	f2.id = "frost_tiefkuehlung"
+	f2.title = "Tiefkühlung"
+	f2.description = "Eisiger Griff.\nVerlangsamung stärker: Getroffene laufen mit 50% statt 60% Tempo."
+	f2.rarity = "Uncommon"
+	f2.color = Color(0.40, 0.78, 1.0)
+	f2.pool = "Offensive"
+	f2.required_element = ElementSystem.FROST
+	f2.chill_strength_add = 0.10
+	_register(f2)
+
+	var f3 = CardData.new()
+	f3.id = "frostschuss_splitternova"
+	f3.title = "Splitternova"
+	f3.description = "Eisnova-Ausbau: Die Eisnova zerspringt in Eissplitter.\n8 Schaden an jedem Gegner in der Nova."
+	f3.rarity = "Epic"
+	f3.color = Color(0.70, 0.95, 1.0)
+	f3.family_id = "frostschuss"
+	f3.parent_card_id = "frostschuss_nova"
+	f3.evolution_branch = "A"
+	f3.frost_nova_shards = true
+	_register(f3)
+
+	var f4 = CardData.new()
+	f4.id = "frostschuss_gletscherhaut"
+	f4.title = "Gletscherhaut"
+	f4.description = "Eisbahn-Ausbau: Auf deiner eigenen Eisbahn gleitest du.\n+20% Tempo und 2 HP pro Sekunde, solange du darauf stehst."
+	f4.rarity = "Rare"
+	f4.color = Color(0.60, 0.90, 1.0)
+	f4.family_id = "frostschuss"
+	f4.parent_card_id = "frostschuss_spur"
+	f4.evolution_branch = "B"
+	f4.frost_trail_haste = true
+	f4.attack_type = "ranged"
+	_register(f4)
+
+	var f5 = CardData.new()
+	f5.id = "frost_kaeltepanzer"
+	f5.title = "Kältepanzer"
+	f5.description = "Wer zuschlägt, friert.\n+8% Rüstung. Wer dich im Nahkampf trifft, wird 1s verlangsamt."
+	f5.rarity = "Uncommon"
+	f5.color = Color(0.50, 0.80, 0.95)
+	f5.pool = "Defensive"
+	f5.required_element = ElementSystem.FROST
+	f5.armor_percent_add = 0.08
+	f5.chill_on_melee_hit_add = 1.0
+	_register(f5)
+
+# --- Element-Karten ---
+# "Element" liegt zusätzlich im Angebot, solange ein Slot frei ist, und öffnet
+# den Unter-Draft. Dort stehen je Element eine Karte: "element_<id>" für das
+# erste Mal oder "element_<id>_rein" für die reine Form. Beschreibung der
+# Kombination steht unten auf der Karte (CardDraftUI._element_footer).
+func _register_element_cards() -> void:
+	var pick = CardData.new()
+	pick.id = ElementSystem.PICK_CARD_ID
+	pick.title = "Element"
+	pick.description = "Wähle ein Element für deinen Build: Feuer, Gift, Frost oder Blitz.\nZwei Elemente ergeben eine Kombination, zweimal dasselbe die reine Form.\nHöchstens 2 Element-Slots."
+	pick.rarity = "Rare"
+	pick.color = Color(0.95, 0.85, 0.55)
+	pick.pool = "Offensive"
+	pick.sub_tags = _element_tags()
+	pick.element_pick = true
+	_register(pick)
+
+	var core_texts := {
+		ElementSystem.FIRE: "Bringt Feuersturm mit: Treffer entzünden, am Einschlag brennt der Boden.",
+		ElementSystem.POISON: "Bringt Giftschuss mit: Treffer vergiften.",
+		ElementSystem.FROST: "Bringt Frostschuss mit: Treffer verlangsamen.",
+		ElementSystem.LIGHTNING: "Bringt Blitzschuss mit: Treffer betäuben kurz.",
+	}
+	for el in ElementSystem.ELEMENTS:
+		var first = CardData.new()
+		first.id = ElementSystem.card_id_for(el, false)
+		first.title = ElementSystem.element_name(el)
+		first.description = "Element %s.\n%s\nSchaltet die Ausbauten des Elements frei." % [ElementSystem.element_name(el), core_texts[el]]
+		first.rarity = "Rare"
+		first.color = ElementSystem.element_color(el)
+		first.pool = "Offensive"
+		first.sub_tags = _element_tags()
+		first.element = el
+		_register(first)
+
+		var pure = CardData.new()
+		pure.id = ElementSystem.card_id_for(el, true)
+		var combo := ElementSystem.combo_for(el, el)
+		pure.title = "%s (rein)" % ElementSystem.element_name(el)
+		pure.description = "Reine Form: %s.\n%s" % [ElementSystem.COMBO_NAMES[combo], ElementSystem.COMBO_DESCRIPTIONS[combo]]
+		pure.rarity = "Epic"
+		pure.color = ElementSystem.element_color(el).lightened(0.2)
+		pure.pool = "Offensive"
+		pure.sub_tags = _element_tags()
+		pure.element = el
+		pure.element_pure = true
+		_register(pure)
+
+	# Grundkarten der Elemente kommen nur noch über die Elementkarte.
+	for table in [ElementSystem.CORE_RANGED, ElementSystem.CORE_MELEE]:
+		for el in table:
+			var core: CardData = cards_by_id.get(table[el], null)
+			if core != null:
+				core.element_core = true
+	# Kleine Element-Boni ohne Talentbaum verlangen das Element.
+	for card in all_cards:
+		if card.required_element.is_empty():
+			card.required_element = _infer_required_element(card)
+
+func _element_tags() -> Array[String]:
+	var tags: Array[String] = ["Element"]
+	return tags
+
+func is_element_card(card: CardData) -> bool:
+	return card != null and (card.element_pick or not card.element.is_empty())
+
+# Welches Element braucht diese Karte? Klassenkarten, Elementkarten, die
+# Grundkarten selbst und Ausbauten (hängen an ihrer Grundkarte) brauchen keins.
+func _infer_required_element(card: CardData) -> String:
+	if not card.hero_id.is_empty() or is_element_card(card) or card.element_core:
+		return ""
+	if not card.parent_card_id.is_empty():
+		return ""
+	if card.poison_stacks_add > 0 or card.poison_damage_mult > 1.0 or card.poison_impact_cloud \
+			or card.poison_trail or card.melee_poison_stacks_add > 0:
+		return ElementSystem.POISON
+	if card.fire_shot or card.fire_impact_zone or card.fire_trail or card.fire_damage_mult > 1.0 \
+			or card.melee_burn_stacks_add > 0:
+		return ElementSystem.FIRE
+	if card.freeze_duration_add > 0.0 or card.frost_nova or card.frost_trail or card.melee_freeze_add > 0.0:
+		return ElementSystem.FROST
+	if card.lightning_shot or card.chain_lightning or card.lightning_zone or card.melee_chain_lightning \
+			or card.melee_stun_add > 0.0:
+		return ElementSystem.LIGHTNING
+	return ""
+
+# Elemente eines Spielers aus Held und Kartenliste.
+func get_player_elements(hero_id: String, owned_ids: Array) -> Array[String]:
+	return ElementSystem.elements_for(hero_id, owned_ids)
+
+# Unter-Draft: je Element eine Karte, die reine Form für schon vorhandene Elemente.
+func get_element_offer(hero_id: String, owned_ids: Array) -> Array[CardData]:
+	var have := ElementSystem.elements_for(hero_id, owned_ids)
+	var result: Array[CardData] = []
+	for el in ElementSystem.ELEMENTS:
+		var pure := have.has(el)
+		var card: CardData = cards_by_id.get(ElementSystem.card_id_for(el, pure), null)
+		if card != null and not owned_ids.has(card.id):
+			result.append(card)
+	return result
 
 func _register(card: CardData) -> void:
 	if card.pool.is_empty():
@@ -4079,6 +4245,16 @@ func is_ability_damage_locked(card: CardData, hero_id: String, owned_ids: Array 
 
 func is_card_available_for_player(card: CardData, hero_id: String, owned_ids: Array = []) -> bool:
 	if card == null:
+		return false
+	# Element-System: "Element" und die Elementkarten hängen nur an freien Slots.
+	if card.element_pick:
+		return ElementSystem.free_slots(hero_id, owned_ids) > 0
+	if not card.element.is_empty():
+		if ElementSystem.free_slots(hero_id, owned_ids) <= 0:
+			return false
+		return card.element_pure == ElementSystem.elements_for(hero_id, owned_ids).has(card.element)
+	if not card.required_element.is_empty() \
+			and not ElementSystem.elements_for(hero_id, owned_ids).has(card.required_element):
 		return false
 	if is_ability_damage_locked(card, hero_id, owned_ids):
 		return false
@@ -4355,6 +4531,9 @@ func get_draft_offer(count: int = 5, exclude_ids: Array = [], hero_id: String = 
 
 	for c in all_cards:
 		if exclude_ids.has(c.id):
+			continue
+		# Elementkarten und Element-Grundkarten kommen nur über die Karte "Element".
+		if is_element_card(c) or c.element_core:
 			continue
 		if not is_card_available_for_player(c, hero_id, owned_ids):
 			continue

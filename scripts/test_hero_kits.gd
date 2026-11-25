@@ -1,5 +1,7 @@
 extends Node2D
 
+const ALL_ELEMENT_CARDS: Array = ["element_fire", "element_poison", "element_frost", "element_lightning"]
+
 ## Fokussierter Test für die Helden-Kits (Nah-/Fernkampf pro Held, Ulti auf E,
 ## Dash-Ladungen, Volt- und Phantom-Kit, Kartenfilter nach Angriffsart).
 ## Start: godot --headless --path . scenes/test_hero_kits.tscn
@@ -56,11 +58,12 @@ func _ready() -> void:
 	for id in ["toxic_spores", "giftschuss", "frostschuss", "feuersturm", "blitzschuss", "schnellfeuer",
 			"scharfe_munition", "schlagkraft_1", "blutdurst"]:
 		var shot_card := CardDatabase.get_card(id)
-		_check(shot_card != null and CardDatabase.is_card_available_for_player(shot_card, "volt", []), "%s für Volt verfügbar" % id)
+		# Element-System: kleine Element-Boni verlangen das Element (hier alle vier als Elementkarten).
+		_check(shot_card != null and (shot_card.element_core or CardDatabase.is_card_available_for_player(shot_card, "volt", ALL_ELEMENT_CARDS)), "%s für Volt verfügbar" % id)
 		for melee_id in ["phantom", "klinge", "bastion", "vampire_melee", "zeitschlaeger"]:
 			_check(not CardDatabase.is_card_available_for_player(shot_card, melee_id, []), "%s nicht für %s" % [id, melee_id])
 	for id in ["kettenreaktion", "rueckstossfeder", "frostartig", "giftklinge"]:
-		_check(CardDatabase.is_card_available_for_player(CardDatabase.get_card(id), "phantom", []), "%s bleibt für Nahkämpfer" % id)
+		_check(CardDatabase.is_card_available_for_player(CardDatabase.get_card(id), "phantom", ALL_ELEMENT_CARDS), "%s bleibt für Nahkämpfer" % id)
 	for id in ["volt_sprungziel", "volt_entladung", "volt_doppelladung", "volt_starkstrom", "volt_dauerblitz", "volt_schockring",
 			"phantom_sprengkoeder", "phantom_platztausch", "phantom_blutspur", "ulti_akku"]:
 		_check(CardDatabase.get_card(id) != null, "Karte %s existiert" % id)

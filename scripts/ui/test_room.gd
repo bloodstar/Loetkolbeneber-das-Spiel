@@ -706,6 +706,9 @@ func _owned_chip(card: CardData) -> Button:
 	return chip
 
 func _card_matches(card: CardData, query: String, rarity: String, pool: String, hero_id: String, hero_only: bool) -> bool:
+	# "Element" öffnet nur im Draft den Unter-Draft; im Testraum gibt man die Elementkarten direkt.
+	if card.element_pick:
+		return false
 	if hero_only and not card.hero_id.is_empty() and card.hero_id != hero_id:
 		return false
 	if not rarity.is_empty() and card.rarity != rarity:

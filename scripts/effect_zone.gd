@@ -15,8 +15,17 @@ enum Kind {
 	ICE,
 	LIGHTNING,
 	VOID,
-	HEAL
+	HEAL,
+	# Element-Reaktionen (ElementReactions):
+	STEAM,       # Dampfwolke: Feuer trifft Eis
+	PLASMA,      # Plasmafeld: Blitz trifft Feuer
+	RIME,        # Giftreif: Frost trifft Giftwolke, liegt am Boden
+	TOXIC_STORM, # Giftgewitter: Blitz trifft Giftwolke
 }
+
+# Arten, die wie Feuer auf den Boden darunter fallen (Seitenansicht).
+static func is_floor_kind(k: int) -> bool:
+	return k == Kind.FIRE or k == Kind.PLASMA or k == Kind.RIME
 
 # Feuer fällt wie brennendes Benzin auf den Boden darunter, auch aus großer Höhe.
 const FIRE_FLOOR_SNAP: float = 5000.0
@@ -41,6 +50,10 @@ var stun_duration: float = 0.25
 var is_replica: bool = false
 # Nur Optik (Void, Heilung, Sporenwolke): die Wirkung berechnet der Spieler selbst.
 var visual_only: bool = false
+# Gasbrand (eigener Build): Diese Giftwolke brennt zusätzlich.
+var also_burn: bool = false
+# Diese Zone löst keine Element-Reaktion aus (z. B. die Blitzfelder des Supraleiters).
+var no_react: bool = false
 
 var _elapsed: float = 0.0
 var _tick_timer: float = 0.0
@@ -69,8 +82,10 @@ var _sparks: PackedVector2Array = PackedVector2Array()
 var _rim: PackedVector2Array = PackedVector2Array()
 
 func _ready() -> void:
-	z_index = -2
+	z_index = 4 if kind == Kind.STEAM else -2
 	add_to_group("effect_zone")
+	if no_react:
+		set_meta("reacted", true)
 	_rng.randomize()
 	var count := 24
 	for i in count:
@@ -84,7 +99,7 @@ func _physics_process(delta: float) -> void:
 
 	# Raumabfragen gehören in den Physik-Schritt. Die Position wird erst nach
 	# add_child() gesetzt, darum hier statt in _ready().
-	if kind == Kind.FIRE and not _fire_scanned:
+	if is_floor_kind(kind) and not _fire_scanned:
 		_scan_fire_floor()
 	_follow_carrier()
 
@@ -105,7 +120,7 @@ func _process(delta: float) -> void:
 	_anim_time += delta
 	# Auch im Render-Schritt nachziehen, damit die Flammen nicht hinterherruckeln.
 	_follow_carrier()
-	if kind == Kind.LIGHTNING:
+	if kind == Kind.LIGHTNING or kind == Kind.TOXIC_STORM:
 		_bolt_timer -= delta
 		if _bolt_timer <= 0.0:
 			_bolt_timer = LIGHTNING_REFRESH
@@ -127,22 +142,52 @@ func _apply_tick() -> void:
 	_apply_effect_to(target)
 
 func _apply_effect_to(target) -> void:
+	# Die Quelle geht mit, damit Element-Reaktionen am Ziel auslösen können.
+	var src: Player = owner_player if is_instance_valid(owner_player) and not no_react else null
 	match kind:
 		Kind.POISON:
-			target.apply_poison(poison_stacks, poison_damage)
+			target.apply_poison(poison_stacks, poison_damage, src)
+			if also_burn and is_instance_valid(owner_player):
+				target.apply_burn(1, owner_player.burn_damage_per_tick)
 		Kind.FIRE:
-			target.apply_burn(burn_stacks, burn_damage)
+			target.apply_burn(burn_stacks, burn_damage, src)
 		Kind.ICE:
-			target.apply_freeze(freeze_duration)
+			target.apply_freeze(freeze_duration, src)
 		Kind.LIGHTNING:
-			if damage > 0.0:
-				var tag := from_ability and is_instance_valid(owner_player)
-				if tag:
-					owner_player.dealing_ability_damage = true
-				target.take_damage(damage, Vector2.ZERO, owner_player)
-				if tag and is_instance_valid(owner_player):
-					owner_player.dealing_ability_damage = false
+			_deal_zone_damage(target)
+			target.apply_stun(stun_duration, src)
+		Kind.STEAM:
+			_deal_zone_damage(target)
+		Kind.PLASMA:
+			_deal_zone_damage(target)
+			target.apply_burn(burn_stacks, burn_damage)
 			target.apply_stun(stun_duration)
+		Kind.RIME:
+			target.apply_poison(poison_stacks, poison_damage)
+			target.apply_freeze(freeze_duration)
+		Kind.TOXIC_STORM:
+			_deal_zone_damage(target)
+			target.apply_poison(poison_stacks, poison_damage)
+			target.apply_stun(stun_duration)
+
+func _deal_zone_damage(target) -> void:
+	if damage <= 0.0:
+		return
+	var tag := from_ability and is_instance_valid(owner_player)
+	if tag:
+		owner_player.dealing_ability_damage = true
+	target.take_damage(damage, Vector2.ZERO, owner_player if is_instance_valid(owner_player) else null)
+	if tag and is_instance_valid(owner_player):
+		owner_player.dealing_ability_damage = false
+
+# Host: Zone vorzeitig beenden (verbraucht von einer Element-Reaktion). Clients
+# entfernen ihre Replik über NetworkManager.send_zone_end.
+func end_zone() -> void:
+	if is_queued_for_deletion():
+		return
+	if not is_replica and Global.network_mode and NetworkManager.is_host:
+		NetworkManager.send_zone_end(int(kind), global_position)
+	queue_free()
 
 # Sucht die Bodenoberfläche unter pos. Liefert pos unverändert, wenn darunter
 # nichts ist (z. B. über einem Abgrund). Der Host ruft das vor dem Spawn auf,
@@ -273,12 +318,33 @@ func _draw() -> void:
 			_draw_void()
 		Kind.HEAL:
 			draw_heal(self, radius, _anim_time, _phase, _offset)
+		Kind.STEAM:
+			_draw_steam()
+		Kind.PLASMA:
+			_draw_fire(PLASMA_PALETTE)
+		Kind.RIME:
+			_draw_rime()
+		Kind.TOXIC_STORM:
+			_draw_poison()
+			_draw_storm_bolts()
 		_:
 			_draw_ice()
+	if also_burn and kind == Kind.POISON:
+		_draw_burning_cloud_rim()
 
 # --- Feuer: brennende Lache auf dem Boden ---
 
-func _draw_fire() -> void:
+const FIRE_PALETTE: Array[Color] = [
+	Color(0.95, 0.18, 0.04, 0.75), Color(1.0, 0.55, 0.08, 0.85), Color(1.0, 0.92, 0.45, 0.9),
+	Color(0.30, 0.06, 0.02, 0.55), Color(1.0, 0.45, 0.08, 1.0), Color(1.0, 0.75, 0.25, 0.9),
+]
+# Plasmafeld: dieselben Flammen in Violett und Pink.
+const PLASMA_PALETTE: Array[Color] = [
+	Color(0.62, 0.10, 0.95, 0.75), Color(0.95, 0.35, 1.0, 0.85), Color(1.0, 0.85, 1.0, 0.9),
+	Color(0.18, 0.02, 0.30, 0.55), Color(0.85, 0.35, 1.0, 1.0), Color(1.0, 0.7, 1.0, 0.9),
+]
+
+func _draw_fire(palette: Array[Color] = FIRE_PALETTE) -> void:
 	if _fire_columns.is_empty():
 		return
 	var t := _anim_time
@@ -293,8 +359,10 @@ func _draw_fire() -> void:
 			continue
 		var x := lerpf(-radius, radius, float(i) / float(cols - 1))
 		var edge := 1.0 - absf(x) / (radius + col_w)
-		draw_rect(Rect2(x - col_w * 0.5, y - 2.5, col_w, 4.0), Color(0.30, 0.06, 0.02, 0.55 * edge))
-		draw_rect(Rect2(x - col_w * 0.5, y - 5.0, col_w, 3.0), Color(1.0, 0.45, 0.08, (0.25 + 0.1 * sin(t * 9.0 + x)) * edge))
+		var pool_c: Color = palette[3]
+		var glow_c: Color = palette[4]
+		draw_rect(Rect2(x - col_w * 0.5, y - 2.5, col_w, 4.0), Color(pool_c.r, pool_c.g, pool_c.b, pool_c.a * edge))
+		draw_rect(Rect2(x - col_w * 0.5, y - 5.0, col_w, 3.0), Color(glow_c.r, glow_c.g, glow_c.b, (0.25 + 0.1 * sin(t * 9.0 + x)) * edge))
 
 	# Flammenzungen, die von der Oberfläche aufsteigen.
 	var flames := cols
@@ -309,9 +377,9 @@ func _draw_fire() -> void:
 		var h := clampf(radius * 0.5, 14.0, 34.0) * flicker * (0.45 + 0.55 * edge) * grow
 		var w := col_w * 1.5
 		var sway := sin(t * 5.0 + ph) * w * 0.35
-		_draw_flame(Vector2(x, y), w, h, sway, Color(0.95, 0.18, 0.04, 0.75))
-		_draw_flame(Vector2(x, y), w * 0.68, h * 0.72, sway * 0.8, Color(1.0, 0.55, 0.08, 0.85))
-		_draw_flame(Vector2(x, y), w * 0.36, h * 0.42, sway * 0.6, Color(1.0, 0.92, 0.45, 0.9))
+		_draw_flame(Vector2(x, y), w, h, sway, palette[0])
+		_draw_flame(Vector2(x, y), w * 0.68, h * 0.72, sway * 0.8, palette[1])
+		_draw_flame(Vector2(x, y), w * 0.36, h * 0.42, sway * 0.6, palette[2])
 
 	# Ein paar Funken steigen auf.
 	var embers := clampi(int(radius / 9.0), 2, 8)
@@ -323,7 +391,8 @@ func _draw_fire() -> void:
 		var s := fposmod(t * 0.9 + _phase[i], 1.0)
 		var x0 := lerpf(-radius, radius, float(col) / float(cols - 1))
 		var p := Vector2(x0 + sin(t * 3.0 + float(i)) * 5.0, y0 - 8.0 - s * radius * 0.9)
-		draw_circle(p, 1.6, Color(1.0, 0.75, 0.25, (1.0 - s) * 0.9))
+		var ember: Color = palette[5]
+		draw_circle(p, 1.6, Color(ember.r, ember.g, ember.b, (1.0 - s) * 0.9))
 
 func _draw_flame(base: Vector2, w: float, h: float, sway: float, color: Color) -> void:
 	if h < 1.0:
@@ -483,3 +552,61 @@ static func draw_heal(ci: CanvasItem, r: float, t: float, phase: Array[float], o
 func _draw_ice() -> void:
 	draw_circle(Vector2.ZERO, radius, Color(0.35, 0.75, 1.0, 0.20))
 	draw_arc(Vector2.ZERO, radius, 0.0, TAU, 32, Color(0.60, 0.90, 1.0, 0.65), 2.0)
+
+# --- Element-Reaktionen ---
+
+# Dampfwolke: weiße Schwaden, die langsam aufsteigen und Spieler halb verdecken.
+func _draw_steam() -> void:
+	var t := _anim_time
+	var grow := clampf(_elapsed / 0.3, 0.3, 1.0)
+	var puffs := 7 + clampi(int(radius / 14.0), 0, 6)
+	# In der Seitenansicht steigt der Dampf auf, in der Draufsicht wabert er.
+	var rise := 0.0 if ArenaMode.active else 1.0
+	for i in puffs:
+		var ph: float = _phase[i % _phase.size()]
+		var s := fposmod(t * 0.35 + ph, 1.0)
+		var u: float = _offset[i % _offset.size()]
+		var c := Vector2(u * radius * 0.8 + sin(t * 1.3 + ph * TAU) * 4.0,
+				radius * 0.2 - s * radius * 0.9 * rise + cos(t + ph * 5.0) * 3.0 * (1.0 - rise))
+		var r := radius * (0.28 + 0.18 * sin(s * PI)) * grow
+		draw_circle(c, r, Color(0.92, 0.95, 1.0, 0.36 * sin(s * PI) + 0.12))
+	draw_circle(Vector2.ZERO, radius * 0.75 * grow, Color(0.95, 0.97, 1.0, 0.16))
+
+# Giftreif: grünlich gefrorene Schicht am Boden mit kleinen Eiszacken.
+func _draw_rime() -> void:
+	if _fire_columns.is_empty():
+		draw_circle(Vector2.ZERO, radius, Color(0.55, 0.95, 0.7, 0.22))
+		return
+	var t := _anim_time
+	var cols := _fire_columns.size()
+	var col_w := (radius * 2.0) / float(cols - 1)
+	for i in cols:
+		var y := _fire_columns[i]
+		if is_nan(y):
+			continue
+		var x := lerpf(-radius, radius, float(i) / float(cols - 1))
+		var edge := 1.0 - absf(x) / (radius + col_w)
+		draw_rect(Rect2(x - col_w * 0.5, y - 3.0, col_w, 4.0), Color(0.45, 0.85, 0.55, 0.6 * edge))
+		draw_rect(Rect2(x - col_w * 0.5, y - 4.5, col_w, 1.5), Color(0.85, 1.0, 0.95, 0.75 * edge))
+		var spike := (4.0 + 5.0 * _phase[i % _phase.size()]) * edge
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(x - 2.5, y - 3.0), Vector2(x, y - 3.0 - spike), Vector2(x + 2.5, y - 3.0)
+		]), Color(0.8, 1.0, 0.9, 0.7 * edge))
+		# Giftblasen unter dem Eis.
+		if i % 3 == 0:
+			var s := fposmod(t * 0.5 + _phase[i % _phase.size()], 1.0)
+			draw_circle(Vector2(x, y - 1.5), 1.2 + s * 1.5, Color(0.5, 1.0, 0.3, (1.0 - s) * 0.7))
+
+# Giftgewitter: Blitze in der Giftwolke.
+func _draw_storm_bolts() -> void:
+	for bolt in _bolts:
+		draw_polyline(bolt, Color(0.85, 1.0, 0.3, 0.35), 4.0, true)
+		draw_polyline(bolt, Color(1.0, 1.0, 0.75, 0.95), 1.4, true)
+
+# Gasbrand: Die Giftwolke glimmt am Rand orange.
+func _draw_burning_cloud_rim() -> void:
+	var t := _anim_time
+	for i in 6:
+		var a := TAU * float(i) / 6.0 + t * 0.7
+		var p := Vector2.from_angle(a) * radius * 0.7
+		draw_circle(p, 2.0 + sin(t * 6.0 + float(i)) * 0.8, Color(1.0, 0.55, 0.15, 0.85))

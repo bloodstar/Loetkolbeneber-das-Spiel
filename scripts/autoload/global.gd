@@ -146,6 +146,10 @@ var draft_picks: int = 1     # X: Wie viele Karten pro Draft gewählt werden
 var blind_pick_enabled: bool = false
 # Lobby-Regel: Nahkampfwaffen (E) und der Kartenpool "Nahkampf" an/aus.
 var melee_enabled: bool = true
+# Element-System: Welt-Reaktionen der Synergie-Matrix zwischen verschiedenen
+# Spielern (Gift von A + Feuer von B = Gasexplosion). Kombinationen im eigenen
+# Build wirken immer.
+var element_reactions_enabled: bool = true
 var random_pick_enabled: bool = false
 # Draft-Modifier Gamble: Karten verdeckt (Rückseite = Seltenheit), von links
 # einzeln aufdecken; wer weiterdreht, verkohlt die offene Karte.
@@ -2070,7 +2074,20 @@ func add_card_to_player(player_index: int, card: CardData) -> bool:
 		return false
 	player_cards[player_index - 1].append(card)
 	card_selected.emit(player_index, card)
+	# Elementkarte: Die Grundkarte des Elements kommt mit (Fernkampf: Schusskarte,
+	# Nahkampf: Gegenstück aus dem Nahkampf-Pool). Läuft auf allen Rechnern
+	# gleich, weil jeder Pick über den Host bestätigt wird.
+	if not card.element.is_empty():
+		var core_id := ElementSystem.core_card_for(card.element, is_melee_hero(get_player_hero_id(player_index)))
+		var core: CardData = CardDatabase.get_card(core_id)
+		if core != null and not player_has_card(player_index, core_id):
+			player_cards[player_index - 1].append(core)
+			card_selected.emit(player_index, core)
 	return true
+
+# Elemente eines Spielers (Klasse + Elementkarten), z. B. ["fire", "poison"].
+func get_player_elements(player_index: int) -> Array[String]:
+	return ElementSystem.elements_for(get_player_hero_id(player_index), get_owned_card_ids(player_index))
 
 func get_player_cards(player_index: int) -> Array:
 	if player_index < 1 or player_index > MAX_PLAYERS:
@@ -2452,6 +2469,13 @@ func set_pre_draft_picks(picks: int) -> void:
 	draft_modifiers_changed.emit()
 	lobby_state_changed.emit()
 
+func set_element_reactions_enabled(enabled: bool) -> void:
+	if element_reactions_enabled == enabled:
+		return
+	element_reactions_enabled = enabled
+	draft_modifiers_changed.emit()
+	lobby_state_changed.emit()
+
 func set_pre_draft_random(enabled: bool) -> void:
 	if pre_draft_random == enabled:
 		return
@@ -2591,6 +2615,7 @@ func get_current_lobby_settings() -> Dictionary:
 		"pre_draft_picks": pre_draft_picks,
 		"pre_draft_random": pre_draft_random,
 		"melee_enabled": melee_enabled,
+		"element_reactions_enabled": element_reactions_enabled,
 		"level_modifier_rate_percent": level_modifier_rate_percent,
 		"enabled_level_modifiers": get_enabled_level_modifiers(),
 		"known_level_modifiers": LevelModifierDefsClass.modifier_ids(),
@@ -2622,6 +2647,7 @@ func _default_lobby_settings() -> Dictionary:
 		"pre_draft_picks": 0,
 		"pre_draft_random": false,
 		"melee_enabled": true,
+		"element_reactions_enabled": true,
 		"level_modifier_rate_percent": LevelModifierDefsClass.RATE_DEFAULT_PERCENT,
 		"enabled_level_modifiers": LevelModifierDefsClass.default_ids(),
 		"base_hp_percent": 100,
@@ -2885,6 +2911,7 @@ func apply_lobby_settings(settings: Dictionary) -> void:
 	set_pre_draft_picks(int(settings.get("pre_draft_picks", 0)))
 	set_pre_draft_random(bool(settings.get("pre_draft_random", false)))
 	set_melee_enabled(bool(settings.get("melee_enabled", true)))
+	set_element_reactions_enabled(bool(settings.get("element_reactions_enabled", true)))
 	set_level_modifier_rate_percent(
 		int(settings.get(
 			"level_modifier_rate_percent",
