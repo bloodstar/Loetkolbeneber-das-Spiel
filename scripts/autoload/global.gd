@@ -883,7 +883,7 @@ func _setup_heroes() -> void:
 	vampire.base_reload_time = 1.2
 	vampire.color_tint = Color(0.72, 0.10, 0.18)
 	vampire.sprite_tile_name = "tile_0007.png"
-	vampire.version = 1
+	vampire.version = 2
 	vampire.ability_version = 1
 	heroes["vampire"] = vampire
 	# 9. Blutritter – Nahkampf-Vampir. Teilt sich die Blutkugeln mit allen
@@ -893,7 +893,7 @@ func _setup_heroes() -> void:
 	vamp_melee.name = "Blutritter"
 	vamp_melee.role = "Blood Knight"
 	vamp_melee.description = "Nahkampf-Vampir, der sich aus Blutkugeln einen gewaltigen Schild baut."
-	vamp_melee.passive_desc = "Blutschild: Jeder 3. Treffer erzeugt eine Blutkugel. Aufgesammelte Blutkugeln geben +%d Schild, bis zu %d %% deiner Max-HP" % [
+	vamp_melee.passive_desc = "Blutschild: Jeder 3. Treffer an einem Gegner (egal welchem) erzeugt eine Blutkugel. Aufgesammelte Blutkugeln geben +%d Schild, bis zu %d %% deiner Max-HP" % [
 		int(Player.VAMP_MELEE_ORB_SHIELD), int(round(Player.VAMP_MELEE_SHIELD_CAP * 100.0))]
 	vamp_melee.ability_name = "Blutbersten"
 	vamp_melee.ability_desc = "Dein ganzer Schild explodiert: 1 Schaden pro Schildpunkt an allen Gegnern in der Nähe!"
@@ -916,7 +916,7 @@ func _setup_heroes() -> void:
 	vamp_melee.base_reload_time = 1.2
 	vamp_melee.color_tint = Color(0.78, 0.10, 0.20)
 	vamp_melee.sprite_tile_name = "tile_0006.png"
-	vamp_melee.version = 1
+	vamp_melee.version = 2
 	vamp_melee.ability_version = 1
 	heroes["vampire_melee"] = vamp_melee
 

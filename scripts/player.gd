@@ -4370,7 +4370,9 @@ func spawn_blood_orb(pos: Vector2) -> BloodOrb:
 		return null
 	return BloodOrb.spawn(get_parent(), pos, self, arena_z if ArenaMode.active else 0.0)
 
-# Ein Angriffstreffer eines Vampirs an einem Gegner (aus take_damage).
+# Ein Angriffstreffer eines Vampirs an einem Gegner (aus Player.take_damage und
+# HordeEnemy.take_damage). Kisten, Objekte und Piñatas zählen nicht. Der Zähler
+# läuft über alle Gegner, die Treffer müssen nicht denselben treffen.
 func register_vampire_hit(target: Node2D) -> void:
 	if is_replica or not is_instance_valid(target):
 		return
