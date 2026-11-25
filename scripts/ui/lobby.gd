@@ -696,7 +696,6 @@ func _create_hero_tile(hero: HeroData) -> Button:
 	btn.custom_minimum_size = HERO_TILE_SIZE
 	btn.focus_mode = Control.FOCUS_NONE
 	btn.set_meta("hero_id", hero.id)
-	btn.tooltip_text = _hero_tooltip(hero)
 	var tint := hero.color_tint
 	var style_normal := _make_tile_style(Color(0.07, 0.09, 0.13, 1.0), Color(tint.r, tint.g, tint.b, 0.25), 1)
 	var style_hover := _make_tile_style(Color(tint.r * 0.25, tint.g * 0.25, tint.b * 0.25, 1.0), Color(tint.r, tint.g, tint.b, 0.8), 2)
@@ -866,12 +865,7 @@ func _refresh_hero_controls() -> void:
 	_refresh_hero_highlights()
 
 func _refresh_hero_stats_text() -> void:
-	for hero_id in hero_tiles.keys():
-		var hero: HeroData = Global.get_hero(hero_id)
-		if hero == null:
-			continue
-		var btn: Button = hero_tiles[hero_id]["button"]
-		btn.tooltip_text = _hero_tooltip(hero)
+	# Kein Tooltip auf den Helden-Icons: die Großansicht zeigt alle Werte.
 	_showcase_signature = ""
 	_refresh_showcase()
 
@@ -1062,15 +1056,6 @@ func _hero_button_text(hero: HeroData) -> String:
 	var effective_hp := Global.get_effective_base_hp(hero)
 	return "%s\nHP %d  ·  DMG %d\n%s" % [
 		hero.name, effective_hp, int(Global.base_damage), hero.ability_name,
-	]
-
-func _hero_tooltip(hero: HeroData) -> String:
-	var effective_hp := Global.get_effective_base_hp(hero)
-	return "%s (%s)\nBasis-HP (effektiv): %d\nBasis-Schaden: %d\nBasis-Munition: %d\nFeuerintervall: %.2fs\nNachladezeit: %.1fs\nPassive: %s\nAktiv: %s (%ss Cooldown)\n%s\n%s" % [
-		hero.name, hero.role, effective_hp, int(Global.base_damage),
-		hero.base_ammo, hero.base_fire_rate_cooldown, hero.base_reload_time,
-		hero.passive_desc, hero.ability_name, hero.ability_cooldown,
-		Global.get_hero_ability_details(hero), Global.get_hero_kit_text(hero) + "\n" + hero.description,
 	]
 
 func _select_hero(slot: int, hero_id: String) -> void:
