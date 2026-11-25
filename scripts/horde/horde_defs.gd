@@ -11,7 +11,14 @@ const BOSS_TIMES: Array[float] = [180.0, 360.0, 540.0, 600.0]
 const BOSS_BASE_HP: Array[float] = [900.0, 1800.0, 3000.0, 5200.0]
 ## Gebiete: Nach jedem besiegten Boss geht es auf die nächste Karte. Die
 ## Treibjagd ist eine lange Scroll-Strecke (Feuerwalze von links).
+## Gebiet 2 und 4 werden je Lauf aus zwei Karten gewürfelt: Felsterrassen und
+## Tafelberge haben Höhenebenen, die man nur durch Springen erreicht
+## (HordeLevelMaps). Der Host würfelt, Clients bekommen die Karten-id.
 const STAGE_MAPS: Array[String] = ["arena_wildnis", "arena_horde_steppe", "arena_horde_treibjagd", "arena_horde_ruinen"]
+const STAGE_ALTERNATIVES: Dictionary = {
+	1: ["arena_horde_steppe", "arena_horde_tafelberge"],
+	3: ["arena_horde_ruinen", "arena_horde_terrassen"],
+}
 ## Level-Modifier, die im Horden-Modus erlaubt sind (Sturmzone nicht).
 const MODIFIERS: Array[String] = [
 	"wind", "low_gravity", "high_gravity", "mini_pigs", "double_damage",
@@ -142,8 +149,14 @@ static func gem_color(value: int) -> Color:
 		return Color(0.4, 1.0, 0.5)
 	return Color(0.45, 0.75, 1.0)
 
-static func stage_map(index: int) -> String:
-	return STAGE_MAPS[clampi(index, 0, STAGE_MAPS.size() - 1)]
+static func stage_map(index: int, seed_value: int = 0) -> String:
+	var i := clampi(index, 0, STAGE_MAPS.size() - 1)
+	var options: Array = STAGE_ALTERNATIVES.get(i, [])
+	if seed_value != 0 and not options.is_empty():
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed_value
+		return str(options[rng.randi() % options.size()])
+	return STAGE_MAPS[i]
 
 static func stage_title(index: int) -> String:
 	return ArenaMaps.display_name(stage_map(index))
