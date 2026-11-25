@@ -1621,7 +1621,7 @@ func _add_character_tusk_row(parent: VBoxContainer) -> void:
 
 # Baukasten: Körperform, Gesichtsteile, Frisur, Kleidung und Schwanz.
 const CHARACTER_PART_LABELS: Dictionary = {
-	"body": "Körperform", "eyes": "Augen", "snout": "Rüssel", "nose": "Nasenlöcher",
+	"gender": "Körperbau", "body": "Körperform", "eyes": "Augen", "snout": "Rüssel", "nose": "Nasenlöcher",
 	"ears": "Ohren", "hair": "Frisur", "top": "Oberteil", "bottom": "Unterteil",
 	"tail": "Schwanz",
 }
@@ -1630,10 +1630,10 @@ func _add_character_parts_section(parent: VBoxContainer) -> void:
 	var header := HBoxContainer.new()
 	header.add_theme_constant_override("separation", 12)
 	parent.add_child(header)
-	_add_character_text_column(header, "Aussehen", "Körperform, Gesicht, Frisur, Kleidung und Schwanz frei kombinieren.")
+	_add_character_text_column(header, "Aussehen", "Körperbau (männlich oder weiblich), Körperform, Gesicht, Frisur, Kleidung und Schwanz frei kombinieren. Gilt für jede Klasse.")
 	var random_button := Button.new()
 	random_button.text = "ZUFÄLLIG"
-	random_button.tooltip_text = "Alle Teile neu würfeln. Farben bleiben."
+	random_button.tooltip_text = "Alle Teile neu würfeln. Farben und Körperbau bleiben."
 	random_button.custom_minimum_size = Vector2(120, 38)
 	random_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	random_button.pressed.connect(_on_character_parts_randomize)
@@ -1646,7 +1646,7 @@ func _add_character_parts_section(parent: VBoxContainer) -> void:
 	parent.add_child(grid)
 
 	part_options.clear()
-	for key in ["body", "eyes", "snout", "nose", "ears", "hair", "top", "bottom", "tail"]:
+	for key in ["gender", "body", "eyes", "snout", "nose", "ears", "hair", "top", "bottom", "tail"]:
 		var option := OptionButton.new()
 		option.custom_minimum_size = Vector2(200, 32)
 		option.size_flags_horizontal = Control.SIZE_EXPAND_FILL

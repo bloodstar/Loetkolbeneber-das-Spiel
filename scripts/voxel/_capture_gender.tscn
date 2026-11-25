@@ -1,0 +1,4 @@
+[gd_scene format=3]
+[ext_resource type="Script" path="res://scripts/voxel/_capture_gender.gd" id="1"]
+[node name="Capture" type="Node3D"]
+script = ExtResource("1")
