@@ -1259,18 +1259,12 @@ func _build_character_tab() -> void:
 	_character_slot_signature = ""
 	_clear_children(character_tab)
 
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	character_tab.add_child(scroll)
-
-	var center := CenterContainer.new()
-	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.add_child(center)
-
+	# Das Panel füllt die Reiterhöhe. Gescrollt wird nur die rechte Optionsspalte,
+	# damit die Charaktervorschau links immer sichtbar bleibt.
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(770, 610)
+	panel.custom_minimum_size = Vector2(770, 0)
+	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = Color(0.06, 0.08, 0.12, 0.98)
 	panel_style.set_corner_radius_all(16)
@@ -1280,7 +1274,7 @@ func _build_character_tab() -> void:
 	panel_style.border_width_bottom = 2
 	panel_style.border_color = Color(1.0, 0.78, 0.32, 0.75)
 	panel.add_theme_stylebox_override("panel", panel_style)
-	center.add_child(panel)
+	character_tab.add_child(panel)
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 24)
@@ -1361,11 +1355,22 @@ func _build_character_tab() -> void:
 	preview_column.add_child(character_slot_label)
 	_add_character_melee_tiles(preview_column)
 
-	# Rechte Seite: Slot-Auswahl und Farbauswahl.
+	# Rechte Seite: Slot-Auswahl und Farbauswahl, eigenständig scrollbar.
+	var controls_scroll := ScrollContainer.new()
+	controls_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	controls_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	controls_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	main_row.add_child(controls_scroll)
+
+	var controls_margin := MarginContainer.new()
+	controls_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	controls_margin.add_theme_constant_override("margin_right", 12)   # Platz für die Scrollleiste
+	controls_scroll.add_child(controls_margin)
+
 	var controls := VBoxContainer.new()
 	controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	controls.add_theme_constant_override("separation", 12)
-	main_row.add_child(controls)
+	controls_margin.add_child(controls)
 
 	var heading := Label.new()
 	heading.text = "CHARAKTER ANPASSEN"
