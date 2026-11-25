@@ -3227,6 +3227,7 @@ func _init_database() -> void:
 
 	var of4 = CardData.new()
 	of4.id = "kettenreaktion"
+	of4.version = 2 # Nahkampf: Kettenblitz springt im 1-gegen-1 aufs getroffene Ziel zurück
 	of4.title = "Kettenreaktion"
 	of4.description = "Blitze springen zwischen Gegnern.\n+Blitzschuss, +Kettenblitz."
 	of4.rarity = "Epic"

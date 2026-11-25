@@ -696,6 +696,8 @@ const MELEE_ECHO_POWER: float = 0.6
 const MELEE_EXECUTE_THRESHOLD: float = 0.35
 const MELEE_CHAIN_RADIUS: float = 220.0
 const MELEE_CHAIN_DAMAGE_MULT: float = 0.5
+# Reichweite des Schuss-Kettenblitzes auf Horden-Gegner (Eber-Gegner: unbegrenzt).
+const HORDE_CHAIN_RADIUS: float = 260.0
 const MELEE_OBJECT_SLACK: float = 18.0
 
 # Stellvertreter für hit_crate/hit_barrel, die ein Projektil mit shooter,
@@ -720,6 +722,9 @@ var melee_lifesteal: float = 0.0
 var melee_wall_stun_bonus: float = 0.0
 var melee_execute_bonus: float = 0.0
 var melee_chain_lightning: bool = false
+# Kettenreaktion (allgemeiner Kettenblitz) bei Nahkampfhelden: ohne weiteren
+# Gegner springt der Blitz wie beim Schuss auf das getroffene Ziel zurück (1-gegen-1).
+var melee_chain_return: bool = false
 var melee_echo: bool = false
 var melee_parry: bool = false
 var melee_echo_timer: float = 0.0
@@ -1095,6 +1100,7 @@ func apply_stats() -> void:
 	var m_wall_stun := 0.0
 	var m_execute := 0.0
 	var m_chain := false
+	var m_chain_return := false
 	var m_echo := false
 	var m_parry := false
 	var size_mult = BASE_CHARACTER_SCALE
@@ -1402,6 +1408,7 @@ func apply_stats() -> void:
 		if lightning_shot:
 			m_stun += 0.1
 		m_chain = m_chain or chain_lightning
+		m_chain_return = chain_lightning
 	# Gedeckelt, damit gestapelte Karten den Nahkampf nicht zum Dauerfeuer machen.
 	melee_cooldown = maxf(0.3, float(melee_data["cooldown"]) * m_cd_mult)
 	melee_cooldown_timer = 0.0
@@ -1419,6 +1426,7 @@ func apply_stats() -> void:
 	melee_wall_stun_bonus = minf(m_wall_stun, 1.5)
 	melee_execute_bonus = m_execute
 	melee_chain_lightning = m_chain
+	melee_chain_return = m_chain_return
 	melee_echo = m_echo
 	melee_parry = m_parry
 	melee_echo_timer = 0.0
@@ -2542,24 +2550,53 @@ func _melee_chain_lightning(hit_targets: Array, damage: float) -> float:
 	var origin: Node2D = hit_targets[0]
 	if not is_instance_valid(origin):
 		return 0.0
-	var best: Player = null
-	var best_dist := MELEE_CHAIN_RADIUS
+	var best = _nearest_chain_target(origin.global_position, MELEE_CHAIN_RADIUS, hit_targets)
+	if best == null and melee_chain_return and _is_chain_target_alive(origin):
+		best = origin
+	if best == null:
+		return 0.0
+	var before: float = best.current_health + best.current_shield
+	best.take_damage(damage, Vector2.ZERO, self)
+	best.apply_stun(maxf(0.15, melee_stun))
+	# Rücksprung aufs selbe Ziel: Bogen vom Eber aus, sonst wäre er unsichtbar.
+	var arc_from: Vector2 = global_position if best == origin else origin.global_position
+	_spawn_lightning_arc(arc_from, best.global_position)
+	return maxf(0.0, before - (maxf(best.current_health, 0.0) + best.current_shield))
+
+# Lebt ein Kettenblitz-Ziel (gegnerischer Eber oder Horden-Gegner) noch?
+func _is_chain_target_alive(n) -> bool:
+	if not is_instance_valid(n):
+		return false
+	if n is Player:
+		return not (n as Player).is_dead and (n as Player).current_health > 0.0
+	if n is HordeEnemy:
+		return (n as HordeEnemy).is_alive()
+	return false
+
+# Nächstes Ziel für einen Kettenblitz: gegnerische Eber und im Horden-Modus
+# auch Horden-Gegner (Wölfe, Bären …). exclude = schon getroffene Ziele.
+func _nearest_chain_target(from_pos: Vector2, radius: float, exclude: Array) -> Node2D:
+	var best: Node2D = null
+	var best_dist := radius
 	for p in get_tree().get_nodes_in_group("player"):
-		if not (p is Player) or p == self or hit_targets.has(p) or not is_instance_valid(p):
+		if not (p is Player) or p == self or exclude.has(p) or not is_instance_valid(p):
 			continue
 		if p.team_id == team_id or p.current_health <= 0.0 or not p.visible:
 			continue
-		var d: float = origin.global_position.distance_to(p.global_position)
+		var d: float = from_pos.distance_to(p.global_position)
 		if d < best_dist:
 			best_dist = d
 			best = p
-	if best == null:
-		return 0.0
-	var before := best.current_health + best.current_shield
-	best.take_damage(damage, Vector2.ZERO, self)
-	best.apply_stun(maxf(0.15, melee_stun))
-	_spawn_lightning_arc(origin.global_position, best.global_position)
-	return maxf(0.0, before - (maxf(best.current_health, 0.0) + best.current_shield))
+	if HordeDirector.is_active():
+		for node in get_tree().get_nodes_in_group(HordeEnemy.GROUP):
+			var e := node as HordeEnemy
+			if e == null or exclude.has(e) or not e.is_alive() or e.is_replica:
+				continue
+			var d: float = from_pos.distance_to(e.global_position)
+			if d < best_dist:
+				best_dist = d
+				best = e
+	return best
 
 # Parade: gegnerische Projektile im Schlagbereich fliegen zurück wie beim Block.
 func _melee_parry(dir: Vector2) -> void:
@@ -5834,14 +5871,18 @@ func trigger_chain_lightning(primary: Node2D, from_position: Vector2) -> void:
 	# primary kann auch ein Nicht-Spieler sein (z. B. das Pinata-Lama).
 	if is_replica:
 		return
-	var chain_target: Player = null
+	var chain_target = null
 	for p in get_tree().get_nodes_in_group("player"):
 		if p is Player and p != self and p != primary and is_instance_valid(p) and p.team_id != team_id and p.current_health > 0.0:
 			chain_target = p
 			break
-	if chain_target == null and is_instance_valid(primary) and primary is Player and (primary as Player).current_health > 0.0:
+	# Horden-Modus: die anderen Eber sind Verbündete, der Blitz springt auf
+	# den nächsten Horden-Gegner in der Nähe.
+	if chain_target == null and HordeDirector.is_active():
+		chain_target = _nearest_chain_target(from_position, HORDE_CHAIN_RADIUS, [primary])
+	if chain_target == null and _is_chain_target_alive(primary):
 		# Im 1-gegen-1 springt der Kettenblitz auf das PrimÃƒÂ¤rziel zurÃƒÂ¼ck.
-		chain_target = primary as Player
+		chain_target = primary
 	if chain_target == null:
 		return
 
