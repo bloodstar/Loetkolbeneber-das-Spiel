@@ -52,6 +52,15 @@ func _ready() -> void:
 				n += 1
 		print("[INFO] %s: %d Karten ohne Vorbedingung verfügbar" % [hero_id, n])
 		_check(n >= 40, "%s hat einen ausreichend großen Kartenpool" % hero_id)
+	# Schuss-Karten mit eigenem Nahkampf-Gegenstück: nur Fernkämpfer.
+	for id in ["toxic_spores", "giftschuss", "frostschuss", "feuersturm", "blitzschuss", "schnellfeuer",
+			"scharfe_munition", "schlagkraft_1", "blutdurst"]:
+		var shot_card := CardDatabase.get_card(id)
+		_check(shot_card != null and CardDatabase.is_card_available_for_player(shot_card, "volt", []), "%s für Volt verfügbar" % id)
+		for melee_id in ["phantom", "klinge", "bastion", "vampire_melee", "zeitschlaeger"]:
+			_check(not CardDatabase.is_card_available_for_player(shot_card, melee_id, []), "%s nicht für %s" % [id, melee_id])
+	for id in ["kettenreaktion", "rueckstossfeder", "frostartig", "giftklinge"]:
+		_check(CardDatabase.is_card_available_for_player(CardDatabase.get_card(id), "phantom", []), "%s bleibt für Nahkämpfer" % id)
 	for id in ["volt_sprungziel", "volt_entladung", "volt_doppelladung", "volt_starkstrom", "volt_dauerblitz", "volt_schockring",
 			"phantom_sprengkoeder", "phantom_platztausch", "phantom_blutspur", "ulti_akku"]:
 		_check(CardDatabase.get_card(id) != null, "Karte %s existiert" % id)
