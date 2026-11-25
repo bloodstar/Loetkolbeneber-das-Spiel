@@ -203,6 +203,13 @@ func _build_outfit() -> void:
 			_box(Vector3(24, 2, 26), Vector3(0, top + 0.8, 0), felt, _head)
 			_box(Vector3(14, 12, 16), Vector3(-1, top + 7.5, 0), felt, _head)
 			_box(Vector3(14.6, 3, 16.6), Vector3(-1, top + 3.2, 0), Color(0.74, 0.06, 0.14), _head)
+		"flocke":
+			# Türkiser Strickschal und Eiskristall-Diadem
+			var wool := accent if Global.is_team_mode() else Color(0.2, 0.75, 0.78)
+			_box(Vector3(20, 4, 22), Vector3(0, 1.0, 0), wool, _head)
+			_box(Vector3(6, 3, 4), Vector3(-12, 1.5, 4), wool.darkened(0.12), _head)
+			_box(Vector3(2, 2, 10), Vector3(8, top - 1.0, 0), Color(0.82, 0.88, 0.95), _head)
+			_box(Vector3(2, 5, 2), Vector3(8.5, top + 2.0, 0), Color(0.75, 0.95, 1.0), _head, Color(0.6, 0.9, 1.0), 1.2)
 		"zeitschlaeger":
 			# Wecker als Hut: Messinggehäuse, Zifferblatt, zwei Glocken
 			var brass := accent if Global.is_team_mode() else Color(0.86, 0.66, 0.26)

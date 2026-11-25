@@ -14,6 +14,7 @@ Aufruf (im Projektordner):  python3 tools/build_hero_grunts.py
 Braucht ffmpeg und numpy.
 """
 import os
+import sys
 import subprocess
 import tempfile
 import wave
@@ -51,6 +52,8 @@ RECIPES = {
     "vampire_melee": ("pig_hit1", 0.78, "bass=g=3:f=160", [("slash", 0.85, -11.0, 0.05)]),
     # Zeitschläger: Grunzen, dann dasselbe rückwärts (Zeit spult zurück).
     "zeitschlaeger": ("pig_idle3", 1.05, "REVERSE", [("countdown", 1.6, -18.0, 0.0)]),
+    # Flocke: helles, freches Quieken mit kaltem Funkeln und kurzem Hall.
+    "flocke": ("pig_idle2", 1.4, "aecho=0.8:0.5:70:0.3", [("teleport", 1.5, -15.0, 0.06)]),
 }
 
 
@@ -135,8 +138,12 @@ def build(hero, recipe, tmp):
 
 
 def main():
+    # Optional nur einzelne Helden bauen: python3 tools/build_hero_grunts.py flocke
+    only = set(sys.argv[1:])
     with tempfile.TemporaryDirectory() as tmp:
         for hero, recipe in RECIPES.items():
+            if only and hero not in only:
+                continue
             build(hero, recipe, tmp)
 
 

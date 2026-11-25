@@ -959,6 +959,37 @@ func _setup_heroes() -> void:
 	zeit.ability_version = 1
 	heroes["zeitschlaeger"] = zeit
 
+	# 10. Flocke – Schweine-Eismagierin mit Eiszapfen-Stab (Grundelement Frost)
+	var flocke = HeroData.new()
+	flocke.id = "flocke"
+	flocke.name = "Flocke"
+	flocke.role = "Frost Mage"
+	flocke.description = "Eismagierin mit Strickschal und Eiszapfen-Stab. Verlangsamt alles, was ihr zu nahe kommt."
+	flocke.passive_desc = "Kältehauch: Jeder Treffer verlangsamt %.1f s lang. Jeder %d. Schuss ist ein Eissplitter, der einen Gegner durchschlägt und %d %% Schaden macht." % [
+		Player.FLOCKE_PASSIVE_CHILL, Player.FLOCKE_PASSIVE_SHARD_INTERVAL,
+		int(round(Player.FLOCKE_SHARD_DAMAGE_MULT * 100.0)),
+	]
+	flocke.ability_name = "Gletscherlanze"
+	flocke.ability_desc = "Ein Eisstrahl durchbohrt alle Gegner in Zielrichtung und endet in einer Eisnova!"
+	flocke.ability_cooldown = 7.0
+	flocke.dash_name = "Schlitterschritt"
+	flocke.dash_desc = "Schlittert los und hinterlässt eine Eisbahn, die Gegner verlangsamt."
+	flocke.ult_name = "Blizzard"
+	flocke.ult_desc = "Ein Schneesturm am Zielpunkt. Wer zu lange darin steht, friert ein!"
+	flocke.ult_cooldown = 28.0
+	flocke.base_hp = 95
+	flocke.base_shield = 10
+	flocke.base_speed = 300.0
+	flocke.base_jump_force = -505.0
+	flocke.base_ammo = 4
+	flocke.base_fire_rate_cooldown = 0.24
+	flocke.base_reload_time = 1.25
+	flocke.color_tint = Color(0.55, 0.86, 1.0)
+	flocke.sprite_tile_name = "tile_0002.png"
+	flocke.version = 1
+	flocke.ability_version = 1
+	heroes["flocke"] = flocke
+
 func get_hero(id: String) -> HeroData:
 	return heroes.get(id, heroes["ignis"])
 
@@ -1018,6 +1049,11 @@ func get_hero_ability_details(hero: HeroData) -> String:
 				int(Player.VAMP_MELEE_BURST_DAMAGE_PER_SHIELD), int(Player.VAMP_MELEE_BURST_RADIUS),
 				int(round(Player.VAMP_MELEE_SHIELD_CAP * 100.0)),
 				int(round(hero.base_hp * Player.VAMP_MELEE_SHIELD_CAP * Player.VAMP_MELEE_BURST_DAMAGE_PER_SHIELD)),
+			]
+		"flocke":
+			return "Eisstrahl in Zielrichtung bis zur ersten Wand, höchstens %d px. Jeder Gegner auf der Linie nimmt %d Schaden und ist %.1f s verlangsamt. Am Ende entsteht eine Eisnova (Radius %d px)." % [
+				int(Player.FLOCKE_LANCE_RANGE), int(Player.FLOCKE_LANCE_DAMAGE), Player.FLOCKE_LANCE_CHILL,
+				int(Player.FLOCKE_LANCE_NOVA_RADIUS),
 			]
 		"zeitschlaeger":
 			return "Zeitkuppel an deiner Position: Radius %d px, %.0f s lang. Gegner darin laufen %d %% langsamer, gegnerische Kugeln fliegen nur mit %d %% Tempo. Du selbst bewegst dich normal." % [
@@ -1085,6 +1121,11 @@ func get_hero_ult_details(hero: HeroData) -> String:
 				int(round((Player.DRUID_BOAR_HP_MULT - 1.0) * 100.0)),
 				int(round(Player.DRUID_BOAR_MELEE_DAMAGE_MULT * 100.0)), int(Player.DRUID_BOAR_CHARGE_DAMAGE),
 			]
+		"flocke":
+			return "Gezielt (bis %d px): %.0f s lang Schneesturm mit Radius %d px. %d Schaden pro Sekunde, starke Verlangsamung. Wer %.0f s am Stück darin steht, friert %.1f s lang ein." % [
+				int(Player.FLOCKE_BLIZZARD_RANGE), Player.FLOCKE_BLIZZARD_DURATION, int(Player.FLOCKE_BLIZZARD_RADIUS),
+				int(Player.FLOCKE_BLIZZARD_DPS), Player.FLOCKE_BLIZZARD_FREEZE_AFTER, Player.FLOCKE_BLIZZARD_FREEZE,
+			]
 		"zeitschlaeger":
 			return "%.0f s lang frieren alle Gegner und ihre Kugeln ein, auch ihre Abklingzeiten stehen. Deine Treffer an eingefrorenen Gegnern stauen sich (%d %% Schaden) und schlagen am Ende gesammelt mit Rückstoß ein." % [
 				Player.ZEIT_STOP_DURATION, int(round(Player.ZEIT_STOP_DAMAGE_MULT * 100.0)),
@@ -1120,6 +1161,8 @@ func get_hero_dash_details(hero: HeroData) -> String:
 			return "Dash in Laufrichtung, kurz unverwundbar und durch Gegner hindurch. Jeder Getroffene nimmt %d Schaden und lässt sofort eine Blutkugel fallen." % int(Player.VAMPIRE_DASH_DAMAGE)
 		"vampire_melee":
 			return "Legt an der Startstelle eine Blutkugel ab und stürmt %d %% weiter als ein normaler Dash, kurz unverwundbar und durch Gegner hindurch." % int(round(Player.VAMP_MELEE_DASH_DURATION_MULT * 100.0))
+		"flocke":
+			return "Dash in Laufrichtung, kurz unverwundbar. Hinterlässt eine Eisbahn (%.0f s), auf der Gegner verlangsamt werden." % Player.FLOCKE_SLIDE_ZONE_DURATION
 		"zeitschlaeger":
 			return "Springt an die Stelle von vor %.0f s zurück (ein Nachbild zeigt sie dir) und bekommt %d %% des Schadens aus dieser Zeit als Leben zurück. %.0f s Abklingzeit." % [
 				Player.ZEIT_REWIND_SECONDS, int(round(Player.ZEIT_REWIND_HEAL_SHARE * 100.0)), Player.ZEIT_REWIND_COOLDOWN,

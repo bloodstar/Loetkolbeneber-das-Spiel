@@ -313,6 +313,41 @@ const ZEITEVO_FAST_HIT_INTERVAL: int = 2
 const ZEITEVO_FAST_SLOW_DURATION: float = 2.5
 const ZEITEVO_STOP_AMP: float = 1.5
 
+# --- Flocke (Frost-Magierin): Kältehauch, Gletscherlanze, Schlitterschritt, Blizzard ---
+const FLOCKE_ID: String = "flocke"
+## Passiv Kältehauch: jeder Treffer verlangsamt so lange (s).
+const FLOCKE_PASSIVE_CHILL: float = 0.8
+## Jeder n. Schuss ist ein Eissplitter, der einen Gegner durchschlägt.
+const FLOCKE_PASSIVE_SHARD_INTERVAL: int = 4
+const FLOCKE_SHARD_DAMAGE_MULT: float = 1.2
+## Gletscherlanze: gerader Eisstrahl in Zielrichtung, endet in einer Eisnova.
+const FLOCKE_LANCE_RANGE: float = 480.0
+const FLOCKE_LANCE_WIDTH: float = 16.0
+const FLOCKE_LANCE_DAMAGE: float = 26.0
+const FLOCKE_LANCE_CHILL: float = 1.6
+const FLOCKE_LANCE_NOVA_RADIUS: float = 70.0
+## Schlitterschritt: Dash, der eine Eisbahn hinterlässt.
+const FLOCKE_SLIDE_ZONE_INTERVAL: float = 0.035
+const FLOCKE_SLIDE_ZONE_RADIUS: float = 26.0
+const FLOCKE_SLIDE_ZONE_DURATION: float = 3.0
+const FLOCKE_SLIDE_CHILL: float = 1.0
+## Blizzard: Schneesturm am Zielpunkt.
+const FLOCKE_BLIZZARD_RANGE: float = 520.0
+const FLOCKE_BLIZZARD_RADIUS: float = 120.0
+const FLOCKE_BLIZZARD_DURATION: float = 5.0
+const FLOCKE_BLIZZARD_TICK: float = 0.25
+const FLOCKE_BLIZZARD_DPS: float = 10.0
+const FLOCKE_BLIZZARD_CHILL: float = 0.6
+## Wer so lange am Stück im Sturm steht, friert ein.
+const FLOCKE_BLIZZARD_FREEZE_AFTER: float = 2.0
+const FLOCKE_BLIZZARD_FREEZE: float = 0.8
+# Evolutionen aus Klassenkarten (gehören zu den Karten, nicht zum Fingerprint).
+const FLOCKEEVO_FAST_SHARD_INTERVAL: int = 3
+const FLOCKEEVO_FAN_COUNT: int = 3
+const FLOCKEEVO_FAN_ANGLE_DEG: float = 14.0
+const FLOCKEEVO_FAN_DAMAGE_SHARE: float = 0.6
+const FLOCKEEVO_TRAIL_STEP: float = 44.0
+
 # Fähigkeits-Evolutionen aus den Klassenkarten. Die Werte gelten vor den
 # Fähigkeits-Multiplikatoren (ability_damage_mult usw.).
 const IGNIS_NAPALM_RADIUS: float = 90.0
@@ -412,7 +447,7 @@ const DRUID_WALL_TARGET_SNAP: float = 40.0
 # weiter die feste Entfernung in Zielrichtung.
 const TARGETED_ABILITY_HEROES: Array[String] = ["druid", "ignis", "spore"]
 # Helden, deren Ulti an einem Zielpunkt landet (Taste E halten und loslassen).
-const TARGETED_ULT_HEROES: Array[String] = ["ignis", "nova"]
+const TARGETED_ULT_HEROES: Array[String] = ["ignis", "nova", "flocke"]
 # Liegt ein Zielpunkt in festem Gelände, rückt er in diesen Schritten zum
 # Spieler zurück (Sofort-Modus und Host-Prüfung).
 const ABILITY_TARGET_PULLBACK_STEP: float = 8.0
@@ -553,6 +588,8 @@ var active_orb: BallLightning = null
 # Vampire: Angriffstreffer bis zur nächsten Blutkugel und Gegner, die der
 # laufende Dash schon getroffen hat.
 var vampire_hit_count: int = 0
+var flocke_shot_count: int = 0           # Flocke: zählt Schüsse für den Eissplitter
+var _flocke_slide_timer: float = 0.0     # Flocke: Abstand der Eisbahn-Zonen im Dash
 var _vampire_dash_hits: Array = []
 var _vampire_dash_ghosted: Array = []
 # Stärke des Helden-Dashs aus Karten (Spurdauer, Wolkengröße, Reichweite …).
@@ -1399,6 +1436,10 @@ func apply_stats() -> void:
 	# Druiden-Passive "Wurzelkraft": ständige Lebensregeneration.
 	if hero.id == "druid":
 		hp_regen += DRUID_PASSIVE_REGEN
+	# Flocke-Passiv "Kältehauch": jeder Schuss verlangsamt.
+	flocke_shot_count = 0
+	if hero.id == FLOCKE_ID:
+		freeze_duration = maxf(freeze_duration, FLOCKE_PASSIVE_CHILL)
 	hp_regen_always = hp_regen_always_total
 
 	# Universeller Block: Basiswerte plus Kartenboni. Dauer und Cooldown sind
@@ -2125,6 +2166,10 @@ func dash() -> void:
 			_dash_speed_now = BASTION_RAM_SPEED
 			dash_timer = BASTION_RAM_DURATION * clampf(dash_effect_mult, 1.0, 1.6)
 			_fx("sound", {"snd": ["shield", 0.15, -2.0]})
+		FLOCKE_ID:
+			# Schlitterschritt: Eisbahn entlang des Dashs.
+			_flocke_slide_timer = 0.0
+			_fx("sound", {"snd": ["teleport", 0.15, -10.0]})
 		"boar":
 			# Urkeiler-Ansturm: schneller, schleudert Gegner weg, bricht Gelände.
 			_dash_speed_now = dash_speed * DRUID_BOAR_CHARGE_SPEED_MULT
@@ -2359,6 +2404,15 @@ func _spawn_bullet(dir: Vector2) -> Bullet:
 	
 	# Konfigurierbare Basis-Schussfarbe aus der Charakteranpassung.
 	b.modulate = shot_color
+	# Flocke: jeder n. Schuss ist ein Eissplitter, der einen Gegner durchschlägt.
+	if Global.get_player_hero_id(player_index) == FLOCKE_ID:
+		flocke_shot_count += 1
+		if flocke_shot_count % flocke_shard_interval() == 0:
+			b.piercing_left += 1
+			b.damage *= FLOCKE_SHARD_DAMAGE_MULT
+			b.freeze_duration = maxf(b.freeze_duration, FLOCKE_PASSIVE_CHILL * 1.5)
+			b.modulate = Color(0.75, 0.95, 1.0)
+			b.scale *= 1.25
 	
 	get_parent().add_child(b)
 	return b
@@ -2456,6 +2510,9 @@ func use_ability(target = null) -> void:
 		"zeitschlaeger":
 			# Zeitblase: Kuppel, in der Gegner und Kugeln langsam werden
 			_spawn_time_bubble()
+		FLOCKE_ID:
+			# Gletscherlanze: Eisstrahl in Zielrichtung, endet in einer Eisnova
+			_flocke_lance()
 
 	# Turm-Talent: Die SpezialfÃƒÂ¤higkeit platziert zusÃƒÂ¤tzlich einen Turm.
 	if tower_enabled:
@@ -4406,6 +4463,94 @@ func use_ultimate(target = null) -> void:
 			_start_boar()
 		"zeitschlaeger":
 			_start_time_stop()
+		FLOCKE_ID:
+			_start_blizzard(target)
+
+# ============================================================
+# Flocke: Kältehauch, Gletscherlanze, Schlitterschritt, Blizzard
+# ============================================================
+
+func flocke_shard_interval() -> int:
+	return FLOCKEEVO_FAST_SHARD_INTERVAL if _has_ability_evolution("flocke_passive_fast") else FLOCKE_PASSIVE_SHARD_INTERVAL
+
+# Gletscherlanze: gerader Eisstrahl bis zur ersten Wand. Trifft jeden Gegner
+# auf der Linie (durchschlagend), verlangsamt stark und endet in einer Eisnova.
+func _flocke_lance() -> void:
+	if is_replica or get_parent() == null:
+		return
+	var dir := aim_direction.normalized()
+	if dir.length_squared() < 0.01:
+		dir = Vector2.LEFT if sprite.flip_h else Vector2.RIGHT
+	var dirs: Array[Vector2] = [dir]
+	var dmg_share := 1.0
+	# Evolution "Lanzenhagel": Fächer aus mehreren schwächeren Lanzen.
+	if _has_ability_evolution("flocke_lance_fan"):
+		dirs.clear()
+		dmg_share = FLOCKEEVO_FAN_DAMAGE_SHARE
+		for i in range(FLOCKEEVO_FAN_COUNT):
+			var off := (float(i) - float(FLOCKEEVO_FAN_COUNT - 1) * 0.5) * deg_to_rad(FLOCKEEVO_FAN_ANGLE_DEG)
+			dirs.append(dir.rotated(off))
+	_fx("sound", {"snd": ["laser_small", 0.1, 0.0], "shake": 0.08})
+	for d in dirs:
+		_flocke_cast_lance(d, dmg_share)
+
+func flocke_lance_end(from: Vector2, dir: Vector2) -> Vector2:
+	var reach := FLOCKE_LANCE_RANGE * ability_range_mult
+	var to := from + dir * reach
+	if not is_inside_tree():
+		return to
+	var query := PhysicsRayQueryParameters2D.create(from, to, 1)
+	query.exclude = [get_rid()]
+	var hit := get_world_2d().direct_space_state.intersect_ray(query)
+	if not hit.is_empty():
+		to = (hit["position"] as Vector2) - dir * 4.0
+	return _clamp_to_map(to)
+
+func _flocke_cast_lance(dir: Vector2, dmg_share: float) -> void:
+	var from := muzzle.global_position if muzzle != null else global_position
+	var to := flocke_lance_end(from, dir)
+	var width := FLOCKE_LANCE_WIDTH * ability_radius_mult
+	var damage := FLOCKE_LANCE_DAMAGE * ability_damage_mult * dmg_share
+	for e in _opponents_within((from + to) * 0.5, from.distance_to(to) * 0.5 + width + 30.0):
+		var p: Vector2 = e.global_position
+		var closest := Geometry2D.get_closest_point_to_segment(p, from, to)
+		var extra: float = float(e.get("radius")) if e is HordeEnemy else 12.0
+		if closest.distance_to(p) > width + extra:
+			continue
+		_ability_hit(e, damage, dir * 120.0)
+		e.apply_freeze(FLOCKE_LANCE_CHILL * ability_duration_mult, self)
+	# Strahl: breiter, kalter Schein mit hellem Kern.
+	_fx("zap", NetFx.zap_args(from, to, Color(0.55, 0.85, 1.0, 0.55), 11.0 * ability_radius_mult, 0.35))
+	_fx("zap", NetFx.zap_args(from, to, Color(0.92, 0.99, 1.0, 0.95), 3.5, 0.3, 6, 1.5))
+	_fx("ring", NetFx.ring_args(to, Color(0.8, 0.96, 1.0, 0.9), 1.0, FLOCKE_LANCE_NOVA_RADIUS * ability_radius_mult / 8.0, 0.18, 0.3, 3, true))
+	spawn_effect_zone(EffectZone.Kind.ICE, to, FLOCKE_LANCE_NOVA_RADIUS * ability_radius_mult, 1.2, {
+		"tick_interval": 0.2,
+		"freeze_duration": FLOCKE_LANCE_CHILL,
+	})
+	# Evolution "Frostbahn": entlang der Lanze bleibt Eis liegen.
+	if _has_ability_evolution("flocke_lance_trail"):
+		var steps := int(from.distance_to(to) / FLOCKEEVO_TRAIL_STEP)
+		for i in range(1, steps):
+			spawn_effect_zone(EffectZone.Kind.ICE, from.lerp(to, float(i) / float(steps)), 26.0, 3.0, {
+				"tick_interval": 0.3,
+				"freeze_duration": 1.0,
+			})
+
+# Blizzard: Schneesturm am Zielpunkt. Schaden und starke Verlangsamung; wer
+# FLOCKE_BLIZZARD_FREEZE_AFTER Sekunden darin steht, friert kurz ein.
+func _start_blizzard(target) -> void:
+	if is_replica or get_parent() == null:
+		return
+	var center := _ult_cast_point(target)
+	var radius := FLOCKE_BLIZZARD_RADIUS * _ult_size()
+	var duration := FLOCKE_BLIZZARD_DURATION * ult_duration_mult
+	var storm := FlockeBlizzard.new()
+	storm.setup(self, radius, duration, FLOCKE_BLIZZARD_DPS * FLOCKE_BLIZZARD_TICK * _ult_power())
+	get_parent().add_child(storm)
+	storm.global_position = center
+	# Optik für alle (Clients bekommen die Zone über das Netz).
+	spawn_effect_zone(EffectZone.Kind.BLIZZARD, center, radius, duration, {"visual_only": true})
+	_fx("sound", {"snd": ["warning", 0.1, -4.0], "shake": 0.15})
 
 # ============================================================
 # Vampire: Blutkugeln, Blutexplosion, Blutsturm, Fledermausschwarm
@@ -4894,6 +5039,8 @@ func ability_target_range(ult := false) -> float:
 				return IGNIS_METEOR_RANGE * ability_range_mult
 			"nova":
 				return SINGULARITY_DISTANCE * ability_range_mult
+			FLOCKE_ID:
+				return FLOCKE_BLIZZARD_RANGE * ability_range_mult
 		return 0.0
 	match Global.get_player_hero_id(player_index):
 		"spore":
@@ -6145,6 +6292,16 @@ func _handle_timers(delta: float) -> void:
 			_vampire_dash_tick()
 		elif hero_dash_id == VAMP_MELEE_ID and not is_replica and _has_ability_evolution("vampm_dash_cut"):
 			_vamp_melee_dash_cut()
+		if hero_dash_id == FLOCKE_ID and not is_replica:
+			_flocke_slide_timer -= delta
+			if _flocke_slide_timer <= 0.0:
+				_flocke_slide_timer = FLOCKE_SLIDE_ZONE_INTERVAL
+				spawn_effect_zone(EffectZone.Kind.ICE, global_position + Vector2(0.0, 10.0),
+						FLOCKE_SLIDE_ZONE_RADIUS * clampf(dash_effect_mult, 0.7, 1.8),
+						FLOCKE_SLIDE_ZONE_DURATION * clampf(dash_effect_mult, 1.0, 2.0), {
+					"tick_interval": 0.3,
+					"freeze_duration": FLOCKE_SLIDE_CHILL,
+				})
 		if hero_dash_id == "ignis":
 			afterburner_timer -= delta
 			if afterburner_timer <= 0.0:

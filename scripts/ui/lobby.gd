@@ -9,6 +9,7 @@ signal lobby_cancelled
 const HERO_IDS: Array[String] = [
 	"ignis", "volt", "spore", "nova",
 	"klinge", "bastion", "phantom", "druid", "vampire", "vampire_melee", "zeitschlaeger",
+	"flocke",
 ]
 const HERO_ICON_DIR: String = "res://assets/ui/"
 const LevelModifierDefsClass = preload("res://scripts/level_modifier_defs.gd")

@@ -461,6 +461,9 @@ func _draw_outfit_front(head: Vector2, neck: Vector2) -> void:
 			_draw_blood_clasp(neck)
 		"zeitschlaeger":
 			_draw_alarm_clock_hat(head)
+		"flocke":
+			_draw_frost_scarf(neck)
+			_draw_ice_diadem(head)
 
 # Wehendes Stoffband nach hinten. Im Stand hängt es schlaff herunter, beim
 # Laufen weht es fast waagerecht hinter der Figur her.
@@ -618,6 +621,31 @@ func _draw_scarf(neck: Vector2) -> void:
 	]), scarf, scarf_outline, 0.7)
 	draw_line(neck + Vector2(-8.6, 1.6), neck + Vector2(8.6, 1.6), _cloth(Color(1.0, 0.55, 0.60, 0.55), -0.45), 0.5, LINE_AA)
 	_draw_ellipse(neck + Vector2(-8.0, 1.7), 1.9, 1.6, scarf, scarf_outline, 0.6)
+
+# Flocke: türkiser Strickschal mit weißen Streifen.
+func _draw_frost_scarf(neck: Vector2) -> void:
+	var wool := _cloth(Color(0.2, 0.75, 0.78, 1.0))
+	var outline := _cloth(Color(0.06, 0.32, 0.36, 1.0), 0.6)
+	_draw_closed_polygon(PackedVector2Array([
+		neck + Vector2(-9.4, 0.3), neck + Vector2(0.0, 1.0), neck + Vector2(9.4, 0.3),
+		neck + Vector2(9.8, 2.8), neck + Vector2(0.0, 3.8), neck + Vector2(-9.8, 2.8),
+	]), wool, outline, 0.7)
+	for x in [-6.0, -2.0, 2.0, 6.0]:
+		draw_line(neck + Vector2(x, 0.9), neck + Vector2(x + 0.6, 3.2), Color(0.95, 0.98, 1.0, 0.85), 0.8, LINE_AA)
+	_draw_ellipse(neck + Vector2(-8.4, 2.4), 2.0, 1.8, wool, outline, 0.6)
+
+# Flocke: silbernes Diadem mit drei Eiszacken auf der Stirn.
+func _draw_ice_diadem(head: Vector2) -> void:
+	var base := head + Vector2(1.0, -8.6)
+	draw_line(base + Vector2(-5.0, 0.6), base + Vector2(5.0, 0.6), Color(0.82, 0.88, 0.95, 1.0), 1.2, LINE_AA)
+	var ice := Color(0.72, 0.94, 1.0, 1.0)
+	var outline := Color(0.25, 0.5, 0.7, 1.0)
+	for spike in [[-3.2, 2.6], [0.0, 4.2], [3.2, 2.6]]:
+		var x: float = spike[0]
+		var h: float = spike[1]
+		_draw_closed_polygon(PackedVector2Array([
+			base + Vector2(x - 1.2, 0.2), base + Vector2(x, -h), base + Vector2(x + 1.2, 0.2),
+		]), ice, outline, 0.4)
 
 # Vampir (Fernkampf): schräger Zylinder mit blutrotem Band und kleiner
 # Fledermaus-Brosche.

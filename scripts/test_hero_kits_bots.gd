@@ -19,6 +19,9 @@ func _ready() -> void:
 	# -- --zeit: Zeitschläger gegen drei andere Helden.
 	if OS.get_cmdline_user_args().has("--zeit"):
 		heroes = ["zeitschlaeger", "volt", "klinge", "zeitschlaeger"]
+	# -- --flocke: Flocke gegen drei andere Helden.
+	if OS.get_cmdline_user_args().has("--flocke"):
+		heroes = ["flocke", "volt", "klinge", "flocke"]
 	for i in range(4):
 		Global.set_player_hero(i + 1, heroes[i])
 	Global.set_bot_test_random_loadouts(false)
@@ -31,7 +34,7 @@ func _ready() -> void:
 		main.kill_cam_enabled = false
 		add_child(main)
 		Engine.time_scale = 3.0
-		var used := {"ult": 0, "decoy": 0, "orb": 0, "blood_orb": 0, "blood_bolt": 0, "bubble": 0}
+		var used := {"ult": 0, "decoy": 0, "orb": 0, "blood_orb": 0, "blood_bolt": 0, "bubble": 0, "blizzard": 0}
 		for step in range(60):
 			await _wait(0.25)
 			used["decoy"] += get_tree().get_nodes_in_group("phantom_decoy").size()
@@ -39,6 +42,7 @@ func _ready() -> void:
 			used["blood_orb"] += get_tree().get_nodes_in_group("blood_orb").size()
 			used["blood_bolt"] += get_tree().get_nodes_in_group("blood_bolt").size()
 			used["bubble"] += get_tree().get_nodes_in_group(TimeBubble.GROUP).size()
+			used["blizzard"] += get_tree().get_nodes_in_group("round_effect").filter(func(n): return n is FlockeBlizzard).size()
 			for p in main.players:
 				if is_instance_valid(p) and (p.overcharge_timer > 0.0 or p.hunt_timer > 0.0 or p.boar_timer > 0.0 \
 						or p.blade_storm_timer > 0.0 or is_instance_valid(p.active_fog) or is_instance_valid(p.active_dome) \
