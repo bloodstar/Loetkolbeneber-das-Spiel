@@ -196,9 +196,9 @@ func _ready() -> void:
 	# Feuer trifft Eis = Dampf.
 	_clear_zones()
 	await _wait(0.05)
-	p1.spawn_fire_zone(Vector2(600, 300))
+	p1.spawn_fire_zone(p1.global_position)
 	var steam_fire := _zones(EffectZone.Kind.FIRE)
-	p1.spawn_frost_nova(steam_fire[0].global_position if not steam_fire.is_empty() else Vector2(600, 300))
+	p1.spawn_frost_nova(steam_fire[0].global_position if not steam_fire.is_empty() else p1.global_position)
 	await _wait(0.05)
 	_check(_zones(EffectZone.Kind.STEAM).size() == 1, "Feuer auf Eis ergibt eine Dampfwolke")
 

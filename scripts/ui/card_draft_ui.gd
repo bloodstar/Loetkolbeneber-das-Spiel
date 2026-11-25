@@ -309,6 +309,20 @@ func _element_footer(card: CardData) -> String:
 		return "REIN: %s" % combo_name
 	return "ERGIBT: %s" % combo_name
 
+# Synergie im Klartext unter der Fußzeile: was die Kombination mit dem schon
+# vorhandenen Element im eigenen Build bewirkt.
+func _element_synergy_text(card: CardData) -> String:
+	if card.element.is_empty() or card.element_pick:
+		return ""
+	var have := Global.get_player_elements(current_drafter)
+	var combo := ElementSystem.preview_combo(have, card.element)
+	if combo.is_empty():
+		return "Dein zweites Element bestimmt später die Kombination."
+	# Die reine Karte erklärt die Kombination schon in ihrem Text.
+	if card.element_pure:
+		return ""
+	return "Mit %s: %s" % [ElementSystem.element_name(str(have[0])), ElementSystem.COMBO_DESCRIPTIONS.get(combo, "")]
+
 func _element_footer_tooltip(card: CardData) -> String:
 	if card.element.is_empty():
 		return ""
@@ -862,15 +876,26 @@ func _create_card_button(card: CardData, slot_index: int, show_button: bool = tr
 	if evolutions_preview != null:
 		vbox.add_child(evolutions_preview)
 	
+	# Element-Fußzeile (Kombination) und darunter die Synergie im Klartext.
+	if not footer.is_empty():
+		var footer_label := Label.new()
+		footer_label.text = footer
+		footer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		footer_label.custom_minimum_size = Vector2(0, 26 if show_button else 34)
+		footer_label.add_theme_color_override("font_color", footer_color)
+		footer_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
+		vbox.add_child(footer_label)
+		var detail := _element_synergy_text(card)
+		if not detail.is_empty():
+			var detail_label := Label.new()
+			detail_label.text = detail
+			detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			detail_label.add_theme_color_override("font_color", footer_color.lerp(Color.WHITE, 0.45))
+			detail_label.add_theme_font_size_override("font_size", 12)
+			vbox.add_child(detail_label)
+
 	if not show_button:
-		if not footer.is_empty():
-			var footer_label := Label.new()
-			footer_label.text = footer
-			footer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			footer_label.custom_minimum_size = Vector2(0, 34)
-			footer_label.add_theme_color_override("font_color", footer_color)
-			footer_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
-			vbox.add_child(footer_label)
 		CardMechanics.apply_tooltip(panel, card)
 		return panel
 
