@@ -2,7 +2,9 @@ extends Node2D
 
 ## Zeichnet die Statusanzeige direkt um den Charakter:
 ## - oben: Munitionsstriche oder ein Nachlade-Kreis
-## - unten: Lebensbalken (mit blauem Schild-Overlay) sowie Symbole für Block, Schild, Dash und Fähigkeit
+## - unten: Lebensbalken (mit blauem Schild-Overlay)
+## Die Symbole für Barriere, Schild, Dash, Fähigkeit und Ulti stehen seit
+## 2026-11-25 in der Fähigkeitenleiste im HUD (scripts/ui/ability_bar.gd).
 ##
 ## Der Node ist ein Kind des Players und übernimmt dessen Skalierung, damit die
 ## Anzeige bei Karten mit Größenänderungen mitwächst.
@@ -11,9 +13,6 @@ const TOP_Y: float = -31.0
 const HEALTH_Y: float = 22.0
 const HEALTH_WIDTH: float = 28.0
 const HEALTH_HEIGHT: float = 2.4
-const ICON_Y: float = 30.0
-const ICON_RADIUS: float = 3.2
-const ICON_SPACING: float = 8.0
 
 const PANEL_COLOR: Color = Color(0.015, 0.02, 0.035, 0.66)
 const PANEL_BORDER: Color = Color(0.92, 0.96, 1.0, 0.16)
@@ -24,14 +23,7 @@ const HEALTH_LOW: Color = Color(0.95, 0.23, 0.20, 0.98)
 const HEALTH_HIGH: Color = Color(0.35, 0.94, 0.45, 0.98)
 const SHIELD_COLOR: Color = Color(0.30, 0.78, 1.0, 0.96)
 const SHIELD_OVERLAY_COLOR: Color = Color(0.25, 0.55, 1.0, 0.72)
-const BLOCK_COLOR: Color = Color(0.55, 0.85, 1.0, 0.96)
-const BLOCK_ACTIVE_COLOR: Color = Color(0.92, 0.98, 1.0, 1.0)
-const DASH_COLOR: Color = Color(0.42, 0.88, 1.0, 0.96)
-const ABILITY_COLOR: Color = Color(1.0, 0.82, 0.36, 0.96)
-const ULT_COLOR: Color = Color(1.0, 0.42, 0.85, 0.98)
 const MELEE_COLOR: Color = Color(1.0, 0.72, 0.42, 0.96)
-const READY_GLOW: Color = Color(1.0, 1.0, 1.0, 0.20)
-const COOLDOWN_OVERLAY: Color = Color(0.01, 0.015, 0.03, 0.52)
 
 var player: Player = null
 
@@ -49,7 +41,6 @@ func _draw() -> void:
 		return
 	_draw_weapon_status()
 	_draw_health_bar()
-	_draw_status_icons()
 
 func _draw_weapon_status() -> void:
 	if player.is_melee:
@@ -135,161 +126,3 @@ func _draw_shield_overlay() -> void:
 		var top := Rect2(-HEALTH_WIDTH * 0.5, HEALTH_Y, HEALTH_WIDTH * extra, HEALTH_HEIGHT)
 		draw_rect(top, Color(0.85, 0.08, 0.20, 0.85), true)
 		draw_rect(Rect2(top.end.x - 0.45, HEALTH_Y - 0.5, 0.45, HEALTH_HEIGHT + 1.0), Color(1.0, 0.55, 0.6, 1.0), true)
-
-func _draw_status_icons() -> void:
-	var icons: Array[String] = ["block"]
-	if player.max_shield > 0.0:
-		icons.append("shield")
-	icons.append("dash")
-	icons.append("ability")
-	if player.has_ult():
-		icons.append("ult")
-	var start_x: float = -ICON_SPACING * float(icons.size() - 1) * 0.5
-	for i in range(icons.size()):
-		var center := Vector2(start_x + float(i) * ICON_SPACING, ICON_Y)
-		match icons[i]:
-			"block":
-				_draw_block_icon(center)
-			"shield":
-				_draw_shield_icon(center)
-			"dash":
-				_draw_dash_icon(center)
-			"ability":
-				_draw_ability_icon(center)
-			"ult":
-				_draw_ult_icon(center)
-
-func _draw_icon_background(center: Vector2, ready: bool) -> void:
-	draw_circle(center, ICON_RADIUS + 0.6, PANEL_COLOR)
-	draw_arc(center, ICON_RADIUS + 0.6, 0.0, TAU, 22, PANEL_BORDER, 0.45, true)
-	if ready:
-		draw_arc(center, ICON_RADIUS + 1.15, 0.0, TAU, 24, READY_GLOW, 0.55, true)
-
-# Block (Taste Q): Wappen-Symbol. Während des Blocks hell, danach läuft die
-# Abklingzeit als dunkler Kreissektor ab.
-func _draw_block_icon(center: Vector2) -> void:
-	var cooldown: float = maxf(0.0, player.block_cooldown_timer)
-	var duration: float = maxf(0.001, player.block_cooldown)
-	var active: bool = player.is_blocking
-	var ready: bool = cooldown <= 0.0 and not active
-	_draw_icon_background(center, ready or active)
-	var color: Color = BLOCK_COLOR
-	if active:
-		color = BLOCK_ACTIVE_COLOR
-	elif not ready:
-		color = Color(0.34, 0.48, 0.60, 0.62)
-	var points := PackedVector2Array([
-		center + Vector2(-2.5, -2.2),
-		center + Vector2(0.0, -3.2),
-		center + Vector2(2.5, -2.2),
-		center + Vector2(2.5, 0.7),
-		center + Vector2(0.0, 3.2),
-		center + Vector2(-2.5, 0.7),
-	])
-	draw_colored_polygon(points, Color(color.r, color.g, color.b, 0.55 if active else 0.30))
-	points.append(points[0])
-	draw_polyline(points, color, 0.8, true)
-	if active:
-		draw_arc(center, ICON_RADIUS + 1.15, 0.0, TAU, 24, BLOCK_ACTIVE_COLOR, 0.7, true)
-	elif not ready:
-		_draw_cooldown_overlay(center, ICON_RADIUS + 0.6, cooldown / duration)
-
-# Schild (Karten mit Max-Schild): Blase, der Ring zeigt die Schildfüllung.
-func _draw_shield_icon(center: Vector2) -> void:
-	var ratio: float = 0.0
-	if player.max_shield > 0.0:
-		ratio = clampf(player.current_shield / player.max_shield, 0.0, 1.0)
-	_draw_icon_background(center, ratio > 0.0)
-	var color: Color = SHIELD_COLOR if ratio > 0.0 else Color(0.30, 0.48, 0.62, 0.48)
-	draw_circle(center, 2.4, Color(color.r, color.g, color.b, 0.22 if ratio <= 0.0 else 0.32))
-	draw_arc(center, 2.4, 0.0, TAU, 20, color, 0.8, true)
-	draw_arc(center + Vector2(-0.7, -0.7), 1.0, PI, PI * 1.5, 8, Color(1.0, 1.0, 1.0, 0.45), 0.5, true)
-	if ratio > 0.0:
-		draw_arc(center, ICON_RADIUS + 0.2, -PI * 0.5, -PI * 0.5 + TAU * ratio, 20, SHIELD_COLOR, 0.7, true)
-
-func _draw_dash_icon(center: Vector2) -> void:
-	var cooldown: float = maxf(0.0, player.dash_cooldown_timer)
-	var duration: float = maxf(0.001, player.dash_cooldown)
-	var ready: bool = player.dash_charges > 0
-	_draw_icon_background(center, ready)
-	var color: Color = DASH_COLOR if ready else Color(0.34, 0.52, 0.64, 0.62)
-	var first := PackedVector2Array([
-		center + Vector2(-2.6, -2.1),
-		center + Vector2(-0.3, 0.0),
-		center + Vector2(-2.6, 2.1),
-	])
-	var second := PackedVector2Array([
-		center + Vector2(0.4, -2.1),
-		center + Vector2(2.7, 0.0),
-		center + Vector2(0.4, 2.1),
-	])
-	draw_polyline(first, color, 0.9, true)
-	draw_polyline(second, color, 0.9, true)
-	if not ready:
-		_draw_cooldown_overlay(center, ICON_RADIUS + 0.6, cooldown / duration)
-	# Mehrere Dash-Ladungen (z. B. Volts Blitzschritt): Punkte unter dem Symbol.
-	if player.dash_charges_max > 1:
-		var n: int = player.dash_charges_max
-		for i in range(n):
-			var dot := center + Vector2((float(i) - float(n - 1) * 0.5) * 2.4, ICON_RADIUS + 2.6)
-			draw_circle(dot, 0.85, DASH_COLOR if i < player.dash_charges else Color(0.22, 0.30, 0.38, 0.85))
-
-# Ulti (Taste E): Krone. Füllt sich mit der Abklingzeit, leuchtet wenn bereit.
-func _draw_ult_icon(center: Vector2) -> void:
-	var cooldown: float = maxf(0.0, player.ult_timer)
-	var duration: float = maxf(0.001, player.ult_max_cooldown)
-	var ready: bool = cooldown <= 0.0
-	_draw_icon_background(center, ready)
-	var color: Color = ULT_COLOR if ready else Color(0.58, 0.36, 0.54, 0.66)
-	var points := PackedVector2Array([
-		center + Vector2(-3.0, 2.2),
-		center + Vector2(-3.0, -1.8),
-		center + Vector2(-1.4, 0.0),
-		center + Vector2(0.0, -2.8),
-		center + Vector2(1.4, 0.0),
-		center + Vector2(3.0, -1.8),
-		center + Vector2(3.0, 2.2),
-	])
-	draw_colored_polygon(points, Color(color.r, color.g, color.b, 0.55 if ready else 0.28))
-	points.append(points[0])
-	draw_polyline(points, color, 0.8, true)
-	if ready:
-		var pulse: float = 0.5 + 0.5 * sin(float(Time.get_ticks_msec()) * 0.006)
-		draw_arc(center, ICON_RADIUS + 1.3, 0.0, TAU, 24, Color(ULT_COLOR.r, ULT_COLOR.g, ULT_COLOR.b, 0.35 + 0.45 * pulse), 0.8, true)
-	else:
-		_draw_cooldown_overlay(center, ICON_RADIUS + 0.6, cooldown / duration)
-
-func _draw_ability_icon(center: Vector2) -> void:
-	var cooldown: float = maxf(0.0, player.ability_timer)
-	var duration: float = maxf(0.001, player.ability_max_cooldown)
-	var ready: bool = cooldown <= 0.0
-	_draw_icon_background(center, ready)
-	var color: Color = ABILITY_COLOR if ready else Color(0.66, 0.56, 0.34, 0.62)
-	var points := PackedVector2Array([
-		center + Vector2(0.0, -3.3),
-		center + Vector2(0.8, -0.8),
-		center + Vector2(3.2, 0.0),
-		center + Vector2(0.8, 0.8),
-		center + Vector2(0.0, 3.3),
-		center + Vector2(-0.8, 0.8),
-		center + Vector2(-3.2, 0.0),
-		center + Vector2(-0.8, -0.8),
-	])
-	draw_colored_polygon(points, Color(color.r, color.g, color.b, 0.30))
-	points.append(points[0])
-	draw_polyline(points, color, 0.8, true)
-	if not ready:
-		_draw_cooldown_overlay(center, ICON_RADIUS + 0.6, cooldown / duration)
-
-func _draw_cooldown_overlay(center: Vector2, radius: float, remaining_ratio: float) -> void:
-	var ratio: float = clampf(remaining_ratio, 0.0, 1.0)
-	if ratio <= 0.0:
-		return
-	var points := PackedVector2Array()
-	points.append(center)
-	var segments: int = maxi(4, int(ceil(28.0 * ratio)))
-	for i in range(segments + 1):
-		var angle: float = -PI * 0.5 + TAU * ratio * float(i) / float(segments)
-		points.append(center + Vector2(cos(angle), sin(angle)) * radius)
-	draw_colored_polygon(points, COOLDOWN_OVERLAY)
-	draw_arc(center, radius + 0.25, -PI * 0.5, -PI * 0.5 + TAU * ratio, 28, Color(1.0, 1.0, 1.0, 0.20), 0.45, true)

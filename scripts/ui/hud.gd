@@ -8,6 +8,7 @@ signal restart_requested
 signal continue_requested
 
 const RadarChartScript = preload("res://scripts/ui/radar_chart.gd")
+const AbilityBarScript = preload("res://scripts/ui/ability_bar.gd")
 
 @onready var player_boxes: HBoxContainer = $Top/PlayerBoxes
 @onready var score_label: Label = $Top/Center_Box/ScoreLabel
@@ -25,6 +26,15 @@ const RadarChartScript = preload("res://scripts/ui/radar_chart.gd")
 # player_index -> { name, hp, shield, ammo, ability, cards }
 var boxes: Dictionary = {}
 var tracked_players: Array[Player] = []
+
+# Fähigkeitenleisten unten in der Mitte, eine pro lokal gespieltem Eber
+# (online nur der eigene). Ersetzt die Symbole unter dem Charakter.
+var _ability_bars_root: HBoxContainer = null
+var ability_bars: Dictionary = {}   # player_index -> AbilityBar
+const ABILITY_BAR_BOTTOM: float = 14.0
+# Rechte Kante der Upgrade-Leiste unten links (siehe _build_upgrade_bar);
+# die Fähigkeitenleiste rückt bei Bedarf daneben.
+const ABILITY_BAR_MIN_LEFT: float = 652.0
 
 # Fortschrittsbalken bis zum Match-Sieg; der aktuelle Punktestand steht
 # direkt rechts neben jedem Balken.
@@ -84,6 +94,7 @@ func _ready() -> void:
 	NetworkManager.ping_updated.connect(_update_ping)
 
 	_build_upgrade_bar()
+	_build_ability_bars_root()
 	_build_tab_overlay()
 	_build_score_bars()
 	_build_modifier_ui()
@@ -122,6 +133,7 @@ func _input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	_update_reload_indicators()
+	_update_ability_bars_layout()
 	_sync_score_box_layer()
 	if _event_timer > 0.0:
 		_event_timer -= delta
@@ -166,6 +178,63 @@ func setup_players(players: Array) -> void:
 	update_all()
 	_update_ping()
 	_refresh_upgrade_bar()
+	_rebuild_ability_bars()
+
+# --- Fähigkeitenleiste ---
+
+func _build_ability_bars_root() -> void:
+	_ability_bars_root = HBoxContainer.new()
+	_ability_bars_root.name = "AbilityBars"
+	_ability_bars_root.add_theme_constant_override("separation", 14)
+	_ability_bars_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ability_bars_root.visible = false
+	add_child(_ability_bars_root)
+
+# Welche Eber eine Leiste bekommen: online nur der eigene (nicht als
+# Zuschauer), offline alle Menschen an diesem Rechner (keine Bots).
+func _wants_ability_bar(p: Variant) -> bool:
+	if not is_instance_valid(p) or not (p is Player):
+		return false
+	if Global.network_mode:
+		return not Global.is_spectator and p.player_index == Global.local_player_index
+	return p._is_local_human()
+
+func _rebuild_ability_bars() -> void:
+	if _ability_bars_root == null:
+		return
+	_clear_ui_children(_ability_bars_root)
+	ability_bars.clear()
+	var wanted: Array[Player] = []
+	for p in tracked_players:
+		if is_instance_valid(p) and _wants_ability_bar(p):
+			wanted.append(p)
+	wanted.sort_custom(func(a: Player, b: Player) -> bool: return a.player_index < b.player_index)
+	for p in wanted:
+		var bar: AbilityBar = AbilityBarScript.new()
+		_ability_bars_root.add_child(bar)
+		bar.setup(p, wanted.size() > 1)
+		ability_bars[p.player_index] = bar
+	_update_ability_bars_layout()
+
+func _update_ability_bars_layout() -> void:
+	if _ability_bars_root == null:
+		return
+	for slot in ability_bars.keys():
+		if not is_instance_valid(ability_bars[slot]) or not is_instance_valid((ability_bars[slot] as AbilityBar).player):
+			_rebuild_ability_bars()
+			return
+	var show: bool = not ability_bars.is_empty() and not _is_draft_active() and not game_over_panel.visible
+	_ability_bars_root.visible = show
+	if not show:
+		return
+	var view: Vector2 = get_viewport().get_visible_rect().size
+	var bar_size: Vector2 = _ability_bars_root.get_combined_minimum_size()
+	_ability_bars_root.size = bar_size
+	var x: float = (view.x - bar_size.x) * 0.5
+	if _upgrade_bar != null and _upgrade_bar.visible:
+		x = maxf(x, ABILITY_BAR_MIN_LEFT)
+	x = minf(x, view.x - bar_size.x - 12.0)
+	_ability_bars_root.position = Vector2(roundf(x), roundf(view.y - bar_size.y - ABILITY_BAR_BOTTOM))
 
 func _build_box(index: int) -> Dictionary:
 	var box := VBoxContainer.new()
@@ -204,7 +273,8 @@ func _build_box(index: int) -> Dictionary:
 	# Munitionszeile: Text plus Nachlade-Kreis wie am Spieler. Während des
 	# Nachladens ersetzt der Kreis die Zahlen und zeigt den Fortschritt.
 	# Munition, Fähigkeit, Block und Nahkampf bleiben in der Übersicht
-	# ausgeblendet; die Anzeigen am Spieler und im Tab-Bogen zeigen sie.
+	# ausgeblendet; die Anzeigen am Spieler, die Fähigkeitenleiste unten und
+	# der Tab-Bogen zeigen sie.
 	var ammo_row := HBoxContainer.new()
 	ammo_row.add_theme_constant_override("separation", 4)
 	ammo_row.visible = false

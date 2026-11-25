@@ -797,8 +797,9 @@ Jede Map-Stilrichtung hat eine eigene, ruhige **Hintergrundmusik**.
 
 ## 📊 Statistiken, HUD & Feedback
 
-- **HUD**: Oben rechts das Match-Ziel, pro Spieler ein Punktebalken (im Team-Modus in Teamfarbe), Ulti-Status `[E]: BEREIT`. Am Charakter zeigen Symbole Barriere, Schild, Dash (mit Punkten für mehrere Ladungen), Fähigkeit und Ulti (Krone); Nahkämpfer haben statt der Munition einen Balken für den nächsten Schlag.
-- **Am Charakter**: Munitionsstriche bzw. Nachlade-Ring, Lebensbalken mit Schild-Overlay, Symbole für Barriere (mit Abklingzeit-Anzeige), Schild, Dash und Fähigkeit.
+- **HUD**: Oben rechts das Match-Ziel, pro Spieler ein Punktebalken (im Team-Modus in Teamfarbe), Ulti-Status `[E]: BEREIT`. Nahkämpfer haben über dem Charakter statt der Munition einen Balken für den nächsten Schlag.
+- **Fähigkeitenleiste** (unten in der Mitte, wie eine Zauberleiste): Felder für Fähigkeit, Dash (Punkte für mehrere Ladungen), Barriere und Ulti mit ihrer Taste. Während der Abklingzeit liegt eine dunkle Abdeckung über dem Symbol, die sich von unten wieder auffüllt, die Restzeit steht in der Mitte. Rechts daneben Status-Felder für Schild, aktive Powerups (mit Restdauer), Gift und Zeitstopp. Maus darüber zeigt einen Tooltip mit Beschreibung, Abklingzeit und Restzeit. Online sieht jeder seine eigene Leiste, lokal bekommt jeder menschliche Spieler eine eigene (Bots keine).
+- **Am Charakter**: Munitionsstriche bzw. Nachlade-Ring und Lebensbalken mit Schild-Overlay. Die früheren kleinen Symbole darunter sind in die Fähigkeitenleiste gewandert.
 - **Tab-Charakterblatt**: Alle Werte, die Nahkampfwaffe und **KARTEN-BONI (SUMMEN)**. Geht auch während der Kartenwahl und wenn du tot bist. Ohne Blind Pick zeigt oben eine Leiste alle Spieler: bei gehaltenem Tab mit den Tasten 1–9 oder per Klick umschalten. Mit Blind Pick (online) bleibt es beim eigenen Blatt.
 - **Kill-Cam**: Beim rundenentscheidenden Tod läuft das Spiel 1,6 s lang in Zeitlupe (20 %), die Kamera zoomt auf den Treffer.
 - **Screenshake** bei Treffern, Kills und Explosionen.
