@@ -21,6 +21,12 @@ const FLOW_BUDGET: int = 2200
 const SEP_CELL: float = 48.0
 const SHOT_RADIUS: float = 7.0
 const GEM_SNAPSHOT_EVERY: int = 3
+## Liegengebliebene XP-Kristalle verschmelzen mit Nachbarn zu größeren:
+## alle GEM_MERGE_EVERY s, wenn sie älter als GEM_MERGE_AGE s sind und
+## näher als GEM_MERGE_RADIUS beieinander liegen. Weniger Objekte im Level.
+const GEM_MERGE_EVERY: float = 1.5
+const GEM_MERGE_AGE: float = 6.0
+const GEM_MERGE_RADIUS: float = 72.0
 const FOOD_CHANCE: float = 0.012
 const FOOD_HEAL: float = 30.0
 const WOLF_RING_EVERY: float = 75.0
@@ -29,9 +35,12 @@ const WOLF_RING_EVERY: float = 75.0
 const POWERUP_FIRST: float = 20.0
 const POWERUP_INTERVAL: float = 28.0
 const POWERUP_MAX: int = 4
-## Nach einem Boss: so lange fliegen alle Kristalle zu den Ebern, dann
-## wechselt das Gebiet.
-const MAP_CHANGE_DELAY: float = 4.5
+## Nach einem Boss fliegen alle Kristalle und die Truhe sofort zu den Ebern.
+## Das Gebiet wechselt, sobald die Truhen-Auswahl beendet ist. Fallback, falls
+## die Truhe nicht eingesammelt wird (Spielzeit, ohne Kartenwahl-Pausen).
+const MAP_CHANGE_FALLBACK: float = 15.0
+## Kurze Pause nach der Truhen-Auswahl, bevor das neue Gebiet lädt.
+const MAP_CHANGE_AFTER_CHEST: float = 0.6
 ## Nach einem Gebietswechsel kurz keine neuen Gegner.
 const STAGE_SPAWN_GRACE: float = 4.0
 ## Treibjagd (Scroll-Karte): Schaden pro Tick hinter der Feuerwalze.
@@ -68,6 +77,8 @@ var _scroll_max: float = 0.0
 var _scroll_wait: float = 0.0
 var _scroll_tick: float = 0.0
 var _map_change_t: float = -1.0
+## Boss besiegt, Gebietswechsel wartet auf die Truhen-Auswahl.
+var _stage_after_chest: bool = false
 var _powerup_t: float = POWERUP_FIRST
 var _spawn_grace: float = 0.0
 ## Pro Slot: {"kills": int, "damage": float, "deaths": int}
@@ -92,6 +103,7 @@ var _next_gem_id: int = 1
 var _respawns: Array = [] # {slot, t}
 var _dead_slots: Dictionary = {}
 var _coin_sound_t: float = 0.0
+var _gem_merge_t: float = GEM_MERGE_EVERY
 var _notice_seq: int = 0
 var _notice_text: String = ""
 var _notice_color: Color = Color.WHITE
@@ -606,8 +618,9 @@ func on_enemy_killed(e: HordeEnemy, killer) -> void:
 			# Magnet: alle Kristalle (und die Truhe) fliegen zu den Ebern,
 			# danach geht es in ein neues Gebiet.
 			_magnet_all()
-			_map_change_t = MAP_CHANGE_DELAY
-			_post_notice("Boss besiegt! Alles wird eingesammelt – gleich geht es weiter.", Color(1.0, 0.9, 0.4))
+			_stage_after_chest = true
+			_map_change_t = MAP_CHANGE_FALLBACK
+			_post_notice("Boss besiegt! Nach der Truhe geht es in ein neues Gebiet.", Color(1.0, 0.9, 0.4))
 		return
 	_drop(pos, "xp", e.xp_value)
 	if _rng.randf() < FOOD_CHANCE:
@@ -630,16 +643,21 @@ func _drop(pos: Vector2, t: String, value: int) -> void:
 		if not best.is_empty():
 			best["v"] = int(best["v"]) + value
 			return
-	_gems.append({"id": _next_gem_id, "pos": pos, "v": value, "t": t, "fly": false, "spd": 0.0})
+	_gems.append({"id": _next_gem_id, "pos": pos, "v": value, "t": t, "fly": false, "spd": 0.0, "age": 0.0})
 	_next_gem_id += 1
 
 func _update_gems(delta: float) -> void:
+	_gem_merge_t -= delta
+	if _gem_merge_t <= 0.0:
+		_gem_merge_t = GEM_MERGE_EVERY
+		_merge_gems()
 	var targets := alive_targets()
 	if targets.is_empty():
 		return
 	var i := _gems.size() - 1
 	while i >= 0:
 		var g: Dictionary = _gems[i]
+		g["age"] = float(g.get("age", 0.0)) + delta
 		var gp: Vector2 = g["pos"]
 		var best: Node2D = null
 		var best_d := INF
@@ -659,6 +677,51 @@ func _update_gems(delta: float) -> void:
 				_collect(g, best)
 				_gems.remove_at(i)
 		i -= 1
+
+## Verschmilzt alte, ruhende XP-Kristalle mit Nachbarn (Raster-Hash). Der
+## größere Kristall bleibt liegen und bekommt den Wert dazu.
+func _merge_gems() -> void:
+	if _gems.size() < 24:
+		return
+	var cell := GEM_MERGE_RADIUS
+	var buckets := {}
+	var removed := {}
+	var r2 := GEM_MERGE_RADIUS * GEM_MERGE_RADIUS
+	for g in _gems:
+		if str(g["t"]) != "xp" or bool(g["fly"]) or float(g.get("age", 0.0)) < GEM_MERGE_AGE:
+			continue
+		var gp: Vector2 = g["pos"]
+		var key := Vector2i(floori(gp.x / cell), floori(gp.y / cell))
+		var merged := false
+		for oy in range(-1, 2):
+			for ox in range(-1, 2):
+				var list = buckets.get(key + Vector2i(ox, oy), null)
+				if list == null:
+					continue
+				for other in list:
+					if gp.distance_squared_to(other["pos"]) <= r2:
+						var big: bool = int(g["v"]) > int(other["v"])
+						if big:
+							other["pos"] = gp
+						other["v"] = int(other["v"]) + int(g["v"])
+						removed[int(g["id"])] = true
+						merged = true
+						break
+				if merged:
+					break
+			if merged:
+				break
+		if not merged:
+			if not buckets.has(key):
+				buckets[key] = []
+			buckets[key].append(g)
+	if removed.is_empty():
+		return
+	var kept: Array = []
+	for g in _gems:
+		if not removed.has(int(g.get("id", -1))):
+			kept.append(g)
+	_gems = kept
 
 ## Alle liegenden Kristalle, Futter und Truhen fliegen sofort zu den Ebern.
 func _magnet_all() -> void:
@@ -747,6 +810,7 @@ func _update_scroll(delta: float) -> void:
 
 func _change_stage() -> void:
 	_map_change_t = -1.0
+	_stage_after_chest = false
 	_collect_remaining()
 	stage += 1
 	stage_map_id = HordeDefs.stage_map(stage)
@@ -808,6 +872,9 @@ func on_levelup_finished() -> void:
 	levelup_active = false
 	if pending_bonus > 0:
 		pending_bonus -= 1
+		# Truhen-Auswahl nach einem Boss fertig: weiter ins nächste Gebiet.
+		if _stage_after_chest and pending_bonus == 0:
+			_map_change_t = MAP_CHANGE_AFTER_CHEST
 
 # --- Gegnergeschosse ---
 

@@ -848,6 +848,10 @@ static func horde_map(map_id: String = HORDE_MAP_ID) -> Dictionary:
 	if _horde_maps.has(map_id):
 		return _horde_maps[map_id]
 	var spec: Dictionary = HORDE_MAP_SPECS.get(map_id, HORDE_MAP_SPECS[HORDE_MAP_ID])
+	# Handgebaute Horden-Karte (z. B. mit Höhenebenen): Zeilen direkt nehmen.
+	if spec.has("rows"):
+		_horde_maps[map_id] = spec
+		return spec
 	var w := int(spec["w"])
 	var h := int(spec["h"])
 	var grid: Array = []

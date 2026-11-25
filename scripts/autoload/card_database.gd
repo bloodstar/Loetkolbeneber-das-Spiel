@@ -4181,7 +4181,9 @@ func get_random_cards(count: int = 5, exclude_ids: Array = [], hero_id: String =
 # - Wenn ein Talentbaum angeboten wird, werden möglichst alle offenen Zweige
 #   dieser Familie gemeinsam angezeigt (z. B. "Mehr Türme" und "Folgende Türme").
 # - Die Seltenheit wird über die in der Lobby eingestellten Prozente gewichtet.
-func get_draft_offer(count: int = 5, exclude_ids: Array = [], hero_id: String = "", owned_ids: Array = []) -> Array[CardData]:
+## rarity_percents: eigene Seltenheits-Anteile statt der Lobby-Werte (z. B.
+## Boss-Truhe im Horden-Modus: {"Epic": 95, "Legendary": 5}). Leer = Lobby.
+func get_draft_offer(count: int = 5, exclude_ids: Array = [], hero_id: String = "", owned_ids: Array = [], rarity_percents: Dictionary = {}) -> Array[CardData]:
 	var base_cards: Array[CardData] = []
 	var upgrade_groups: Dictionary = {}
 
@@ -4228,7 +4230,7 @@ func get_draft_offer(count: int = 5, exclude_ids: Array = [], hero_id: String = 
 		if fitting.is_empty():
 			break
 
-		var weights := _unit_rarity_weights(units, fitting)
+		var weights := _unit_rarity_weights(units, fitting, rarity_percents)
 		var total := 0.0
 		for weight in weights:
 			total += weight
@@ -4268,15 +4270,25 @@ func get_draft_offer(count: int = 5, exclude_ids: Array = [], hero_id: String = 
 	selected.shuffle()
 	return selected
 
-func _unit_rarity_weights(units: Array, fitting: Array[int]) -> Array[float]:
+func _unit_rarity_weights(units: Array, fitting: Array[int], rarity_percents: Dictionary = {}) -> Array[float]:
 	var counts: Dictionary = {}
 	for i in fitting:
 		var rarity: String = _unit_rarity(units[i]["cards"])
 		counts[rarity] = int(counts.get(rarity, 0)) + 1
 
+	# Eigene Anteile nur, wenn davon überhaupt etwas im Angebot ist.
+	var custom := false
+	if not rarity_percents.is_empty():
+		for rarity in counts.keys():
+			if float(rarity_percents.get(rarity, 0.0)) > 0.0:
+				custom = true
+				break
+	var percent_of := func(r: String) -> float:
+		return maxf(0.0, float(rarity_percents.get(r, 0.0)) if custom else Global.get_rarity_percent(r))
+
 	var total_percent := 0.0
 	for rarity in counts.keys():
-		total_percent += maxf(0.0, Global.get_rarity_percent(rarity))
+		total_percent += percent_of.call(rarity)
 
 	var weights: Array[float] = []
 	if total_percent <= 0.0:
@@ -4286,7 +4298,7 @@ func _unit_rarity_weights(units: Array, fitting: Array[int]) -> Array[float]:
 
 	for i in fitting:
 		var rarity: String = _unit_rarity(units[i]["cards"])
-		var percent := maxf(0.0, Global.get_rarity_percent(rarity))
+		var percent: float = percent_of.call(rarity)
 		weights.append(percent / float(counts[rarity]))
 	return weights
 

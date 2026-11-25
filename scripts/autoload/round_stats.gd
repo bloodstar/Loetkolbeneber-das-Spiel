@@ -19,6 +19,8 @@ extends Node
 # (direkte Treffer der Heldenfähigkeit; Brand/Gift danach zählen nicht).
 # Runden- und Draftzeilen aus dem Bot-Test (Lobby → Regeln) tragen
 # "bot_test": true; ältere Zeilen ohne das Feld sind normale Runden.
+# Draftzeilen tragen ab 2026-11-25 "match_mode" (z. B. "horde") und
+# "draft_source". Der Horden-Modus schreibt keine Rundenzeilen, nur Drafts.
 #
 # Nur der Host bzw. ein Offline-Spiel schreibt, weil nur dort Schaden, Kills
 # und Rundensieger autoritativ feststehen. Clients schreiben nichts.
@@ -180,7 +182,7 @@ func end_round(winner_index: int, death_order: Array, match_winner: int = 0) -> 
 
 # Ein Kartenangebot inklusive gewählter Karten. Wird erst geschrieben, wenn
 # der Drafter fertig ist, damit Angebot und Wahl in einer Zeile stehen.
-func record_draft(drafter: int, offered: Array, picked: Array) -> void:
+func record_draft(drafter: int, offered: Array, picked: Array, draft_source: String = "") -> void:
 	if not _is_authoritative() or offered.is_empty():
 		return
 	var picked_ids: Array = []
@@ -207,6 +209,9 @@ func record_draft(drafter: int, offered: Array, picked: Array) -> void:
 		"match_id": match_id,
 		"after_round": round_number,
 		"bot_test": Global.is_bot_test_active(),
+		# Horden-Modus: Stufenaufstiege und Boss-Truhen ("horde"/"horde_chest").
+		"match_mode": Global.match_mode,
+		"draft_source": draft_source,
 		"drafter": drafter,
 		"kind": "bot" if Global.is_bot_slot(drafter) else "human",
 		"hero_id": Global.get_player_hero_id(drafter),

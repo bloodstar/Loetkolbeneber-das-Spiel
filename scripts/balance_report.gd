@@ -21,6 +21,11 @@ const DEFAULT_MIN_ROUNDS: int = 20
 # Herkunft der Zeilen: alle, nur normale Matches oder nur Bot-Test
 # (Zeilen mit "bot_test": true, siehe RoundStats).
 enum Source { ALL, NORMAL, BOT_TEST }
+# Spielmodus: Horden-Drafts verfälschen Pickraten normaler Matches, deshalb
+# bleiben sie standardmäßig draußen. Zeilen tragen "match_mode"; ältere
+# Draftzeilen ohne das Feld zählen als Horde, wenn ihr Match keine einzige
+# Rundenzeile hat (der Horden-Modus schreibt keine).
+enum Mode { NO_HORDE, HORDE_ONLY, ALL_MODES }
 
 var round_count: int = 0
 var draft_count: int = 0
@@ -58,9 +63,9 @@ static func read_lines(file_path: String) -> Dictionary:
 	file.close()
 	return result
 
-static func build(lines: Array, humans_only: bool, min_rounds: int, source: int = Source.ALL) -> BalanceReport:
+static func build(lines: Array, humans_only: bool, min_rounds: int, source: int = Source.ALL, mode: int = Mode.NO_HORDE) -> BalanceReport:
 	var report := BalanceReport.new()
-	report._collect(lines, humans_only, source)
+	report._collect(lines, humans_only, source, mode)
 	report._analyze_cards(min_rounds)
 	report._analyze_weapons()
 	report._analyze_heroes()
@@ -89,10 +94,35 @@ static func matches_source(data: Dictionary, source: int) -> bool:
 			return bot_test
 	return true
 
-func _collect(lines: Array, humans_only: bool, source: int = Source.ALL) -> void:
+## match_ids, zu denen es mindestens eine Rundenzeile gibt.
+static func matches_with_rounds(lines: Array) -> Dictionary:
+	var out := {}
+	for raw in lines:
+		var data: Dictionary = raw
+		if str(data.get("type", "")) == "round":
+			out[str(data.get("match_id", ""))] = true
+	return out
+
+static func is_horde_line(data: Dictionary, with_rounds: Dictionary) -> bool:
+	if data.has("match_mode"):
+		return str(data["match_mode"]) == "horde"
+	return str(data.get("type", "")) == "draft" and not with_rounds.has(str(data.get("match_id", "")))
+
+static func matches_mode(data: Dictionary, mode: int, with_rounds: Dictionary) -> bool:
+	match mode:
+		Mode.NO_HORDE:
+			return not is_horde_line(data, with_rounds)
+		Mode.HORDE_ONLY:
+			return is_horde_line(data, with_rounds)
+	return true
+
+func _collect(lines: Array, humans_only: bool, source: int = Source.ALL, mode: int = Mode.NO_HORDE) -> void:
+	var with_rounds := matches_with_rounds(lines) if mode != Mode.ALL_MODES else {}
 	for raw in lines:
 		var data: Dictionary = raw
 		if not matches_source(data, source):
+			continue
+		if not matches_mode(data, mode, with_rounds):
 			continue
 		var kind := str(data.get("type", ""))
 		if kind == "round":

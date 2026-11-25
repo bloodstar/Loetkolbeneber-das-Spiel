@@ -17,6 +17,8 @@ const MODIFIERS: Array[String] = [
 	"wind", "low_gravity", "high_gravity", "mini_pigs", "double_damage",
 	"speed_demon", "air_jumps", "regeneration", "starting_shield",
 ]
+## Inhalt der Boss-Truhe: Seltenheits-Anteile in Prozent.
+const CHEST_RARITY: Dictionary = {"Epic": 95.0, "Legendary": 5.0}
 ## Wiederbelebung nach dem Tod, solange ein Teamkollege lebt.
 const RESPAWN_DELAY: float = 12.0
 ## XP-Kristalle fliegen ab diesem Abstand zum Eber, darunter werden sie eingesammelt.

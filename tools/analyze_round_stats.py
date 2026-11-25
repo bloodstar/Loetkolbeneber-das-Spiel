@@ -15,10 +15,14 @@ Dieselbe Rechnung zeigt das Spiel unter Optionen -> STATISTIK
 Aufruf:
     python tools/analyze_round_stats.py [pfad/zu/round_stats.jsonl]
         [--min-rounds 20] [--humans-only] [--source all|normal|bot-test]
-        [--csv balance.csv]
+        [--mode no-horde|horde|all] [--csv balance.csv]
 
 --source bot-test wertet nur Zeilen aus dem Bot-Test der Lobby aus
 ("bot_test": true), --source normal nur die übrigen.
+
+--mode: Horden-Drafts (Stufenaufstiege, Boss-Truhen) bleiben standardmäßig
+draußen (no-horde). Zeilen tragen "match_mode"; ältere Draftzeilen ohne das
+Feld zählen als Horde, wenn ihr Match keine Rundenzeile hat.
 """
 
 import argparse
@@ -105,7 +109,22 @@ def matches_source(data, source):
     return True
 
 
-def collect(path, humans_only, source="all"):
+def is_horde_line(data, with_rounds):
+    if "match_mode" in data:
+        return str(data["match_mode"]) == "horde"
+    return data.get("type") == "draft" and str(data.get("match_id", "")) not in with_rounds
+
+
+def matches_mode(data, mode, with_rounds):
+    if mode == "no-horde":
+        return not is_horde_line(data, with_rounds)
+    if mode == "horde":
+        return is_horde_line(data, with_rounds)
+    return True
+
+
+def collect(path, humans_only, source="all", mode="no-horde"):
+    with_rounds = {str(d.get("match_id", "")) for d in read_lines(path) if d.get("type") == "round"}
     cards = defaultdict(new_card_entry)
     weapons = defaultdict(new_weapon_entry)
     heroes = defaultdict(new_hero_entry)
@@ -113,6 +132,8 @@ def collect(path, humans_only, source="all"):
     draft_count = 0
     for data in read_lines(path):
         if not matches_source(data, source):
+            continue
+        if not matches_mode(data, mode, with_rounds):
             continue
         kind = data.get("type")
         if kind == "round":
@@ -331,6 +352,8 @@ def main():
     parser.add_argument("--humans-only", action="store_true", help="Bots ignorieren")
     parser.add_argument("--source", choices=["all", "normal", "bot-test"], default="all",
                         help="Nur normale Matches oder nur Bot-Test-Matches auswerten (Standard: all)")
+    parser.add_argument("--mode", choices=["no-horde", "horde", "all"], default="no-horde",
+                        help="Horden-Drafts ausblenden, nur sie oder alles auswerten (Standard: no-horde)")
     parser.add_argument("--csv", help="Ergebnis zusätzlich als CSV (Trennzeichen ';') speichern")
     args = parser.parse_args()
 
@@ -338,7 +361,7 @@ def main():
         print(f"Datei nicht gefunden: {args.path}", file=sys.stderr)
         return 1
 
-    cards, weapons, heroes, round_count, draft_count = collect(args.path, args.humans_only, args.source)
+    cards, weapons, heroes, round_count, draft_count = collect(args.path, args.humans_only, args.source, args.mode)
     print(f"Datei: {args.path}")
     print(f"Runden: {round_count}, Drafts: {draft_count}, Karten(-Versionen): {len(cards)}")
     if args.humans_only:
