@@ -231,3 +231,29 @@ gleichnamige Retro-Datei angeglichen).
 | ui_click.wav | OGA 100 CC0 SFX `switch_02.ogg` |
 | ui_confirm.wav | OGA 100 CC0 SFX #2 `sfx100v2_switch_02.ogg` + OGA 100 CC0 SFX `bell_02.ogg` (+3 HT) |
 
+
+## Grunzen der Heldenauswahl (CC-BY 3.0, Namensnennung nötig)
+
+Die Dateien `assets/audio/sfx/grunt_<held>.wav` beruhen auf dem
+**„Pig SFX Pack“ von Vinrax**, https://opengameart.org/content/pig-sfx-pack ,
+Lizenz **CC-BY 3.0** (https://creativecommons.org/licenses/by/3.0/).
+Bei einer Veröffentlichung des Spiels muss Vinrax in den Credits genannt werden.
+Die Originale liegen in `tools/audio_sources/pig_vinrax/`, gebaut werden die
+Grunzer mit `python3 tools/build_hero_grunts.py` (Rezepte dort): andere
+Tonhöhe pro Klasse, teils Hall/Zittern/Rückwärts, dazu leise eine Klassen-Würze
+aus den eigenen SFX (z. B. `fuse` bei Ignis, `slash` bei Klinge), danach die
+gemeinsame Kette (Hochpass 90 Hz, Tiefpass 7 kHz, kleiner Raum, RMS-Angleich).
+
+| Datei | Quelle | Würze |
+| :--- | :--- | :--- |
+| grunt_ignis.wav | `pig_idle3` | `fuse` |
+| grunt_volt.wav | `pig_idle2` (+Tremolo) | `laser_charge` |
+| grunt_spore.wav | `pig_idle4` | `poison` |
+| grunt_nova.wav | `pig_idle3` (+Echo) | `teleport` |
+| grunt_klinge.wav | `pig_hit1` | `slash` |
+| grunt_bastion.wav | `pig_idle3` (tief) | `shield` |
+| grunt_phantom.wav | `pig_idle2` (+Hall) | `dash` |
+| grunt_druid.wav | `pig_idle4` | `heal` |
+| grunt_vampire.wav | `pig_hit2` (+Hall) | – |
+| grunt_vampire_melee.wav | `pig_hit1` (tief) | `slash` |
+| grunt_zeitschlaeger.wav | `pig_idle3` + rückwärts | `countdown` |

@@ -334,6 +334,8 @@ const HERO_TILE_GAP: int = 8
 # Vorschau-Eber in der Großansicht.
 const SHOWCASE_PREVIEW_SIZE: Vector2 = Vector2(330, 320)
 const SHOWCASE_PIG_SCALE: float = 5.8
+# Füße des Ebers in seinen lokalen Koordinaten (wie VoxelSprite.FEET_Y).
+const SHOWCASE_FEET_Y: float = 17.0
 # Voxel-Eber (kommt mit dem Voxel-Umbau). Solange es die Skripte noch nicht
 # gibt, bleibt die Vorschau beim 2D-Eber; danach schaltet sie von selbst um.
 const VOXEL_SPRITE_SCRIPT_PATH: String = "res://scripts/voxel/voxel_sprite.gd"
@@ -356,6 +358,9 @@ var showcase_tag: Label = null
 var showcase_frame_style: StyleBoxFlat = null
 var showcase_icon: TextureRect = null
 var showcase_pig: PigModular = null
+# Knoten an den Füßen, an dem Eber + Lötkolben hängen (für die Auswahl-Animation).
+var showcase_actor: Node2D = null
+var showcase_cheer: HeroSelectCheer = null
 var showcase_voxel: Node = null
 var showcase_wand: MagicWand = null
 var showcase_wand_pivot: Node2D = null
@@ -527,23 +532,32 @@ func _build_showcase(parent: Control) -> void:
 
 	# Fußpunkt des Ebers: mittig, etwas unter der Mitte.
 	var foot := Vector2(SHOWCASE_PREVIEW_SIZE.x * 0.5, SHOWCASE_PREVIEW_SIZE.y * 0.66)
+	# Eber und Lötkolben hängen an einem gemeinsamen Knoten an den Füßen,
+	# damit die Auswahl-Animation (HeroSelectCheer) beide zusammen bewegt.
+	var feet_offset := Vector2(0.0, SHOWCASE_FEET_Y * SHOWCASE_PIG_SCALE)
+	showcase_actor = Node2D.new()
+	showcase_actor.position = foot + feet_offset
+	canvas.add_child(showcase_actor)
 	showcase_pig = PigModular.new()
-	showcase_pig.position = foot
+	showcase_pig.position = -feet_offset
 	showcase_pig.scale = Vector2.ONE * SHOWCASE_PIG_SCALE
 	showcase_pig.animate = true
 	showcase_pig.follow_parent_motion = false
-	canvas.add_child(showcase_pig)
+	showcase_actor.add_child(showcase_pig)
 	showcase_voxel = _attach_voxel_preview(showcase_pig)
 
 	showcase_wand_pivot = Node2D.new()
-	showcase_wand_pivot.position = foot
+	showcase_wand_pivot.position = -feet_offset
 	showcase_wand_pivot.scale = Vector2.ONE * SHOWCASE_PIG_SCALE
 	showcase_wand_pivot.rotation = -0.24
 	# Beim Voxel-Eber steckt der Lötkolben schon im Arm.
 	showcase_wand_pivot.visible = showcase_voxel == null
-	canvas.add_child(showcase_wand_pivot)
+	showcase_actor.add_child(showcase_wand_pivot)
 	showcase_wand = MagicWand.new()
 	showcase_wand_pivot.add_child(showcase_wand)
+	showcase_cheer = HeroSelectCheer.new()
+	canvas.add_child(showcase_cheer)
+	showcase_cheer.setup(showcase_actor, showcase_pig, showcase_voxel, SHOWCASE_PIG_SCALE)
 
 	showcase_icon = TextureRect.new()
 	showcase_icon.position = Vector2(12, 12)
@@ -792,7 +806,18 @@ func _on_slot_chip_input(event: InputEvent, slot: int) -> void:
 	_refresh_hero_controls()
 
 func _on_hero_tile_pressed(hero_id: String) -> void:
+	if not Global.can_choose_hero(_hero_edit_slot):
+		return
 	_select_hero(_hero_edit_slot, hero_id)
+	_play_hero_cheer(hero_id)
+
+# Kleine Jubel-Animation + Grunzen der Klasse in der Großansicht.
+func _play_hero_cheer(hero_id: String) -> void:
+	if showcase_cheer == null:
+		return
+	var hero: HeroData = Global.get_hero(hero_id)
+	var tint := hero.color_tint if hero != null else UiTheme.GOLD
+	showcase_cheer.play(hero_id, tint)
 
 func _on_hero_tile_hover(hero_id: String, entered: bool) -> void:
 	if entered:
