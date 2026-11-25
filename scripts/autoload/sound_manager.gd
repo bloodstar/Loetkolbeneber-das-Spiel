@@ -106,6 +106,18 @@ const SOUND_TABLE: Dictionary = {
 	"match_win": {"files": ["match_win"], "vol": -3.0, "max": 1, "gap": 1.0, "bus": BUS_UI},
 	"click": {"files": ["ui_click"], "vol": -6.0, "max": 3, "gap": 0.02, "bus": BUS_UI},
 	"confirm": {"files": ["ui_confirm"], "vol": -6.0, "max": 2, "gap": 0.05, "bus": BUS_UI},
+	# Heldenauswahl in der Lobby: eigenes Grunzen pro Klasse (tools/build_hero_grunts.py).
+	"grunt_ignis": {"files": ["grunt_ignis"], "vol": -6.0, "max": 1, "gap": 0.15, "bus": BUS_UI},
+	"grunt_volt": {"files": ["grunt_volt"], "vol": -6.0, "max": 1, "gap": 0.15, "bus": BUS_UI},
+	"grunt_spore": {"files": ["grunt_spore"], "vol": -6.0, "max": 1, "gap": 0.15, "bus": BUS_UI},
+	"grunt_nova": {"files": ["grunt_nova"], "vol": -6.0, "max": 1, "gap": 0.15, "bus": BUS_UI},
+	"grunt_klinge": {"files": ["grunt_klinge"], "vol": -6.0, "max": 1, "gap": 0.15, "bus": BUS_UI},
+	"grunt_bastion": {"files": ["grunt_bastion"], "vol": -6.0, "max": 1, "gap": 0.15, "bus": BUS_UI},
+	"grunt_phantom": {"files": ["grunt_phantom"], "vol": -6.0, "max": 1, "gap": 0.15, "bus": BUS_UI},
+	"grunt_druid": {"files": ["grunt_druid"], "vol": -6.0, "max": 1, "gap": 0.15, "bus": BUS_UI},
+	"grunt_vampire": {"files": ["grunt_vampire"], "vol": -6.0, "max": 1, "gap": 0.15, "bus": BUS_UI},
+	"grunt_vampire_melee": {"files": ["grunt_vampire_melee"], "vol": -6.0, "max": 1, "gap": 0.15, "bus": BUS_UI},
+	"grunt_zeitschlaeger": {"files": ["grunt_zeitschlaeger"], "vol": -6.0, "max": 1, "gap": 0.15, "bus": BUS_UI},
 }
 
 # Ältere Schlüssel, die noch im Code vorkommen können.
