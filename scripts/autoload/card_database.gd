@@ -3588,6 +3588,124 @@ func _init_database() -> void:
 	gab4.required_mechanic = "ability"
 	_register(gab4)
 
+	# Schaden-/Munitionslinien mit je drei Stufen (Jochen 2026-11-25).
+	# Jede Stufe schaltet die nächste frei (Zweig A) und stapelt sich (Schaden multiplikativ,
+	# drei Stufen Schlagkraft = x2,2). Stufe 1
+	# Common, Stufe 2 Uncommon, Stufe 3 Rare.
+	var sm1 = CardData.new()
+	sm1.id = "schlagkraft_1"
+	sm1.title = "Schlagkraft I"
+	sm1.description = "Deine Schüsse treffen härter.\n+30% Schaden."
+	sm1.rarity = "Common"
+	sm1.pool = "Offensive"
+	sm1.color = Color(1.00, 0.55, 0.45)
+	sm1.family_id = "schlagkraft_1"
+	sm1.damage_mult = 1.30
+	_register(sm1)
+
+	var sm2 = CardData.new()
+	sm2.id = "schlagkraft_2"
+	sm2.title = "Schlagkraft II"
+	sm2.description = "Schlagkraft-Ausbau: Noch mehr Wucht.\n+30% Schaden."
+	sm2.rarity = "Uncommon"
+	sm2.pool = "Offensive"
+	sm2.color = Color(1.00, 0.42, 0.32)
+	sm2.family_id = "schlagkraft_1"
+	sm2.parent_card_id = "schlagkraft_1"
+	sm2.evolution_branch = "A"
+	sm2.damage_mult = 1.30
+	_register(sm2)
+
+	var sm3 = CardData.new()
+	sm3.id = "schlagkraft_3"
+	sm3.title = "Schlagkraft III"
+	sm3.description = "Schlagkraft-Ausbau: Maximale Wucht.\n+30% Schaden."
+	sm3.rarity = "Rare"
+	sm3.pool = "Offensive"
+	sm3.color = Color(1.00, 0.28, 0.20)
+	sm3.family_id = "schlagkraft_1"
+	sm3.parent_card_id = "schlagkraft_2"
+	sm3.evolution_branch = "A"
+	sm3.damage_mult = 1.30
+	_register(sm3)
+
+	var sm4 = CardData.new()
+	sm4.id = "munitionsgurt_1"
+	sm4.title = "Munitionsgurt I"
+	sm4.description = "Mehr Schuss pro Magazin.\n+2 Munition."
+	sm4.rarity = "Common"
+	sm4.pool = "Offensive"
+	sm4.color = Color(0.90, 0.80, 0.45)
+	sm4.family_id = "munitionsgurt_1"
+	sm4.max_ammo_add = 2
+	_register(sm4)
+
+	var sm5 = CardData.new()
+	sm5.id = "munitionsgurt_2"
+	sm5.title = "Munitionsgurt II"
+	sm5.description = "Munitionsgurt-Ausbau: Noch mehr Schuss.\n+2 Munition."
+	sm5.rarity = "Uncommon"
+	sm5.pool = "Offensive"
+	sm5.color = Color(0.95, 0.75, 0.30)
+	sm5.family_id = "munitionsgurt_1"
+	sm5.parent_card_id = "munitionsgurt_1"
+	sm5.evolution_branch = "A"
+	sm5.max_ammo_add = 2
+	_register(sm5)
+
+	var sm6 = CardData.new()
+	sm6.id = "munitionsgurt_3"
+	sm6.title = "Munitionsgurt III"
+	sm6.description = "Munitionsgurt-Ausbau: Volles Arsenal.\n+2 Munition."
+	sm6.rarity = "Rare"
+	sm6.pool = "Offensive"
+	sm6.color = Color(1.00, 0.68, 0.15)
+	sm6.family_id = "munitionsgurt_1"
+	sm6.parent_card_id = "munitionsgurt_2"
+	sm6.evolution_branch = "A"
+	sm6.max_ammo_add = 2
+	_register(sm6)
+
+	var sm7 = CardData.new()
+	sm7.id = "gefechtsbereit_1"
+	sm7.title = "Gefechtsbereit I"
+	sm7.description = "Etwas mehr Wucht und Munition.\n+15% Schaden, +1 Munition."
+	sm7.rarity = "Common"
+	sm7.pool = "Offensive"
+	sm7.color = Color(0.95, 0.65, 0.80)
+	sm7.family_id = "gefechtsbereit_1"
+	sm7.damage_mult = 1.15
+	sm7.max_ammo_add = 1
+	_register(sm7)
+
+	var sm8 = CardData.new()
+	sm8.id = "gefechtsbereit_2"
+	sm8.title = "Gefechtsbereit II"
+	sm8.description = "Gefechtsbereit-Ausbau: Wucht und Munition wachsen weiter.\n+15% Schaden, +1 Munition."
+	sm8.rarity = "Uncommon"
+	sm8.pool = "Offensive"
+	sm8.color = Color(0.90, 0.50, 0.85)
+	sm8.family_id = "gefechtsbereit_1"
+	sm8.parent_card_id = "gefechtsbereit_1"
+	sm8.evolution_branch = "A"
+	sm8.damage_mult = 1.15
+	sm8.max_ammo_add = 1
+	_register(sm8)
+
+	var sm9 = CardData.new()
+	sm9.id = "gefechtsbereit_3"
+	sm9.title = "Gefechtsbereit III"
+	sm9.description = "Gefechtsbereit-Ausbau: Voll ausgerüstet.\n+15% Schaden, +1 Munition."
+	sm9.rarity = "Rare"
+	sm9.pool = "Offensive"
+	sm9.color = Color(0.80, 0.38, 0.95)
+	sm9.family_id = "gefechtsbereit_1"
+	sm9.parent_card_id = "gefechtsbereit_2"
+	sm9.evolution_branch = "A"
+	sm9.damage_mult = 1.15
+	sm9.max_ammo_add = 1
+	_register(sm9)
+
 	# Pickup-Powerups: stärker (Dauer bzw. Heilmenge) und mit Evolution weiter
 	# einsammeln. Nicht im Angebot, wenn die Lobby alle Powerups abschaltet.
 	var pw1 = CardData.new()

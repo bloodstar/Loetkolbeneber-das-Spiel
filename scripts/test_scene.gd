@@ -495,6 +495,14 @@ func _ready() -> void:
 		assert(evo.pool == evo_parent.pool, "%s should share the pool of its base card" % evo_id)
 		assert(Global.RARITY_ORDER.find(evo.rarity) >= Global.RARITY_ORDER.find(evo_parent.rarity), "%s must not be rarer than its base card" % evo_id)
 		assert(not CardDatabase.is_card_available_for_player(evo, "ignis", []), "%s needs its base card first" % evo_id)
+	# Stufenkarten: drei Stufen, jede braucht die vorige.
+	for line_id in ["schlagkraft", "munitionsgurt", "gefechtsbereit"]:
+		for lvl in [2, 3]:
+			var stage := CardDatabase.get_card("%s_%d" % [line_id, lvl])
+			var prev_id := "%s_%d" % [line_id, lvl - 1]
+			assert(stage != null and stage.parent_card_id == prev_id, "%s stage %d should evolve from %s" % [line_id, lvl, prev_id])
+			assert(not CardDatabase.is_card_available_for_player(stage, "ignis", []), "%s stage %d needs the previous stage" % [line_id, lvl])
+			assert(CardDatabase.is_card_available_for_player(stage, "ignis", ["%s_1" % line_id, prev_id]), "%s stage %d unlocks after %s" % [line_id, lvl, prev_id])
 	# Nova: Fähigkeitsschaden-Karten erst mit Implosion.
 	assert(not CardDatabase.is_card_available_for_player(CardDatabase.get_card("kraftladung"), "nova", []), "Kraftladung needs Implosion for Nova")
 	assert(CardDatabase.is_card_available_for_player(CardDatabase.get_card("kraftladung"), "nova", ["nova_implosion"]), "Kraftladung unlocks with Implosion")

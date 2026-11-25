@@ -234,6 +234,8 @@ Die Lobby hat mehrere Tabs. **Spieler 1 ist Host** und stellt Regeln, Map und Ka
 
 ### Tab Regeln
 
+Ganz oben stehen **Spielart**, **Modus** und **Map**, darunter Loadouts, Bot-Test und die übrigen Regeln.
+
 | Einstellung | Bereich | Standard |
 | :--- | :--- | :--- |
 | Spielmodus | FFA, 2v2, 3v3, 2v2v2 | FFA |
@@ -388,7 +390,7 @@ Insgesamt gibt es über **230 Karten**: rund 210 in den Pools Offensive, Defensi
 
 | Pool | Inhalt | Beispiele |
 | :--- | :--- | :--- |
-| **Offensive** | Schaden, Munition, Projektile, Elemente | Splittergeschoss, Panzerbrecher, Brandkapsel, Kettenreaktion, Leichtes/Schweres Geschoss, Mörser, Notvorrat, Fokuskristall, Weitstrahler, Kraftladung |
+| **Offensive** | Schaden, Munition, Projektile, Elemente | Splittergeschoss, Panzerbrecher, Brandkapsel, Kettenreaktion, Leichtes/Schweres Geschoss, Mörser, Notvorrat, Fokuskristall, Weitstrahler, Kraftladung, Schlagkraft, Munitionsgurt, Gefechtsbereit |
 | **Defensive** | Leben, Schild, Rüstung, Reflexion, Barriere, Größe | Sanitäter, Bollwerk, Zweites Herz, Tank-Panzerung, Stachelweste, Dornenthron, Riese, Wandelnder Koloss |
 | **Bewegung** | Tempo, Sprünge, Dash, Größe | Federstiefel, Windschatten |
 | **Nahkampf** | Nur für den `E`-Schlag | Schleifstein, Frostklinge, Parade, Meister der Werkbank |
@@ -415,6 +417,14 @@ Weitere bekannte Karten: **Lebensquell** (Max-HP), **Scharfe Munition** (+20 % S
 | Powerup-Verstärker (Common, +25 % Powerup-Wirkung) | Powerup-Magnet (Common, +25 % Powerup-Wirkung, +2 Felder Sammelreichweite) | – |
 
 Max-HP- und Schild-Boni auf Karten wurden verdoppelt, damit man nicht zu schnell stirbt.
+
+**Stufenkarten (3 Stufen, Offensive):** Jede Stufe erscheint erst, wenn die vorige im Deck ist. Stufe I ist Common, II Uncommon, III Rare. Die Boni stapeln sich, Schaden multipliziert sich (drei Stufen Schlagkraft = ×2,2).
+
+| Linie | Stufe I | Stufe II | Stufe III |
+| :--- | :--- | :--- | :--- |
+| Schlagkraft | +30 % Schaden | +30 % Schaden | +30 % Schaden |
+| Munitionsgurt | +2 Munition | +2 Munition | +2 Munition |
+| Gefechtsbereit | +15 % Schaden, +1 Munition | +15 % Schaden, +1 Munition | +15 % Schaden, +1 Munition |
 
 ### Sub-Tags
 
