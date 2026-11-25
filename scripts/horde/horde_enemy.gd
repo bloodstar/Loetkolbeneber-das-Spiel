@@ -442,6 +442,11 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null
 	var resist := 0.25 if is_boss else (0.6 if riese else 1.0)
 	_knock += knockback * resist * 0.6
 	_apply_damage(amount, source)
+	# Vampire: Treffer an Horden-Gegnern zählen wie Treffer an Ebern für die
+	# Blutkugel (jeder 3. Angriffstreffer, Zähler über alle Gegner).
+	if source is Player and not source.dealing_ability_damage \
+			and Global.is_vampire_hero(Global.get_player_hero_id(source.player_index)):
+		source.register_vampire_hit(self)
 
 func _apply_damage(amount: float, source) -> void:
 	if is_dead:
