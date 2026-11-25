@@ -17,6 +17,11 @@ const GROUP: String = "horde_enemy"
 const POISON_TICK: float = 0.8
 const BURN_TICK: float = 0.5
 const FLY_HEIGHT: float = 70.0
+## Hüpfen auf Felsstufen (p, 36 px): kurz ausholen, dann im Bogen hinauf.
+const HOP_WINDUP: float = 0.35
+const HOP_AIR: float = 0.32
+const HOP_ARC: float = 22.0
+const HOP_COOLDOWN: float = 0.5
 
 var net_id: int = 0
 var kind: String = "wolf"
@@ -94,6 +99,12 @@ var _flow_ver: int = -1
 var _flow_cache: Vector2 = Vector2.ZERO
 var _los_t: float = 0.0
 var _los_val: bool = false
+# Höhenstufe (0 Boden, 1 Felsstufe), -1 = noch nicht bestimmt (frisch gespawnt).
+var _stand_level: int = -1
+var _hop_wind: float = 0.0
+var _hop_air: float = 0.0
+var _hop_cd: float = 0.0
+var _hop_z0: float = 0.0
 var _los_target: Node2D = null
 var _sep_cache: Vector2 = Vector2.ZERO
 var _move_cache: Vector2 = Vector2.ZERO
@@ -268,7 +279,12 @@ func _sees(target: Node2D) -> bool:
 	if _los_t <= 0.0 or target != _los_target:
 		_los_t = randf_range(0.2, 0.3)
 		_los_target = target
-		_los_val = director.has_los(global_position, target.global_position)
+		var tz := _target_floor(target)
+		if tz > arena_z + 20.0:
+			# Erhöhter Eber: Sicht über das Raster in Wurfhöhe (über Felsstufen hinweg).
+			_los_val = director.has_los_at(global_position, target.global_position, tz + ArenaMode.MUZZLE_H)
+		else:
+			_los_val = director.has_los(global_position, target.global_position)
 	return _los_val
 
 func _think_lunge(dist: float, dir: Vector2, delta: float) -> Vector2:
@@ -305,8 +321,10 @@ func _think_ranged(target: Node2D, dist: float, dir: Vector2, delta: float) -> V
 		if target is CharacterBody2D:
 			lead += (target as CharacterBody2D).velocity * clampf(dist / float(def.get("shot_speed", 400.0)), 0.0, 0.6) * 0.5
 		var aim := (lead - global_position).normalized()
+		# Steht der Eber höher, fliegt der Wurf im Bogen auf seine Höhe.
 		director.spawn_shot(global_position + aim * radius, aim * float(def.get("shot_speed", 400.0)),
-			float(def.get("shot_damage", 10.0)) * HordeDefs.damage_mult(director.run_time), shot_kind)
+			float(def.get("shot_damage", 10.0)) * HordeDefs.damage_mult(director.run_time), shot_kind,
+			maxf(arena_z, _target_floor(target)) + ArenaMode.MUZZLE_H)
 	_strafe_t -= delta
 	if _strafe_t <= 0.0:
 		_strafe_t = randf_range(1.0, 2.2)
@@ -335,22 +353,25 @@ func _think_fly(target: Node2D, dist: float, dir: Vector2) -> Vector2:
 		return dir * 2.1
 	return (orbit - global_position).normalized()
 
-func _update_flight(delta: float, _target: Node2D) -> void:
+func _update_flight(delta: float, target: Node2D) -> void:
+	# Adler fliegen über erhöhten Ebern höher und stoßen auf ihre Höhe herab.
+	var tz := _target_floor(target)
+	var cruise := maxf(FLY_HEIGHT, tz + 40.0)
 	match _state:
 		"dive":
-			arena_z = move_toward(arena_z, 8.0, 260.0 * delta)
+			arena_z = move_toward(arena_z, tz + 8.0, 260.0 * delta)
 			_state_t -= delta
 			if _state_t <= 0.0:
 				_state = "rise"
 				_state_t = 0.7
 		"rise":
-			arena_z = move_toward(arena_z, FLY_HEIGHT, 120.0 * delta)
+			arena_z = move_toward(arena_z, cruise, 120.0 * delta)
 			_state_t -= delta
 			if _state_t <= 0.0:
 				_state = ""
 				_special_cd = randf_range(2.5, 4.0)
 		_:
-			arena_z = move_toward(arena_z, FLY_HEIGHT, 90.0 * delta)
+			arena_z = move_toward(arena_z, cruise, 90.0 * delta)
 
 func _think_boss_melee(target: Node2D, dist: float, dir: Vector2, delta: float) -> Vector2:
 	match _state:
@@ -392,7 +413,8 @@ func _think_boss_ranged(target: Node2D, dist: float, dir: Vector2, delta: float)
 		anim_action = 0.3
 		for i in range(3):
 			var spread := (float(i) - 1.0) * 0.16
-			director.spawn_shot(global_position + dir * radius, dir.rotated(spread) * 470.0, damage * 0.7, "orb")
+			director.spawn_shot(global_position + dir * radius, dir.rotated(spread) * 470.0, damage * 0.7, "orb",
+				maxf(arena_z, _target_floor(target)) + ArenaMode.MUZZLE_H)
 	_state_t -= delta
 	if _state_t <= 0.0:
 		_state_t = 10.0
@@ -445,13 +467,79 @@ func _grid_move(delta: float) -> void:
 		if free_pos != Vector2.INF:
 			global_position = free_pos
 		return
+	# Höhenstufen: Bodengegner laufen auf Boden und Felsstufen (p). Eine
+	# höhere Stufe erreichen sie nur mit einem Hüpfer, Plateaus (P/T) gar nicht.
+	var lvl: int = director.level_at(pos)
+	if _stand_level < 0:
+		_stand_level = maxi(lvl, 0)
+		arena_z = float(_stand_level) * HordeDirector.STEP_LEVEL_H
+	_hop_cd -= delta
+	if _hop_wind > 0.0:
+		_hop_wind -= delta
+		if _hop_wind <= 0.0:
+			_hop_air = HOP_AIR
+			_hop_z0 = arena_z
+		_settle_height(delta)
+		return
+	var max_lvl := 1 if _hop_air > 0.0 else _stand_level
+	var here_area: int = director.area_level(pos, r)
+	var blocked_up := false
 	var nx := pos + Vector2(step.x, 0.0)
 	if director.is_free_area(nx, r):
-		pos = nx
+		if _may_enter(nx, r, max_lvl, here_area):
+			pos = nx
+		else:
+			blocked_up = true
 	var ny := pos + Vector2(0.0, step.y)
 	if director.is_free_area(ny, r):
-		pos = ny
+		if _may_enter(ny, r, max_lvl, here_area):
+			pos = ny
+		else:
+			blocked_up = true
 	global_position = pos
+	if _hop_air > 0.0:
+		_hop_air -= delta
+		var k := 1.0 - clampf(_hop_air / HOP_AIR, 0.0, 1.0)
+		arena_z = lerpf(_hop_z0, HordeDirector.STEP_LEVEL_H, k) + sin(k * PI) * HOP_ARC
+		if _hop_air <= 0.0:
+			_stand_level = maxi(director.level_at(global_position), 0)
+			_hop_cd = HOP_COOLDOWN
+		return
+	if blocked_up and _stand_level == 0 and _hop_cd <= 0.0 and step.length_squared() > 0.01 \
+			and stun_timer <= 0.0 and freeze_timer <= 0.0:
+		_hop_wind = HOP_WINDUP
+		anim_action = maxf(anim_action, HOP_WINDUP)
+	# Über die Kante gelaufen oder gestoßen: herunterfallen.
+	var now: int = director.level_at(global_position)
+	if now >= 0 and now < _stand_level:
+		_stand_level = now
+	_settle_height(delta)
+
+## Darf der Gegner nach p? Die Mitte darf nicht höher stehen als seine Stufe,
+## und er darf nicht weiter auf eine höhere Stufe rutschen, als er schon
+## berührt (sonst klebt er nach einem missglückten Hüpfer an der Kante).
+func _may_enter(p: Vector2, r: float, max_lvl: int, here_area: int) -> bool:
+	if director.level_at(p) > max_lvl:
+		return false
+	var a: int = director.area_level(p, r)
+	return a <= max_lvl or a <= here_area
+
+func _settle_height(delta: float) -> void:
+	var floor_z := float(maxi(_stand_level, 0)) * HordeDirector.STEP_LEVEL_H
+	if arena_z > floor_z:
+		arena_z = move_toward(arena_z, floor_z, 320.0 * delta)
+	else:
+		arena_z = floor_z
+
+## Standhöhe eines Ziels, auf ganze Höhenbänder abgerundet (springende Eber
+## zählen zur Fläche unter ihnen).
+static func _target_floor(target: Node2D) -> float:
+	if target == null:
+		return 0.0
+	var tz = target.get("arena_z")
+	if tz == null:
+		return 0.0
+	return floorf(maxf(float(tz), 0.0) / ArenaMode.BAND_H) * ArenaMode.BAND_H
 
 func _clamp_to_map() -> void:
 	var w := float(LevelGenerator.map_w) * LevelGenerator.TILE_SIZE

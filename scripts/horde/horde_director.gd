@@ -220,9 +220,27 @@ func has_los(a: Vector2, b: Vector2) -> bool:
 	var ray := PhysicsRayQueryParameters2D.create(a, b, 1)
 	return space.intersect_ray(ray).is_empty()
 
+## Sichtlinie über das Höhenraster für ein Geschoss in Höhe z (Würfe auf
+## erhöhte Eber). Die Zielzelle selbst zählt nicht (dort steht der Eber).
+func has_los_at(a: Vector2, b: Vector2, z: float) -> bool:
+	var grid := ArenaMode.grid
+	if grid == null:
+		return true
+	var goal := grid.cell_of(b)
+	var steps := maxi(1, int(a.distance_to(b) / (LevelGenerator.TILE_SIZE * 0.5)))
+	for i in range(1, steps):
+		var c := grid.cell_of(a.lerp(b, float(i) / float(steps)))
+		if c == goal:
+			break
+		if _blocks_shot(grid, c, z):
+			return false
+	return true
+
 # --- Fluss-Feld: BFS von allen lebenden Ebern über freie Zellen ---
 
 var _free: PackedByteArray = PackedByteArray()
+## Höhe einer Felsstufe, auf die Bodengegner hüpfen (Kartenzeichen p).
+const STEP_LEVEL_H: float = 36.0
 var _free_t: float = 0.0
 
 ## Begehbarkeit je Zelle, zwischengespeichert (zerstörte Kisten werden alle
@@ -236,12 +254,62 @@ func _refresh_free_mask() -> void:
 	_free.resize(_flow_w * _flow_h)
 	for y in range(_flow_h):
 		for x in range(_flow_w):
-			_free[y * _flow_w + x] = 1 if grid.is_free_cell(Vector2i(x, y)) else 0
+			_free[y * _flow_w + x] = _walk_code(grid, Vector2i(x, y))
+
+## Begehbarkeit einer Zelle für Bodengegner: 0 = Mauer/Erhöhung, 1 = Boden,
+## 2 = niedrige Felsstufe (p, 36 px), auf die Bodengegner hüpfen können.
+## Stege mit Luft darunter zählen als Boden (man läuft unten durch).
+func _walk_code(grid: ArenaGrid, cell: Vector2i) -> int:
+	if not grid.in_bounds(cell) or grid.segment_cells.has(cell):
+		return 0
+	var spans: Array = grid.blocks.get(cell, [])
+	if spans.is_empty():
+		return 1
+	var top := 0.0
+	var low := 0
+	for b in spans:
+		var span: Vector2 = b
+		if span.x >= ArenaMode.BODY_H:
+			continue
+		low += 1
+		top = maxf(top, span.y)
+	if low == 0:
+		return 1
+	if low == 1 and grid.terrain.has(cell) and absf(top - STEP_LEVEL_H) < 0.5:
+		return 2
+	return 0
 
 func _is_free_idx(x: int, y: int) -> bool:
 	if x < 0 or y < 0 or x >= _flow_w or y >= _flow_h:
 		return false
-	return _free[y * _flow_w + x] == 1
+	return _free[y * _flow_w + x] != 0
+
+## Höhenstufe der Zelle unter pos für Bodengegner: 0 Boden, 1 Felsstufe,
+## -1 nicht begehbar.
+func level_at(pos: Vector2) -> int:
+	if _free.is_empty():
+		return 0
+	var t := LevelGenerator.TILE_SIZE
+	var x := floori(pos.x / t)
+	var y := floori(pos.y / t)
+	if x < 0 or y < 0 or x >= _flow_w or y >= _flow_h:
+		return -1
+	return int(_free[y * _flow_w + x]) - 1
+
+## Höchste Stufe, die ein Kreis (als Quadrat genähert) an pos berührt.
+func area_level(pos: Vector2, r: float) -> int:
+	if _free.is_empty():
+		return 0
+	var t := LevelGenerator.TILE_SIZE
+	var x0 := floori((pos.x - r) / t)
+	var x1 := floori((pos.x + r) / t)
+	var y0 := floori((pos.y - r) / t)
+	var y1 := floori((pos.y + r) / t)
+	var best := 0
+	for c in [Vector2i(x0, y0), Vector2i(x1, y0), Vector2i(x0, y1), Vector2i(x1, y1)]:
+		if c.x >= 0 and c.y >= 0 and c.x < _flow_w and c.y < _flow_h:
+			best = maxi(best, int(_free[c.y * _flow_w + c.x]) - 1)
+	return best
 
 ## Ist ein Kreis (als Quadrat genähert) frei von Mauern?
 func is_free_area(pos: Vector2, r: float) -> bool:
@@ -813,8 +881,8 @@ func _change_stage() -> void:
 	_stage_after_chest = false
 	_collect_remaining()
 	stage += 1
-	stage_map_id = HordeDefs.stage_map(stage)
 	stage_seed = maxi(1, int(main_node.match_seed) + stage * 7919) if main_node.get("match_seed") != null else stage * 7919
+	stage_map_id = HordeDefs.stage_map(stage, stage_seed)
 	main_node.horde_change_map(stage_map_id, stage_seed)
 
 ## main meldet: neues Gebiet ist gebaut. Gegner, Kristalle und Geschosse des
@@ -836,7 +904,7 @@ func on_map_changed() -> void:
 	_setup_scroll()
 	_refresh_free_mask()
 	_rebuild_flow()
-	var title := HordeDefs.stage_title(stage)
+	var title := ArenaMaps.display_name(stage_map_id)
 	_post_notice("Neues Gebiet: %s" % title, Color(0.7, 1.0, 0.85))
 
 func _collect(g: Dictionary, p: Node2D) -> void:
@@ -878,8 +946,20 @@ func on_levelup_finished() -> void:
 
 # --- Gegnergeschosse ---
 
-func spawn_shot(pos: Vector2, vel: Vector2, dmg: float, k: String) -> void:
-	_shots.append({"pos": pos, "vel": vel, "dmg": dmg, "k": k, "life": 3.0})
+## z: Flughöhe des Geschosses (Standhöhe des Ziels + Mündungshöhe). Auf
+## erhöhte Eber fliegt es im Bogen über niedrigere Hindernisse.
+func spawn_shot(pos: Vector2, vel: Vector2, dmg: float, k: String, z: float = ArenaMode.MUZZLE_H) -> void:
+	_shots.append({"pos": pos, "vel": vel, "dmg": dmg, "k": k, "life": 3.0, "z": z})
+
+## Blockiert die Zelle ein Geschoss in Höhe z? (Stege lassen unten durch.)
+static func _blocks_shot(grid: ArenaGrid, c: Vector2i, z: float) -> bool:
+	if float(grid.segment_cells.get(c, 0.0)) > z:
+		return true
+	for b in grid.blocks.get(c, []):
+		var span: Vector2 = b
+		if span.x < z and span.y > z:
+			return true
+	return false
 
 func _update_shots(delta: float) -> void:
 	var grid := ArenaMode.grid
@@ -893,11 +973,13 @@ func _update_shots(delta: float) -> void:
 		var gone := float(s["life"]) <= 0.0
 		if not gone and grid != null:
 			var c := grid.cell_of(pos)
-			if not grid.in_bounds(c) or grid.top_at(c) > ArenaMode.MUZZLE_H:
+			if not grid.in_bounds(c) or _blocks_shot(grid, c, float(s.get("z", ArenaMode.MUZZLE_H))):
 				gone = true
 		if not gone:
+			# Wer über das Geschoss springt oder deutlich tiefer steht, wird nicht getroffen.
+			var hz := float(s.get("z", ArenaMode.MUZZLE_H)) - ArenaMode.MUZZLE_H
 			for p in targets:
-				if p.arena_z > 40.0:
+				if p.arena_z > hz + 40.0 or p.arena_z < hz - 30.0:
 					continue
 				var r: float = SHOT_RADIUS + 12.0 * p.scale.x / Player.BASE_CHARACTER_SCALE
 				if pos.distance_to(p.global_position) < r:
@@ -997,7 +1079,7 @@ func get_network_state() -> Dictionary:
 	for s in _shots:
 		var p: Vector2 = s["pos"]
 		var v: Vector2 = s["vel"]
-		shots.append([int(p.x), int(p.y), int(v.x), int(v.y), s["k"]])
+		shots.append([int(p.x), int(p.y), int(v.x), int(v.y), s["k"], int(s.get("z", ArenaMode.MUZZLE_H))])
 	var data := {
 		"t": snappedf(run_time, 0.1), "lv": level, "xp": xp, "xn": xp_next, "k": kills,
 		"e": rows, "s": shots, "o": over, "pc": player_count,
@@ -1066,7 +1148,8 @@ func apply_network_state(data: Dictionary) -> void:
 			run_over.emit(over == 1)
 	_shots.clear()
 	for s in data.get("s", []):
-		_shots.append({"pos": Vector2(float(s[0]), float(s[1])), "vel": Vector2(float(s[2]), float(s[3])), "k": str(s[4]), "life": 1.0})
+		_shots.append({"pos": Vector2(float(s[0]), float(s[1])), "vel": Vector2(float(s[2]), float(s[3])), "k": str(s[4]), "life": 1.0,
+			"z": float(s[5]) if s.size() > 5 else ArenaMode.MUZZLE_H})
 	var g = data.get("g", null)
 	if g is Array:
 		_gems.clear()
@@ -1150,9 +1233,8 @@ func _draw() -> void:
 				draw_rect(Rect2(c3 + Vector2(-14, -10), Vector2(28, 7)), Color(0.7, 0.42, 0.16))
 				draw_rect(Rect2(c3 + Vector2(-14, -10), Vector2(28, 20)), Color(1.0, 0.82, 0.3), false, 2.0)
 				draw_rect(Rect2(c3 + Vector2(-3, -5), Vector2(6, 7)), Color(1.0, 0.85, 0.3))
-	var lift := ArenaMode.height_offset(ArenaMode.MUZZLE_H)
 	for s in _shots:
-		var p: Vector2 = s["pos"] + lift
+		var p: Vector2 = s["pos"] + ArenaMode.height_offset(float(s.get("z", ArenaMode.MUZZLE_H)))
 		match str(s["k"]):
 			"cleaver":
 				var a := _anim_t * 14.0

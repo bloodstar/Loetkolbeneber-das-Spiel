@@ -842,12 +842,13 @@ const HORDE_MAP_SPECS: Dictionary = {
 static var _horde_maps: Dictionary = {}
 
 static func is_horde_map(map_id: String) -> bool:
-	return HORDE_MAP_SPECS.has(map_id)
+	return HORDE_MAP_SPECS.has(map_id) or HordeLevelMaps.MAPS.has(map_id)
 
 static func horde_map(map_id: String = HORDE_MAP_ID) -> Dictionary:
 	if _horde_maps.has(map_id):
 		return _horde_maps[map_id]
-	var spec: Dictionary = HORDE_MAP_SPECS.get(map_id, HORDE_MAP_SPECS[HORDE_MAP_ID])
+	var spec: Dictionary = HordeLevelMaps.MAPS[map_id] if HordeLevelMaps.MAPS.has(map_id) \
+			else HORDE_MAP_SPECS.get(map_id, HORDE_MAP_SPECS[HORDE_MAP_ID])
 	# Handgebaute Horden-Karte (z. B. mit Höhenebenen): Zeilen direkt nehmen.
 	if spec.has("rows"):
 		_horde_maps[map_id] = spec
