@@ -2289,6 +2289,9 @@ func _build_rules_tab() -> void:
 	body.add_theme_constant_override("separation", 10)
 	scroll.add_child(body)
 
+	_build_game_mode_section(body)
+	body.add_child(HSeparator.new())
+
 	_build_loadout_section(body)
 	body.add_child(HSeparator.new())
 
@@ -2339,87 +2342,6 @@ func _build_rules_tab() -> void:
 	kill_spin.value_changed.connect(_on_scoring_changed)
 	base_hp_spin.value_changed.connect(_on_base_hp_percent_changed)
 	base_damage_spin.value_changed.connect(_on_base_damage_changed)
-
-	body.add_child(HSeparator.new())
-	_add_section_title(body, "SPIELMODUS & SPIELFELD", Color(1.0, 0.55, 0.55, 1.0))
-	# Spielart (Ansicht): Seitenansicht oder Arena. Gleiche Karten und Helden.
-	var view_row := HBoxContainer.new()
-	view_row.add_theme_constant_override("separation", 12)
-	body.add_child(view_row)
-	var view_label := Label.new()
-	view_label.text = "Spielart:"
-	view_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
-	view_row.add_child(view_label)
-	game_mode_option = OptionButton.new()
-	game_mode_option.custom_minimum_size = Vector2(200, 0)
-	for gm_id in [Global.GAME_MODE_SIDE, Global.GAME_MODE_ARENA]:
-		game_mode_option.add_item(Global.get_game_mode_name(gm_id))
-	game_mode_option.item_selected.connect(_on_game_mode_selected)
-	view_row.add_child(game_mode_option)
-	game_mode_info_label = Label.new()
-	game_mode_info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	game_mode_info_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
-	game_mode_info_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
-	game_mode_info_label.autowrap_mode = 2
-	view_row.add_child(game_mode_info_label)
-	# Modus und Map stehen nebeneinander, darunter jeweils ihre Erklärung.
-	var choice_row := HBoxContainer.new()
-	choice_row.add_theme_constant_override("separation", 24)
-	body.add_child(choice_row)
-
-	var mode_column := VBoxContainer.new()
-	mode_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	mode_column.size_flags_stretch_ratio = 1.0
-	choice_row.add_child(mode_column)
-	var mode_row := HBoxContainer.new()
-	mode_row.add_theme_constant_override("separation", 12)
-	mode_column.add_child(mode_row)
-
-	var mode_label := Label.new()
-	mode_label.text = "Modus:"
-	mode_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
-	mode_row.add_child(mode_label)
-
-	mode_option = OptionButton.new()
-	mode_option.custom_minimum_size = Vector2(200, 0)
-	for mode_id in Global.MATCH_MODE_ORDER:
-		mode_option.add_item(Global.get_match_mode_name(mode_id))
-	mode_option.item_selected.connect(_on_mode_selected)
-	mode_row.add_child(mode_option)
-
-	mode_info_label = Label.new()
-	mode_info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	mode_info_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
-	mode_info_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
-	mode_info_label.autowrap_mode = 2
-	mode_column.add_child(mode_info_label)
-
-	var map_column := VBoxContainer.new()
-	map_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	map_column.size_flags_stretch_ratio = 1.0
-	choice_row.add_child(map_column)
-	var map_row := HBoxContainer.new()
-	map_row.add_theme_constant_override("separation", 12)
-	map_column.add_child(map_row)
-
-	var map_label := Label.new()
-	map_label.text = "Map:"
-	map_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
-	map_row.add_child(map_label)
-
-	map_option = OptionButton.new()
-	map_option.custom_minimum_size = Vector2(200, 0)
-	for map_id in _map_ids():
-		map_option.add_item(Global.get_map_name(map_id))
-	map_option.item_selected.connect(_on_map_selected)
-	map_row.add_child(map_option)
-
-	map_info_label = Label.new()
-	map_info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	map_info_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
-	map_info_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
-	map_info_label.autowrap_mode = 2
-	map_column.add_child(map_info_label)
 
 	body.add_child(HSeparator.new())
 	_add_section_title(body, "KARTEN-DRAFT", Color(0.45, 0.8, 1.0, 1.0))
@@ -2565,6 +2487,89 @@ func _build_rules_tab() -> void:
 	body.add_child(info)
 
 # --- Lobby-Loadouts ---
+
+# Spielart, Modus und Map stehen ganz oben im Regeln-Tab (Jochen 2026-11-25).
+func _build_game_mode_section(body: VBoxContainer) -> void:
+	_add_section_title(body, "SPIELMODUS & SPIELFELD", Color(1.0, 0.55, 0.55, 1.0))
+	# Spielart (Ansicht): Seitenansicht oder Arena. Gleiche Karten und Helden.
+	var view_row := HBoxContainer.new()
+	view_row.add_theme_constant_override("separation", 12)
+	body.add_child(view_row)
+	var view_label := Label.new()
+	view_label.text = "Spielart:"
+	view_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	view_row.add_child(view_label)
+	game_mode_option = OptionButton.new()
+	game_mode_option.custom_minimum_size = Vector2(200, 0)
+	for gm_id in [Global.GAME_MODE_SIDE, Global.GAME_MODE_ARENA]:
+		game_mode_option.add_item(Global.get_game_mode_name(gm_id))
+	game_mode_option.item_selected.connect(_on_game_mode_selected)
+	view_row.add_child(game_mode_option)
+	game_mode_info_label = Label.new()
+	game_mode_info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	game_mode_info_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	game_mode_info_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	game_mode_info_label.autowrap_mode = 2
+	view_row.add_child(game_mode_info_label)
+	# Modus und Map stehen nebeneinander, darunter jeweils ihre Erklärung.
+	var choice_row := HBoxContainer.new()
+	choice_row.add_theme_constant_override("separation", 24)
+	body.add_child(choice_row)
+
+	var mode_column := VBoxContainer.new()
+	mode_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mode_column.size_flags_stretch_ratio = 1.0
+	choice_row.add_child(mode_column)
+	var mode_row := HBoxContainer.new()
+	mode_row.add_theme_constant_override("separation", 12)
+	mode_column.add_child(mode_row)
+
+	var mode_label := Label.new()
+	mode_label.text = "Modus:"
+	mode_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	mode_row.add_child(mode_label)
+
+	mode_option = OptionButton.new()
+	mode_option.custom_minimum_size = Vector2(200, 0)
+	for mode_id in Global.MATCH_MODE_ORDER:
+		mode_option.add_item(Global.get_match_mode_name(mode_id))
+	mode_option.item_selected.connect(_on_mode_selected)
+	mode_row.add_child(mode_option)
+
+	mode_info_label = Label.new()
+	mode_info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mode_info_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	mode_info_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	mode_info_label.autowrap_mode = 2
+	mode_column.add_child(mode_info_label)
+
+	var map_column := VBoxContainer.new()
+	map_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_column.size_flags_stretch_ratio = 1.0
+	choice_row.add_child(map_column)
+	var map_row := HBoxContainer.new()
+	map_row.add_theme_constant_override("separation", 12)
+	map_column.add_child(map_row)
+
+	var map_label := Label.new()
+	map_label.text = "Map:"
+	map_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	map_row.add_child(map_label)
+
+	map_option = OptionButton.new()
+	map_option.custom_minimum_size = Vector2(200, 0)
+	for map_id in _map_ids():
+		map_option.add_item(Global.get_map_name(map_id))
+	map_option.item_selected.connect(_on_map_selected)
+	map_row.add_child(map_option)
+
+	map_info_label = Label.new()
+	map_info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_info_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	map_info_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	map_info_label.autowrap_mode = 2
+	map_column.add_child(map_info_label)
+
 
 func _build_loadout_section(body: VBoxContainer) -> void:
 	_add_section_title(body, "LOBBY-LOADOUTS", Color(0.85, 0.65, 1.0, 1.0))
