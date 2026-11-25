@@ -24,6 +24,19 @@ const GEM_SNAPSHOT_EVERY: int = 3
 const FOOD_CHANCE: float = 0.012
 const FOOD_HEAL: float = 30.0
 const WOLF_RING_EVERY: float = 75.0
+## Powerups: erstes nach POWERUP_FIRST s, dann alle POWERUP_INTERVAL s
+## (mit mehr Ebern etwas öfter), höchstens POWERUP_MAX gleichzeitig.
+const POWERUP_FIRST: float = 20.0
+const POWERUP_INTERVAL: float = 28.0
+const POWERUP_MAX: int = 4
+## Nach einem Boss: so lange fliegen alle Kristalle zu den Ebern, dann
+## wechselt das Gebiet.
+const MAP_CHANGE_DELAY: float = 4.5
+## Nach einem Gebietswechsel kurz keine neuen Gegner.
+const STAGE_SPAWN_GRACE: float = 4.0
+## Treibjagd (Scroll-Karte): Schaden pro Tick hinter der Feuerwalze.
+const SCROLL_DAMAGE: float = 7.0
+const SCROLL_TICK: float = 0.5
 
 static var current: HordeDirector = null
 
@@ -44,6 +57,19 @@ var boss_index: int = 0
 var boss: HordeEnemy = null
 var boss_info: Dictionary = {}
 var final_boss_spawned: bool = false
+## Gebiet (0 = Start). Wechselt nach jedem besiegten Boss (HordeDefs.STAGE_MAPS).
+var stage: int = 0
+var stage_map_id: String = ""
+var stage_seed: int = 0
+## Treibjagd: linke Kante des erlaubten Bereichs in px, -1 = keine Walze.
+var scroll_x: float = -1.0
+var _scroll_speed: float = 0.0
+var _scroll_max: float = 0.0
+var _scroll_wait: float = 0.0
+var _scroll_tick: float = 0.0
+var _map_change_t: float = -1.0
+var _powerup_t: float = POWERUP_FIRST
+var _spawn_grace: float = 0.0
 ## Pro Slot: {"kills": int, "damage": float, "deaths": int}
 var slot_stats: Dictionary = {}
 
@@ -56,6 +82,8 @@ var _flow: PackedInt32Array = PackedInt32Array()
 var _flow_w: int = 0
 var _flow_h: int = 0
 var _flow_t: float = 0.0
+## Zählt hoch, wenn ein neues Fluss-Feld fertig ist (Gegner-Zwischenspeicher).
+var flow_version: int = 0
 var _sep_frame: int = -1
 var _sep_buckets: Dictionary = {}
 var _gems: Array = []   # {id, pos, v, t ("xp"|"food"|"chest"), fly}
@@ -94,6 +122,10 @@ func start(main: Node, seed_value: int, players: int) -> void:
 	xp = 0
 	xp_next = HordeDefs.xp_needed(level, player_count)
 	_spawn_acc = 4.0
+	stage = 0
+	stage_map_id = main.match_map_id if main.get("match_map_id") != null else ""
+	stage_seed = seed_value
+	_setup_scroll()
 	_rebuild_flow()
 
 # ============================================================
@@ -118,12 +150,20 @@ func _physics_process(delta: float) -> void:
 	elif _flow_t <= 0.0:
 		_flow_t = FLOW_INTERVAL
 		_begin_flow()
-	_update_spawning(delta)
-	_update_bosses()
+	_spawn_grace = maxf(0.0, _spawn_grace - delta)
+	if _spawn_grace <= 0.0 and _map_change_t < 0.0:
+		_update_spawning(delta)
+		_update_bosses()
 	_update_gems(delta)
 	_update_shots(delta)
 	_update_respawns(delta)
+	_update_powerups(delta)
+	_update_scroll(delta)
 	_check_levelup()
+	if _map_change_t >= 0.0:
+		_map_change_t -= delta
+		if _map_change_t < 0.0:
+			_change_stage()
 	queue_redraw()
 
 func alive_targets() -> Array:
@@ -202,6 +242,34 @@ func is_free_area(pos: Vector2, r: float) -> bool:
 	var y1 := floori((pos.y + r) / t)
 	return _is_free_idx(x0, y0) and _is_free_idx(x1, y0) and _is_free_idx(x0, y1) and _is_free_idx(x1, y1)
 
+## Nächster Punkt um pos, an dem ein Kreis mit Radius r frei steht (Ringe in
+## halben Kacheln, bis etwa 7 Kacheln weit). Vector2.INF, wenn nichts passt.
+func find_free_spot(pos: Vector2, r: float) -> Vector2:
+	if _free.is_empty():
+		_refresh_free_mask()
+	if _free.is_empty():
+		return pos
+	var w := float(_flow_w) * LevelGenerator.TILE_SIZE
+	var h := float(_flow_h) * LevelGenerator.TILE_SIZE
+	var lo := Vector2(r + 2.0, r + 2.0)
+	var hi := Vector2(w - r - 2.0, h - r - 2.0)
+	var p0 := pos.clamp(lo, hi)
+	if is_free_area(p0, r) and not _behind_scroll(p0):
+		return p0
+	var step := LevelGenerator.TILE_SIZE * 0.5
+	for ring in range(1, 15):
+		var rad := step * float(ring)
+		var n := 6 + ring * 3
+		var a0 := _rng.randf() * TAU
+		for k in range(n):
+			var p := (p0 + Vector2.from_angle(a0 + TAU * float(k) / float(n)) * rad).clamp(lo, hi)
+			if is_free_area(p, r) and not _behind_scroll(p):
+				return p
+	return Vector2.INF
+
+func _behind_scroll(p: Vector2) -> bool:
+	return scroll_x >= 0.0 and p.x < scroll_x + 60.0
+
 var _bfs_active: bool = false
 var _bfs_queue: PackedInt32Array = PackedInt32Array()
 var _bfs_head: int = 0
@@ -271,6 +339,7 @@ func _step_flow(budget: int) -> void:
 		var done := _flow
 		_flow = _flow_next
 		_flow_next = done
+		flow_version += 1
 
 func _flow_at(cx: int, cy: int) -> int:
 	if cx < 0 or cy < 0 or cx >= _flow_w or cy >= _flow_h:
@@ -307,8 +376,9 @@ func flow_dir(pos: Vector2) -> Vector2:
 # --- Weiches Ausweichen der Gegner (Raster-Hash) ---
 
 func separation(e: HordeEnemy) -> Vector2:
+	# Raster nur jeden zweiten Frame neu (Gegner fragen ohnehin versetzt).
 	var frame := Engine.get_physics_frames()
-	if frame != _sep_frame:
+	if frame - _sep_frame >= 2 or frame < _sep_frame:
 		_sep_frame = frame
 		_sep_buckets.clear()
 		for node in get_tree().get_nodes_in_group(HordeEnemy.GROUP):
@@ -330,7 +400,8 @@ func separation(e: HordeEnemy) -> Vector2:
 			if list == null:
 				continue
 			for other in list:
-				if other == e:
+				# Raster ist bis zu einen Frame alt: Gestorbene überspringen.
+				if other == e or not is_instance_valid(other):
 					continue
 				var d: Vector2 = pos - other.global_position
 				var rs: float = e.radius + other.radius
@@ -377,7 +448,8 @@ func _update_spawning(delta: float) -> void:
 			if en == null or en.is_dead or en.is_boss:
 				continue
 			var t := nearest_target(en.global_position)
-			if t != null and en.global_position.distance_to(t.global_position) > HordeDefs.DESPAWN_DIST:
+			if t != null and (en.global_position.distance_to(t.global_position) > HordeDefs.DESPAWN_DIST \
+					or _behind_scroll(en.global_position + Vector2(120.0, 0.0))):
 				var p := _spawn_point(t.global_position)
 				if p != Vector2.INF:
 					en.global_position = p
@@ -391,8 +463,8 @@ func _spawn_point(center: Vector2) -> Vector2:
 		if grid == null:
 			return p
 		var c := grid.cell_of(p)
-		if grid.in_bounds(c) and grid.is_free_cell(c) and c.x > 1 and c.y > 1 \
-				and c.x < grid.width - 2 and c.y < grid.height - 2:
+		if grid.in_bounds(c) and c.x > 1 and c.y > 1 and c.x < grid.width - 2 and c.y < grid.height - 2 \
+				and is_free_area(p, 34.0) and not _behind_scroll(p - Vector2(80.0, 0.0)):
 			return p
 	return Vector2.INF
 
@@ -401,6 +473,12 @@ func spawn_enemy(kind: String, pos: Vector2, riese: bool = false) -> HordeEnemy:
 	e.director = self
 	e.net_id = NetEntity.next_id()
 	e.setup(kind, riese, HordeDefs.hp_mult(run_time, player_count), HordeDefs.damage_mult(run_time))
+	# Nie in einer Mauer erscheinen: sonst kommt der Gegner nicht mehr los.
+	if e.ai != "fly":
+		pos = find_free_spot(pos, e.radius * 0.75 + 1.0)
+		if pos == Vector2.INF:
+			e.free()
+			return null
 	e.position = pos
 	get_parent().add_child(e)
 	return e
@@ -419,8 +497,7 @@ func _wolf_ring(target: Node2D) -> void:
 	n = mini(n, enemy_limit() - enemy_count())
 	for i in range(n):
 		var p: Vector2 = target.global_position + Vector2.from_angle(TAU * float(i) / float(n)) * 560.0
-		var c := ArenaMode.grid.cell_of(p) if ArenaMode.grid else Vector2i.ZERO
-		if ArenaMode.grid and (not ArenaMode.grid.in_bounds(c) or not ArenaMode.grid.is_free_cell(c)):
+		if _behind_scroll(p):
 			continue
 		spawn_enemy(kind, p)
 	_post_notice("Das Rudel umzingelt euch!", Color(1.0, 0.75, 0.35))
@@ -444,7 +521,11 @@ func _update_bosses() -> void:
 	b.director = self
 	b.net_id = NetEntity.next_id()
 	b.setup_boss(hero, HordeDefs.boss_hp(boss_index, player_count), HordeDefs.damage_mult(run_time))
-	b.position = pos
+	var free_pos := find_free_spot(pos, b.radius * 0.75 + 1.0)
+	if free_pos == Vector2.INF:
+		b.free()
+		return
+	b.position = free_pos
 	get_parent().add_child(b)
 	boss = b
 	var final := boss_index == HordeDefs.BOSS_TIMES.size() - 1
@@ -522,7 +603,11 @@ func on_enemy_killed(e: HordeEnemy, killer) -> void:
 		if was_final:
 			_finish(true)
 		else:
-			_post_notice("Boss besiegt! Truhe einsammeln.", Color(1.0, 0.9, 0.4))
+			# Magnet: alle Kristalle (und die Truhe) fliegen zu den Ebern,
+			# danach geht es in ein neues Gebiet.
+			_magnet_all()
+			_map_change_t = MAP_CHANGE_DELAY
+			_post_notice("Boss besiegt! Alles wird eingesammelt – gleich geht es weiter.", Color(1.0, 0.9, 0.4))
 		return
 	_drop(pos, "xp", e.xp_value)
 	if _rng.randf() < FOOD_CHANCE:
@@ -566,13 +651,129 @@ func _update_gems(delta: float) -> void:
 		var magnet := HordeDefs.GEM_MAGNET_RADIUS * (1.6 if g["t"] == "chest" else 1.0)
 		if best != null and (bool(g["fly"]) or best_d < magnet):
 			g["fly"] = true
-			g["spd"] = minf(float(g["spd"]) + 1400.0 * delta, 900.0)
+			var mag := bool(g.get("mag", false))
+			g["spd"] = minf(float(g["spd"]) + (3000.0 if mag else 1400.0) * delta, 2600.0 if mag else 900.0)
 			gp = gp.move_toward(best.global_position, float(g["spd"]) * delta)
 			g["pos"] = gp
 			if gp.distance_to(best.global_position) < HordeDefs.GEM_PICKUP_RADIUS:
 				_collect(g, best)
 				_gems.remove_at(i)
 		i -= 1
+
+## Alle liegenden Kristalle, Futter und Truhen fliegen sofort zu den Ebern.
+func _magnet_all() -> void:
+	for g in _gems:
+		g["fly"] = true
+		g["mag"] = true
+
+## Was beim Gebietswechsel noch unterwegs ist, wird direkt gutgeschrieben.
+func _collect_remaining() -> void:
+	var targets := alive_targets()
+	for g in _gems:
+		if str(g["t"]) == "food":
+			continue
+		_collect(g, targets[0] if not targets.is_empty() else null)
+	_gems.clear()
+
+# --- Powerups ---
+
+func _update_powerups(delta: float) -> void:
+	if not Global.has_active_powerups() or main_node == null:
+		return
+	_powerup_t -= delta * (1.0 + 0.2 * float(player_count - 1))
+	if _powerup_t > 0.0:
+		return
+	_powerup_t = POWERUP_INTERVAL * _rng.randf_range(0.85, 1.15)
+	if get_tree().get_nodes_in_group("powerup_pickup").size() >= POWERUP_MAX:
+		return
+	var targets := alive_targets()
+	if targets.is_empty():
+		return
+	var lg = main_node.get("level_generator")
+	if lg == null or not lg.has_method("_spawn_powerup_at"):
+		return
+	var center: Vector2 = targets[_rng.randi() % targets.size()].global_position
+	for attempt in range(10):
+		var d := _rng.randf_range(220.0, 520.0)
+		var dir := Vector2.from_angle(_rng.randf() * TAU)
+		if scroll_x >= 0.0:
+			dir.x = absf(dir.x) # Treibjagd: nach vorn legen
+		var p := find_free_spot(center + dir * Vector2(d, d * 0.75), 26.0)
+		if p == Vector2.INF:
+			continue
+		var kind: String = lg._random_powerup_kind()
+		if kind.is_empty():
+			return
+		lg._spawn_powerup_at(p, kind)
+		NetFx.emit(get_parent(), "ring", NetFx.ring_args(p, Color(1.0, 0.95, 0.5, 0.8), 0.6, 8.0, 0.4, 0.2))
+		return
+
+# --- Treibjagd (Scroll-Karte) ---
+
+func _setup_scroll() -> void:
+	scroll_x = -1.0
+	_scroll_speed = 0.0
+	var data: Dictionary = ArenaMaps.get_map(stage_map_id) if not stage_map_id.is_empty() else {}
+	var cfg = data.get("scroll", null)
+	if not (cfg is Dictionary):
+		return
+	var map_px := float(LevelGenerator.map_w) * LevelGenerator.TILE_SIZE
+	scroll_x = 0.0
+	_scroll_wait = float(cfg.get("delay", 6.0))
+	_scroll_speed = float(cfg.get("speed", 40.0))
+	_scroll_max = maxf(0.0, map_px - float(cfg.get("end_room", 1900.0)))
+
+func _update_scroll(delta: float) -> void:
+	if scroll_x < 0.0:
+		return
+	if _scroll_wait > 0.0:
+		_scroll_wait -= delta
+	else:
+		# Holt auf, wenn alle weit vorn sind; nie schneller als doppelt.
+		var lead := INF
+		for p in alive_targets():
+			lead = minf(lead, p.global_position.x - scroll_x)
+		var mult := 1.0 if lead == INF or lead < 900.0 else 1.8
+		scroll_x = minf(_scroll_max, scroll_x + _scroll_speed * mult * delta)
+	_scroll_tick -= delta
+	if _scroll_tick > 0.0:
+		return
+	_scroll_tick = SCROLL_TICK
+	for p in alive_targets():
+		if p.global_position.x < scroll_x + 6.0:
+			p.take_damage(SCROLL_DAMAGE * HordeDefs.damage_mult(run_time), Vector2(520.0, 0.0), null)
+
+# --- Gebietswechsel ---
+
+func _change_stage() -> void:
+	_map_change_t = -1.0
+	_collect_remaining()
+	stage += 1
+	stage_map_id = HordeDefs.stage_map(stage)
+	stage_seed = maxi(1, int(main_node.match_seed) + stage * 7919) if main_node.get("match_seed") != null else stage * 7919
+	main_node.horde_change_map(stage_map_id, stage_seed)
+
+## main meldet: neues Gebiet ist gebaut. Gegner, Kristalle und Geschosse des
+## alten Gebiets verschwinden, das Fluss-Feld wird neu berechnet.
+func on_map_changed() -> void:
+	for node in get_tree().get_nodes_in_group(HordeEnemy.GROUP):
+		var en := node as HordeEnemy
+		if en != null and not en.is_replica:
+			en.is_dead = true
+			en.queue_free()
+	_shots.clear()
+	_gems.clear()
+	_free.clear()
+	_flow = PackedInt32Array()
+	_bfs_active = false
+	_spawn_acc = 2.0
+	_spawn_grace = STAGE_SPAWN_GRACE
+	_powerup_t = minf(_powerup_t, 8.0)
+	_setup_scroll()
+	_refresh_free_mask()
+	_rebuild_flow()
+	var title := HordeDefs.stage_title(stage)
+	_post_notice("Neues Gebiet: %s" % title, Color(0.7, 1.0, 0.85))
 
 func _collect(g: Dictionary, p: Node2D) -> void:
 	match str(g["t"]):
@@ -582,7 +783,7 @@ func _collect(g: Dictionary, p: Node2D) -> void:
 				_coin_sound_t = 0.06
 				SoundManager.play_sound("coin", 0.15, -10.0)
 		"food":
-			if p.has_method("heal"):
+			if p != null and p.has_method("heal"):
 				p.heal(FOOD_HEAL)
 			NetFx.emit(get_parent(), "sound", {"snd": ["heal", 0.1, -4.0]})
 		"chest":
@@ -735,6 +936,7 @@ func get_network_state() -> Dictionary:
 		"e": rows, "s": shots, "o": over, "pc": player_count,
 		"n": [_notice_seq, _notice_text, _notice_color.to_html()],
 		"st": slot_stats, "rs": _respawn_snapshot(), "nb": snappedf(next_boss_in(), 0.1),
+		"stg": [stage, stage_map_id, stage_seed], "sx": snappedf(scroll_x, 0.5),
 	}
 	if not boss_info.is_empty():
 		var b := boss_info.duplicate()
@@ -771,6 +973,18 @@ func apply_network_state(data: Dictionary) -> void:
 	if rs is Dictionary:
 		_replica_respawns = rs
 	_replica_next_boss = float(data.get("nb", -1.0))
+	scroll_x = float(data.get("sx", scroll_x))
+	var stg = data.get("stg", null)
+	if stg is Array and stg.size() >= 3 and int(stg[0]) != stage:
+		stage = int(stg[0])
+		stage_map_id = str(stg[1])
+		stage_seed = int(stg[2])
+		if main_node != null and main_node.has_method("horde_apply_map"):
+			main_node.horde_apply_map(stage_map_id, stage_seed)
+		for id in _replicas.keys():
+			if is_instance_valid(_replicas[id]):
+				_replicas[id].queue_free()
+		_replicas.clear()
 	var b = data.get("b", null)
 	boss_info = b if b is Dictionary else {}
 	var n = data.get("n", null)
@@ -836,6 +1050,12 @@ func replica_next_boss_in() -> float:
 # ============================================================
 
 func _draw() -> void:
+	if scroll_x >= 0.0:
+		var mh := float(LevelGenerator.map_h) * LevelGenerator.TILE_SIZE
+		var pulse := 0.5 + 0.5 * sin(_anim_t * 6.0)
+		draw_rect(Rect2(scroll_x - 4000.0, 0.0, 4000.0, mh), Color(0.9, 0.22, 0.08, 0.32))
+		draw_rect(Rect2(scroll_x - 26.0, 0.0, 26.0, mh), Color(1.0, 0.45, 0.1, 0.45 + 0.2 * pulse))
+		draw_line(Vector2(scroll_x, 0.0), Vector2(scroll_x, mh), Color(1.0, 0.85, 0.35, 0.9), 4.0)
 	for g in _gems:
 		var p: Vector2 = g["pos"]
 		match str(g["t"]):

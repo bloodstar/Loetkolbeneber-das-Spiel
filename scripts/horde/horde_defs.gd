@@ -9,6 +9,14 @@ const RUN_LENGTH: float = 600.0
 ## Bosse (Sekunden ab Start). Der letzte ist der Endboss: Wer ihn besiegt, gewinnt.
 const BOSS_TIMES: Array[float] = [180.0, 360.0, 540.0, 600.0]
 const BOSS_BASE_HP: Array[float] = [900.0, 1800.0, 3000.0, 5200.0]
+## Gebiete: Nach jedem besiegten Boss geht es auf die nächste Karte. Die
+## Treibjagd ist eine lange Scroll-Strecke (Feuerwalze von links).
+const STAGE_MAPS: Array[String] = ["arena_wildnis", "arena_horde_steppe", "arena_horde_treibjagd", "arena_horde_ruinen"]
+## Level-Modifier, die im Horden-Modus erlaubt sind (Sturmzone nicht).
+const MODIFIERS: Array[String] = [
+	"wind", "low_gravity", "high_gravity", "mini_pigs", "double_damage",
+	"speed_demon", "air_jumps", "regeneration", "starting_shield",
+]
 ## Wiederbelebung nach dem Tod, solange ein Teamkollege lebt.
 const RESPAWN_DELAY: float = 12.0
 ## XP-Kristalle fliegen ab diesem Abstand zum Eber, darunter werden sie eingesammelt.
@@ -131,6 +139,12 @@ static func gem_color(value: int) -> Color:
 	if value >= 6:
 		return Color(0.4, 1.0, 0.5)
 	return Color(0.45, 0.75, 1.0)
+
+static func stage_map(index: int) -> String:
+	return STAGE_MAPS[clampi(index, 0, STAGE_MAPS.size() - 1)]
+
+static func stage_title(index: int) -> String:
+	return ArenaMaps.display_name(stage_map(index))
 
 ## Zeit als m:ss.
 static func format_time(t: float) -> String:

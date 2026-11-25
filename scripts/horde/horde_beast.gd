@@ -98,7 +98,10 @@ func build(p_kind: String) -> void:
 		var mi := MeshInstance3D.new()
 		mi.mesh = entry["mesh"]
 		mi.material_override = _shared_material()
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		# Echte Schatten nur bei weichen Schatten (Grafik Hoch), sonst reicht
+		# der Blob-Schatten der ArenaView: spart bei hunderten Gegnern viel GPU.
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if GameSettings.shadow_quality() >= 2 \
+				else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		holder.add_child(mi)
 		_meshes.append(mi)
 		var n := str(name)

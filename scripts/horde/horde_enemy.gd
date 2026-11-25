@@ -86,6 +86,18 @@ var hit_flash: float = 0.0
 ## Für die Anzeige: Animation (Schnappen, Werfen, Heulen) kurz an.
 var anim_action: float = 0.0
 var _net_target: Vector2 = Vector2.ZERO
+# Zwischenspeicher, damit hunderte Gegner nicht jeden Frame alles neu rechnen:
+# Fluss-Richtung je Zelle, Sichtlinie für kurze Zeit, Ausweichschub jeden
+# zweiten Frame, Bewegung weit entfernter Gegner jeden dritten Frame.
+var _flow_cell: Vector2i = Vector2i(-99999, -99999)
+var _flow_ver: int = -1
+var _flow_cache: Vector2 = Vector2.ZERO
+var _los_t: float = 0.0
+var _los_val: bool = false
+var _los_target: Node2D = null
+var _sep_cache: Vector2 = Vector2.ZERO
+var _move_cache: Vector2 = Vector2.ZERO
+const FAR_THINK_DIST_SQ: float = 720.0 * 720.0
 var _kill_credit = null
 
 func setup(p_kind: String, p_riese: bool, hp_mult: float, dmg_mult: float) -> void:
@@ -180,12 +192,21 @@ func _physics_process(delta: float) -> void:
 		freeze_timer = maxf(0.0, freeze_timer - delta)
 		_state = "" if _state != "dive" else _state
 	elif target != null:
-		move = _think(target, delta) * spd
+		# Weit weg (außerhalb des Bildes) reicht jeder dritte Frame.
+		var frame := Engine.get_physics_frames() + net_id
+		if not is_boss and _state == "" and frame % 3 != 0 \
+				and global_position.distance_squared_to(target.global_position) > FAR_THINK_DIST_SQ:
+			move = _move_cache * spd
+		else:
+			_move_cache = _think(target, delta)
+			move = _move_cache * spd
 	if ai == "fly":
 		_update_flight(delta, target)
 	velocity = move + _knock
 	if not is_boss:
-		velocity += director.separation(self) * 90.0
+		if (Engine.get_physics_frames() + net_id) % 2 == 0:
+			_sep_cache = director.separation(self)
+		velocity += _sep_cache * 90.0
 	_grid_move(delta)
 	_clamp_to_map()
 	if target != null and not disabled:
@@ -221,12 +242,34 @@ func _think(target: Node2D, delta: float) -> Vector2:
 func _path_dir(target: Node2D, dist: float, dir: Vector2) -> Vector2:
 	if dist < 110.0:
 		return dir
-	var flow: Vector2 = director.flow_dir(global_position)
+	var flow := _cached_flow()
 	if flow == Vector2.ZERO:
 		return dir
-	if dist < 260.0 and director.has_los(global_position, target.global_position):
+	if dist < 260.0 and _sees(target):
 		return dir
 	return flow
+
+## Fluss-Richtung nur neu, wenn die Zelle oder das Fluss-Feld wechselt.
+func _cached_flow() -> Vector2:
+	var grid := ArenaMode.grid
+	if grid == null:
+		return Vector2.ZERO
+	var c := grid.cell_of(global_position)
+	var ver: int = director.flow_version
+	if c != _flow_cell or ver != _flow_ver:
+		_flow_cell = c
+		_flow_ver = ver
+		_flow_cache = director.flow_dir(global_position)
+	return _flow_cache
+
+## Sichtlinie zum Ziel, für 0,2 bis 0,3 s zwischengespeichert.
+func _sees(target: Node2D) -> bool:
+	_los_t -= get_physics_process_delta_time()
+	if _los_t <= 0.0 or target != _los_target:
+		_los_t = randf_range(0.2, 0.3)
+		_los_target = target
+		_los_val = director.has_los(global_position, target.global_position)
+	return _los_val
 
 func _think_lunge(dist: float, dir: Vector2, delta: float) -> Vector2:
 	match _state:
@@ -253,7 +296,7 @@ func _think_lunge(dist: float, dir: Vector2, delta: float) -> Vector2:
 
 func _think_ranged(target: Node2D, dist: float, dir: Vector2, delta: float) -> Vector2:
 	var reach := float(def.get("range", 450.0))
-	var sees: bool = director.has_los(global_position, target.global_position)
+	var sees: bool = _sees(target)
 	if _attack_cd <= 0.0 and dist < reach and sees:
 		_attack_cd = float(def.get("shot_interval", 2.5)) * randf_range(0.85, 1.15)
 		anim_action = 0.35
@@ -344,7 +387,7 @@ func _think_boss_ranged(target: Node2D, dist: float, dir: Vector2, delta: float)
 		for i in range(n):
 			var a := base + TAU * float(i) / float(n)
 			director.spawn_shot(global_position, Vector2.from_angle(a) * 300.0, damage * 0.55, "orb")
-	if _attack_cd <= 0.0 and director.has_los(global_position, target.global_position):
+	if _attack_cd <= 0.0 and _sees(target):
 		_attack_cd = randf_range(1.6, 2.2)
 		anim_action = 0.3
 		for i in range(3):
@@ -395,6 +438,13 @@ func _grid_move(delta: float) -> void:
 		global_position = pos + step
 		return
 	var r := radius * 0.75
+	# Steckt der Gegner in einer Mauer (Rückstoß, neue Kiste, Kartenwechsel),
+	# holt ihn die nächste freie Stelle heraus, statt dass er festhängt.
+	if not director.is_free_area(pos, r):
+		var free_pos: Vector2 = director.find_free_spot(pos, r)
+		if free_pos != Vector2.INF:
+			global_position = free_pos
+		return
 	var nx := pos + Vector2(step.x, 0.0)
 	if director.is_free_area(nx, r):
 		pos = nx

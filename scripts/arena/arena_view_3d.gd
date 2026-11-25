@@ -627,11 +627,26 @@ func _sync_crates() -> void:
 			crate.visible = false
 			ArenaMode.grid.clear_cell(cell)
 
+## Sichtbarer Bodenausschnitt (2D-Koordinaten) mit großzügigem Rand. Die
+## Kamera ist gekippt, deshalb zeigt sie in y mehr Boden als in x.
+func _horde_view_rect() -> Rect2:
+	if camera_2d == null or not is_instance_valid(camera_2d):
+		return Rect2(-1e7, -1e7, 2e7, 2e7)
+	var vis := get_viewport().get_visible_rect().size / maxf(0.01, camera_2d.zoom.x)
+	var tilt := deg_to_rad(ArenaMode.TILT_DEG)
+	var ground_h := vis.y / maxf(0.3, sin(tilt))
+	var half := Vector2(vis.x * 0.5 + 220.0, ground_h * 0.5 + 260.0)
+	var c := camera_2d.get_screen_center_position()
+	return Rect2(c - half, half * 2.0)
+
 # Horden-Modus: Gegner als Voxel-Tiere, Bosse als riesiges Helden-Schwein.
 func _sync_horde(delta: float) -> void:
 	if _beasts.is_empty() and not HordeDirector.is_active():
 		return
 	var seen := {}
+	# Nur Gegner im Bild (plus Rand) zeigen und animieren: Neue Gegner
+	# erscheinen außerhalb des Bildes, das spart viel CPU und GPU.
+	var view := _horde_view_rect()
 	for node in get_tree().get_nodes_in_group(HordeEnemy.GROUP):
 		var e := node as HordeEnemy
 		if e == null or not is_instance_valid(e) or e.is_dead or e.is_queued_for_deletion():
@@ -639,6 +654,18 @@ func _sync_horde(delta: float) -> void:
 		var eid := e.get_instance_id()
 		seen[eid] = true
 		var model: Node3D = _beasts.get(eid, null)
+		if not view.has_point(e.global_position) and not e.is_boss:
+			if model != null and model.visible:
+				model.visible = false
+				var sh_off := model.get_meta("shadow") as MeshInstance3D
+				if sh_off:
+					sh_off.visible = false
+			continue
+		if model != null and not model.visible:
+			model.visible = true
+			var sh_on := model.get_meta("shadow") as MeshInstance3D
+			if sh_on:
+				sh_on.visible = true
 		if model == null:
 			if e.is_boss:
 				var pig := VoxelPig.new()

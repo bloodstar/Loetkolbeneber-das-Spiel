@@ -81,3 +81,13 @@ Endbildschirm, Online-Sync.
 - Weitere Gegner: Luchs (springt aus dem Gebüsch), Python (umschlingt und hält
   fest), Hyänenrudel, Löwe, Tiger, Geier (fressen Gefallene), Koch mit Bratpfanne.
 - Bosse mit ihrem echten Helden-Kit (Fähigkeit, Dash, Ulti) statt Boss-Muster.
+
+## Stand 2026-11-25: Gebiete, Treibjagd, Leistung
+
+- **Gebiete:** Nach jedem besiegten Boss (außer dem Endboss) fliegen alle Kristalle und die Truhe per Magnet zu den Ebern, nach 4,5 s geht es auf die nächste Karte (`HordeDefs.STAGE_MAPS`): Wildnis → Dürresteppe → Treibjagd → Burgruinen. Karten werden in `ArenaMaps.HORDE_MAP_SPECS` aus festen Seeds erzeugt. Clients folgen über den Snapshot-Schlüssel `stg`.
+- **Treibjagd:** lange Strecke (240 × 44). Eine Feuerwalze (`scroll_x`, Snapshot `sx`) schiebt von links nach Osten, wer dahinter steht, nimmt Schaden. Bots bleiben davor.
+- **Level-Modifier:** pro Gebiet nach Lobby-Auswahl und -Rate, nur `HordeDefs.MODIFIERS` (Arena-Modifier ohne Sturmzone). `_horde_reapply_cards` legt die Modifier nach jedem Stufenaufstieg wieder drauf.
+- **Powerups:** alle ~28 s ein Powerup in der Nähe eines Ebers, höchstens 4 gleichzeitig, nur aktive Powerups aus der Lobby.
+- **Kein Sudden Death** im Horden-Modus (Timer wird nie gestartet, `_start_sudden_death` bricht ab).
+- **Spawns:** `find_free_spot` legt jeden Gegner und Boss auf eine freie Stelle; steckt einer trotzdem in einer Mauer, holt `_grid_move` ihn heraus.
+- **Leistung:** Messung im Container (2 Bots, 10 Minuten): kein Speicherleck, Knotenzahl folgt der Gegnerzahl. Kosten wachsen mit den Gegnern (45 am Anfang, 150/230 ab Minute 5–8). Optimiert: Fluss-Richtung je Zelle zwischengespeichert, Sichtlinie 0,2–0,3 s, Ausweichen jeden zweiten Frame, Gegner weit weg denken jeden dritten Frame, 3D-Modelle außerhalb des Bildes ausgeblendet, echte Gegner-Schatten nur bei Grafik Hoch. Ergebnis bei 150 Gegnern: Gegner-Skripte etwa 30 % günstiger, Draw Calls 373 → 87.
