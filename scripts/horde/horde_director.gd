@@ -89,6 +89,8 @@ var _spawn_acc: float = 0.0
 var _next_ring: float = WOLF_RING_EVERY
 var _targets: Array = []
 var _targets_frame: int = -1
+var _hunt: Array = []
+var _hunt_frame: int = -1
 var _flow: PackedInt32Array = PackedInt32Array()
 var _flow_w: int = 0
 var _flow_h: int = 0
@@ -191,10 +193,24 @@ func alive_targets() -> Array:
 			_targets.append(p)
 	return _targets
 
+## Lebende Eber, die Gegner sehen können: Unsichtbare (Powerup, Phantom-
+## Tarnung) werden nicht gejagt und ziehen das Fluss-Feld nicht an.
+func hunt_targets() -> Array:
+	var frame := Engine.get_physics_frames()
+	if frame == _hunt_frame:
+		return _hunt
+	_hunt_frame = frame
+	_hunt.clear()
+	for p in alive_targets():
+		if p.has_method("is_invisible") and p.is_invisible():
+			continue
+		_hunt.append(p)
+	return _hunt
+
 func nearest_target(pos: Vector2) -> Node2D:
 	var best: Node2D = null
 	var best_d := INF
-	for p in alive_targets():
+	for p in hunt_targets():
 		var d: float = pos.distance_squared_to(p.global_position)
 		if d < best_d:
 			best_d = d
@@ -374,7 +390,7 @@ func _begin_flow() -> void:
 	_flow_next.fill(-1)
 	_bfs_queue.clear()
 	_bfs_head = 0
-	for p in alive_targets():
+	for p in hunt_targets():
 		var c := grid.cell_of(p.global_position)
 		if grid.in_bounds(c):
 			var i := c.y * _flow_w + c.x
@@ -614,7 +630,9 @@ func _update_bosses() -> void:
 	boss_info = {"id": b.net_id, "hero": hero, "name": Global.get_hero(hero).name, "final": final}
 	boss_index += 1
 	_post_notice(("ENDBOSS: %s!" if final else "BOSS: %s erscheint!") % Global.get_hero(hero).name, Color(1.0, 0.35, 0.3))
-	SoundManager.play_sound("sudden_death", 0.0, -2.0)
+	# Eigener Boss-Klang (nicht der Sudden-Death-Sound, das hat verwirrt).
+	SoundManager.play_sound("warning", 0.0, 0.0)
+	SoundManager.play_sound("explosion_big", 0.0, -6.0)
 	Global.shake_camera(0.4)
 
 func _pick_boss_hero() -> String:

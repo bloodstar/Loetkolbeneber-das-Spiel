@@ -1299,6 +1299,9 @@ func _add_modifier_totals(p: Player) -> void:
 		_add_stat_cell(grid, row[0], row[1], row[2])
 
 func set_sudden_death(active: bool) -> void:
+	# Horden-Modus kennt keinen Sudden Death.
+	if active and Global.is_horde_mode():
+		active = false
 	sudden_death_label.visible = active
 
 func reset_for_round() -> void:

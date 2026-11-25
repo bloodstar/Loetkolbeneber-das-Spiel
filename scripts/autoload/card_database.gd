@@ -4082,6 +4082,10 @@ func is_card_available_for_player(card: CardData, hero_id: String, owned_ids: Ar
 		return false
 	if not card.hero_id.is_empty() and card.hero_id != hero_id:
 		return false
+	# Horden-Modus: Märtyrium nur, wenn man zurückkommen kann (Teamkollegen
+	# beleben wieder). Allein endet die Jagd mit dem Tod, die Explosion nützt nichts.
+	if card.kamikaze and Global.is_horde_mode() and Global.get_active_player_indices().size() < 2:
+		return false
 	if not card.parent_card_id.is_empty() and not owned_ids.has(card.parent_card_id):
 		return false
 	if not card.evolution_branch.is_empty():
