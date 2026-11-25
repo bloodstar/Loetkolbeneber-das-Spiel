@@ -93,6 +93,11 @@ class BodySpec extends RefCounted:
 # Gemeinsame Liste für Lobby-Editor und Speichern/Netzwerk. Jeder Eintrag ist
 # [id, Anzeigename]; der erste Eintrag ist der Standard.
 const PART_OPTIONS: Dictionary = {
+	# Körperbau für alle Klassen. Weiblich: Taille, Hüfte, Oberweite mit Top und
+	# Ausschnitt, Wimpern (siehe VoxelBoar._add_female_shape).
+	"gender": [
+		["male", "Männlich"], ["female", "Weiblich"],
+	],
 	"body": [
 		["original", "Original – ausgewogen"], ["mascot", "Maskottchen – rund & knuffig"],
 		["comic", "Comic – breit & grafisch"], ["boar", "Keiler – breit & wild"],
@@ -195,6 +200,8 @@ static func _part_color(value: Variant, fallback: Color) -> Color:
 static func random_parts(keep: Dictionary) -> Dictionary:
 	var parts := normalize_parts(keep)
 	for key in PART_OPTIONS.keys():
+		if key == "gender":
+			continue # Geschlecht bleibt beim Würfeln erhalten
 		var list: Array = PART_OPTIONS[key]
 		parts[key] = str(list[randi() % list.size()][0])
 	parts["tail_side"] = -1.0 if randf() < 0.5 else 1.0

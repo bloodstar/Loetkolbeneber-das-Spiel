@@ -230,6 +230,8 @@ Die Lobby hat mehrere Tabs. **Spieler 1 ist Host** und stellt Regeln, Map und Ka
 - **Lötspitze**: 8 Formen (Kegel, Meißel, Messer, Huf, Kugel, Diamant, Stern, Flamme) plus Glutfarbe.
 - **Schussfarbe**.
 - **Nahkampfwaffe**.
+- **Körperbau** (unter Aussehen): Männlich oder Weiblich, für jede Klasse. Weiblich hat schmalere Schultern, Taille und breitere Hüfte, eine runde Oberweite mit Top und rundem Ausschnitt sowie Wimpern. Ohne gewähltes Oberteil trägt sie automatisch ein Top in der Oberteil-Farbe. ZUFÄLLIG lässt den Körperbau stehen.
+- **Minirock** wird beim Voxel-Eber als ausgestellter Rock gezeigt.
 - Die Vorschau zeigt alles live. Das Profil wird automatisch gespeichert und online an alle verteilt.
 
 ### Tab Regeln
