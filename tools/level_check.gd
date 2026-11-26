@@ -26,8 +26,13 @@ const JUMP_V := -490.0
 const RUN_SPEED := 270.0
 const DT := 1.0 / 60.0
 const MAX_SIM_TIME := 2.6
-const HALF := Vector2(9.0, 11.0)
-const BODY_OFFSET := Vector2(0.0, 1.0)
+# Körperbox der Spielfigur (RectangleShape2D 18 x 22, um 1 px nach unten
+# versetzt) ohne Skalierung. Standard ist --scale=1.7, die normale Figur
+# (Player.BASE_CHARACTER_SCALE); --scale=3.4 prüft eine Figur mit +100 % Größe.
+const BASE_HALF := Vector2(9.0, 11.0)
+const BASE_BODY_OFFSET := Vector2(0.0, 1.0)
+var HALF := BASE_HALF * 1.7
+var BODY_OFFSET := BASE_BODY_OFFSET * 1.7
 const PAD_FORCE := -750.0
 const TRAMPOLINE_FORCE := -690.0
 const MIN_HEADROOM_PX := 72.0
@@ -57,7 +62,14 @@ var oneway_cells: Dictionary = {}     # Einweg-Stege (Teilmenge von solid_cells)
 var shape_polys: Array = []           # Kollisionspolygone (Pyramiden, Dächer) in Pixeln
 var obstacle_rects: Array[Rect2] = [] # Kettenglieder und Kettenkisten: nur Hindernis
 var trampoline_cells: Dictionary = {}
+# Bewegungsplattformen: Index in extra_rects -> Gruppen-ID. Wer eine Stellung
+# erreicht, fährt mit und erreicht alle Stellungen derselben Plattform.
+var mover_group_of: Dictionary = {}
+var node_group: Dictionary = {}       # Knoten -> Gruppen-ID
 var print_ascii := false
+# --break-blocks: Zerstörbare Blöcke zählen nicht als Hindernis (man kann sie
+# wegschießen). Sinnvoll für große Figuren, die sich den Weg freischießen.
+var break_blocks := false
 var _last_unreached: Dictionary = {}
 
 func _ready() -> void:
@@ -67,6 +79,12 @@ func _ready() -> void:
 	for a in args:
 		if a == "--ascii":
 			print_ascii = true
+		if a == "--break-blocks":
+			break_blocks = true
+		if a.begins_with("--scale="):
+			var body_scale := float(a.substr(8))
+			HALF = BASE_HALF * body_scale
+			BODY_OFFSET = BASE_BODY_OFFSET * body_scale
 		if a.begins_with("--seeds="):
 			seeds = int(a.substr(8))
 		elif a.begins_with("--maps="):
@@ -113,6 +131,8 @@ func _read_level() -> void:
 	extra_names.clear()
 	pad_rects.clear()
 	trampoline_cells.clear()
+	mover_group_of.clear()
+	node_group.clear()
 	oneway_cells.clear()
 	shape_polys.clear()
 	obstacle_rects.clear()
@@ -122,6 +142,10 @@ func _read_level() -> void:
 		oneway_cells[c] = true
 	for c in gen._special_cells.keys():
 		solid_cells[c] = true
+	if break_blocks:
+		for tile in gen._special_tiles.values():
+			if is_instance_valid(tile) and tile.kind == SpecialTile.Kind.DESTRUCTIBLE:
+				solid_cells.erase(Vector2i(int(floor(tile.position.x / TILE)), int(floor(tile.position.y / TILE))))
 	for child in gen.get_children():
 		if child is JumpPad:
 			# Area 18x12, mit Faktor 2 skaliert, Unterkante auf der Standfläche.
@@ -169,7 +193,9 @@ func _read_level() -> void:
 		elif child.has_method("get_path_rect"):
 			# Bewegungsplattform: Für die Erreichbarkeit zählt jede Position
 			# entlang der Bahn. Wir nehmen Start, Mitte und Ende als Flächen.
+			var group_id := mover_group_of.size() + 1000 * extra_rects.size()
 			for p in child.get_sample_rects():
+				mover_group_of[extra_rects.size()] = group_id
 				extra_rects.append(p)
 				extra_names.append("Bewegungsplattform")
 
@@ -318,6 +344,8 @@ func _collect_nodes() -> Dictionary:
 			var x := clampf((cx + 0.5) * TILE, r.position.x + 4.0, r.end.x - 4.0)
 			if _can_stand(Vector2(x, r.position.y)):
 				nodes[Vector2i(cx, int(round(r.position.y)))] = extra_names[i]
+				if mover_group_of.has(i):
+					node_group[Vector2i(cx, int(round(r.position.y)))] = mover_group_of[i]
 	# Oberkanten von Pyramiden und Dächern, spaltenweise abgetastet.
 	if not shape_polys.is_empty():
 		for cx in range(map_w):
@@ -380,6 +408,13 @@ func check_current_level() -> Array[String]:
 			queue.append(n)
 	while not queue.is_empty():
 		var n: Vector2i = queue.pop_back()
+		# Mitfahren: alle Stellungen derselben Bewegungsplattform.
+		if node_group.has(n):
+			var gid = node_group[n]
+			for other in node_group.keys():
+				if node_group[other] == gid and not reached.has(other):
+					reached[other] = true
+					queue.append(other)
 		# Laufen auf derselben Höhe; auf Schrägen auch bergauf/bergab.
 		for dx in [-1, 1]:
 			var nb := Vector2i(n.x + dx, n.y)
@@ -434,6 +469,24 @@ func check_current_level() -> Array[String]:
 		elif i == 0:
 			seg_start = n.x
 		last = n
+
+	# Spawns (bis zu 4 Spieler): Jeder Startplatz muss auf einer erreichbaren
+	# Standfläche liegen, auf der die Figur in ihrer Größe Platz hat.
+	for total in ([] if LevelGenerator.zero_g else [2, 4]):
+		gen._round_spawn_total = -1
+		for i in range(1, total + 1):
+			var sp: Vector2 = gen.get_spawn_position(i, total)
+			var found := false
+			for dy in range(0, 80):
+				var k := Vector2i(int(floor(sp.x / TILE)), int(round(sp.y)) + dy)
+				if nodes.has(k):
+					found = true
+					if not reached.has(k):
+						issues.append("Spawn unerreichbar: Spalte %d Reihe %d" % [k.x, int(k.y / TILE)])
+					break
+			if not found:
+				issues.append("Spawn ohne Standfläche: (%d, %d) px" % [int(sp.x), int(sp.y)])
+	gen._round_spawn_total = -1
 
 	# Sprungfedern: Die komplette Flugbahn (ganze Sprunghöhe, Feder ±1 Kachel
 	# breit) muss frei sein. Jede Plattform, Kiste oder bewegliche Plattform

@@ -1535,7 +1535,7 @@ func apply_stats() -> void:
 	fire_trail_timer = 0.0
 	
 	_body_scale = size_mult
-	scale = Vector2(size_mult, size_mult)
+	_set_body_scale(size_mult)
 
 	_clear_drones()
 	_spawn_drones()
@@ -1964,7 +1964,7 @@ func apply_network_state(data: Dictionary) -> void:
 	# Urkeiler: Clients zeigen die Gestalt (Größe, Hammer-Schwung) selbst.
 	var net_boar := float(data.get("boar", 0.0))
 	if (net_boar > 0.0) != (boar_timer > 0.0):
-		scale = Vector2.ONE * _body_scale * (DRUID_BOAR_SCALE if net_boar > 0.0 else 1.0)
+		_set_body_scale(_body_scale * (DRUID_BOAR_SCALE if net_boar > 0.0 else 1.0))
 	boar_timer = net_boar
 	var net_frozen := float(data.get("tfrz", 0.0))
 	if (net_frozen > 0.0) != (time_frozen_timer > 0.0):
@@ -4305,11 +4305,22 @@ func _start_boar() -> void:
 	_boar_hp_bonus = max_health * (DRUID_BOAR_HP_MULT - 1.0)
 	max_health += _boar_hp_bonus
 	current_health += _boar_hp_bonus
-	scale = Vector2.ONE * _body_scale * DRUID_BOAR_SCALE
+	_set_body_scale(_body_scale * DRUID_BOAR_SCALE)
 	_fx("ring", NetFx.with_sound(NetFx.ring_args(global_position, Color(0.6, 0.4, 0.2, 0.85),
 		1.0, 9.0, 0.3, 0.35), "explosion", 0.15, -2.0))
 	_fx("sound", {"snd": ["hit", 0.1, 0.0], "shake": 0.3})
 	emit_signal("health_changed", current_health, max_health, current_shield, max_shield)
+
+## Setzt die Größe der Figur; die Kollisionsbox wächst voll mit (Riesen
+## kommen bewusst nicht überall durch, Jochen 2026-11-26).
+func _set_body_scale(s: float) -> void:
+	scale = Vector2(s, s)
+
+## Wie weit die Figur beim Spawnen zusätzlich angehoben werden muss, damit die
+## Unterkante der Kollisionsbox (12 px unter dem Ursprung, skaliert) über der
+## Standfläche liegt.
+func spawn_lift() -> float:
+	return maxf(0.0, 12.0 * absf(scale.y) - LevelGenerator.SPAWN_BODY_OFFSET + 1.0)
 
 func _end_boar() -> void:
 	boar_timer = 0.0
@@ -4324,7 +4335,7 @@ func _end_boar() -> void:
 	max_health = maxf(1.0, max_health - _boar_hp_bonus)
 	current_health = minf(current_health, max_health)
 	_boar_hp_bonus = 0.0
-	scale = Vector2.ONE * _body_scale
+	_set_body_scale(_body_scale)
 	if is_inside_tree():
 		_fx("ring", NetFx.ring_args(global_position, Color(0.5, 0.75, 0.35, 0.7), 1.0, 5.0, 0.25, 0.3))
 	emit_signal("health_changed", current_health, max_health, current_shield, max_shield)

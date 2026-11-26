@@ -554,6 +554,9 @@ func _spawn_players() -> void:
 		var spawn_slot := active_indices.find(i) + 1 if tiebreak else i
 		p.position = level_generator.get_spawn_position(spawn_slot, total)
 		add_child(p)
+		# Große Figuren (Karten) etwas höher setzen, damit die Füße nicht im
+		# Einweg-Steg stecken und hindurchfallen.
+		p.position.y -= p.spawn_lift()
 		p.died.connect(_on_player_died)
 		players.append(p)
 		if modifier_manager != null:
@@ -2271,6 +2274,7 @@ func _horde_build_stage(map_id: String, seed_value: int) -> void:
 			continue
 		idx += 1
 		p.global_position = level_generator.get_spawn_position(idx, total)
+		p.global_position.y -= p.spawn_lift()
 		p.velocity = Vector2.ZERO
 		p.arena_z = 0.0
 		p.arena_vz = 0.0
