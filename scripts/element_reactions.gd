@@ -186,7 +186,8 @@ static func on_element(target, element: String, src, amount: float = 0.0) -> boo
 			if target.burn_ticks_left > 0 and _allowed(src, "plasma") and _ready(target, "plasma"):
 				_spark_burst(target, src)
 			if target.poison_ticks_left > 0 and _allowed(src, "neurotoxin") and _ready(target, "nerve"):
-				target.stun_timer = maxf(target.stun_timer, minf(NERVE_STUN_MAX, maxf(amount, 0.1) * 2.0))
+				# Ohne Quelle, sonst löst die Betäubung erneut Reaktionen aus.
+				target.apply_stun(minf(NERVE_STUN_MAX, maxf(amount, 0.1) * 2.0))
 				_hit(target, float(target.poison_damage_per_tick), src)
 				_ring(target, target.global_position, Color(0.7, 1.0, 0.3, 0.8), 26.0, "zap", -6.0)
 			if target.freeze_timer > 0.0 and _allowed(src, "supraleiter") and _ready(target, "super"):
@@ -266,7 +267,7 @@ static func _charge_hit(target, src, st: Dictionary) -> void:
 	for e in victims:
 		_hit(e, DISCHARGE_DAMAGE, src)
 		if _alive(e):
-			e.stun_timer = maxf(e.stun_timer, DISCHARGE_STUN)
+			e.apply_stun(DISCHARGE_STUN)
 		if e != target:
 			_zap(target, pos, e.global_position, Color(1.0, 1.0, 0.6, 0.95))
 

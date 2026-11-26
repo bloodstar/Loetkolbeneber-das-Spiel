@@ -1622,6 +1622,7 @@ func _player_snapshot(player: Player, with_appearance: bool = true) -> Dictionar
 		"armor": player.armor_percent,
 		"reflect": player.damage_reflect_percent,
 		"poison": player.poison_ticks_left,
+		"stn": snappedf(player.stun_visual_time(), 0.01),
 		"shield": player.current_shield,
 		"max_shield": player.max_shield,
 		"vorbs": player.vampire_orbs,

@@ -186,7 +186,7 @@ Kurzer Sprint mit kurzer Unverwundbarkeit. Ignis hinterlässt dabei Feuer.
 | Gift | Schaden in Ticks, das Schwein wird grünlich und blubbert |
 | Brand | Feuerschaden in Ticks |
 | Frost | Verlangsamt |
-| Betäubung | Keine Bewegung für kurze Zeit |
+| Betäubung | Keine Bewegung für kurze Zeit. Schockfunken zucken um den Eber. Auf Eber wirkt jede Betäubung nur 60 % so lang (höchstens 0,8 s), danach ist man 0,5 bis 1 s immun (kein Stun-Lock) |
 | Wand-Betäubung | Nach einem Hammerschlag: wer gegen Wand oder Decke prallt, ist betäubt |
 
 ### Flächeneffekte
