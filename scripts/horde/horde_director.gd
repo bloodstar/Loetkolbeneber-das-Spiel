@@ -983,8 +983,10 @@ func on_levelup_finished() -> void:
 
 ## z: Flughöhe des Geschosses (Standhöhe des Ziels + Mündungshöhe). Auf
 ## erhöhte Eber fliegt es im Bogen über niedrigere Hindernisse.
-func spawn_shot(pos: Vector2, vel: Vector2, dmg: float, k: String, z: float = ArenaMode.MUZZLE_H) -> void:
-	_shots.append({"pos": pos, "vel": vel, "dmg": dmg, "k": k, "life": 3.0, "z": z})
+## src: der Schütze (für Schadensreflexion und Statistik), darf null sein.
+func spawn_shot(pos: Vector2, vel: Vector2, dmg: float, k: String, z: float = ArenaMode.MUZZLE_H,
+		src: Node = null) -> void:
+	_shots.append({"pos": pos, "vel": vel, "dmg": dmg, "k": k, "life": 3.0, "z": z, "src": src})
 
 ## Blockiert die Zelle ein Geschoss in Höhe z? (Stege lassen unten durch.)
 static func _blocks_shot(grid: ArenaGrid, c: Vector2i, z: float) -> bool:
@@ -999,6 +1001,11 @@ static func _blocks_shot(grid: ArenaGrid, c: Vector2i, z: float) -> bool:
 func _update_shots(delta: float) -> void:
 	var grid := ArenaMode.grid
 	var targets := alive_targets()
+	var blockers: Array = []
+	for d in get_tree().get_nodes_in_group("drone"):
+		var comp := d as Companion
+		if comp != null and comp.blocks_projectiles and not comp.is_replica:
+			blockers.append(comp)
 	var i := _shots.size() - 1
 	while i >= 0:
 		var s: Dictionary = _shots[i]
@@ -1010,6 +1017,14 @@ func _update_shots(delta: float) -> void:
 			var c := grid.cell_of(pos)
 			if not grid.in_bounds(c) or _blocks_shot(grid, c, float(s.get("z", ArenaMode.MUZZLE_H))):
 				gone = true
+		if not gone and not blockers.is_empty():
+			# Schutzdrohnen fangen Gegnergeschosse ab wie Spielerkugeln.
+			var start: Vector2 = pos - s["vel"] * clampf(delta, 0.0, 0.05)
+			var sz := float(s.get("z", ArenaMode.MUZZLE_H)) - ArenaMode.MUZZLE_H
+			for d in blockers:
+				if is_instance_valid(d) and d.try_block_horde_shot(start, pos, sz, float(s["dmg"])):
+					gone = true
+					break
 		if not gone:
 			# Wer über das Geschoss springt oder deutlich tiefer steht, wird nicht getroffen.
 			var hz := float(s.get("z", ArenaMode.MUZZLE_H)) - ArenaMode.MUZZLE_H
@@ -1018,7 +1033,10 @@ func _update_shots(delta: float) -> void:
 					continue
 				var r: float = SHOT_RADIUS + 12.0 * p.scale.x / Player.BASE_CHARACTER_SCALE
 				if pos.distance_to(p.global_position) < r:
-					p.take_damage(float(s["dmg"]), (s["vel"] as Vector2).normalized() * 150.0, null)
+					var src = s.get("src")
+					if not is_instance_valid(src):
+						src = null
+					p.take_damage(float(s["dmg"]), (s["vel"] as Vector2).normalized() * 150.0, src)
 					gone = true
 					break
 		if gone:

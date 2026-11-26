@@ -4375,6 +4375,9 @@ func is_card_available_for_player(card: CardData, hero_id: String, owned_ids: Ar
 	# beleben wieder). Allein endet die Jagd mit dem Tod, die Explosion nützt nichts.
 	if card.kamikaze and Global.is_horde_mode() and Global.get_active_player_indices().size() < 2:
 		return false
+	# Gummiwand: Abpraller am Kartenrand nützen in den Horden-Arenen nichts.
+	if card.id == "gummiwand" and Global.is_horde_mode():
+		return false
 	if not card.parent_card_id.is_empty() and not owned_ids.has(card.parent_card_id):
 		return false
 	if not card.evolution_branch.is_empty():

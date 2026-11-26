@@ -324,7 +324,7 @@ func _think_ranged(target: Node2D, dist: float, dir: Vector2, delta: float) -> V
 		# Steht der Eber höher, fliegt der Wurf im Bogen auf seine Höhe.
 		director.spawn_shot(global_position + aim * radius, aim * float(def.get("shot_speed", 400.0)),
 			float(def.get("shot_damage", 10.0)) * HordeDefs.damage_mult(director.run_time), shot_kind,
-			maxf(arena_z, _target_floor(target)) + ArenaMode.MUZZLE_H)
+			maxf(arena_z, _target_floor(target)) + ArenaMode.MUZZLE_H, self)
 	_strafe_t -= delta
 	if _strafe_t <= 0.0:
 		_strafe_t = randf_range(1.0, 2.2)
@@ -407,14 +407,15 @@ func _think_boss_ranged(target: Node2D, dist: float, dir: Vector2, delta: float)
 		var base := randf() * TAU
 		for i in range(n):
 			var a := base + TAU * float(i) / float(n)
-			director.spawn_shot(global_position, Vector2.from_angle(a) * 300.0, damage * 0.55, "orb")
+			director.spawn_shot(global_position, Vector2.from_angle(a) * 300.0, damage * 0.55, "orb",
+				arena_z + ArenaMode.MUZZLE_H, self)
 	if _attack_cd <= 0.0 and _sees(target):
 		_attack_cd = randf_range(1.6, 2.2)
 		anim_action = 0.3
 		for i in range(3):
 			var spread := (float(i) - 1.0) * 0.16
 			director.spawn_shot(global_position + dir * radius, dir.rotated(spread) * 470.0, damage * 0.7, "orb",
-				maxf(arena_z, _target_floor(target)) + ArenaMode.MUZZLE_H)
+				maxf(arena_z, _target_floor(target)) + ArenaMode.MUZZLE_H, self)
 	_state_t -= delta
 	if _state_t <= 0.0:
 		_state_t = 10.0

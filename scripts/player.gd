@@ -5580,20 +5580,22 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null
 				Global.add_match_stat(damage_source_index, "ability_damage", effective_damage)
 		Global.shake_camera(clampf(effective_damage * 0.008, 0.06, 0.45))
 
-	# Schadensreflexion geht nur an gegnerische Spieler zurück. Reflektierter
-	# Schaden darf nicht erneut reflektiert werden, sonst entsteht eine Schleife.
+	# Schadensreflexion geht an gegnerische Spieler und Horden-Gegner zurück
+	# (Biss oder Geschoss). Reflektierter Schaden darf nicht erneut reflektiert
+	# werden, sonst entsteht eine Schleife.
 	var reflect_share := get_current_reflect_percent()
 	if not is_reflected and effective_damage > 0.0 and reflect_share > 0.0 \
-			and is_instance_valid(source) and source is Player and source != self \
-			and not source.is_dead and source.current_health > 0.0:
+			and is_instance_valid(source) and (source is Player or source is HordeEnemy) \
+			and source != self and not source.is_dead and source.current_health > 0.0 \
+			and not source.is_replica:
 		var reflected_damage := effective_damage * reflect_share
-		var attacker: Player = source
-		var attacker_pool_before := attacker.current_health + attacker.current_shield
+		var attacker: Node = source
+		var attacker_pool_before: float = attacker.current_health + attacker.current_shield
 		attacker.take_damage(reflected_damage, Vector2.ZERO, self, true)
 		# Blutspiegel & Co.: Der Tank heilt sich um einen Anteil dessen, was
 		# beim Angreifer nach Rüstung/Block tatsächlich angekommen ist.
 		if reflect_heal_percent > 0.0 and current_health > 0.0 and is_instance_valid(attacker):
-			var landed := attacker_pool_before - (maxf(attacker.current_health, 0.0) + attacker.current_shield)
+			var landed: float = attacker_pool_before - (maxf(attacker.current_health, 0.0) + attacker.current_shield)
 			if landed > 0.0:
 				heal(landed * reflect_heal_percent)
 	
