@@ -72,7 +72,7 @@ var map_option: OptionButton
 var map_info_label: Label
 var mode_option: OptionButton
 var mode_info_label: Label
-# Spielart: Seitenansicht oder Arena (Draufsicht).
+# Spielart: Seitenansicht, Draufsicht (Arena) oder Beides.
 var game_mode_option: OptionButton
 var game_mode_info_label: Label
 var loadout_option: OptionButton
@@ -119,10 +119,15 @@ var levels_tab: VBoxContainer = null
 var level_scroll: ScrollContainer = null
 var level_grid: GridContainer = null
 var level_count_label: Label = null
+var level_intro_label: Label = null
 var level_all_btn: Button = null
 var level_none_btn: Button = null
 # map_id -> { card, texture, placeholder, badge, name, check }
 var level_cards: Dictionary = {}
+# Reihenfolge der Kacheln im Levels-Reiter und Einträge der Map-Auswahl, um
+# Neuaufbauten nur bei geänderter Kartenliste zu machen.
+var _level_card_ids: Array[String] = []
+var _map_option_ids: Array[String] = []
 var level_preview_renderer: LevelPreviewRendererScript = null
 var _level_card_on: StyleBoxFlat
 var _level_card_off: StyleBoxFlat
@@ -2105,7 +2110,7 @@ func _refresh_host_controls() -> void:
 		rarity_spins[rarity].editable = is_host
 	player_count_spin.editable = is_host
 	if map_option != null:
-		map_option.disabled = not is_host
+		map_option.disabled = not is_host or Global.is_horde_mode()
 	if mode_option != null:
 		mode_option.disabled = not is_host
 	unban_btn.disabled = not is_host
@@ -2140,10 +2145,29 @@ func _refresh_host_controls() -> void:
 	_refresh_powerup_controls()
 	_refresh_loadout_enabled()
 
+## Map-Auswahl: "Zufällig" plus die Karten der aktuellen Einstellung
+## (Seitenansicht, Draufsicht oder beides). Die Horde hat feste Gebiete.
 func _map_ids() -> Array[String]:
 	var ids: Array[String] = [Global.MAP_RANDOM]
-	ids.append_array(Global.get_playable_maps())
+	if not Global.is_horde_mode():
+		ids.append_array(Global.get_lobby_maps())
 	return ids
+
+## Baut die Einträge der Map-Auswahl neu, wenn sich die Kartenliste geändert hat.
+func _rebuild_map_options() -> void:
+	if map_option == null:
+		return
+	var ids := _map_ids()
+	if ids == _map_option_ids:
+		return
+	_map_option_ids = ids
+	map_option.clear()
+	var mixed := Global.is_mixed_mode()
+	for map_id in ids:
+		var label := Global.get_map_name(map_id)
+		if mixed and map_id != Global.MAP_RANDOM:
+			label += "  (Draufsicht)" if ArenaMaps.is_arena_map(map_id) else "  (Seite)"
+		map_option.add_item(label)
 
 func _on_map_selected(index: int) -> void:
 	if not Global.is_local_host():
@@ -2164,6 +2188,8 @@ func _on_map_changed() -> void:
 func _refresh_map_controls() -> void:
 	if map_option == null:
 		return
+	_rebuild_map_options()
+	map_option.disabled = not Global.is_local_host() or Global.is_horde_mode()
 	var ids := _map_ids()
 	# Abgeschaltete Levels (Reiter "Levels") lassen sich nicht als feste Map wählen.
 	for i in range(mini(ids.size(), map_option.item_count)):
@@ -2173,39 +2199,50 @@ func _refresh_map_controls() -> void:
 	if map_option.item_count > selected:
 		map_option.text = map_option.get_item_text(selected)
 	if map_info_label != null:
-		map_info_label.text = "%s — %s" % [
-			Global.get_map_name(Global.selected_map_id),
-			Global.get_map_description(Global.selected_map_id),
-		]
+		if Global.is_horde_mode():
+			map_info_label.text = Global.get_map_description(Global.MAP_RANDOM)
+		else:
+			map_info_label.text = "%s — %s" % [
+				Global.get_map_name(Global.selected_map_id),
+				Global.get_map_description(Global.selected_map_id),
+			]
+			if Global.is_mixed_mode() and Global.selected_map_id != Global.MAP_RANDOM:
+				map_info_label.text += " Runden in der anderen Ansicht nehmen eine zufällige Karte."
 
 func _on_game_mode_selected(index: int) -> void:
 	if not Global.is_local_host():
 		_refresh_game_mode_controls()
 		return
-	Global.set_game_mode(Global.GAME_MODE_ARENA if index == 1 else Global.GAME_MODE_SIDE)
+	if index < 0 or index >= Global.GAME_MODE_ORDER.size():
+		return
+	Global.set_game_mode(Global.GAME_MODE_ORDER[index])
 	SoundManager.play_sound("click")
 
 func _on_game_mode_changed(_mode: String) -> void:
 	_refresh_game_mode_controls()
+	_refresh_map_controls()
 	_update_status()
 
 func _refresh_game_mode_controls() -> void:
 	if game_mode_option == null:
 		return
-	var idx := 1 if Global.is_arena_mode() else 0
+	# Die Horde spielt immer in der Draufsicht.
+	var shown := Global.GAME_MODE_ARENA if Global.is_horde_mode() else Global.game_mode
+	var idx := maxi(0, Global.GAME_MODE_ORDER.find(shown))
 	game_mode_option.selected = idx
-	# Die Horde spielt immer in der Arena.
 	game_mode_option.disabled = not Global.is_local_host() or Global.is_horde_mode()
 	if game_mode_info_label != null:
-		var info := str(Global.GAME_MODES[Global.game_mode].get("description", ""))
+		var info := str(Global.GAME_MODES.get(Global.game_mode, Global.GAME_MODES[Global.GAME_MODE_SIDE]).get("description", ""))
 		if Global.is_horde_mode():
-			info = "Horde: immer Arena auf der großen Karte „Wildnis“."
-		elif Global.is_arena_mode():
-			info += " Spielfeld: zufällige Arena-Karte (%s)." % ", ".join(ArenaMaps.MAP_IDS.map(func(m): return ArenaMaps.display_name(m)))
+			info = "Horde: immer Draufsicht, Gebiete in fester Reihenfolge (siehe Reiter „Levels“)."
+		else:
+			info += " Welche Karten drankommen, steht im Reiter „Levels“."
 		game_mode_info_label.text = info
+	_sync_level_cards()
 
 func _on_match_mode_changed() -> void:
 	_refresh_mode_controls()
+	_refresh_map_controls()
 	_update_titles()
 	_update_status()
 	_refresh_character_tab()
@@ -2520,7 +2557,8 @@ func _build_rules_tab() -> void:
 # Spielart, Modus und Map stehen ganz oben im Regeln-Tab (Jochen 2026-11-25).
 func _build_game_mode_section(body: VBoxContainer) -> void:
 	_add_section_title(body, "SPIELMODUS & SPIELFELD", Color(1.0, 0.55, 0.55, 1.0))
-	# Spielart (Ansicht): Seitenansicht oder Arena. Gleiche Karten und Helden.
+	# Spielart (Ansicht): Seitenansicht, Draufsicht oder Beides (pro Runde
+	# zufällig). Gleiche Karten und Helden.
 	var view_row := HBoxContainer.new()
 	view_row.add_theme_constant_override("separation", 12)
 	body.add_child(view_row)
@@ -2530,7 +2568,7 @@ func _build_game_mode_section(body: VBoxContainer) -> void:
 	view_row.add_child(view_label)
 	game_mode_option = OptionButton.new()
 	game_mode_option.custom_minimum_size = Vector2(200, 0)
-	for gm_id in [Global.GAME_MODE_SIDE, Global.GAME_MODE_ARENA]:
+	for gm_id in Global.GAME_MODE_ORDER:
 		game_mode_option.add_item(Global.get_game_mode_name(gm_id))
 	game_mode_option.item_selected.connect(_on_game_mode_selected)
 	view_row.add_child(game_mode_option)
@@ -2587,8 +2625,8 @@ func _build_game_mode_section(body: VBoxContainer) -> void:
 
 	map_option = OptionButton.new()
 	map_option.custom_minimum_size = Vector2(200, 0)
-	for map_id in _map_ids():
-		map_option.add_item(Global.get_map_name(map_id))
+	_map_option_ids.clear()
+	_rebuild_map_options()
 	map_option.item_selected.connect(_on_map_selected)
 	map_row.add_child(map_option)
 
@@ -3048,6 +3086,7 @@ func _build_levels_tab() -> void:
 		tabs.set_tab_title(tabs.get_tab_idx_from_control(levels_tab), "Levels")
 	_clear_children(levels_tab)
 	level_cards.clear()
+	_level_card_ids.clear()
 
 	if level_preview_renderer == null:
 		level_preview_renderer = LevelPreviewRendererScript.new()
@@ -3070,12 +3109,11 @@ func _build_levels_tab() -> void:
 	level_scroll.add_child(body)
 
 	_add_section_title(body, "LEVELS", Color(0.4, 0.95, 0.6, 1.0))
-	var intro := Label.new()
-	intro.text = "Abgeschaltete Levels kommen bei Map „Zufällig“ nicht mehr dran. Ein Klick auf ein Vorschaubild zeigt das Level groß. Ohne aktives Level lässt sich das Match nicht starten."
-	intro.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
-	intro.add_theme_font_size_override("font_size", UiTheme.FS_S)
-	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	body.add_child(intro)
+	level_intro_label = Label.new()
+	level_intro_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	level_intro_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	level_intro_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(level_intro_label)
 
 	var header := HBoxContainer.new()
 	header.add_theme_constant_override("separation", 12)
@@ -3107,32 +3145,36 @@ func _build_levels_tab() -> void:
 	level_grid.add_theme_constant_override("v_separation", 12)
 	body.add_child(level_grid)
 
-	# Die Liste kommt direkt aus MAP_PLAYABLE: Neue Maps erscheinen hier ohne
-	# weitere Pflege, das Bild rendert der LevelGenerator.
-	for map_id in Global.get_playable_maps():
+	# Die Liste kommt aus Global.get_lobby_maps() und folgt der Einstellung
+	# (Seitenansicht, Draufsicht, Beides, Horde). Neue Maps erscheinen ohne
+	# weitere Pflege, die Bilder rendert LevelPreviewRenderer.
+	for map_id in Global.get_lobby_maps():
 		level_grid.add_child(_create_level_card(map_id))
+		_level_card_ids.append(map_id)
 
 	_build_level_viewer()
 	_refresh_level_controls()
 
-## Eigene Level aus dem Karteneditor kommen und gehen: Karten neu aufbauen,
-## wenn sich die Liste geändert hat. Geänderte Level bekommen ein neues Bild.
+## Kartenliste folgt Spielart und Modus; eigene Level aus dem Karteneditor
+## kommen und gehen. Kacheln nur neu aufbauen, wenn sich die Liste geändert hat.
 func _sync_level_cards() -> void:
 	if level_grid == null:
 		return
-	var ids := Global.get_playable_maps()
-	var same := ids.size() == level_cards.size()
-	for id in ids:
-		if not level_cards.has(id):
-			same = false
-	if same:
+	var ids := Global.get_lobby_maps()
+	if ids == _level_card_ids:
 		return
 	for child in level_grid.get_children():
+		level_grid.remove_child(child)
 		child.queue_free()
 	level_cards.clear()
+	_level_card_ids = ids
 	for map_id in ids:
 		level_grid.add_child(_create_level_card(map_id))
+	if not _level_viewer_map.is_empty() and not ids.has(_level_viewer_map):
+		_close_level_viewer()
 	_refresh_level_controls()
+	if levels_tab != null and tabs.get_current_tab_control() == levels_tab:
+		_request_level_previews()
 
 func _create_level_card(map_id: String) -> PanelContainer:
 	var card := PanelContainer.new()
@@ -3186,6 +3228,34 @@ func _create_level_card(map_id: String) -> PanelContainer:
 	off_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	thumb.add_child(off_badge)
 
+	# Ansicht bzw. Horden-Gebiet oben rechts, damit man bei "Beides" und in der
+	# Horde sieht, was man vor sich hat.
+	var tag_text := ""
+	var tag_color := Color(0.55, 0.85, 1.0, 1.0)
+	var stage := Global.get_horde_stage_number(map_id) if Global.is_horde_mode() else 0
+	if stage > 0:
+		tag_text = "GEBIET %d" % stage
+		tag_color = Color(1.0, 0.7, 0.35, 1.0)
+	elif Global.is_mixed_mode():
+		var arena := ArenaMaps.is_arena_map(map_id)
+		tag_text = "DRAUFSICHT" if arena else "SEITE"
+		tag_color = Color(0.5, 1.0, 0.7, 1.0) if arena else Color(0.55, 0.85, 1.0, 1.0)
+	if not tag_text.is_empty():
+		var view_badge := Label.new()
+		view_badge.text = tag_text
+		view_badge.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+		view_badge.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		view_badge.offset_left = -160
+		view_badge.offset_right = -10
+		view_badge.offset_top = 8
+		view_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		view_badge.add_theme_color_override("font_color", tag_color)
+		view_badge.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
+		view_badge.add_theme_constant_override("outline_size", 4)
+		view_badge.add_theme_font_size_override("font_size", UiTheme.FS_S)
+		view_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		thumb.add_child(view_badge)
+
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	vbox.add_child(row)
@@ -3202,6 +3272,8 @@ func _create_level_card(map_id: String) -> PanelContainer:
 	check.tooltip_text = "Level an- oder abschalten."
 	check.button_pressed = Global.is_map_enabled(map_id)
 	check.toggled.connect(_on_level_toggled.bind(map_id))
+	# Horden-Gebiete sind fest: nur ansehen, nicht schalten.
+	check.visible = Global.get_switchable_maps().has(map_id)
 	row.add_child(check)
 
 	level_cards[map_id] = {
@@ -3239,18 +3311,40 @@ func _refresh_level_controls() -> void:
 		(nodes["name"] as Label).add_theme_color_override(
 			"font_color", Color(0.92, 0.95, 1.0, 1.0) if enabled else Color(0.5, 0.52, 0.58, 1.0)
 		)
-	if level_all_btn != null:
-		level_all_btn.disabled = not is_host or Global.disabled_map_ids.is_empty()
-	if level_none_btn != null:
-		level_none_btn.disabled = not is_host or not Global.has_enabled_maps()
-	var total := Global.get_playable_maps().size()
+	var horde := Global.is_horde_mode()
+	var lobby_maps := Global.get_lobby_maps()
+	var total := lobby_maps.size()
 	var active := Global.get_enabled_map_ids().size()
+	if level_all_btn != null:
+		level_all_btn.visible = not horde
+		level_all_btn.disabled = not is_host or active == total
+	if level_none_btn != null:
+		level_none_btn.visible = not horde
+		level_none_btn.disabled = not is_host or active == 0
+	if level_intro_label != null:
+		if horde:
+			level_intro_label.text = "Horde: Die Gebiete kommen in dieser Reihenfolge, nach jedem besiegten Boss geht es ins nächste. Wo zwei Karten dieselbe Nummer haben, wird eine davon zufällig gewählt. Ein Klick auf ein Vorschaubild zeigt das Gebiet groß."
+		else:
+			var view_text := "Seitenansicht"
+			if Global.game_mode == Global.GAME_MODE_ARENA:
+				view_text = "Draufsicht"
+			elif Global.is_mixed_mode():
+				view_text = "Seitenansicht und Draufsicht"
+			level_intro_label.text = "Karten für %s (Spielart im Regeln-Reiter). Abgeschaltete Levels kommen bei Map „Zufällig“ nicht mehr dran. Ein Klick auf ein Vorschaubild zeigt das Level groß. Ohne aktives Level lässt sich das Match nicht starten." % view_text
 	var text := "%d von %d Levels aktiv" % [active, total]
-	if active == 0:
+	if horde:
+		text = "%d Horden-Gebiete" % HordeDefs.STAGE_MAPS.size()
+	elif active == 0:
 		text = "Kein Level aktiv – das Match kann so nicht starten."
-	if Global.selected_map_id != Global.MAP_RANDOM:
+	elif Global.is_mixed_mode():
+		var side_on := Global.get_enabled_side_maps().size()
+		var arena_on := Global.get_enabled_arena_maps().size()
+		text += " (Seite %d, Draufsicht %d)" % [side_on, arena_on]
+		if side_on == 0 or arena_on == 0:
+			text += " – es kommt nur die Ansicht mit aktiven Levels dran"
+	if not horde and Global.selected_map_id != Global.MAP_RANDOM:
 		text += "  |  Feste Map: %s (Regeln-Reiter)" % Global.get_map_name(Global.selected_map_id)
-	if not is_host:
+	if not is_host and not horde:
 		text += "  |  Nur der Host kann Levels schalten."
 	level_count_label.text = text
 	_refresh_level_viewer()
@@ -3259,7 +3353,7 @@ func _request_level_previews() -> void:
 	if level_preview_renderer == null:
 		return
 	var missing: Array[String] = []
-	for map_id in Global.get_playable_maps():
+	for map_id in Global.get_lobby_maps():
 		if not LevelPreviewRendererScript.has_cached(map_id):
 			missing.append(map_id)
 	if not missing.is_empty():
@@ -3287,7 +3381,13 @@ func _on_level_toggled(pressed: bool, map_id: String) -> void:
 func _on_all_levels_pressed() -> void:
 	if not Global.is_local_host():
 		return
-	Global.set_disabled_maps([])
+	# Nur die Karten der aktuellen Spielart; die andere Ansicht bleibt wie sie ist.
+	var lobby_maps := Global.get_lobby_maps()
+	var keep: Array[String] = []
+	for map_id in Global.disabled_map_ids:
+		if not lobby_maps.has(map_id):
+			keep.append(map_id)
+	Global.set_disabled_maps(keep)
 	SoundManager.play_sound("click")
 	_refresh_level_controls()
 	_update_status()
@@ -3295,7 +3395,11 @@ func _on_all_levels_pressed() -> void:
 func _on_no_levels_pressed() -> void:
 	if not Global.is_local_host():
 		return
-	Global.set_disabled_maps(Global.get_playable_maps())
+	var target: Array[String] = Global.disabled_map_ids.duplicate()
+	for map_id in Global.get_lobby_maps():
+		if not target.has(map_id):
+			target.append(map_id)
+	Global.set_disabled_maps(target)
 	SoundManager.play_sound("click")
 	_refresh_level_controls()
 	_update_status()
@@ -3623,7 +3727,7 @@ func _build_level_viewer() -> void:
 	footer.add_child(level_viewer_status)
 
 func _open_level_viewer(map_id: String) -> void:
-	if level_viewer == null or not Global.get_playable_maps().has(map_id):
+	if level_viewer == null or not Global.get_lobby_maps().has(map_id):
 		return
 	_level_viewer_map = map_id
 	# Bildgröße an das Fenster anpassen (16:9, Platz für Kopf- und Fußzeile).
@@ -3647,7 +3751,7 @@ func _close_level_viewer() -> void:
 	_level_viewer_map = ""
 
 func _step_level_viewer(direction: int) -> void:
-	var ids := Global.get_playable_maps()
+	var ids := Global.get_lobby_maps()
 	if _level_viewer_map.is_empty() or ids.is_empty():
 		return
 	var index := ids.find(_level_viewer_map)
@@ -3657,8 +3761,9 @@ func _refresh_level_viewer() -> void:
 	if level_viewer == null or not level_viewer.visible or _level_viewer_map.is_empty():
 		return
 	var map_id := _level_viewer_map
-	var index := Global.get_playable_maps().find(map_id)
-	level_viewer_title.text = "%s  (%d/%d)" % [Global.get_map_name(map_id), index + 1, Global.get_playable_maps().size()]
+	var ids := Global.get_lobby_maps()
+	var index := ids.find(map_id)
+	level_viewer_title.text = "%s  (%d/%d)" % [Global.get_map_name(map_id), index + 1, ids.size()]
 	level_viewer_desc.text = Global.get_map_description(map_id)
 	var texture := LevelPreviewRendererScript.get_cached(map_id)
 	level_viewer_texture.texture = texture
@@ -3667,7 +3772,13 @@ func _refresh_level_viewer() -> void:
 	level_viewer_texture.modulate = Color(1, 1, 1, 1) if enabled else Color(0.6, 0.6, 0.65, 0.6)
 	level_viewer_check.set_pressed_no_signal(enabled)
 	level_viewer_check.disabled = not Global.is_local_host()
-	if not Global.is_local_host():
+	level_viewer_check.visible = Global.get_switchable_maps().has(map_id)
+	if Global.is_horde_mode():
+		var stage := Global.get_horde_stage_number(map_id)
+		level_viewer_status.text = "Horden-Gebiet %d." % stage if stage > 0 else ""
+	elif ArenaMaps.is_arena_map(map_id):
+		level_viewer_status.text = "Draufsicht: Raster der Karte von oben." if Global.is_local_host() else "Nur der Host kann Levels schalten."
+	elif not Global.is_local_host():
 		level_viewer_status.text = "Nur der Host kann Levels schalten."
 	elif not Global.has_enabled_maps():
 		level_viewer_status.text = "Kein Level aktiv – das Match kann so nicht starten."
@@ -4490,8 +4601,8 @@ func _refresh_network_status() -> void:
 
 func _map_summary_text() -> String:
 	var text := Global.get_map_name(Global.selected_map_id)
-	if Global.selected_map_id == Global.MAP_RANDOM and not Global.disabled_map_ids.is_empty():
-		text += " (%d/%d)" % [Global.get_enabled_map_ids().size(), Global.get_playable_maps().size()]
+	if Global.selected_map_id == Global.MAP_RANDOM and not Global.is_horde_mode() and Global.get_enabled_map_ids().size() < Global.get_lobby_maps().size():
+		text += " (%d/%d)" % [Global.get_enabled_map_ids().size(), Global.get_lobby_maps().size()]
 	return text
 
 func _update_status() -> void:

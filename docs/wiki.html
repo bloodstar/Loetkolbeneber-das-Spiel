@@ -1158,17 +1158,25 @@ der kleinste Helden-Pool noch hat.</li>
 </ul>
 <h3 id="tab-levels">Tab Levels</h3>
 <ul>
-<li>Zeigt <strong>alle Maps mit Vorschaubild</strong>. Die Bilder
-rendert das Spiel beim ersten Öffnen des Reiters selbst aus dem
-Level-Generator, neue Maps tauchen also automatisch auf.</li>
+<li>Zeigt <strong>die Maps, die zur Einstellung passen</strong>, mit
+Vorschaubild: bei Spielart <em>Seitenansicht</em> die
+Seitenansicht-Level, bei <em>Draufsicht</em> die Arena-Karten, bei
+<em>Beides</em> beide (Kachel-Markierung SEITE / DRAUFSICHT), im Modus
+<em>Horde</em> die Horden-Gebiete in Spielreihenfolge (GEBIET 1–4, nur
+zum Ansehen, nicht abschaltbar). Seitenansicht-Bilder rendert das Spiel
+beim ersten Öffnen des Reiters aus dem Level-Generator, Arena-Karten
+werden aus ihrem Raster von oben gemalt. Neue Maps tauchen automatisch
+auf.</li>
 <li><strong>Klick aufs Bild</strong> öffnet die Großansicht mit
 Beschreibung. Mit <code>←</code>/<code>→</code> blättern, mit
 <code>Esc</code> oder Klick daneben schließen.</li>
 <li>Der Schalter neben dem Namen <strong>schaltet ein Level ab</strong>.
 Abgeschaltete Levels kommen bei <strong>Zufällig</strong> nicht mehr
-dran und sind unter Regeln → Spielfeld ausgegraut. <strong>ALLE
-AN</strong> / <strong>ALLE AUS</strong> schalten alles auf einmal. Ist
-kein Level aktiv, lässt sich das Match nicht starten.</li>
+dran und sind unter Regeln → Spielfeld ausgegraut. Das gilt auch für
+Arena-Karten. <strong>ALLE AN</strong> / <strong>ALLE AUS</strong>
+schalten alle gerade angezeigten Karten auf einmal, die der anderen
+Ansicht bleiben, wie sie sind. Ist kein Level aktiv, lässt sich das
+Match nicht starten.</li>
 <li>Die Auswahl gehört zu den Lobby-Regeln: Sie landet im Preset
 <strong>Last</strong> und in gespeicherten Loadouts, und der Host
 überträgt sie an alle Clients.</li>
@@ -1343,39 +1351,50 @@ selbst.</li>
 Runde draften alle Mitglieder der Verliererteams.</li>
 <li>Teamfarben: ROT, BLAU, GRÜN.</li>
 </ul>
-<h3 id="spielart-arena-draufsicht-beta">Spielart: Arena (Draufsicht,
-Beta)</h3>
+<h3
+id="spielart-seitenansicht-draufsicht-arena-beta-oder-beides">Spielart:
+Seitenansicht, Draufsicht (Arena, Beta) oder Beides</h3>
 <p>Im Tab <strong>Regeln</strong> unter <em>Spielmodus &amp;
 Spielfeld</em> wählt der Host die <strong>Spielart</strong>:
-<em>Seitenansicht</em> (klassisch) oder <em>Arena (Draufsicht)</em>. Die
-Spielart gilt für alle Teammodi oben, wird online übertragen und im
-Loadout gespeichert.</p>
+<em>Seitenansicht</em> (klassisch), <em>Draufsicht</em> (Arena) oder
+<em>Beides</em>. Die Spielart gilt für FFA und alle Teammodi, wird
+online übertragen und im Loadout gespeichert. Die Horde spielt immer in
+der Draufsicht.</p>
 <ul>
-<li><strong>Ansicht:</strong> schräg von oben in einfachem Voxel-3D.
+<li><p><strong>Beides:</strong> Jede Runde wird zufällig (50/50)
+Seitenansicht oder Draufsicht gewürfelt, höchstens zwei Runden in Folge
+in derselben Ansicht. Die Karte kommt aus den aktiven Leveln der
+gewürfelten Ansicht (Reiter <strong>Levels</strong>); ist eine Ansicht
+dort ganz abgeschaltet, kommt nur die andere dran. Eine feste Map gilt
+in ihrer Ansicht, Runden der anderen Ansicht nehmen eine zufällige
+Karte. Level-Modifier richten sich nach der Ansicht der Runde.</p></li>
+<li><p><strong>Ansicht:</strong> schräg von oben in einfachem Voxel-3D.
 Effekte, Zonen, Powerups und Kugeln liegen als 2D-Ebene passgenau auf
-dem Boden.</li>
-<li><strong>Steuerung:</strong> <code>W</code> <code>A</code>
+dem Boden.</p></li>
+<li><p><strong>Steuerung:</strong> <code>W</code> <code>A</code>
 <code>S</code> <code>D</code> laufen in alle Richtungen, die Maus zielt,
-<code>Leertaste</code> springt. Alle anderen Tasten bleiben gleich.</li>
-<li><strong>Höhe:</strong> Springen ist ein echter Sprung in die Höhe.
-Niedrige Deckung (eine Schicht) kann man überspringen und darauf stehen,
-halbhohe und hohe Mauern nur mit viel Sprungkraft. Kugeln fliegen in
-Schusshöhe und fliegen über Deckung, wenn der Schütze höher steht.
-Hinter Mauern sieht man die Schweine als Umriss in Teamfarbe.</li>
-<li><strong>Karten:</strong> Alle Karten bleiben gleich. Sprungkraft,
+<code>Leertaste</code> springt. Alle anderen Tasten bleiben
+gleich.</p></li>
+<li><p><strong>Höhe:</strong> Springen ist ein echter Sprung in die
+Höhe. Niedrige Deckung (eine Schicht) kann man überspringen und darauf
+stehen, halbhohe und hohe Mauern nur mit viel Sprungkraft. Kugeln
+fliegen in Schusshöhe und fliegen über Deckung, wenn der Schütze höher
+steht. Hinter Mauern sieht man die Schweine als Umriss in
+Teamfarbe.</p></li>
+<li><p><strong>Karten:</strong> Alle Karten bleiben gleich. Sprungkraft,
 Luftsprünge und Schwerkraft wirken auf die Sprunghöhe.
 <em>Projektil-Schwerkraft</em> (Leichtes/Schweres Geschoss, Mörser) hat
-in der Arena noch keine Wirkung, Kugeln fliegen flach.</li>
-<li><strong>Kamera:</strong> fester Zoom, sie zoomt nicht heraus. Sie
+in der Arena noch keine Wirkung, Kugeln fliegen flach.</p></li>
+<li><p><strong>Kamera:</strong> fester Zoom, sie zoomt nicht heraus. Sie
 folgt dem eigenen Schwein (lokal zu zweit: beiden) und bleibt innerhalb
 der Karte. Gegner außerhalb des Bildes zeigt ein Randpfeil in
-Teamfarbe.</li>
-<li><strong>Erhöhungen, Rampen, Stege:</strong> Erhöhungen haben oben
+Teamfarbe.</p></li>
+<li><p><strong>Erhöhungen, Rampen, Stege:</strong> Erhöhungen haben oben
 Boden und seitlich Felswände. Rampen führen ohne Sprung hinauf, ihre
 höheren Teile kann man von der Seite nicht betreten. Unter Holzstegen
 läuft man durch, oben läuft man darüber. Wer von einer Kante läuft,
-fällt herunter.</li>
-<li><strong>Maps:</strong> zufällig eine von zwölf Arenen.
+fällt herunter.</p></li>
+<li><p><strong>Maps:</strong> zufällig eine von zwölf Arenen.
 Autoscroll-Strecken (siehe Autoscroll unten): <em>Rennstrecke</em>
 (Insel, Slalom, drei Spuren) und <em>Bergrennen</em> (Hügel mit Rampen,
 Turmbrücke, Felsbuckel-Slalom). Dazu <em>Hafen</em> (Holzstege zwischen
@@ -1386,9 +1405,10 @@ vierfache Fläche): <em>Weite Steppe</em>, <em>Marktplatz</em>,
 <em>Canyon</em>, <em>Hochplateau</em> (große Erhöhung in der Mitte mit
 vier Rampen, erhöhte Randplattform), <em>Stegwerk</em> (fünf Türme mit
 Holzstegen). Wände gibt es gerade und schräg, Boden und Mauern haben
-32×32-Pixeltexturen. Die Levelauswahl der Seitenansicht gilt hier
-nicht.</li>
-<li><strong>Karteneditor:</strong> <em>Optionen → KARTENEDITOR</em>.
+32×32-Pixeltexturen. Im Reiter <strong>Levels</strong> lassen sich
+einzelne Arenen abschalten, unter Regeln → Map auch eine feste Arena
+wählen.</p></li>
+<li><p><strong>Karteneditor:</strong> <em>Optionen → KARTENEDITOR</em>.
 Links malen, rechts radieren, Mausrad zoomt, mittlere Maustaste oder
 Leertaste + Ziehen verschiebt. Werkzeuge: Pinsel (B, 1×1 bis 5×5),
 Rechteck (R), Füllen (F), schräge Wand (W, von Ecke zu Ecke ziehen,
@@ -1402,8 +1422,8 @@ unter <code>user://arena_maps/</code>. Mit <em>Im Zufallspool</em> kommt
 die Karte in die Arena-Auswahl, online schickt der Host sie an alle.
 <strong>TESTEN</strong> speichert und startet eine Runde auf der Karte
 mit den Spielern und Bots der letzten Lobby; ESC → Hauptmenü beendet den
-Test.</li>
-<li><strong>Seitenansicht-Level im Editor:</strong> Im Karteneditor
+Test.</p></li>
+<li><p><strong>Seitenansicht-Level im Editor:</strong> Im Karteneditor
 führt <em>Zum Seitenansicht-Editor</em> zu den klassischen Leveln. Jedes
 Level lässt sich laden und ändern: Plattformen, Einweg-Stege,
 Kistenblöcke und Gruben waagrecht ziehen, Wände als Rechteck, Stacheln,
@@ -1423,11 +1443,11 @@ ein eigenes Level an, das im Levels-Tab der Lobby erscheint.
 <em>Zufällige Extras</em> schaltet die zufälligen Zusatzplattformen,
 Kistenhaufen und Eisflächen des Levels ab. Gespeichert wird unter
 <code>user://side_levels/</code>, online schickt der Host den Bauplan
-vor jeder Runde an alle.</li>
-<li><strong>Runden-Modifier:</strong> nur Sturmwind, Mondgravitation,
+vor jeder Runde an alle.</p></li>
+<li><p><strong>Runden-Modifier:</strong> nur Sturmwind, Mondgravitation,
 Schwerewelt, Mini-Chaos, Schadensrausch, Turboschweine, Luftakrobatik,
 Regeneration, Startschild und Zone. Die übrigen sind in der Arena
-vorerst aus.</li>
+vorerst aus.</p></li>
 </ul>
 <hr />
 <h2 id="-karten-draft">🃏 Karten-Draft</h2>

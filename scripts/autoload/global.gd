@@ -120,11 +120,20 @@ var match_mode: String = MATCH_MODE_FFA
 # unterscheiden sich (siehe scripts/arena/).
 const GAME_MODE_SIDE: String = "side"
 const GAME_MODE_ARENA: String = "arena"
+# Beides: Pro Runde zufällig Seitenansicht oder Draufsicht (Jochen 2026-11-25).
+const GAME_MODE_MIXED: String = "mixed"
+const GAME_MODE_ORDER: Array[String] = [GAME_MODE_SIDE, GAME_MODE_ARENA, GAME_MODE_MIXED]
+# Höchstens so viele Runden in Folge in derselben Ansicht (nur bei "Beides").
+const MIXED_MAX_STREAK: int = 2
 const GAME_MODES: Dictionary = {
 	"side": {"name": "Seitenansicht", "description": "Klassisch: Plattformen, Schwerkraft, Sprünge."},
-	"arena": {"name": "Arena (Draufsicht)", "description": "Top-down-Arena in Voxel-3D: Laufen in alle Richtungen, Springen über Deckung."},
+	"arena": {"name": "Draufsicht", "description": "Top-down-Arena in Voxel-3D: Laufen in alle Richtungen, Springen über Deckung."},
+	"mixed": {"name": "Beides", "description": "Seitenansicht und Draufsicht wechseln sich pro Runde zufällig ab, höchstens zwei Runden in Folge in derselben Ansicht."},
 }
 var game_mode: String = GAME_MODE_SIDE
+# Ansicht der letzten Runden bei "Beides" (nur der Host würfelt).
+var _mixed_last_view: String = ""
+var _mixed_streak: int = 0
 
 # Match-Punkte: Kills und das Überleben einer Runde geben Punkte. Wer zuerst
 # die konfigurierte Punktzahl erreicht, gewinnt das Match.
@@ -1722,11 +1731,51 @@ func set_game_mode(mode: String) -> void:
 	if game_mode == resolved:
 		return
 	game_mode = resolved
+	# Eine feste Map der anderen Ansicht passt nicht mehr: zurück auf Zufällig.
+	if selected_map_id != MAP_RANDOM and not get_lobby_maps().has(selected_map_id) and not is_horde_mode():
+		selected_map_id = MAP_RANDOM
+		map_changed.emit()
 	game_mode_changed.emit(game_mode)
 	lobby_state_changed.emit()
 
+## Nur "Draufsicht" (oder Horde). Bei "Beides" entscheidet die Karte der
+## Runde: dafür ArenaMode.active oder view_of_map(map_id) nehmen.
 func is_arena_mode() -> bool:
 	return game_mode == GAME_MODE_ARENA or is_horde_mode()
+
+func is_mixed_mode() -> bool:
+	return game_mode == GAME_MODE_MIXED and not is_horde_mode()
+
+## Ansicht einer Karte: "arena" für Arena-/Horden-Karten, sonst "side".
+func view_of_map(map_id: String) -> String:
+	return GAME_MODE_ARENA if ArenaMaps.is_arena_map(map_id) else GAME_MODE_SIDE
+
+## Merkt sich die Ansicht der gestarteten Runde (Serienbremse bei "Beides").
+func note_round_view(map_id: String) -> void:
+	var view := view_of_map(map_id)
+	if view == _mixed_last_view:
+		_mixed_streak += 1
+	else:
+		_mixed_last_view = view
+		_mixed_streak = 1
+
+func reset_mixed_views() -> void:
+	_mixed_last_view = ""
+	_mixed_streak = 0
+
+## "Beides": 50/50 aus dem Runden-Seed. Nach MIXED_MAX_STREAK Runden in einer
+## Ansicht kommt die andere dran. Ist eine Ansicht ganz abgeschaltet (Reiter
+## Levels), bleibt es bei der anderen.
+func _roll_mixed_arena(level_seed: int) -> bool:
+	var side_ok := not get_enabled_side_maps().is_empty()
+	var arena_ok := not get_enabled_arena_maps().is_empty()
+	if side_ok != arena_ok:
+		return arena_ok
+	if _mixed_streak >= MIXED_MAX_STREAK and not _mixed_last_view.is_empty():
+		return _mixed_last_view != GAME_MODE_ARENA
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([maxi(1, level_seed), "mixed_view"])
+	return rng.randf() < 0.5
 
 func is_horde_mode() -> bool:
 	return match_mode == MATCH_MODE_HORDE
@@ -1858,6 +1907,7 @@ func reset_match() -> void:
 		if player_cards[i] is Array:
 			player_cards[i].clear()
 	reset_match_stats()
+	reset_mixed_views()
 	tiebreak_slots.clear()
 	match_end_reason = ""
 	current_state = GameState.PLAYING
@@ -2278,7 +2328,67 @@ func get_playable_maps() -> Array[String]:
 	ids.append_array(SideLevels.custom_ids())
 	return ids
 
+## Arena-Karten im Zufallspool: eingebaute plus eigene mit "in_pool".
+func get_arena_pool_maps() -> Array[String]:
+	var ids: Array[String] = ArenaMaps.MAP_IDS.duplicate()
+	for id in ArenaMaps.custom_ids():
+		if bool(ArenaMaps.get_map(id).get("in_pool", false)):
+			ids.append(id)
+	return ids
+
+## Alle Karten, die sich im Reiter "Levels" schalten lassen (beide Ansichten).
+func get_switchable_maps() -> Array[String]:
+	var ids := get_playable_maps()
+	ids.append_array(get_arena_pool_maps())
+	return ids
+
+## Gebiete des Horden-Modus in Spielreihenfolge, inkl. Alternativen.
+func get_horde_maps() -> Array[String]:
+	var ids: Array[String] = []
+	for i in range(HordeDefs.STAGE_MAPS.size()):
+		var options: Array = [HordeDefs.STAGE_MAPS[i]]
+		options.append_array(HordeDefs.STAGE_ALTERNATIVES.get(i, []))
+		for raw in options:
+			var id := str(raw)
+			if not ids.has(id):
+				ids.append(id)
+	return ids
+
+## Nummer des Horden-Gebiets (1-basiert), 0 wenn keine Horden-Karte.
+func get_horde_stage_number(map_id: String) -> int:
+	for i in range(HordeDefs.STAGE_MAPS.size()):
+		if HordeDefs.STAGE_MAPS[i] == map_id or (HordeDefs.STAGE_ALTERNATIVES.get(i, []) as Array).has(map_id):
+			return i + 1
+	return 0
+
+## Karten, die zur aktuellen Einstellung passen (Levelübersicht, Map-Auswahl):
+## Horde → Horden-Gebiete, Draufsicht → Arena-Karten, Beides → beide,
+## sonst Seitenansicht.
+func get_lobby_maps() -> Array[String]:
+	if is_horde_mode():
+		return get_horde_maps()
+	if game_mode == GAME_MODE_ARENA:
+		return get_arena_pool_maps()
+	if game_mode == GAME_MODE_MIXED:
+		return get_switchable_maps()
+	return get_playable_maps()
+
+func get_enabled_side_maps() -> Array[String]:
+	return _without_disabled(get_playable_maps())
+
+func get_enabled_arena_maps() -> Array[String]:
+	return _without_disabled(get_arena_pool_maps())
+
+func _without_disabled(ids: Array[String]) -> Array[String]:
+	var result: Array[String] = []
+	for map_id in ids:
+		if not disabled_map_ids.has(map_id):
+			result.append(map_id)
+	return result
+
 func get_map_name(map_id: String) -> String:
+	if ArenaMaps.is_arena_map(map_id):
+		return ArenaMaps.display_name(map_id)
 	if SideLevels.is_custom(map_id):
 		return SideLevels.custom_name(map_id)
 	var info: Dictionary = MAPS.get(map_id, {})
@@ -2286,19 +2396,24 @@ func get_map_name(map_id: String) -> String:
 
 func get_map_description(map_id: String) -> String:
 	if map_id == MAP_RANDOM:
+		if is_horde_mode():
+			return "Die Horde zieht durch %d Gebiete, die Reihenfolge ist fest." % HordeDefs.STAGE_MAPS.size()
 		var enabled_count := get_enabled_map_ids().size()
-		if enabled_count == get_playable_maps().size():
+		var total := get_lobby_maps().size()
+		if enabled_count == total:
 			return "Wählt pro Runde eine der %d Maps." % enabled_count
 		if enabled_count == 0:
 			return "Alle Levels sind abgeschaltet – im Reiter „Levels“ mindestens eins aktivieren."
-		return "Wählt pro Runde eine der %d aktiven Maps (von %d)." % [enabled_count, get_playable_maps().size()]
+		return "Wählt pro Runde eine der %d aktiven Maps (von %d)." % [enabled_count, total]
+	if ArenaMaps.is_arena_map(map_id):
+		return str(ArenaMaps.get_map(map_id).get("description", ""))
 	if SideLevels.is_custom(map_id):
 		return str(SideLevels.custom.get(map_id, {}).get("description", "Eigenes Level aus dem Karteneditor."))
 	var info: Dictionary = MAPS.get(map_id, {})
 	return str(info.get("description", ""))
 
 func set_selected_map(map_id: String) -> void:
-	if map_id != MAP_RANDOM and not get_playable_maps().has(map_id):
+	if map_id != MAP_RANDOM and not get_switchable_maps().has(map_id):
 		return
 	# Wer eine feste Map wählt, will sie spielen: ein abgeschaltetes Level
 	# wird dabei wieder aktiv.
@@ -2311,21 +2426,24 @@ func set_selected_map(map_id: String) -> void:
 	map_changed.emit()
 
 func is_map_enabled(map_id: String) -> bool:
-	return get_playable_maps().has(map_id) and not disabled_map_ids.has(map_id)
+	if is_horde_mode() and get_horde_maps().has(map_id):
+		return true
+	return get_switchable_maps().has(map_id) and not disabled_map_ids.has(map_id)
 
-# Aktive Levels in der Reihenfolge von MAP_PLAYABLE.
+# Aktive Levels der aktuellen Einstellung (Reihenfolge wie get_lobby_maps).
+# Die Horde hat feste Gebiete und gilt immer als spielbar.
 func has_enabled_maps() -> bool:
-	return not get_enabled_map_ids().is_empty()
+	return is_horde_mode() or not get_enabled_map_ids().is_empty()
 
 func get_enabled_map_ids() -> Array[String]:
 	var result: Array[String] = []
-	for map_id in get_playable_maps():
-		if not disabled_map_ids.has(map_id):
+	for map_id in get_lobby_maps():
+		if is_map_enabled(map_id):
 			result.append(map_id)
 	return result
 
 func set_map_enabled(map_id: String, enabled: bool) -> void:
-	if not get_playable_maps().has(map_id):
+	if not get_switchable_maps().has(map_id):
 		return
 	if enabled == is_map_enabled(map_id):
 		return
@@ -2344,7 +2462,7 @@ func set_map_enabled(map_id: String, enabled: bool) -> void:
 # werden verworfen.
 func set_disabled_maps(map_ids: Array) -> void:
 	var target: Array[String] = []
-	for map_id in get_playable_maps():
+	for map_id in get_switchable_maps():
 		if map_ids.has(map_id):
 			target.append(map_id)
 	if target == disabled_map_ids:
@@ -2407,15 +2525,19 @@ func set_disabled_powerups(kinds: Array) -> void:
 func resolve_map_id(level_seed: int) -> String:
 	if is_horde_mode():
 		return ArenaMaps.HORDE_MAP_ID
-	if is_arena_mode():
-		return ArenaMaps.pick_random(level_seed)
+	if not ArenaMaps.test_map_id.is_empty() and ArenaMaps.is_arena_map(ArenaMaps.test_map_id):
+		return ArenaMaps.test_map_id
 	if not SideLevels.test_map_id.is_empty() and SideLevels.has(SideLevels.test_map_id):
 		return SideLevels.test_map_id
-	if selected_map_id != MAP_RANDOM and get_playable_maps().has(selected_map_id):
+	var arena := is_arena_mode() or (is_mixed_mode() and _roll_mixed_arena(level_seed))
+	var all_maps := get_arena_pool_maps() if arena else get_playable_maps()
+	# Feste Map: gilt in ihrer Ansicht. Bei "Beides" kommt in Runden der
+	# anderen Ansicht eine zufällige Karte dran.
+	if selected_map_id != MAP_RANDOM and all_maps.has(selected_map_id):
 		return selected_map_id
-	var pool := get_enabled_map_ids()
+	var pool := get_enabled_arena_maps() if arena else get_enabled_side_maps()
 	if pool.is_empty():
-		pool = get_playable_maps()
+		pool = all_maps
 	var rng := RandomNumberGenerator.new()
 	rng.seed = maxi(1, level_seed)
 	return pool[rng.randi() % pool.size()]
@@ -3040,12 +3162,13 @@ func get_lobby_loadout_summary(name: String) -> String:
 	]
 	var disabled_maps: Variant = data.get("disabled_map_ids", [])
 	var disabled_map_count := 0
+	var switchable := get_switchable_maps()
 	if disabled_maps is Array:
-		for map_id in get_playable_maps():
+		for map_id in switchable:
 			if disabled_maps.has(map_id):
 				disabled_map_count += 1
-	if disabled_map_count > 0 and disabled_map_count < get_playable_maps().size():
-		modifier_text += " · Levels %d/%d" % [get_playable_maps().size() - disabled_map_count, get_playable_maps().size()]
+	if disabled_map_count > 0 and disabled_map_count < switchable.size():
+		modifier_text += " · Levels %d/%d" % [switchable.size() - disabled_map_count, switchable.size()]
 	var disabled_powerups: Variant = data.get("disabled_powerup_kinds", [])
 	var disabled_powerup_count := 0
 	if disabled_powerups is Array:
