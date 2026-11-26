@@ -327,17 +327,7 @@ func _init_database() -> void:
 	c19.max_ammo_add = 3
 	_register(c19)
 
-	# 20. Meteor Cannon (Epic)
-	var c20 = CardData.new()
-	c20.id = "meteor_cannon"
-	c20.title = "Meteor Cannon"
-	c20.description = "Riesige verheerende Explosion!\n+75px Explosionsradius, +60% Schaden, -30% Feuerrate"
-	c20.rarity = "Epic"
-	c20.color = Color(0.95, 0.3, 0.0)
-	c20.explosion_radius_add = 75.0
-	c20.damage_mult = 1.60
-	c20.fire_rate_mult = 1.30
-	_register(c20)
+	# 20. Meteor Cannon ist seit 2026-11-26 Ausbau C von Explosivschuss (siehe dort).
 
 	# 21. Kamikaze Soul (Legendary)
 	var c21 = CardData.new()
@@ -905,6 +895,24 @@ func _init_database() -> void:
 	eb3.evolution_branch = "B"
 	eb3.cluster_bomblets = true
 	_register(eb3)
+
+	# Meteor Cannon war eine eigene Epic-Karte mit demselben Effekt wie
+	# Explosivschuss und ist seit 2026-11-26 dessen Ausbau C. Werte unverändert,
+	# kommen jetzt aber zur Grundkarte dazu.
+	var eb4 = CardData.new()
+	eb4.id = "meteor_cannon"
+	eb4.version = 2 # Ausbau C von Explosivschuss (vorher eigene Karte)
+	eb4.title = "Meteor Cannon"
+	eb4.description = "Explosivschuss-Ausbau: Riesige verheerende Explosion!\n+75px Explosionsradius, +60% Schaden, -30% Feuerrate"
+	eb4.rarity = "Epic"
+	eb4.color = Color(0.95, 0.3, 0.0)
+	eb4.family_id = "explosivschuss"
+	eb4.parent_card_id = "explosivschuss"
+	eb4.evolution_branch = "C"
+	eb4.explosion_radius_add = 75.0
+	eb4.damage_mult = 1.60
+	eb4.fire_rate_mult = 1.30
+	_register(eb4)
 
 	# --- Feuersturm ---
 	# Seit v3 mit der früheren Einzelkarte Brandkapsel verschmolzen: Die

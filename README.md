@@ -543,7 +543,7 @@ Eine Ausbaukarte erscheint erst, wenn die Grundkarte im Deck liegt. Wer einen Zw
 | **Giftschuss** | +2 Gift-Stapel | Giftwolke am Einschlag | Giftspur hinter dir |
 | **Blitzschuss** | 0,1 s Betäubung | Kettenblitz | Blitz-Orb am Einschlag |
 | **Frostschuss** | 0,8 s Verlangsamung | Eisnova am Einschlag | Eisbahn hinter dir |
-| **Explosivschuss** | +30 px Explosion | Großer Knall (+60 px) | Splitterbomben |
+| **Explosivschuss** | +30 px Explosion | Großer Knall (+60 px) | Splitterbomben (Zweig C: Meteor Cannon, +75 px, +60 % Schaden, −30 % Feuerrate, früher eigene Karte) |
 | **Feuersturm** | Geschosse entzünden Gegner und den Boden am Einschlag (früher Brandkapsel) | Brandherd: +60 % Feuerschaden | Brandkapsel: +60 % Feuerreichweite (Zweig C: Feuerspur hinter dir) |
 | **Wächterdrohne** | Drohne schießt mit | Zwillingsdrohne | Regenerationsdrohne |
 | **Schutzdrohne** | Drohne fängt Schüsse ab | Heilende Schutzdrohne | Schutzdrohnen-Schwarm |
