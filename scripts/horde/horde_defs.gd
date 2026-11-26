@@ -104,7 +104,10 @@ static func spawn_rate(t: float) -> float:
 static func max_alive(t: float, players: int) -> int:
 	var m := t / 60.0
 	var base := (45.0 + m * 17.0) * ENEMY_COUNT_MULT
-	return mini(MAX_ENEMIES_CAP, int(base * (1.0 + 0.25 * float(maxi(0, players - 1)))))
+	# Auch die feste Obergrenze schrumpft mit, sonst merken 4 Spieler ab
+	# Minute 9 nichts von der Verringerung.
+	var cap := int(round(float(MAX_ENEMIES_CAP) * ENEMY_COUNT_MULT))
+	return mini(cap, int(base * (1.0 + 0.25 * float(maxi(0, players - 1)))))
 
 static func hp_mult(t: float, players: int) -> float:
 	var m := t / 60.0
