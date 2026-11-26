@@ -117,6 +117,8 @@ var default_physics_ticks: int = 60
 
 # Horden-Modus (Koop gegen Schweinejäger, scripts/horde/).
 var horde_director: HordeDirector = null
+## Challenge-Runde (ChallengeDefs). null in normalen Runden.
+var challenge_director: ChallengeDirector = null
 var horde_hud: HordeHud = null
 
 func _ready() -> void:
@@ -316,7 +318,7 @@ func _on_lobby_cancelled() -> void:
 	_leave_arena()
 	main_menu.open_menu()
 
-func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> void:
+func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "", forced_challenge: String = "") -> void:
 	_cancel_kill_cam()
 	Global.current_state = Global.GameState.PLAYING
 	_apply_game_speed()
@@ -329,17 +331,22 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	if level_seed <= 0:
 		level_seed = maxi(1, randi())
 	match_seed = level_seed
+	# Challenge-Runde? Würfelt nur der Host; Clients bekommen sie mitgeschickt.
+	var challenge := forced_challenge
+	if not is_network_client and forced_map_id.is_empty() and challenge.is_empty():
+		challenge = Global.roll_challenge(level_seed)
 	var map_id := forced_map_id
 	if map_id.is_empty():
-		map_id = Global.resolve_map_id(level_seed)
+		map_id = _resolve_round_map(level_seed, challenge)
 	match_map_id = map_id
 	Global.note_round_view(map_id)
+	Global.note_round_challenge(challenge)
 	if is_network_host and NetworkManager.has_clients():
 		if ArenaMaps.is_custom(map_id):
 			NetworkManager.send_arena_map(map_id, ArenaMaps.to_json(ArenaMaps.get_map(map_id)))
 		elif SideLevels.has(map_id):
 			NetworkManager.send_side_level(map_id, SideLevels.entry_json(map_id))
-		NetworkManager.send_round_start(level_seed, map_id, Global.points_to_win, Global.tiebreak_slots)
+		NetworkManager.send_round_start(level_seed, map_id, Global.points_to_win, Global.tiebreak_slots, challenge)
 
 	_clear_remote_bullets()
 	_clear_remote_towers()
@@ -351,7 +358,8 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	# 1. Level-Modifier deterministisch bestimmen (im Testraum keine).
 	var active_mods: Array[String] = []
 	var horde := Global.is_horde_mode()
-	if modifier_manager != null and not horde and not Global.test_room_active:
+	# Challenge-Runden laufen ohne Level-Modifier (das Ziel ist Abwechslung genug).
+	if modifier_manager != null and not horde and not Global.test_room_active and challenge.is_empty():
 		active_mods = modifier_manager.roll_configured_modifiers(level_seed, map_id)
 	elif modifier_manager != null and horde:
 		active_mods = _roll_horde_modifiers(level_seed)
@@ -384,6 +392,7 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 
 	_spawn_players()
 	_setup_horde(level_seed)
+	_setup_challenge(challenge, level_seed)
 	if Global.is_tiebreak():
 		hud.show_tiebreak_notice(Global.tiebreak_slots)
 	_start_round_countdown()
@@ -694,11 +703,16 @@ func _end_round_countdown() -> void:
 		if not is_network_client:
 			horde_director.start(self, match_seed, players.size())
 	elif not is_network_client:
-		sudden_death_timer.start(SUDDEN_DEATH_DELAY)
+		# Challenges haben ihr eigenes Zeitlimit, kein Sudden Death.
+		if not _challenge_running():
+			sudden_death_timer.start(SUDDEN_DEATH_DELAY)
 		RoundStats.mark_fight_started()
 		if not rising_lava.is_empty():
 			rising_lava_wait = float(rising_lava.get("delay", 4.0))
 		level_generator.start_auto_scroll()
+
+	if _challenge_running():
+		challenge_director.start()
 
 	var hide_timer := get_tree().create_timer(0.8)
 	hide_timer.timeout.connect(_hide_countdown_after_start)
@@ -859,6 +873,11 @@ func _on_player_died(dead_player_index: int) -> void:
 	# Während der Kill-Cam steht der Rundensieger schon fest. Weitere Tode
 	# zählen nur noch für Punkte und Statistik.
 	if kill_cam_active:
+		return
+
+	# Challenge mit Wiedereinstieg: Die Runde läuft weiter, der Spieler kommt
+	# nach kurzer Zeit zurück. Kill-Punkte sind oben schon gutgeschrieben.
+	if _challenge_running() and challenge_director.on_player_died(dead_player_index):
 		return
 
 	# Runde endet in FFA, wenn höchstens noch ein Spieler lebt. In Team-Modi
@@ -1400,7 +1419,7 @@ func _on_network_match_start(config: Dictionary) -> void:
 		return
 	_apply_network_config(config)
 
-func _on_network_round_start(level_seed: int, map_id: String, points_to_win: int = 0, tiebreak_slots: Array = []) -> void:
+func _on_network_round_start(level_seed: int, map_id: String, points_to_win: int = 0, tiebreak_slots: Array = [], challenge_id: String = "") -> void:
 	if not is_network_client:
 		return
 	if points_to_win > 0:
@@ -1408,7 +1427,7 @@ func _on_network_round_start(level_seed: int, map_id: String, points_to_win: int
 	Global.set_tiebreak_slots(tiebreak_slots)
 	lobby.close_lobby()
 	main_menu.close_menu()
-	_start_fresh_round(level_seed, map_id)
+	_start_fresh_round(level_seed, map_id, challenge_id)
 
 # --- Laufendes Spiel: Eingaben & Snapshots ---
 
@@ -1587,6 +1606,7 @@ func _send_snapshot() -> void:
 		"scroll": level_generator.get_auto_scroll_snapshot(),
 		"modifiers": modifier_manager.get_network_snapshot() if modifier_manager != null else {},
 		"horde": horde_director.get_network_state() if horde_director != null and is_instance_valid(horde_director) else {},
+		"challenge": challenge_director.get_network_state() if challenge_director != null and is_instance_valid(challenge_director) else {},
 	})
 
 func _player_snapshot(player: Player, with_appearance: bool = true) -> Dictionary:
@@ -1723,6 +1743,9 @@ func _on_network_snapshot(data: Dictionary) -> void:
 	var horde_data = data.get("horde", {})
 	if horde_data is Dictionary and not horde_data.is_empty() and horde_director != null and is_instance_valid(horde_director):
 		horde_director.apply_network_state(horde_data)
+	var challenge_data = data.get("challenge", {})
+	if challenge_data is Dictionary and not challenge_data.is_empty() and challenge_director != null and is_instance_valid(challenge_director):
+		challenge_director.apply_network_state(challenge_data)
 
 	var scores = data.get("scores", [])
 	if scores is Array:
@@ -2212,8 +2235,12 @@ func horde_respawn_player(slot: int, pos: Vector2) -> void:
 	p.is_remote = is_network_host and Global.is_human_slot(slot) and slot != 1
 	p.position = pos
 	add_child(p)
+	# Seitenansicht (Challenges): Füße nicht im Einweg-Steg.
+	if not ArenaMode.active:
+		p.position.y -= p.spawn_lift()
 	p.died.connect(_on_player_died)
 	players.append(p)
+	p.opponent = _nearest_other(p)
 	if modifier_manager != null:
 		modifier_manager.apply_player_modifiers(p)
 	p.control_enabled = true
@@ -2226,6 +2253,49 @@ func horde_respawn_player(slot: int, pos: Vector2) -> void:
 	_configure_camera_world()
 	hud.setup_players(players)
 	hud.update_all()
+
+# ============================================================
+# Challenge-Runden (ChallengeDefs / ChallengeDirector)
+# ============================================================
+
+## Karte der Runde. Challenges mit fester Karte nehmen diese; sonst die
+## normale Karte, bei Hügel und Münzjagd aber keine Scroll- oder Lavaturm-Karte.
+func _resolve_round_map(level_seed: int, challenge: String) -> String:
+	if not challenge.is_empty():
+		var fixed := ChallengeDefs.pick_map(challenge, level_seed)
+		if not fixed.is_empty():
+			return fixed
+	var map_id := Global.resolve_map_id(level_seed)
+	if challenge.is_empty():
+		return map_id
+	var tries := 0
+	while not ChallengeDefs.map_suitable(challenge, map_id) and tries < 12:
+		tries += 1
+		map_id = Global.resolve_map_id(level_seed + tries * 7919)
+	if not ChallengeDefs.map_suitable(challenge, map_id):
+		map_id = "arena_hof" if ArenaMaps.is_arena_map(map_id) else "grasarena"
+	return map_id
+
+func _setup_challenge(challenge: String, level_seed: int) -> void:
+	challenge_director = null
+	if challenge.is_empty() or not ChallengeDefs.DEFS.has(challenge):
+		return
+	var d := ChallengeDirector.new()
+	d.name = "ChallengeDirector"
+	add_child(d)
+	d.setup(self, level_generator, challenge, level_seed, is_network_client)
+	challenge_director = d
+
+func _challenge_running() -> bool:
+	return challenge_director != null and is_instance_valid(challenge_director) and not challenge_director.finished
+
+## Der ChallengeDirector (Host) meldet den Sieger: normale Rundenwertung.
+func challenge_finished(winner: int) -> void:
+	if is_network_client or winner <= 0:
+		return
+	if Global.current_state != Global.GameState.PLAYING or kill_cam_active:
+		return
+	_finish_round(winner, true)
 
 ## Level-Modifier für ein Horden-Gebiet: Lobby-Auswahl und -Rate, aber nur
 ## die Modifier aus HordeDefs.MODIFIERS. Host und Clients würfeln gleich.

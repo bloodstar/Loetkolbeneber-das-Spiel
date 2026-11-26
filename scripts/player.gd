@@ -3354,11 +3354,15 @@ func _spawn_spore_cloud(pos: Vector2, radius: float, duration: float, dps: float
 	# Schaden pro Sekunde statt pro Frame, damit er nicht von der Bildrate abhängt.
 	# progress[1] zählt bis zum nächsten Gift-Tick von "Ätzender Nebel".
 	var progress := [0.0, 0.0]
+	# Die Wolke kann den Spieler überleben (Respawn in Challenges/Horde ersetzt
+	# den Knoten): über die Instanz-ID prüfen, nicht über self.
+	var owner_id := get_instance_id()
 	var t = cloud.create_tween()
 	t.tween_method(func(val: float):
 		var dt: float = (val - progress[0]) * duration
 		progress[0] = val
-		if dt <= 0.0 or not is_instance_valid(self) or not is_inside_tree():
+		var me := instance_from_id(owner_id) as Player
+		if dt <= 0.0 or me == null or not me.is_inside_tree():
 			return
 		var poison_now := false
 		if corrosive:
@@ -3366,13 +3370,13 @@ func _spawn_spore_cloud(pos: Vector2, radius: float, duration: float, dps: float
 			if progress[1] <= 0.0:
 				progress[1] = SPORE_CORROSIVE_INTERVAL
 				poison_now = true
-		for p in _opponents_within(cloud.global_position, radius):
-			_ability_hit(p, dps * dt, Vector2.ZERO)
+		for p in me._opponents_within(cloud.global_position, radius):
+			me._ability_hit(p, dps * dt, Vector2.ZERO)
 			if poison_now:
-				p.apply_poison(SPORE_CORROSIVE_STACKS, poison_damage_per_tick * ability_damage_mult)
+				p.apply_poison(SPORE_CORROSIVE_STACKS, me.poison_damage_per_tick * me.ability_damage_mult)
 		# Evolution "Symbiose": Spore heilt sich in der eigenen Wolke.
-		if symbiosis and current_health > 0.0 and global_position.distance_to(cloud.global_position) <= radius:
-			heal(SPORE_SYMBIOSIS_HPS * dt)
+		if symbiosis and me.current_health > 0.0 and me.global_position.distance_to(cloud.global_position) <= radius:
+			me.heal(SPORE_SYMBIOSIS_HPS * dt)
 	, 0.0, 1.0, duration)
 	t.tween_callback(cloud.queue_free)
 

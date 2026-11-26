@@ -63,6 +63,8 @@ var gamble_check: CheckButton
 var element_reactions_check: CheckButton
 var pre_draft_spin: SpinBox
 var pre_draft_random_check: CheckButton
+var challenge_option: OptionButton
+var challenge_checks: Dictionary = {} # Challenge-ID -> CheckButton
 var bot_test_section: VBoxContainer = null
 var bot_test_check: CheckButton = null
 var bot_test_random_check: CheckButton = null
@@ -2185,6 +2187,7 @@ func _refresh_host_controls() -> void:
 		element_reactions_check.disabled = not is_host
 	if pre_draft_random_check != null:
 		pre_draft_random_check.disabled = not is_host or Global.pre_draft_picks <= 0
+	_refresh_challenge_controls()
 	_refresh_modifier_controls()
 	_refresh_level_controls()
 	_refresh_powerup_controls()
@@ -2682,6 +2685,72 @@ func _build_game_mode_section(body: VBoxContainer) -> void:
 	map_info_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	map_info_label.autowrap_mode = 2
 	map_column.add_child(map_info_label)
+
+	_build_challenge_rows(body)
+
+## Challenge-Runden (Jochen 2026-11-26): Häufigkeit plus einzelne Arten.
+func _build_challenge_rows(body: VBoxContainer) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	body.add_child(row)
+	var label := Label.new()
+	label.text = "Challenge-Runden:"
+	label.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	row.add_child(label)
+	challenge_option = OptionButton.new()
+	challenge_option.custom_minimum_size = Vector2(160, 0)
+	for freq_name in ChallengeDefs.FREQUENCY_NAMES:
+		challenge_option.add_item(freq_name)
+	challenge_option.selected = Global.challenge_frequency
+	challenge_option.tooltip_text = "Ab und zu kommt statt einer normalen Runde eine Challenge. Der Sieger bekommt die normalen Rundenpunkte, Kills zählen wie immer. Nie in der ersten Runde, nie zweimal hintereinander und nie im Stechen."
+	challenge_option.item_selected.connect(_on_challenge_frequency_selected)
+	row.add_child(challenge_option)
+	var hint := Label.new()
+	hint.text = "Wettrennen, Bällebad und Co. zwischen den normalen Runden (FFA und Teams)."
+	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hint.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	hint.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	hint.autowrap_mode = 2
+	row.add_child(hint)
+	var flow := HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 14)
+	body.add_child(flow)
+	challenge_checks.clear()
+	for id in ChallengeDefs.ORDER:
+		var check := CheckButton.new()
+		check.text = ChallengeDefs.display_name(id)
+		check.tooltip_text = str(ChallengeDefs.get_def(id).get("short", ""))
+		check.button_pressed = Global.is_challenge_enabled(id)
+		check.toggled.connect(_on_challenge_toggled.bind(id))
+		flow.add_child(check)
+		challenge_checks[id] = check
+	_refresh_challenge_controls()
+
+func _refresh_challenge_controls() -> void:
+	if challenge_option == null:
+		return
+	var is_host := Global.is_local_host()
+	var horde := Global.is_horde_mode()
+	challenge_option.selected = Global.challenge_frequency
+	challenge_option.disabled = not is_host or horde
+	for id in challenge_checks.keys():
+		var check := challenge_checks[id] as CheckButton
+		check.set_pressed_no_signal(Global.is_challenge_enabled(id))
+		check.disabled = not is_host or horde or Global.challenge_frequency <= 0
+
+func _on_challenge_frequency_selected(index: int) -> void:
+	if not Global.is_local_host():
+		_refresh_challenge_controls()
+		return
+	Global.set_challenge_frequency(index)
+	_refresh_challenge_controls()
+
+func _on_challenge_toggled(pressed: bool, id: String) -> void:
+	if not Global.is_local_host():
+		_refresh_challenge_controls()
+		return
+	Global.set_challenge_enabled(id, pressed)
+	_refresh_challenge_controls()
 
 
 func _build_loadout_section(body: VBoxContainer) -> void:
@@ -4837,6 +4906,7 @@ func _sync_from_global() -> void:
 		pre_draft_spin.set_value_no_signal(Global.pre_draft_picks)
 	if pre_draft_random_check != null:
 		pre_draft_random_check.set_pressed_no_signal(Global.pre_draft_random)
+	_refresh_challenge_controls()
 	if melee_enabled_check != null:
 		melee_enabled_check.set_pressed_no_signal(Global.melee_enabled)
 	for rarity in rarity_spins.keys():
@@ -4935,6 +5005,8 @@ func _update_status() -> void:
 		modifier_summary = "  ·  Modifier: %s" % ", ".join(active_modifiers)
 	if Global.pre_draft_picks > 0:
 		modifier_summary += "  ·  Pre-Draft %d%s" % [Global.pre_draft_picks, " (zufällig)" if Global.pre_draft_random else ""]
+	if Global.challenge_frequency > 0:
+		modifier_summary += "  ·  Challenges %s" % ChallengeDefs.FREQUENCY_NAMES[Global.challenge_frequency].to_lower()
 	modifier_summary += "  ·  Level-Mod %d %% (%d/%d)" % [
 		Global.level_modifier_rate_percent,
 		Global.get_enabled_level_modifier_count(),

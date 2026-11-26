@@ -52,6 +52,10 @@ const SCROLL_TICK: float = 0.5
 static var current: HordeDirector = null
 
 var is_replica: bool = false
+## Challenge "Hordenwelle" (ChallengeDirector): nur Gegner-Wellen gegen alle
+## Spieler. Keine Kristalle, Stufen, Truhen, Bosse, Powerups, Respawns oder
+## Gebietswechsel; Kills pro Slot stehen in slot_stats.
+var pvp_wave: bool = false
 var running: bool = false
 var main_node: Node = null
 var run_time: float = 0.0
@@ -158,6 +162,17 @@ func _physics_process(delta: float) -> void:
 		queue_redraw()
 		return
 	run_time += delta
+	if pvp_wave:
+		_flow_t -= delta
+		if _bfs_active:
+			_step_flow(FLOW_BUDGET)
+		elif _flow_t <= 0.0:
+			_flow_t = FLOW_INTERVAL
+			_begin_flow()
+		_update_spawning(delta)
+		_update_shots(delta)
+		queue_redraw()
+		return
 	_coin_sound_t -= delta
 	# Fluss-Feld zeitversetzt: höchstens FLOW_BUDGET Zellen pro Physik-Frame.
 	_flow_t -= delta
@@ -683,6 +698,12 @@ func note_damage(slot: int, amount: float) -> void:
 
 func on_enemy_killed(e: HordeEnemy, killer) -> void:
 	kills += 1
+	if pvp_wave:
+		if killer is Player and is_instance_valid(killer):
+			var ws: Dictionary = slot_stats.get(killer.player_index, {"kills": 0, "damage": 0.0, "deaths": 0})
+			ws["kills"] = int(ws["kills"]) + (3 if e.riese else 1)
+			slot_stats[killer.player_index] = ws
+		return
 	if killer is Player and is_instance_valid(killer):
 		var s: Dictionary = slot_stats.get(killer.player_index, {"kills": 0, "damage": 0.0, "deaths": 0})
 		s["kills"] = int(s["kills"]) + 1

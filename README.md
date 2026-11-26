@@ -349,6 +349,21 @@ Im Tab **Regeln** unter *Spielmodus & Spielfeld* wählt der Host die **Spielart*
 - **Seitenansicht-Level im Editor:** Im Karteneditor führt *Zum Seitenansicht-Editor* zu den klassischen Leveln. Jedes Level lässt sich laden und ändern: Plattformen, Einweg-Stege, Kistenblöcke und Gruben waagrecht ziehen, Wände als Rechteck, Stacheln, Sprungfedern und Mystery-Blöcke anklicken, Röhrenpaare mit zwei Klicks. Mit *Objekt setzen* kommen Wippen, Kettenplattformen, Fahrplattformen, Drehbalken, Häuser, Pyramiden, Treppen, Kistenketten, Gitterzäune, Schrägen, Kugel-Objekte sowie Schalter, Türen/Falltüren, Laser und Orbitalschläge dazu (verbunden über die Kanalnummer; die gespiegelte Seite bekommt Kanal + 100). Ein ausgewähltes Objekt zeigt unter *Eigenschaften* alle Werte (z. B. Kettenlänge, Wippenbreite, Drehtempo und Stil, Kistengrößen); Verschieben per Ziehen, Löschen per Rechtsklick oder Entf. Gespiegelte Level zeigen die automatische Spiegelung blass. *Speichern* legt eine geänderte Fassung an, die das Spiel statt des eingebauten Bauplans nutzt; *Original* stellt ihn wieder her. *Als neues Level* legt ein eigenes Level an, das im Levels-Tab der Lobby erscheint. *Zufällige Extras* schaltet die zufälligen Zusatzplattformen, Kistenhaufen und Eisflächen des Levels ab. Gespeichert wird unter `user://side_levels/`, online schickt der Host den Bauplan vor jeder Runde an alle.
 - **Runden-Modifier:** nur Sturmwind, Mondgravitation, Schwerewelt, Mini-Chaos, Schadensrausch, Turboschweine, Luftakrobatik, Regeneration, Startschild und Zone. Die übrigen sind in der Arena vorerst aus.
 
+### Challenge-Runden
+
+Lobby-Regel **Challenge-Runden** (Regeln-Tab, unter Spielmodus & Spielfeld): *Aus*, *Selten* (25 % pro Runde) oder *Oft* (45 %). Einzelne Challenges lassen sich abschalten. Nie in der ersten Runde, nie zweimal hintereinander, nie im Stechen und nicht in der Horde. Der Sieger (bzw. sein Team) bekommt die normalen Rundenpunkte, die Verlierer draften wie immer. **Kills zählen in jeder Challenge normal.** Challenge-Runden laufen ohne Level-Modifier und ohne Sudden Death.
+
+| Challenge | Karte | Ziel | Tod |
+| :--- | :--- | :--- | :--- |
+| **Wettrennen** | Rundkurs (Draufsicht) | 3 Runden im Uhrzeigersinn, alle Tore der Reihe nach. Zeitlimit 3:00 | nach 2 s am letzten Tor |
+| **König des Hügels** | normale Karte | Zone halten, nur wer allein drin ist, füllt seine Leiste (20 s). Zeitlimit 1:30 | nach 2 s am Spawn |
+| **Bällebad** | Bällebad (Draufsicht) | Jeder startet in einer Ecke, die Karte wird mit Bällen geflutet. Nach 60 s gewinnt, wer die meisten Bälle in seiner Ecke hat | nach 2 s in der eigenen Ecke |
+| **Münzjagd** | normale Karte | 60 s Münzen sammeln, 7 liegen immer bereit | nach 2 s, verliert die Hälfte (liegt 14 s herum) |
+| **Lava-Aufstieg** | Lavaturm | Die Lava hält nicht an. Wer zuerst die Flagge auf dem Gipfel berührt, gewinnt | raus (normales Ausscheiden) |
+| **Hordenwelle** | Arena-Karte (Draufsicht) | 75 s gegen die Horde, wer die meisten Gegner erlegt (Riese = 3), gewinnt | nach 2 s am Spawn |
+
+Code: `scripts/challenge/` (ChallengeDefs, ChallengeDirector, ChallengeHud). Laufzeit-Test mit Bots: `godot --headless res://tools/challenge_runtime_test.tscn` (optional `-- race hill ...`).
+
 ---
 
 ## 🃏 Karten-Draft
