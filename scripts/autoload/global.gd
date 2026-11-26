@@ -2817,6 +2817,10 @@ func roll_challenge(level_seed: int) -> String:
 		return ""
 	if _rounds_since_challenge < 1:
 		return ""
+	# Am Matchpunkt keine Challenge (Jochen 2026-11-26): Das Match soll im
+	# normalen Kampf entschieden werden.
+	if is_match_point():
+		return ""
 	var pool: Array[String] = []
 	for id in ChallengeDefs.ORDER:
 		if is_challenge_enabled(id) and ChallengeDefs.is_possible(id, get_round_player_indices().size()):
@@ -2828,6 +2832,13 @@ func roll_challenge(level_seed: int) -> String:
 	if rng.randf() >= ChallengeDefs.chance_for(challenge_frequency):
 		return ""
 	return pool[rng.randi() % pool.size()]
+
+## Matchpunkt: Ein Rundensieg würde einen Spieler bzw. ein Team ans Ziel bringen.
+func is_match_point() -> bool:
+	for slot in get_round_player_indices():
+		if get_team_score_for_slot(slot) + survival_points >= points_to_win:
+			return true
+	return false
 
 ## Merkt sich, ob die gestartete Runde eine Challenge ist (Host und Clients).
 func note_round_challenge(id: String) -> void:

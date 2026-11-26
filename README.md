@@ -378,7 +378,7 @@ Im Tab **Regeln** unter *Spielmodus & Spielfeld* wählt der Host die **Spielart*
 
 ### Challenge-Runden
 
-Lobby-Regel **Challenge-Runden** (Regeln-Tab, unter Spielmodus & Spielfeld): *Aus*, *Selten* (25 % pro Runde) oder *Oft* (45 %). Einzelne Challenges lassen sich abschalten. Nie in der ersten Runde, nie zweimal hintereinander, nie im Stechen und nicht in der Horde. Der Sieger (bzw. sein Team) bekommt die normalen Rundenpunkte, die Verlierer draften wie immer. **Kills zählen in jeder Challenge normal.** Challenge-Runden laufen ohne Level-Modifier und ohne Sudden Death.
+Lobby-Regel **Challenge-Runden** (Regeln-Tab, unter Spielmodus & Spielfeld): *Aus*, *Selten* (25 % pro Runde) oder *Oft* (45 %). Einzelne Challenges lassen sich abschalten. Nie in der ersten Runde, nie zweimal hintereinander, nie am Matchpunkt (ein Rundensieg brächte jemanden ans Ziel), nie im Stechen und nicht in der Horde. Der Sieger (bzw. sein Team) bekommt die normalen Rundenpunkte, die Verlierer draften wie immer. **Kills zählen in jeder Challenge normal.** Challenge-Runden laufen ohne Level-Modifier und ohne Sudden Death.
 
 | Challenge | Karte | Ziel | Tod |
 | :--- | :--- | :--- | :--- |
