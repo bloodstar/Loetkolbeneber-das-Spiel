@@ -95,6 +95,7 @@ func _ready() -> void:
 	Global.map_changed.connect(_on_global_map_changed)
 	Global.map_pool_changed.connect(_on_global_map_changed)
 	Global.powerup_pool_changed.connect(_on_global_lobby_changed)
+	Global.handicaps_changed.connect(_on_global_lobby_changed)
 	Global.match_mode_changed.connect(_on_global_match_mode_changed)
 	Global.player_count_changed.connect(_on_global_player_count_changed)
 
@@ -656,6 +657,7 @@ func build_lobby_sync() -> Dictionary:
 		"card_pools": Global.enabled_card_pools.duplicate(),
 		"disabled_maps": Global.disabled_map_ids.duplicate(),
 		"disabled_powerups": Global.disabled_powerup_kinds.duplicate(),
+		"handicaps": Global.get_handicaps(),
 		"map_id": Global.selected_map_id,
 		"match_mode": Global.match_mode,
 		"game_mode": Global.game_mode,
@@ -782,6 +784,8 @@ func _apply_lobby_sync(data: Dictionary) -> void:
 		Global.set_disabled_maps(data.get("disabled_maps", []))
 	if data.has("disabled_powerups"):
 		Global.set_disabled_powerups(data.get("disabled_powerups", []))
+	if data.has("handicaps"):
+		Global.set_handicaps(data.get("handicaps", {}))
 	if data.has("map_id"):
 		Global.set_selected_map(str(data.get("map_id", Global.MAP_RANDOM)))
 	Global.banned_card_ids.clear()

@@ -1212,6 +1212,7 @@ func _build_network_config() -> Dictionary:
 		"card_pools": Global.enabled_card_pools.duplicate(),
 		"disabled_maps": Global.disabled_map_ids.duplicate(),
 		"disabled_powerups": Global.disabled_powerup_kinds.duplicate(),
+		"handicaps": Global.get_handicaps(),
 		"map_id": Global.selected_map_id,
 		"match_mode": Global.match_mode,
 		"game_mode": Global.game_mode,
@@ -1258,6 +1259,8 @@ func _apply_network_config(config: Dictionary) -> void:
 		Global.set_disabled_maps(config.get("disabled_maps", []))
 	if config.has("disabled_powerups"):
 		Global.set_disabled_powerups(config.get("disabled_powerups", []))
+	if config.has("handicaps"):
+		Global.set_handicaps(config.get("handicaps", {}))
 	if config.has("map_id"):
 		Global.set_selected_map(str(config.get("map_id", Global.MAP_RANDOM)))
 	Global.banned_card_ids.clear()
