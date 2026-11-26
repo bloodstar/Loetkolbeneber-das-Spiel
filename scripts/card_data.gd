@@ -119,6 +119,7 @@ extends Resource
 # Blitzschuss
 @export var lightning_shot: bool = false
 @export var chain_lightning: bool = false
+@export var chain_jumps_add: int = 0 # zusätzliche Sprünge des Kettenblitzes (Kettenreaktion)
 @export var lightning_zone: bool = false
 # Frostschuss
 @export var frost_nova: bool = false

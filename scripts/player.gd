@@ -768,7 +768,7 @@ var melee_lifesteal: float = 0.0
 var melee_wall_stun_bonus: float = 0.0
 var melee_execute_bonus: float = 0.0
 var melee_chain_lightning: bool = false
-# Kettenreaktion (allgemeiner Kettenblitz) bei Nahkampfhelden: ohne weiteren
+# Kettenblitz (allgemeine Karte) bei Nahkampfhelden: ohne weiteren
 # Gegner springt der Blitz wie beim Schuss auf das getroffene Ziel zurück (1-gegen-1).
 var melee_chain_return: bool = false
 var melee_echo: bool = false
@@ -921,6 +921,8 @@ var poison_trail_timer: float = 0.0
 
 var lightning_shot: bool = false
 var chain_lightning: bool = false
+# Sprünge des Kettenblitzes (1 + Kettenreaktion).
+var chain_jumps: int = 1
 var lightning_zone: bool = false
 
 var frost_nova: bool = false
@@ -1216,6 +1218,7 @@ func apply_stats() -> void:
 	poison_trail = false
 	lightning_shot = false
 	chain_lightning = false
+	chain_jumps = 1
 	lightning_zone = false
 	frost_nova = false
 	frost_trail = false
@@ -1349,6 +1352,7 @@ func apply_stats() -> void:
 			lightning_shot = true
 		if c.chain_lightning:
 			chain_lightning = true
+		chain_jumps += c.chain_jumps_add
 		if c.lightning_zone:
 			lightning_zone = true
 		if c.frost_nova:
@@ -2657,23 +2661,38 @@ func _melee_strike(dir: Vector2, power: float) -> void:
 	if not targets.is_empty():
 		_fx("sound", {"snd": ["hit", 0.15, 0.0], "shake": clampf(base_damage * 0.006, 0.08, 0.3)})
 
-# Hochspannung: vom ersten Treffer springt ein Blitz auf den nächsten weiteren Gegner.
+# Hochspannung/Kettenblitz: vom ersten Treffer springt ein Blitz auf den nächsten
+# weiteren Gegner. Mit Kettenblitz (melee_chain_return) chain_jumps Sprünge und
+# ohne weiteren Gegner einmal zurück aufs getroffene Ziel.
 func _melee_chain_lightning(hit_targets: Array, damage: float) -> float:
 	var origin: Node2D = hit_targets[0]
 	if not is_instance_valid(origin):
 		return 0.0
-	var best = _nearest_chain_target(origin.global_position, MELEE_CHAIN_RADIUS, hit_targets)
-	if best == null and melee_chain_return and _is_chain_target_alive(origin):
-		best = origin
-	if best == null:
-		return 0.0
-	var before: float = best.current_health + best.current_shield
-	best.take_damage(damage, Vector2.ZERO, self)
-	best.apply_stun(maxf(0.15, melee_stun), self)
-	# Rücksprung aufs selbe Ziel: Bogen vom Eber aus, sonst wäre er unsichtbar.
-	var arc_from: Vector2 = global_position if best == origin else origin.global_position
-	_spawn_lightning_arc(arc_from, best.global_position)
-	return maxf(0.0, before - (maxf(best.current_health, 0.0) + best.current_shield))
+	var jumps: int = maxi(1, chain_jumps) if melee_chain_return else 1
+	var exclude: Array = hit_targets.duplicate()
+	var from_pos: Vector2 = origin.global_position
+	var returned := false
+	var dealt := 0.0
+	for _jump in range(jumps):
+		var best = _nearest_chain_target(from_pos, MELEE_CHAIN_RADIUS, exclude)
+		var is_return := false
+		if best == null and melee_chain_return and not returned and _is_chain_target_alive(origin):
+			best = origin
+			returned = true
+			is_return = true
+		if best == null:
+			break
+		var target_pos: Vector2 = best.global_position
+		var before: float = best.current_health + best.current_shield
+		best.take_damage(damage, Vector2.ZERO, self)
+		best.apply_stun(maxf(0.15, melee_stun), self)
+		# Rücksprung aufs selbe Ziel: Bogen vom Eber aus, sonst wäre er unsichtbar.
+		var arc_from: Vector2 = global_position if is_return else from_pos
+		_spawn_lightning_arc(arc_from, target_pos)
+		dealt += maxf(0.0, before - (maxf(best.current_health, 0.0) + best.current_shield))
+		exclude.append(best)
+		from_pos = target_pos
+	return dealt
 
 # Lebt ein Kettenblitz-Ziel (gegnerischer Eber oder Horden-Gegner) noch?
 func _is_chain_target_alive(n) -> bool:
@@ -6158,33 +6177,50 @@ func trigger_chain_lightning(primary: Node2D, from_position: Vector2) -> void:
 	# primary kann auch ein Nicht-Spieler sein (z. B. das Pinata-Lama).
 	if is_replica:
 		return
-	var chain_target = null
-	for p in get_tree().get_nodes_in_group("player"):
-		if p is Player and p != self and p != primary and is_instance_valid(p) and p.team_id != team_id and p.current_health > 0.0:
-			chain_target = p
-			break
-	# Horden-Modus: die anderen Eber sind Verbündete, der Blitz springt auf
-	# den nächsten Horden-Gegner in der Nähe.
-	if chain_target == null and HordeDirector.is_active():
-		chain_target = _nearest_chain_target(from_position, HORDE_CHAIN_RADIUS, [primary])
-	if chain_target == null and _is_chain_target_alive(primary):
-		# Im 1-gegen-1 springt der Kettenblitz auf das PrimÃƒÂ¤rziel zurÃƒÂ¼ck.
-		chain_target = primary
-	if chain_target == null:
-		return
-
 	# Kettenblitze aus der Fähigkeit (Volt "Kettenblink") skalieren mit Fähigkeitsschaden.
 	var chain_damage := bullet_damage * 0.45
 	if dealing_ability_damage:
 		chain_damage *= ability_damage_mult
-	chain_target.take_damage(chain_damage, Vector2.ZERO, self)
-	chain_target.apply_stun(0.1, self)
-	# Element-Kombinationen im eigenen Build: Plasma entzündet, Neurotoxin vergiftet.
-	if element_combos.has("plasma"):
-		chain_target.apply_burn(2, burn_damage_per_tick)
-	if element_combos.has("neurotoxin"):
-		chain_target.apply_poison(maxi(1, poison_ticks_from_chain()), poison_damage_per_tick)
-	_spawn_lightning_arc(from_position, chain_target.global_position)
+	# chain_jumps Sprünge (Kettenreaktion +1), jeder auf ein neues Ziel. Gibt es
+	# keins mehr, springt der Blitz einmal aufs Primärziel zurück (1-gegen-1).
+	var hit: Array = [primary]
+	var from_pos: Vector2 = from_position
+	var returned := false
+	for _jump in range(maxi(1, chain_jumps)):
+		var chain_target = _next_shot_chain_target(from_pos, hit)
+		if chain_target == null and not returned and _is_chain_target_alive(primary):
+			chain_target = primary
+			returned = true
+		if chain_target == null:
+			return
+		var target_pos: Vector2 = chain_target.global_position
+		chain_target.take_damage(chain_damage, Vector2.ZERO, self)
+		chain_target.apply_stun(0.1, self)
+		# Element-Kombinationen im eigenen Build: Plasma entzündet, Neurotoxin vergiftet.
+		if element_combos.has("plasma"):
+			chain_target.apply_burn(2, burn_damage_per_tick)
+		if element_combos.has("neurotoxin"):
+			chain_target.apply_poison(maxi(1, poison_ticks_from_chain()), poison_damage_per_tick)
+		_spawn_lightning_arc(from_pos, target_pos)
+		hit.append(chain_target)
+		from_pos = target_pos
+
+# Nächstes Ziel des Schuss-Kettenblitzes: nächster gegnerischer Eber (ohne
+# Reichweitengrenze), im Horden-Modus sonst ein Horden-Gegner in der Nähe.
+func _next_shot_chain_target(from_pos: Vector2, exclude: Array) -> Node2D:
+	var best: Node2D = null
+	var best_dist := INF
+	for p in get_tree().get_nodes_in_group("player"):
+		if p is Player and p != self and not exclude.has(p) and is_instance_valid(p) and p.team_id != team_id and p.current_health > 0.0:
+			var d: float = from_pos.distance_to(p.global_position)
+			if d < best_dist:
+				best_dist = d
+				best = p
+	# Horden-Modus: die anderen Eber sind Verbündete, der Blitz springt auf
+	# den nächsten Horden-Gegner in der Nähe.
+	if best == null and HordeDirector.is_active():
+		best = _nearest_chain_target(from_pos, HORDE_CHAIN_RADIUS, exclude)
+	return best
 
 func _standing_on_own_ice() -> bool:
 	for node in get_tree().get_nodes_in_group("effect_zone"):
