@@ -24,9 +24,11 @@ const GEM_SNAPSHOT_EVERY: int = 3
 ## Liegengebliebene XP-Kristalle verschmelzen mit Nachbarn zu größeren:
 ## alle GEM_MERGE_EVERY s, wenn sie älter als GEM_MERGE_AGE s sind und
 ## näher als GEM_MERGE_RADIUS beieinander liegen. Weniger Objekte im Level.
-const GEM_MERGE_EVERY: float = 1.5
-const GEM_MERGE_AGE: float = 6.0
-const GEM_MERGE_RADIUS: float = 72.0
+const GEM_MERGE_EVERY: float = 1.0
+const GEM_MERGE_AGE: float = 3.0
+const GEM_MERGE_RADIUS: float = 120.0
+## Ab so vielen liegenden Kristallen wird verschmolzen.
+const GEM_MERGE_MIN: int = 10
 const FOOD_CHANCE: float = 0.012
 const FOOD_HEAL: float = 30.0
 const WOLF_RING_EVERY: float = 75.0
@@ -588,7 +590,7 @@ func enemy_limit() -> int:
 	return mini(HordeDefs.MAX_ENEMIES_CAP, lim)
 
 func _wolf_ring(target: Node2D) -> void:
-	var n := 14 + mini(10, int(run_time / 60.0) * 2)
+	var n := int(round(float(14 + mini(10, int(run_time / 60.0) * 2)) * HordeDefs.ENEMY_COUNT_MULT))
 	var kind := "wolf" if run_time > 60.0 else "fuchs"
 	n = mini(n, enemy_limit() - enemy_count())
 	for i in range(n):
@@ -782,7 +784,7 @@ func _chest_must_wait() -> bool:
 ## Verschmilzt alte, ruhende XP-Kristalle mit Nachbarn (Raster-Hash). Der
 ## größere Kristall bleibt liegen und bekommt den Wert dazu.
 func _merge_gems() -> void:
-	if _gems.size() < 24:
+	if _gems.size() < GEM_MERGE_MIN:
 		return
 	var cell := GEM_MERGE_RADIUS
 	var buckets := {}

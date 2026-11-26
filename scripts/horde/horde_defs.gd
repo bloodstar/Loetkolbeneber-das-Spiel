@@ -29,10 +29,16 @@ const CHEST_RARITY: Dictionary = {"Epic": 95.0, "Legendary": 5.0}
 ## Wiederbelebung nach dem Tod, solange ein Teamkollege lebt.
 const RESPAWN_DELAY: float = 12.0
 ## XP-Kristalle fliegen ab diesem Abstand zum Eber, darunter werden sie eingesammelt.
-const GEM_MAGNET_RADIUS: float = 120.0
-const GEM_PICKUP_RADIUS: float = 22.0
-const GEM_MAX: int = 400
+## Sammelreichweite 2026-11-26 um 50 % erhöht (120 -> 180, 22 -> 33).
+const GEM_MAGNET_RADIUS: float = 180.0
+const GEM_PICKUP_RADIUS: float = 33.0
+## Mehr liegende Kristalle werden in den nächsten eingerechnet.
+const GEM_MAX: int = 220
 const MAX_ENEMIES_CAP: int = 230
+## Weniger, dafür stärkere Gegner (2026-11-26): Spawnrate, Höchstzahl und
+## Rudel-Ringe laufen mit diesem Faktor, dafür kommen deutlich mehr Riesen.
+## Gesamt-HP und XP der Horde bleiben dadurch etwa gleich.
+const ENEMY_COUNT_MULT: float = 0.7
 ## Gegner erscheinen in diesem Abstand zum nächsten Eber (außerhalb des Bildes).
 const SPAWN_MIN_DIST: float = 620.0
 const SPAWN_MAX_DIST: float = 900.0
@@ -40,8 +46,9 @@ const SPAWN_MAX_DIST: float = 900.0
 const DESPAWN_DIST: float = 1700.0
 ## Kontaktschaden höchstens so oft pro Gegner.
 const CONTACT_INTERVAL: float = 0.7
-const RIESE_CHANCE_START: float = 0.01
-const RIESE_CHANCE_PER_MIN: float = 0.006
+const RIESE_CHANCE_START: float = 0.03
+const RIESE_CHANCE_PER_MIN: float = 0.015
+const RIESE_CHANCE_MAX: float = 0.2
 const RIESE_SIZE: float = 1.6
 const RIESE_HP_MULT: float = 4.0
 const RIESE_XP_MULT: float = 5.0
@@ -91,12 +98,12 @@ const ENEMIES: Dictionary = {
 ## Gegner pro Sekunde (vor der Spielerzahl-Skalierung).
 static func spawn_rate(t: float) -> float:
 	var m := t / 60.0
-	return 0.9 + m * 0.62 + m * m * 0.03
+	return (0.9 + m * 0.62 + m * m * 0.03) * ENEMY_COUNT_MULT
 
 ## Höchstzahl lebender Gegner.
 static func max_alive(t: float, players: int) -> int:
 	var m := t / 60.0
-	var base := 45.0 + m * 17.0
+	var base := (45.0 + m * 17.0) * ENEMY_COUNT_MULT
 	return mini(MAX_ENEMIES_CAP, int(base * (1.0 + 0.25 * float(maxi(0, players - 1)))))
 
 static func hp_mult(t: float, players: int) -> float:
@@ -140,7 +147,7 @@ static func pick_kind(t: float, rng: RandomNumberGenerator) -> String:
 	return str(pool[pool.size() - 1][0])
 
 static func riese_chance(t: float) -> float:
-	return RIESE_CHANCE_START + RIESE_CHANCE_PER_MIN * (t / 60.0)
+	return minf(RIESE_CHANCE_MAX, RIESE_CHANCE_START + RIESE_CHANCE_PER_MIN * (t / 60.0))
 
 static func gem_color(value: int) -> Color:
 	if value >= 20:
