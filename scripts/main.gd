@@ -1567,7 +1567,7 @@ func _can_local_shoot(local: Player) -> bool:
 	if local == null or not is_instance_valid(local):
 		return false
 	return local.visible and local.current_health > 0.0 \
-		and local.control_enabled and not local.is_melee \
+		and local.can_control() and not local.is_melee \
 		and (local.overcharge_timer > 0.0 or (local.current_ammo > 0 and not local.is_reloading))
 
 func _on_network_input(slot: int, data: Dictionary) -> void:

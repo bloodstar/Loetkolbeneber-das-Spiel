@@ -60,7 +60,7 @@ func _physics_process(delta: float) -> void:
 	if not player or not is_instance_valid(player) or not player.is_bot:
 		return
 	# Während des Start-Countdowns oder eines Betäubungs-Effekts nicht eingreifen.
-	if not player.control_enabled or player.stun_timer > 0.0:
+	if not player.can_control() or player.stun_timer > 0.0:
 		return
 	
 	if jump_cooldown > 0.0:

@@ -140,7 +140,7 @@ func _physics_process(delta: float) -> void:
 	if is_replica:
 		return
 	# Während des Start-Countdowns dürfen auch Begleiter nicht angreifen.
-	if not owner_player.control_enabled:
+	if not owner_player.can_control():
 		return
 	# Schutzdrohnen greifen nicht an; ihre Aufgabe ist ausschließlich das
 	# Abfangen gegnerischer Projektile.
@@ -162,7 +162,7 @@ func _apply_tower_decay(delta: float) -> void:
 		_destroy_tower()
 
 func _handle_support(delta: float) -> void:
-	if not support or not owner_player.control_enabled:
+	if not support or not owner_player.can_control():
 		return
 	_heal_timer -= delta
 	if _heal_timer <= 0.0:

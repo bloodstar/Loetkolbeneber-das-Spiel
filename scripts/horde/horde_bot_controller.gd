@@ -22,7 +22,7 @@ func _physics_process(delta: float) -> void:
 	var d := HordeDirector.current
 	if player == null or not is_instance_valid(player) or d == null or not d.running:
 		return
-	if not player.control_enabled or player.stun_timer > 0.0 or player.is_dead:
+	if not player.can_control() or player.stun_timer > 0.0 or player.is_dead:
 		return
 	_shoot_t -= delta
 	_dash_t -= delta
