@@ -2702,7 +2702,7 @@ func _build_challenge_rows(body: VBoxContainer) -> void:
 	for freq_name in ChallengeDefs.FREQUENCY_NAMES:
 		challenge_option.add_item(freq_name)
 	challenge_option.selected = Global.challenge_frequency
-	challenge_option.tooltip_text = "Ab und zu kommt statt einer normalen Runde eine Challenge. Der Sieger bekommt die normalen Rundenpunkte, Kills zählen wie immer. Nie in der ersten Runde, nie zweimal hintereinander und nie im Stechen."
+	challenge_option.tooltip_text = "Ab und zu kommt statt einer normalen Runde eine Challenge. Der Sieger bekommt die normalen Rundenpunkte, Kills zählen wie immer. Nie in der ersten Runde, nie zweimal hintereinander, nie am Matchpunkt und nie im Stechen."
 	challenge_option.item_selected.connect(_on_challenge_frequency_selected)
 	row.add_child(challenge_option)
 	var hint := Label.new()
