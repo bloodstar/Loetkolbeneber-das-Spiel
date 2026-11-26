@@ -2603,6 +2603,32 @@ func _init_database() -> void:
 	vp4.version = 2 # 2026-11-26: Blutkugeln kreisen, Blutgeschosse
 	_register(vp4)
 
+	# Größerer Kugel-Vorrat (2026-11-26, Jochen): Basis +3, Evolution +3.
+	var vp7 = CardData.new()
+	vp7.id = "vampire_blutreserve"
+	vp7.title = "Blutreserve"
+	vp7.description = "Vampir: +%d Plätze für kreisende Blutkugeln." % Player.VAMPIRE_ORBIT_CARD_ADD
+	vp7.rarity = "Rare"
+	vp7.pool = "Offensive"
+	vp7.color = Color(0.70, 0.06, 0.16)
+	vp7.hero_id = "vampire"
+	vp7.family_id = "vampire_orbit"
+	vp7.ability_evolution = "vampire_orbs_more"
+	_register(vp7)
+
+	var vp7a = CardData.new()
+	vp7a.id = "vampire_blutkrone"
+	vp7a.title = "Blutkrone"
+	vp7a.description = "Blutreserve-Evolution: noch einmal +%d Plätze für kreisende Blutkugeln." % Player.VAMPIRE_ORBIT_CARD_ADD
+	vp7a.rarity = "Epic"
+	vp7a.color = Color(0.70, 0.06, 0.16)
+	vp7a.hero_id = "vampire"
+	vp7a.family_id = "vampire_orbit"
+	vp7a.parent_card_id = "vampire_blutreserve"
+	vp7a.evolution_branch = "A"
+	vp7a.ability_evolution = "vampire_orbs_more2"
+	_register(vp7a)
+
 	var vp5 = CardData.new()
 	vp5.id = "vampire_blutsturm_plus"
 	vp5.title = "Rote Flut"

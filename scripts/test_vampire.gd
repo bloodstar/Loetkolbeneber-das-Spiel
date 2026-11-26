@@ -160,6 +160,18 @@ func _ready() -> void:
 		_check(card != null and not CardDatabase.is_card_available_for_player(card, "volt", []), "Karte %s nicht für Volt" % id)
 	_check(not CardDatabase.is_card_available_for_player(CardDatabase.get_card("vampire_aderlass"), "vampire", []), "Aderlass braucht Blutfontäne")
 	_check(CardDatabase.is_card_available_for_player(CardDatabase.get_card("vampire_aderlass"), "vampire", ["vampire_blutfontaene"]), "Aderlass mit Blutfontäne verfügbar")
+	# Blutreserve / Blutkrone: je +3 Plätze.
+	_check(not CardDatabase.is_card_available_for_player(CardDatabase.get_card("vampire_blutkrone"), "vampire", []), "Blutkrone braucht Blutreserve")
+	_check(CardDatabase.is_card_available_for_player(CardDatabase.get_card("vampire_blutkrone"), "vampire", ["vampire_blutreserve"]), "Blutkrone mit Blutreserve verfügbar")
+	vamp.ability_evolutions.append("vampire_orbs_more")
+	_check(vamp.vampire_orbit_max() == Player.VAMPIRE_ORBIT_MAX + 3, "Blutreserve: 9 Plätze")
+	vamp.ability_evolutions.append("vampire_orbs_more2")
+	_check(vamp.vampire_orbit_max() == Player.VAMPIRE_ORBIT_MAX + 6, "Blutkrone: 12 Plätze")
+	vamp.vampire_orbs = 11
+	_check(vamp.vampire_add_orb() and not vamp.vampire_add_orb(), "Vorrat bis 12")
+	vamp.ability_evolutions.erase("vampire_orbs_more")
+	vamp.ability_evolutions.erase("vampire_orbs_more2")
+	vamp.vampire_orbs = 0
 	# Blutrausch: Kugel schon beim 2. Treffer.
 	_clear_orbs()
 	vamp.ability_evolutions.append("vampire_frenzy")
