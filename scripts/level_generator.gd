@@ -3944,7 +3944,10 @@ func _is_bot_surface(cell: Vector2i) -> bool:
 ## Ebene nach oben, z. B. um steigender Lava zu entkommen. Ergebnis:
 ## takeoff_x (hier abspringen), land_x/land_y (Ziel-Oberkante) und pad
 ## (true = einfach auf die Sprungfeder laufen). Leer, wenn es keinen Weg gibt.
-func find_climb_route(feet: Vector2) -> Dictionary:
+## prefer_x (Weltkoordinate, INF = egal) bevorzugt Landeplätze nahe diesem x,
+## etwa unter einem höheren Gegner. max_rise begrenzt die Sprunghöhe in
+## Kacheln, blocked enthält Landezellen, die gerade nicht klappen.
+func find_climb_route(feet: Vector2, prefer_x: float = INF, max_rise: int = 4, blocked: Dictionary = {}) -> Dictionary:
 	var col := int(floor(feet.x / TILE_SIZE))
 	var row := int(round(feet.y / TILE_SIZE))
 	if not _is_bot_surface(Vector2i(col, row)):
@@ -3979,17 +3982,23 @@ func find_climb_route(feet: Vector2) -> Dictionary:
 		if land.x < 0:
 			continue
 		var cost := absf(float(pad_col - col)) - 3.0
+		if prefer_x != INF:
+			cost += absf(float(land.x) + 0.5 - prefer_x / TILE_SIZE) * 0.6
 		if cost < best_cost:
 			best_cost = cost
 			best = {"takeoff_x": pad_node.global_position.x, "land_x": (float(land.x) + 0.5) * TILE_SIZE,
-				"land_y": float(land.y) * TILE_SIZE, "pad": true}
+				"land_y": float(land.y) * TILE_SIZE, "pad": true, "cell": land}
 
 	var candidates: Array = _solid_cells.keys() + _bot_surfaces.keys()
 	for raw in candidates:
 		var cell: Vector2i = raw
 		var rise := row - cell.y
-		if rise < 2 or rise > 4 or not _is_bot_surface(cell):
+		if rise < 2 or rise > max_rise or blocked.has(cell) or not _is_bot_surface(cell):
 			continue
+		# Mit Zielvorgabe: Landeplätze nahe am Ziel zählen weniger.
+		var prefer_cost := 0.0
+		if prefer_x != INF:
+			prefer_cost = absf(float(cell.x) + 0.5 - prefer_x / TILE_SIZE) * 0.6
 		# Einweg-Steg: einfach direkt darunter hochspringen.
 		if _oneway_cells.has(cell) and cell.x >= left and cell.x <= right:
 			var shaft_clear := true
@@ -3999,11 +4008,11 @@ func find_climb_route(feet: Vector2) -> Dictionary:
 					shaft_clear = false
 					break
 			if shaft_clear:
-				var direct_cost := absf(float(cell.x - col)) + absf(float(rise - 3)) * 2.0
+				var direct_cost := absf(float(cell.x - col)) + absf(float(rise - 3)) * 2.0 + prefer_cost
 				if direct_cost < best_cost:
 					best_cost = direct_cost
 					best = {"takeoff_x": (float(cell.x) + 0.5) * TILE_SIZE, "land_x": (float(cell.x) + 0.5) * TILE_SIZE,
-						"land_y": float(cell.y) * TILE_SIZE, "pad": false}
+						"land_y": float(cell.y) * TILE_SIZE, "pad": false, "oneway": true, "cell": cell}
 		for dir in [-1, 1]:
 			# Nur Plattform-Enden: daneben ist frei, dort kann man vorbeispringen.
 			if _is_bot_surface(Vector2i(cell.x + dir, cell.y)) or _solid_cells.has(Vector2i(cell.x + dir, cell.y)):
@@ -4022,11 +4031,11 @@ func find_climb_route(feet: Vector2) -> Dictionary:
 						break
 				if not clear:
 					continue
-				var cost := absf(float(takeoff - col)) + float(offset) * 0.5 + absf(float(rise - 3)) * 2.0
+				var cost := absf(float(takeoff - col)) + float(offset) * 0.5 + absf(float(rise - 3)) * 2.0 + prefer_cost
 				if cost < best_cost:
 					best_cost = cost
 					best = {"takeoff_x": (float(takeoff) + 0.5) * TILE_SIZE, "land_x": (float(cell.x) + 0.5) * TILE_SIZE,
-						"land_y": float(cell.y) * TILE_SIZE, "pad": false, "dir": dir,
+						"land_y": float(cell.y) * TILE_SIZE, "pad": false, "dir": dir, "cell": cell,
 						"edge_x": float(cell.x + (1 if dir > 0 else 0)) * TILE_SIZE}
 	return best
 

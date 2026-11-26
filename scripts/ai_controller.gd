@@ -21,6 +21,17 @@ const BODY_FOOT_OFFSET: float = 12.0
 var _climb_route: Dictionary = {}
 var _climb_replan_timer: float = 0.0
 var _climb_airborne: bool = false
+var _climb_mode: String = ""          # "lava", "target" oder leer
+var _climb_start_y: float = 0.0
+var _climb_air_jumped: bool = false
+var _climb_blocked: Dictionary = {}     # Landezelle -> Restzeit in s
+# Ab so viel Höhenunterschied (Füße) klettert der Bot zum Gegner hinauf.
+const CLIMB_MIN_RISE: float = 60.0
+const CLIMB_BLOCK_TIME: float = 4.0
+const CLIMB_RETRY_TIME: float = 0.6
+var _climb_retry_timer: float = 0.0
+var _ground_target: Player = null
+var _target_ground_y: float = INF
 
 # Heiße Kartoffel: Ist der Bot das Ziel, schießt er auf den Teufel, um ihn
 # weiterzugeben. Sonst hält er das Feuer zurück, wenn der Teufel in der
@@ -194,6 +205,8 @@ func _handle_navigation(_delta: float) -> void:
 		return
 	if _handle_plate_goal():
 		return
+	if _handle_target_climb(_delta):
+		return
 
 	var diff = target_pos() - player.global_position
 	var dist_x = diff.x
@@ -243,24 +256,95 @@ func _lava_y() -> float:
 
 # Liefert true, solange der Bot vor der Lava flieht (Navigation übernommen).
 func _handle_lava_escape(delta: float) -> bool:
+	_tick_climb_blocked(delta)
 	var lava_y := _lava_y()
 	if lava_y == INF or lava_y - player.global_position.y > LAVA_ALERT_DISTANCE:
-		_climb_route = {}
-		_climb_airborne = false
+		if _climb_mode == "lava":
+			_reset_climb()
 		return false
+	if _climb_mode != "lava":
+		_reset_climb()
+		_climb_mode = "lava"
+	return _run_climb(delta, INF)
+
+# Gegner steht eine Ebene höher: über Einweg-Stege (von unten durchspringen)
+# oder Plattform-Enden zu ihm hinaufklettern, statt nur zufällig zu hüpfen.
+func _handle_target_climb(delta: float) -> bool:
+	_climb_retry_timer -= delta
+	var feet := _feet()
+	# Springt der Gegner nur kurz hoch, zählt seine letzte Standhöhe.
+	if target != _ground_target or target.is_on_floor() or _target_ground_y == INF:
+		_ground_target = target
+		_target_ground_y = target_pos().y + BODY_FOOT_OFFSET * target.scale.y
+	var above := feet.y - _target_ground_y
+	if _climb_mode == "target":
+		# Laufenden Sprung zu Ende führen; am Boden neu entscheiden.
+		if not player.is_on_floor():
+			return _run_climb(delta, target_pos().x)
+		if above < CLIMB_MIN_RISE * 0.5:
+			_reset_climb()
+			return false
+	elif above < CLIMB_MIN_RISE or not player.is_on_floor() or _climb_retry_timer > 0.0:
+		return false
+	if _climb_mode != "target":
+		_reset_climb()
+		_climb_mode = "target"
+	if not _run_climb(delta, target_pos().x):
+		# Kein Weg nach oben: kurz normal weiterkämpfen, dann neu suchen.
+		_reset_climb()
+		_climb_retry_timer = CLIMB_RETRY_TIME
+		return false
+	return true
+
+func _feet() -> Vector2:
+	# Heldengröße skaliert den Körper (18 x 22 px Grundmaß).
+	return player.global_position + Vector2(0.0, BODY_FOOT_OFFSET * player.scale.y)
+
+func _reset_climb() -> void:
+	_climb_route = {}
+	_climb_airborne = false
+	_climb_mode = ""
+	_climb_replan_timer = 0.0
+
+func _tick_climb_blocked(delta: float) -> void:
+	for key in _climb_blocked.keys():
+		_climb_blocked[key] = float(_climb_blocked[key]) - delta
+		if float(_climb_blocked[key]) <= 0.0:
+			_climb_blocked.erase(key)
+
+# Höchste Kachelzahl, die der Bot mit Sprung (und Doppelsprung) schafft.
+func _climb_max_rise() -> int:
+	var grav := 980.0 * maxf(player.gravity_mult, 0.05)
+	var v0 := absf(player.jump_force)
+	var height := v0 * v0 / (2.0 * grav)
+	if player.max_jumps > 0:
+		var v1 := v0 * 0.9
+		# Doppelsprung kurz vor dem Scheitel: nicht ganz die volle Höhe.
+		height += v1 * v1 / (2.0 * grav) * 0.85 * float(player.max_jumps)
+	return clampi(int(floor((height - 10.0) / 36.0)), 2, 6)
+
+# Führt eine Kletterroute aus (gemeinsam für Lava-Flucht und Gegner oben).
+# prefer_x != INF bevorzugt Landeplätze nahe diesem x. false = kein Weg.
+func _run_climb(delta: float, prefer_x: float) -> bool:
 	var main := player.get_parent()
 	var level = main.get("level_generator") if main != null else null
 	if level == null or not level.has_method("find_climb_route"):
 		return false
 
-	# Heldengröße skaliert den Körper (18 x 22 px Grundmaß).
-	var feet := player.global_position + Vector2(0.0, BODY_FOOT_OFFSET * player.scale.y)
+	var feet := _feet()
 	var speed := player.move_speed
 	_climb_replan_timer -= delta
 	if player.is_on_floor():
-		_climb_airborne = false
+		if _climb_airborne:
+			_climb_airborne = false
+			# Sprung misslungen (wieder auf der Startebene gelandet): diese
+			# Landezelle kurz meiden, sonst springt der Bot ewig dagegen.
+			if absf(feet.y - _climb_start_y) < 12.0 and _climb_route.has("cell"):
+				_climb_blocked[_climb_route["cell"]] = CLIMB_BLOCK_TIME
+				_climb_route = {}
 		if _climb_route.is_empty() or _climb_replan_timer <= 0.0:
-			_climb_route = level.call("find_climb_route", feet)
+			var max_rise := 4 if prefer_x == INF else _climb_max_rise()
+			_climb_route = level.call("find_climb_route", feet, prefer_x, max_rise, _climb_blocked)
 			_climb_replan_timer = 0.35
 		if _climb_route.is_empty():
 			# Kein Weg nach oben bekannt (z. B. schon auf dem Gipfel): normal
@@ -276,7 +360,9 @@ func _handle_lava_escape(delta: float) -> bool:
 		else:
 			player.velocity.x = 0.0
 			player.jump()
+			_climb_start_y = feet.y
 			_climb_airborne = true
+			_climb_air_jumped = false
 		return true
 
 	# In der Luft: erst steigen, bis die Füße über der Zielkante sind, dann
@@ -285,6 +371,12 @@ func _handle_lava_escape(delta: float) -> bool:
 		return true
 	var land_y := float(_climb_route["land_y"])
 	var target_x := float(_climb_route["land_x"])
+	# Reicht der erste Sprung nicht bis über die Kante: Doppelsprung am Scheitel.
+	if _climb_airborne and not _climb_air_jumped and player.velocity.y > -60.0 \
+			and feet.y > land_y - 4.0 and player.jumps_remaining > 0 \
+			and not bool(_climb_route.get("pad", false)):
+		player.jump()
+		_climb_air_jumped = true
 	if bool(_climb_route.get("pad", false)):
 		# Erst im Schacht steigen, kurz vor dem Scheitel zur Landefläche.
 		if player.velocity.y < -220.0:
