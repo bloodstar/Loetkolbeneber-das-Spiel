@@ -191,12 +191,12 @@ const BASTION_DOME_RADIUS: float = 140.0
 # schiebt Gegner mit und stößt sie am Ende weg. Nicht unverwundbar.
 const BASTION_RAM_SPEED: float = 640.0
 const BASTION_RAM_DURATION: float = 0.3
-const BASTION_RAM_DAMAGE: float = 10.0
+const BASTION_RAM_DAMAGE: float = 25.0 # Jochen 2026-11-26: Dash soll spürbar Schaden machen (war 10)
 const BASTION_RAM_KNOCKBACK: float = 620.0
 const BASTION_RAM_FRONT: float = 48.0
 # Fähigkeit "Magnethaken" (siehe MagnetHook).
-const BASTION_HOOK_RANGE: float = 380.0
-const BASTION_HOOK_SPEED: float = 950.0
+const BASTION_HOOK_RANGE: float = 440.0
+const BASTION_HOOK_SPEED: float = 1250.0
 const BASTION_HOOK_PULL_SPEED: float = 1000.0
 const BASTION_HOOK_DAMAGE: float = 6.0
 const BASTION_HOOK_STUN: float = 0.3
@@ -1491,7 +1491,8 @@ func apply_stats() -> void:
 	melee_wall_stun_timer = 0.0
 	melee_damage_mult = m_dmg_mult
 	melee_range_bonus = clampf(m_range_add, 0.0, 3.0)
-	melee_range_mult = 1.0
+	# Heldeneigene Reichweite (Bastion +50 %); Modifier multiplizieren danach.
+	melee_range_mult = hero.melee_range_mult if is_melee else 1.0
 	melee_knockback_mult = m_kb_mult
 	melee_arc_bonus = clampf(m_arc_add, 0.0, 180.0)
 	melee_freeze = minf(m_freeze, 3.0)
@@ -3901,7 +3902,7 @@ func _bastion_ram_tick() -> void:
 	for p in _opponents_within(front, 34.0 * size + MELEE_BODY_RADIUS):
 		if not _dash_hit.has(p):
 			_dash_hit.append(p)
-			p.take_damage(BASTION_RAM_DAMAGE * powerup_damage_mult, Vector2.ZERO, self)
+			p.take_damage(BASTION_RAM_DAMAGE * powerup_damage_mult * dash_effect_mult, Vector2.ZERO, self)
 			_spawn_blade_hit_spark(p.global_position)
 		p.velocity = dash_dir * _dash_speed_now
 		p.knockback_timer = maxf(p.knockback_timer, 0.12)

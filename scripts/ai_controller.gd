@@ -647,7 +647,8 @@ func _handle_combat(_delta: float) -> void:
 			"klinge":
 				wants = dist < 300.0 and dist > player.get_melee_reach()
 			"bastion":
-				wants = dist < 380.0 and dist > player.get_melee_reach() * 1.3
+				wants = dist < Player.BASTION_HOOK_RANGE * player.ability_range_mult * 0.9 \
+					and dist > player.get_melee_reach() * 1.3 and _hook_line_clear()
 			"flocke":
 				# Gletscherlanze, sobald der Gegner in Reichweite des Strahls ist.
 				wants = dist < Player.FLOCKE_LANCE_RANGE * player.ability_range_mult * 0.85
@@ -659,7 +660,34 @@ func _handle_combat(_delta: float) -> void:
 			if hero_id == "spore" and is_instance_valid(target):
 				player.use_ability(target_pos())
 			else:
+				if hero_id == "bastion":
+					# Der Haken fliegt gerade: direkt (mit Vorhalt) zielen statt
+					# mit der trägen Schussausrichtung.
+					player.aim_direction = _hook_lead_dir()
 				player.use_ability()
+
+# Bastions Magnethaken: freie Linie zum Ziel (Einweg-Stege zählen nicht).
+func _hook_line_clear() -> bool:
+	if not is_instance_valid(target):
+		return false
+	if ArenaMode.active:
+		return ArenaBot.has_line_of_sight(player, target)
+	var ray := PhysicsRayQueryParameters2D.create(player.global_position, target.global_position, 1)
+	ray.exclude = [player.get_rid()]
+	var hit := player.get_world_2d().direct_space_state.intersect_ray(ray)
+	if hit.is_empty():
+		return true
+	var collider = hit.get("collider")
+	return collider is Node and (collider as Node).is_in_group("one_way_platform")
+
+# Zielrichtung mit Vorhalt: dorthin, wo das Ziel beim Eintreffen des Hakens ist.
+func _hook_lead_dir() -> Vector2:
+	var goal := target_pos()
+	var flight := player.global_position.distance_to(goal) / Player.BASTION_HOOK_SPEED
+	if is_instance_valid(target):
+		goal += target.velocity * flight
+	var dir := goal - player.global_position
+	return dir.normalized() if dir.length_squared() > 1.0 else player.aim_direction
 
 # --- Schalter ------------------------------------------------------------------
 

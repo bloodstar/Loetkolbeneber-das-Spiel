@@ -812,6 +812,7 @@ func _setup_heroes() -> void:
 	bastion.melee_weapon = "hammer"
 	bastion.melee_damage_mult = 1.5
 	bastion.melee_cooldown_mult = 0.8
+	bastion.melee_range_mult = 1.5 # Jochen 2026-11-26: langsam, kam an niemanden heran
 	bastion.base_hp = 145
 	bastion.base_shield = 20
 	bastion.base_speed = 270.0
@@ -821,8 +822,8 @@ func _setup_heroes() -> void:
 	bastion.base_reload_time = 1.45
 	bastion.color_tint = Color(0.3, 0.9, 0.7)
 	bastion.sprite_tile_name = "tile_0001.png"
-	bastion.version = 5 # Rammbock-Dash, Ulti Festung
-	bastion.ability_version = 2 # Magnethaken statt Heilfeld
+	bastion.version = 6 # 6: Nahkampfreichweite +50 % (5: Rammbock-Dash, Ulti Festung)
+	bastion.ability_version = 3 # 3: Haken trifft zuverlässiger, schneller, weiter; Rammbock 25 Schaden (2: Magnethaken statt Heilfeld)
 	heroes["bastion"] = bastion
 
 	# 7. Phantom – Schattenassassine
@@ -1202,7 +1203,7 @@ func get_hero_attack_text(hero: HeroData) -> String:
 	var data := get_melee_weapon_data(hero.melee_weapon)
 	return "Nahkampf: %s, %d Schaden alle %.2f s, Reichweite %.1f Felder" % [
 		str(data["label"]), int(round(float(data["damage"]) * hero.melee_damage_mult)),
-		float(data["cooldown"]) * hero.melee_cooldown_mult, float(data["range_tiles"]),
+		float(data["cooldown"]) * hero.melee_cooldown_mult, float(data["range_tiles"]) * hero.melee_range_mult,
 	]
 
 # Angriff, Dash und Ulti eines Helden als Textblock für Menü und Tooltips.
