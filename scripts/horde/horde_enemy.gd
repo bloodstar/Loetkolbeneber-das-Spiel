@@ -84,6 +84,10 @@ var _state_dir: Vector2 = Vector2.ZERO
 var _strafe: float = 1.0
 var _strafe_t: float = 0.0
 var _haste_t: float = 0.0
+## Boss-Enrage: Sekunden seit Erscheinen und aktuelle Wut-Stufe.
+var boss_age: float = 0.0
+var enrage_level: int = 0
+var _base_damage: float = 0.0
 var _time_slow_t: float = 0.0
 var _time_slow_mult: float = 1.0
 var _orbit_angle: float = 0.0
@@ -145,6 +149,7 @@ func setup_boss(p_hero_id: String, hp: float, dmg_mult: float) -> void:
 	ai = "boss_melee" if Global.is_melee_hero(hero_id) else "boss_ranged"
 	speed = 125.0 if ai == "boss_melee" else 95.0
 	damage = 22.0 * dmg_mult
+	_base_damage = damage
 	radius = 30.0
 	size = 2.6
 	xp_value = 60
@@ -187,6 +192,8 @@ func _physics_process(delta: float) -> void:
 	_attack_cd -= delta
 	_special_cd -= delta
 	_haste_t = maxf(0.0, _haste_t - delta)
+	if is_boss:
+		_tick_enrage(delta)
 	_time_slow_t = maxf(0.0, _time_slow_t - delta)
 	knockback_timer = maxf(0.0, knockback_timer - delta)
 	mark_timer = maxf(0.0, mark_timer - delta)
@@ -197,6 +204,8 @@ func _physics_process(delta: float) -> void:
 	var target: Node2D = director.nearest_target(global_position)
 	var move := Vector2.ZERO
 	var spd := speed * (1.35 if _haste_t > 0.0 else 1.0) * (_time_slow_mult if _time_slow_t > 0.0 else 1.0)
+	if is_boss:
+		spd *= enrage_speed_mult()
 	var disabled := stun_timer > 0.0 or freeze_timer > 0.0
 	if disabled:
 		stun_timer = maxf(0.0, stun_timer - delta)
@@ -222,6 +231,20 @@ func _physics_process(delta: float) -> void:
 	_clamp_to_map()
 	if target != null and not disabled:
 		_try_contact(target)
+
+## Alle HordeDefs.BOSS_ENRAGE_EVERY Sekunden wird der Boss wütender:
+## schneller und mehr Schaden (Nahkampf, Stampfer, Geschosse nutzen damage).
+func _tick_enrage(delta: float) -> void:
+	boss_age += delta
+	var lvl := int(boss_age / HordeDefs.BOSS_ENRAGE_EVERY)
+	if lvl <= enrage_level:
+		return
+	enrage_level = lvl
+	damage = _base_damage * (1.0 + HordeDefs.BOSS_ENRAGE_DAMAGE * float(lvl))
+	director.on_boss_enrage(self)
+
+func enrage_speed_mult() -> float:
+	return minf(HordeDefs.BOSS_ENRAGE_SPEED_MAX, 1.0 + HordeDefs.BOSS_ENRAGE_SPEED * float(enrage_level))
 
 func _think(target: Node2D, delta: float) -> Vector2:
 	var to := target.global_position - global_position

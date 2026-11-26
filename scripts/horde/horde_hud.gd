@@ -164,6 +164,9 @@ func _process(delta: float) -> void:
 		var hp := director.boss_health_ratio()
 		_boss_bar.value = maxf(0.0, hp)
 		_boss_label.text = ("ENDBOSS " if bool(info.get("final", false)) else "BOSS ") + str(info.get("name", "")).to_upper()
+		var rage := int(info.get("rage", 0))
+		if rage > 0:
+			_boss_label.text += "   WUT %d" % rage
 	if _notice_t > 0.0:
 		_notice_t -= delta
 		_notice_label.modulate.a = clampf(_notice_t / 0.6, 0.0, 1.0)
