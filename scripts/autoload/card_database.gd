@@ -4200,7 +4200,9 @@ func _register_element_cards() -> void:
 		var combo := ElementSystem.combo_for(el, el)
 		pure.title = "%s (rein)" % ElementSystem.element_name(el)
 		pure.description = "Reine Form: %s.\n%s" % [ElementSystem.COMBO_NAMES[combo], ElementSystem.COMBO_DESCRIPTIONS[combo]]
-		pure.rarity = "Epic"
+		# Rare wie die anderen Elementkarten, sonst nehmen Bots immer die reine Form.
+		pure.rarity = "Rare"
+		pure.version = 2
 		pure.color = ElementSystem.element_color(el).lightened(0.2)
 		pure.pool = "Offensive"
 		pure.sub_tags = _element_tags()
