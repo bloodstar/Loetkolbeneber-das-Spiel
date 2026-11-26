@@ -18,7 +18,7 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if player == null or not is_instance_valid(player) or player.is_dead:
 		return
-	if not player.control_enabled or player.stun_timer > 0.0:
+	if not player.can_control() or player.stun_timer > 0.0:
 		return
 	# Nicht wegrutschen: Laufeingabe immer 0 (Rückstoß wirkt trotzdem).
 	if ArenaMode.active:

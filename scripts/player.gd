@@ -900,6 +900,15 @@ var last_damage_timer: float = 0.0
 # Countdown: Eingaben sind erst nach dem Start-Countdown erlaubt.
 var control_enabled: bool = true
 
+## Steuerung nur während einer laufenden Runde. Nach Rundenende (Draft,
+## Win-Screen, Statistik) wird nicht mehr geschossen, gelaufen oder gezaubert;
+## online sperrt der Host damit auch die zuletzt gemeldete Remote-Eingabe.
+static func round_controls_open() -> bool:
+	return Global.current_state == Global.GameState.PLAYING
+
+func can_control() -> bool:
+	return control_enabled and round_controls_open()
+
 # --- Talentbaum-Effekte ---
 var tower_enabled: bool = false
 var tower_auto_spawn: bool = false
@@ -1627,7 +1636,7 @@ func _physics_process(delta: float) -> void:
 	
 	# Input Handling. WÃƒÂ¤hrend des Start-Countdowns oder eines BetÃƒÂ¤ubungs-Effekts
 	# werden keine Bewegungs-/Angriffseingaben verarbeitet.
-	if control_enabled and stun_timer <= 0.0:
+	if can_control() and stun_timer <= 0.0:
 		if is_remote and not is_bot:
 			_handle_remote_input(delta)
 		elif not is_bot:
@@ -2049,7 +2058,7 @@ func apply_network_state(data: Dictionary) -> void:
 	emit_signal("block_state_changed", is_blocking, block_cooldown_timer, block_cooldown)
 
 func jump() -> void:
-	if not control_enabled or stun_timer > 0.0:
+	if not can_control() or stun_timer > 0.0:
 		return
 	if ArenaMode.active:
 		ArenaMotion.jump(self)
@@ -2074,7 +2083,7 @@ func jump() -> void:
 ## Lässt die Figur durch den Einweg-Steg fallen, auf dem sie steht. Liefert
 ## false, wenn sie nicht auf einem solchen Steg steht.
 func drop_through() -> bool:
-	if ArenaMode.active or not control_enabled or stun_timer > 0.0 or not is_on_floor():
+	if ArenaMode.active or not can_control() or stun_timer > 0.0 or not is_on_floor():
 		return false
 	var found := false
 	for i in range(get_slide_collision_count()):
@@ -2110,7 +2119,7 @@ func apply_jump_pad_boost(force: float) -> void:
 	jumps_remaining = max_jumps
 
 func dash() -> void:
-	if not control_enabled or stun_timer > 0.0:
+	if not can_control() or stun_timer > 0.0:
 		return
 	if dash_charges <= 0 or is_dashing or glide_timer > 0.0:
 		return
@@ -2333,7 +2342,7 @@ func attack() -> void:
 		shoot()
 
 func shoot() -> void:
-	if not control_enabled or stun_timer > 0.0 or is_melee:
+	if not can_control() or stun_timer > 0.0 or is_melee:
 		return
 	# Volt "Überladung": Dauerfeuer ohne Munitionsverbrauch.
 	var overcharged := overcharge_timer > 0.0
@@ -2448,7 +2457,7 @@ func start_reload() -> void:
 
 # Manuelles Nachladen per Taste. Ein volles Magazin wird nicht nachgeladen.
 func manual_reload() -> void:
-	if not control_enabled or stun_timer > 0.0 or is_reloading:
+	if not can_control() or stun_timer > 0.0 or is_reloading:
 		return
 	if current_ammo >= max_ammo:
 		return
@@ -2459,7 +2468,7 @@ func manual_reload() -> void:
 # Zielrichtung. Der Punkt wird hier noch einmal auf Reichweite und freies
 # Gelände geprüft, der Host vertraut also keiner Client-Position.
 func use_ability(target = null) -> void:
-	if not control_enabled or stun_timer > 0.0:
+	if not can_control() or stun_timer > 0.0:
 		return
 	# Erneutes Drücken, solange Kugelblitz bzw. Köder noch da ist (Evolutionen).
 	if _try_ability_recast():
@@ -2542,7 +2551,7 @@ func use_ability(target = null) -> void:
 # den Schlag über melee_seq im Snapshot.
 # aim_override (Auto-Angriff) zielt auf einen Gegner statt auf den Zeiger.
 func melee_attack(aim_override: Vector2 = Vector2.ZERO) -> void:
-	if not control_enabled or stun_timer > 0.0 or is_replica or not is_melee:
+	if not can_control() or stun_timer > 0.0 or is_replica or not is_melee:
 		return
 	if melee_cooldown_timer > 0.0:
 		return
@@ -3036,7 +3045,7 @@ func _check_melee_wall_stun() -> void:
 # ============================================================
 
 func start_block() -> void:
-	if not control_enabled or stun_timer > 0.0:
+	if not can_control() or stun_timer > 0.0:
 		return
 	if is_blocking or block_cooldown_timer > 0.0:
 		return
@@ -4473,7 +4482,7 @@ func _store_ult_timer() -> void:
 		Global.player_ult_timers[player_index - 1] = ult_timer
 
 func use_ultimate(target = null) -> void:
-	if not control_enabled or stun_timer > 0.0 or is_replica:
+	if not can_control() or stun_timer > 0.0 or is_replica:
 		return
 	if not has_ult() or ult_timer > 0.0:
 		return
@@ -6494,7 +6503,7 @@ func _handle_timers(delta: float) -> void:
 	if powerup_auto_attack_timer > 0.0:
 		powerup_auto_attack_timer = maxf(0.0, powerup_auto_attack_timer - delta)
 		if not is_replica and is_melee and melee_cooldown_timer <= 0.0 \
-				and control_enabled and current_health > 0.0 and is_inside_tree():
+				and can_control() and current_health > 0.0 and is_inside_tree():
 			var auto_dir := _melee_auto_target_dir()
 			if auto_dir != Vector2.ZERO:
 				melee_attack(auto_dir)
@@ -6502,7 +6511,7 @@ func _handle_timers(delta: float) -> void:
 	# Parade: bereiter Nahkampfschlag löst von selbst aus, sobald ein
 	# gegnerisches Projektil auf den Eber zufliegt und in Reichweite ist.
 	if melee_parry and not is_replica and is_melee and melee_cooldown_timer <= 0.0 \
-			and control_enabled and current_health > 0.0 and is_inside_tree():
+			and can_control() and current_health > 0.0 and is_inside_tree():
 		var parry_dir := _melee_parry_target_dir()
 		if parry_dir != Vector2.ZERO:
 			melee_attack(parry_dir)
