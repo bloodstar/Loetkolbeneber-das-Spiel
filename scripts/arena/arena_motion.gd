@@ -11,9 +11,12 @@ const FOOT_SCALE: float = 0.7
 
 static func foot_half(p: Player) -> Vector2:
 	var half := Vector2(9, 11)
+	var shape_scale := 1.0
 	if p.collision_shape and p.collision_shape.shape is RectangleShape2D:
 		half = (p.collision_shape.shape as RectangleShape2D).size * 0.5
-	return half * absf(p.scale.x) * FOOT_SCALE
+		# Riesen: Die Box ist ab +50 % Größe gegen die Figur gestaucht.
+		shape_scale = absf(p.collision_shape.scale.x)
+	return half * absf(p.scale.x) * shape_scale * FOOT_SCALE
 
 ## Schwerkraft auf die Höhe, Landen, Herunterfallen von Kanten und die
 ## passende Kollisionsmaske für die Höhen-Schichten.

@@ -227,7 +227,7 @@ func _process(delta: float) -> void:
 	var screen_size = get_viewport_rect().size
 	var width_zoom = screen_size.x / maxf(bounds.size.x + zoom_margin * 2.0, 1.0)
 	var height_zoom = screen_size.y / maxf(bounds.size.y + zoom_margin * 2.0, 1.0)
-	var target_zoom = clampf(minf(width_zoom, height_zoom), min_zoom, scroll_max_zoom if scroll_mode else max_zoom)
+	var target_zoom = clampf(minf(width_zoom, height_zoom), _effective_min_zoom(screen_size), scroll_max_zoom if scroll_mode else max_zoom)
 	if ArenaMode.active:
 		target_zoom = arena_zoom
 	# Autoscroll: Die Kamera fährt mit dem Streckenfenster, nicht mit den Spielern.
@@ -260,6 +260,16 @@ func _process(delta: float) -> void:
 	
 	_apply_shake(real_delta)
 	_apply_arena_squash()
+
+## Untergrenze des Zooms. Große Karten ohne Scrollen (z. B. die doppelt
+## großen Sonnentempel/Serverhaus, 88 x 50) passen bei min_zoom nicht ganz ins
+## Bild; dann darf die Kamera so weit herauszoomen, dass die ganze Karte zu
+## sehen ist und kein Spieler aus dem Bild läuft.
+func _effective_min_zoom(screen_size: Vector2) -> float:
+	if scroll_mode or ArenaMode.active or world_rect.size == Vector2.ZERO:
+		return min_zoom
+	var fit := minf(screen_size.x / (world_rect.size.x + zoom_margin), screen_size.y / (world_rect.size.y + zoom_margin))
+	return minf(min_zoom, fit)
 
 ## Hält die Bildmitte so, dass nicht über den Kartenrand hinaus geschaut
 ## wird. Ist die Karte kleiner als das Bild, bleibt sie mittig.

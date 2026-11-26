@@ -17,10 +17,11 @@ static var map_h: int = MAP_HEIGHT
 ## und Physikobjekte, Düsensteuerung in alle Richtungen (SpaceMotion).
 static var zero_g: bool = false
 const RUBBER_BAND: float = 320.0
-# Abstand der Spawn-Mitte über der Standfläche. Der Player-Körper reicht etwa
-# 12 px unter seinen Ursprung, sodass die Figur knapp über der Fläche startet
-# und nicht mehrere Kacheln fällt.
-const SPAWN_BODY_OFFSET: float = 14.0
+# Abstand der Spawn-Mitte über der Standfläche. Der Player-Körper reicht
+# 12 px * Figurgröße (1.7) = 20.4 px unter seinen Ursprung, sodass die Figur
+# knapp über der Fläche startet. Steckt sie mit den Füßen im Steg, fällt sie
+# durch Einweg-Stege hindurch (Player.spawn_lift für größere Figuren).
+const SPAWN_BODY_OFFSET: float = 22.0
 const SPAWN_HEADROOM_ROWS: int = 2
 const SPAWN_EDGE_MARGIN: int = 2
 # Anteil des größtmöglichen Abstands, den ein zufällig gewählter Spawn
@@ -571,6 +572,9 @@ const MAP_PROFILES: Dictionary = {
 		# Riesige, innen hohle Pyramide in der Mitte (unten offen, drei
 		# Viertel der Kartenbreite), darüber eine Kistenkette.
 		"archetype": "layout",
+		# Doppelt so groß wie eine normale Arena (Jochen 2026-11-26).
+		"width": 88,
+		"height": 50,
 		"theme": "storybook",
 		"backdrop_variant": "desert",
 		"ground_top": [120, 121, 122, 123, 140, 141, 142, 143],
@@ -586,11 +590,11 @@ const MAP_PROFILES: Dictionary = {
 		"vines": false,
 		"destructibles": 0,
 		"random_platforms": 0,
-		"barrels": 1,
+		"barrels": 2,
 		"tnt_barrels": 1,
-		"crate_stacks": 1,
+		"crate_stacks": 2,
 		"crate_powerup_chance": 0.6,
-		"powerups": 2,
+		"powerups": 4,
 	},
 	"kettenwerk": {
 		# Neon-Halle voller Kistenketten: Brücken zwischen Einweg-Stegen,
@@ -622,6 +626,9 @@ const MAP_PROFILES: Dictionary = {
 		# Stilisiertes Haus mit vier Räumen in der Mitte; Leisten und Luken
 		# führen nach oben, über das Dach kommt man auf die andere Seite.
 		"archetype": "layout",
+		# Doppelt so groß wie eine normale Arena (Jochen 2026-11-26).
+		"width": 88,
+		"height": 50,
 		"theme": "wool",
 		"backdrop_variant": "clouds",
 		"ground_top": [80, 81, 82, 83, 100, 101, 102, 103],
@@ -638,16 +645,19 @@ const MAP_PROFILES: Dictionary = {
 		"vines": false,
 		"destructibles": 0,
 		"random_platforms": 0,
-		"barrels": 1,
+		"barrels": 2,
 		"tnt_barrels": 0,
-		"crate_stacks": 1,
+		"crate_stacks": 2,
 		"crate_powerup_chance": 0.55,
-		"powerups": 2,
+		"powerups": 4,
 	},
 	"eispyramiden": {
 		# Zwei große hohle Eispyramiden über fast die ganze Breite, zwischen
 		# ihren Spitzen hängt eine Kistenkette.
 		"archetype": "layout",
+		# Doppelt so groß wie eine normale Arena (Jochen 2026-11-26).
+		"width": 88,
+		"height": 50,
 		"theme": "frost",
 		"backdrop_variant": "cave",
 		"ground_top": [80, 81, 82, 83, 100, 101, 102, 103],
@@ -664,16 +674,19 @@ const MAP_PROFILES: Dictionary = {
 		"vines": false,
 		"destructibles": 0,
 		"random_platforms": 0,
-		"barrels": 1,
+		"barrels": 2,
 		"tnt_barrels": 1,
-		"crate_stacks": 1,
+		"crate_stacks": 2,
 		"crate_powerup_chance": 0.6,
-		"powerups": 2,
+		"powerups": 4,
 	},
 	"serverhaus": {
 		# Rechenzentrum auf der Platine: Haus mit vier Räumen, Kistenketten
 		# vom Kartenrand bis an die Hauswand und Kisten am Deckenkabel.
 		"archetype": "layout",
+		# Doppelt so groß wie eine normale Arena (Jochen 2026-11-26).
+		"width": 88,
+		"height": 50,
 		"theme": "platine",
 		"backdrop_variant": "circuit",
 		"ground_top": [113, 114, 115, 132, 133, 134],
@@ -689,11 +702,11 @@ const MAP_PROFILES: Dictionary = {
 		"vines": false,
 		"destructibles": 0,
 		"random_platforms": 0,
-		"barrels": 1,
+		"barrels": 2,
 		"tnt_barrels": 1,
-		"crate_stacks": 1,
+		"crate_stacks": 2,
 		"crate_powerup_chance": 0.6,
-		"powerups": 2,
+		"powerups": 4,
 	},
 	"gitterzaun": {
 		# Gitterzaun auf der Platine: fünf senkrechte und vier waagrechte
@@ -1892,26 +1905,30 @@ const LAYOUTS: Dictionary = {
 		],
 	},
 	"sonnentempel": {
-		# Riesige hohle Pyramide (drei Viertel der Kartenbreite): außen
-		# begehbare Schrägen, innen Einweg-Stege in drei Etagen bis unter die
-		# Spitze. Über der Spitze hängt eine Kistenkette zwischen den oberen
-		# Plattformen, an den Rändern führen Plattformen nach oben.
+		# Doppelt große Karte (88 x 50). Riesige hohle Pyramide (drei Viertel
+		# der Kartenbreite): außen begehbare Schrägen, innen versetzte
+		# Einweg-Stege alle drei Reihen bis unter die Spitze. Über der Spitze
+		# hängt eine Kistenkette zwischen den oberen Plattformen, an den
+		# Rändern führt eine Leiter aus versetzten Plattformen nach oben.
 		"mirror": true,
-		"platforms": [[1, 3, 20], [2, 5, 17], [1, 3, 14], [2, 5, 11], [8, 12, 9], [15, 18, 7]],
-		"oneway": [[12, 17, 20], [17, 20, 17], [20, 23, 14]],
-		"pyramids": [[22.0, 20.5, 9.5, 16.5]],
-		"mystery": [[10, 5]],
-		"pipes": [[1, 22, 42, 22]],
+		# Leiter aus zwei versetzten Spalten alle drei Reihen: Über jeder
+		# Stufe liegen 5 Reihen Luft.
+		"platforms": [[1, 5, 45], [6, 10, 42], [1, 5, 39], [6, 10, 36], [1, 5, 33], [6, 10, 30],
+			[1, 5, 27], [6, 10, 24], [14, 21, 21], [24, 27, 18], [30, 37, 15]],
+		"oneway": [[20, 27, 45], [30, 35, 42], [36, 41, 39], [28, 33, 36], [34, 39, 33], [40, 47, 30]],
+		"pyramids": [[44.0, 45.5, 21.0, 33.0]],
+		"mystery": [[33, 11]],
+		"pipes": [[2, 47, 85, 47]],
 		"crate_chains": [
-			[19.0, 7.2, 25.0, 7.2, [0.82], 1.03],
-			[6.5, 0.0, -1, 4.0, [1.0]],
+			[38.0, 15.2, 50.0, 15.2, [0.82, 0.82], 1.03],
+			[13.0, 0.0, -1, 8.0, [1.0]],
 		],
 	},
 	"kettenwerk": {
 		# Kettenbrücken zwischen Einweg-Stegen (unten und in der Mitte), eine
 		# Kette vom Kartenrand zur Plattform und hängende Kisten.
 		"mirror": true,
-		"platforms": [[3, 8, 20], [9, 13, 17], [2, 6, 14], [7, 11, 11], [16, 20, 8]],
+		"platforms": [[3, 8, 20], [9, 13, 17], [2, 6, 14], [7, 12, 11], [15, 20, 8]],
 		"oneway": [[14, 18, 20], [12, 16, 14], [3, 6, 8]],
 		"mystery": [[5, 4]],
 		"pipes": [[1, 22, 42, 22]],
@@ -1925,18 +1942,20 @@ const LAYOUTS: Dictionary = {
 	"wollhaus": {
 		# Haus mit vier Räumen: Türen unten, Fenster oben, Luken in der
 		# Zwischendecke. Kistenkette vom Rand zur Plattform, Kisten an Fäden.
+		# Doppelt große Karte (88 x 50) mit doppelt hohem Haus.
 		"mirror": true,
-		"houses": [[14, 29, 23]],
+		"houses": [[28, 59, 48, 2]],
 		# Untere Mitteltür ist zu, ein Hebel in jedem unteren Raum öffnet sie
 		# für 6 s. Die obere Tür steht offen; die Hebel oben schließen sie.
-		"gates": [[21, 22, 21, 22, 0, "door"], [21, 22, 15, 16, 1, "door", 1]],
-		"switches": [[20.55, 19.5, 0, "lever", "timed", 6.0, 3.0], [20.55, 14.0, 1, "lever", "timed", 5.0, 4.0]],
-		"platforms": [[2, 6, 20], [7, 10, 17], [7, 10, 11]],
-		"oneway": [[2, 6, 14], [2, 6, 8]],
-		"mystery": [[4, 4]],
+		"gates": [[43, 44, 44, 47, 0, "door"], [43, 44, 32, 35, 1, "door", 1]],
+		"switches": [[42.55, 44.5, 0, "lever", "timed", 6.0, 3.0], [42.55, 33.0, 1, "lever", "timed", 5.0, 4.0]],
+		"platforms": [[1, 4, 45], [6, 9, 42], [1, 4, 39], [6, 9, 36], [1, 4, 33],
+			[1, 4, 27], [6, 9, 24], [1, 4, 21]],
+		"oneway": [[6, 9, 30], [6, 12, 18]],
+		"mystery": [[9, 14]],
 		"crate_chains": [
-			[0.0, 17.2, 7.0, 17.2, [1.0]],
-			[12.0, 0.0, -1, 5.0, [1.16]],
+			[20.0, 0.0, -1, 14.0, [1.16]],
+			[24.0, 0.0, -1, 10.0, [1.16]],
 		],
 	},
 	"eispyramiden": {
@@ -1944,27 +1963,35 @@ const LAYOUTS: Dictionary = {
 		# einnehmen; zwischen ihren Spitzen hängt eine lange Kistenkette.
 		# Innen je zwei Etagen Einweg-Stege, im Tal dazwischen ein Steg als
 		# Aufstieg, darüber Plattformen bis unter die Decke.
+		# Doppelt große Karte (88 x 50): Innen drei Etagen Stege, darüber
+		# versetzte Plattformen alle drei Reihen bis unter die Decke.
 		"mirror": true,
-		"platforms": [[7, 9, 11], [2, 5, 8], [15, 18, 11], [19, 21, 8], [10, 13, 8], [16, 18, 5]],
-		"oneway": [[6, 9, 20], [14, 17, 20], [21, 22, 20], [10, 13, 17]],
-		"pyramids": [[11.5, 20.5, 14.0, 9.5]],
-		"pipes": [[1, 22, 42, 22]],
+		# Von der Spitze führen Treppen nach außen; zwischen den oberen Stufen
+		# über dem Tal hängt die Kistenkette als Brücke.
+		"platforms": [[17, 20, 28], [26, 29, 28], [12, 15, 25], [31, 34, 25], [7, 10, 22],
+			[36, 39, 22], [2, 5, 19]],
+		"oneway": [[8, 12, 45], [34, 38, 45], [14, 18, 42], [28, 32, 42], [19, 27, 39]],
+		"pyramids": [[23.0, 45.5, 31.0, 20.0]],
+		"pipes": [[2, 47, 85, 47]],
 		"crate_chains": [
-			[12.5, 14.1, 31.5, 14.1, [0.82, 1.16, 0.82], 1.03],
-			[22.0, 0.0, -1, 5.0, [1.0]],
+			[40.0, 22.2, 48.0, 22.2, [1.0, 1.0], 1.02],
+			[44.0, 0.0, -1, 10.0, [1.0]],
 		],
 	},
 	"serverhaus": {
 		# Haus mit vier Räumen; tief gespannte Kistenketten vom Kartenrand bis
 		# an die untere Leiste (unten durchlaufen oder draufspringen).
+		# Doppelt große Karte (88 x 50) mit doppelt hohem Haus. Links eine
+		# Leiter aus zwei versetzten Spalten alle drei Reihen (5 Reihen Luft
+		# über jeder Stufe).
 		"mirror": true,
-		"houses": [[14, 29, 23]],
-		"platforms": [[2, 6, 17], [2, 5, 11]],
-		"oneway": [[6, 9, 14], [7, 10, 8]],
-		"mystery": [[3, 7]],
+		"houses": [[28, 59, 48, 2]],
+		"platforms": [[1, 4, 45], [6, 9, 42], [1, 4, 39], [6, 9, 36], [1, 4, 33], [6, 9, 30],
+			[1, 4, 27], [6, 9, 24], [1, 4, 21], [6, 12, 18]],
+		"mystery": [[9, 14]],
 		"crate_chains": [
-			[0.0, 20.2, 11.0, 20.2, [0.82, 1.0], 1.02],
-			[22.0, 0.0, -1, 5.0, [1.16, 0.82]],
+			[16.0, 0.0, -1, 12.0, [1.16, 0.82]],
+			[44.0, 0.0, -1, 10.0, [1.16, 0.82]],
 		],
 	},
 	"gitterzaun": {
@@ -2051,8 +2078,10 @@ const LAYOUTS: Dictionary = {
 		# Mitte und lassen die Kette durchhängen. Wird ein Glied zerschossen,
 		# regnet alles in die offene Arena darunter.
 		"mirror": true,
-		"platforms": [[0, 2, 7], [4, 8, 20], [10, 14, 17], [4, 7, 14], [15, 18, 20]],
-		"oneway": [[0, 2, 16], [0, 2, 13], [0, 2, 10], [19, 24, 18]],
+		# Die Randleisten oben sind Einweg-Stege: Von der Leiter darunter
+		# springt man hindurch (eine feste Leiste versperrte den Weg).
+		"platforms": [[4, 8, 20], [10, 14, 17], [4, 7, 14], [15, 18, 20]],
+		"oneway": [[0, 2, 16], [0, 2, 13], [0, 2, 10], [0, 2, 7], [19, 24, 18]],
 		"ball_chains": [[3.0, 7.15, 41.0, 7.15, 1.0, 0.9, 0.15, 0.4]],
 	},
 	"falltuerburg": {
@@ -2145,9 +2174,10 @@ func _build_layout(layout: Dictionary) -> void:
 	for entry in layout.get("houses", []):
 		var hx0 := int(entry[0])
 		var hx1 := int(entry[1])
-		_build_house(hx0, hx1, int(entry[2]))
+		var house_scale := int(entry[3]) if entry.size() > 3 else 1
+		_build_house(hx0, hx1, int(entry[2]), house_scale)
 		if mirror and _layout_mirror_x(hx1) > hx1:
-			_build_house(_layout_mirror_x(hx1), _layout_mirror_x(hx0), int(entry[2]))
+			_build_house(_layout_mirror_x(hx1), _layout_mirror_x(hx0), int(entry[2]), house_scale)
 	for entry in layout.get("pyramids", []):
 		_for_mirrored_center(float(entry[0]), mirror, func(cx: float) -> void:
 			_build_pyramid(cx, float(entry[1]), float(entry[2]), float(entry[3])))
@@ -2319,7 +2349,13 @@ func _build_pyramid(cx: float, base_y: float, top_y: float, half_w: float) -> vo
 ## Fenster und unter die Dachkante, das Satteldach ist begehbar.
 ##   f-15..f-12 Dach, f-11 Decke, f-10..f-7 obere Räume, f-6 Zwischendecke,
 ##   f-5..f-1 untere Räume.
-func _build_house(x0: int, x1: int, floor_row: int) -> void:
+## scale 2 (vierter Wert im Layout-Eintrag): doppelt so hohe Räume für die
+## großen Karten, Wände und Decken bleiben eine Kachel dick (siehe
+## _build_house_big).
+func _build_house(x0: int, x1: int, floor_row: int, scale: int = 1) -> void:
+	if scale >= 2:
+		_build_house_big(x0, x1, floor_row)
+		return
 	var f := floor_row
 	# Wände mit Plattform-Textur und hellem Rahmen: Die Bodenfüllung ist auf
 	# manchen Themes (Platine) kaum vom Hintergrund zu unterscheiden.
@@ -2381,6 +2417,82 @@ func _build_house(x0: int, x1: int, floor_row: int) -> void:
 	# Die Decke liegt unter dem Dach: dort keine Spawns, Kisten oder Deko.
 	for x in range(x0, x1 + 1):
 		_object_cells[Vector2i(x, f - 11)] = true
+
+## Haus in doppelter Größe: Räume doppelt so hoch und breit, Wände, Decke und
+## Zwischendecke bleiben eine Kachel dick. Türen sind vier Reihen hoch, damit
+## auch Riesen (+100 % Größe) hindurchpassen. Weil die Sprunghöhe gleich
+## bleibt, führen versetzte Stufen (alle drei Reihen) zu Luken und Fenstern.
+##   f-22 Decke, f-21..f-13 obere Räume, f-12 Zwischendecke, f-11..f-1 untere.
+func _build_house_big(x0: int, x1: int, floor_row: int) -> void:
+	var f := floor_row
+	var wall_tex: Array[Texture2D] = platform_textures if not platform_textures.is_empty() else ground_bottom_textures
+	var back := Polygon2D.new()
+	var back_l := float(x0 + 1) * TILE_SIZE
+	var back_r := float(x1) * TILE_SIZE
+	back.polygon = PackedVector2Array([
+		Vector2(back_l, float(f - 21) * TILE_SIZE), Vector2(back_r, float(f - 21) * TILE_SIZE),
+		Vector2(back_r, float(f) * TILE_SIZE), Vector2(back_l, float(f) * TILE_SIZE),
+	])
+	back.color = Color(0.0, 0.0, 0.0, 0.32)
+	back.z_index = -1
+	add_child(back)
+	# Spiegelt eine Spalte an der Hausmitte.
+	var mx := func(x: int) -> int: return x0 + x1 - x
+	var both := func(a: int, b: int, y0: int, y1: int, tex: Array, framed: bool) -> void:
+		_build_rect_solid(a, b, y0, y1, tex)
+		_build_rect_solid(mx.call(b), mx.call(a), y0, y1, tex)
+		if framed:
+			_frame_rect(a, b, y0, y1)
+			_frame_rect(mx.call(b), mx.call(a), y0, y1)
+
+	_build_rect_solid(x0, x1, f - 22, f - 22, platform_textures)
+	# Außenwände: oben 2 Reihen, Fenster f-19..f-13, Wand bis f-5, Tür 4 Reihen.
+	both.call(x0, x0, f - 21, f - 20, wall_tex, true)
+	both.call(x0, x0, f - 12, f - 5, wall_tex, true)
+	# Zwischendecke mit je einer sechs Kacheln breiten Einweg-Luke.
+	var hatch_left := x0 + 3
+	var hatch_right: int = mx.call(hatch_left + 5)
+	_build_rect_solid(x0 + 1, hatch_left - 1, f - 12, f - 12, platform_textures)
+	_build_oneway_platform(hatch_left, hatch_left + 5, f - 12)
+	_build_rect_solid(hatch_left + 6, hatch_right - 1, f - 12, f - 12, platform_textures)
+	_build_oneway_platform(hatch_right, hatch_right + 5, f - 12)
+	_build_rect_solid(hatch_right + 6, x1 - 1, f - 12, f - 12, platform_textures)
+	# Mittelwand mit Türen oben (f-16..f-13) und unten (f-4..f-1).
+	var w := x1 - x0 + 1
+	var mid_end := x0 + int(w / 2)
+	var mid_start := mid_end - 1 if w % 2 == 0 else mid_end
+	_build_rect_solid(mid_start, mid_end, f - 21, f - 17, wall_tex)
+	_build_rect_solid(mid_start, mid_end, f - 11, f - 5, wall_tex)
+	_frame_rect(mid_start, mid_end, f - 21, f - 17)
+	_frame_rect(mid_start, mid_end, f - 11, f - 5)
+	# Stufen in den unteren Räumen zur Luke: f-3 an der Wand, f-6 neben der
+	# Luke, f-9 direkt unter der Luke.
+	# Die Stufen liegen nie direkt übereinander (Kopffreiheit für Riesen).
+	both.call(x0 + 10, x0 + 12, f - 3, f - 3, platform_textures, false)
+	both.call(x0 + 6, x0 + 8, f - 6, f - 6, platform_textures, false)
+	both.call(x0 + 2, x0 + 4, f - 9, f - 9, platform_textures, false)
+	# Außenleisten in drei Spalten (A an der Wand, B, C weiter außen), sodass
+	# über jeder Leiste mindestens 8 Reihen Luft sind: C f-3, B f-6, A f-9
+	# (von dort ins Fenster), B f-15, C f-18 und A' f-20 unter der Traufe.
+	both.call(x0 - 11, x0 - 9, f - 3, f - 3, platform_textures, false)
+	both.call(x0 - 7, x0 - 5, f - 6, f - 6, platform_textures, false)
+	both.call(x0 - 3, x0 - 1, f - 9, f - 9, platform_textures, false)
+	both.call(x0 - 7, x0 - 5, f - 15, f - 15, platform_textures, false)
+	both.call(x0 - 11, x0 - 9, f - 18, f - 18, platform_textures, false)
+	both.call(x0 - 4, x0 - 2, f - 20, f - 20, platform_textures, false)
+	var top := float(f - 22)
+	var cx := float(x0 + x1 + 1) * 0.5
+	var roof: Array = [
+		Vector2(float(x0 - 1), top),
+		Vector2(float(x0 - 1), top - HOUSE_EAVE),
+		Vector2(cx - PYRAMID_CAP_HALF, top - HOUSE_ROOF_RISE * 2.0),
+		Vector2(cx + PYRAMID_CAP_HALF, top - HOUSE_ROOF_RISE * 2.0),
+		Vector2(float(x1 + 2), top - HOUSE_EAVE),
+		Vector2(float(x1 + 2), top),
+	]
+	_build_shape_solid([roof], [], roof)
+	for x in range(x0, x1 + 1):
+		_object_cells[Vector2i(x, f - 22)] = true
 
 ## Heller Rahmen in der Akzentfarbe um einen Block aus Kacheln (Hauswände).
 func _frame_rect(x0: int, x1: int, y0: int, y1: int) -> void:
