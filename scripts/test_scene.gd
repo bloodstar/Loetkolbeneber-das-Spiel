@@ -487,7 +487,7 @@ func _ready() -> void:
 	for card in CardDatabase.all_cards:
 		assert(Global.CARD_POOLS.has(card.pool), "Card %s has invalid pool %s" % [card.id, card.pool])
 	assert(Global.enabled_card_pools.size() == Global.CARD_POOLS.size(), "All card pools should be enabled by default")
-	for new_card_id in ["splittergeschoss", "panzerbrecher", "brandkapsel", "kettenreaktion", "sanitaeter", "bollwerk", "zweites_herz", "federstiefel", "windschatten", "notvorrat", "fokuskristall", "wandelnder_koloss", "leichtes_geschoss", "schweres_geschoss", "moerser", "moerser_praezision", "moerser_belagerung", "rueckstossfeder", "druckkammer", "schockgeschoss", "weitstrahler", "kraftladung", "powerup_verstaerker"]:
+	for new_card_id in ["splittergeschoss", "panzerbrecher", "brandkapsel", "sanitaeter", "bollwerk", "zweites_herz", "federstiefel", "windschatten", "notvorrat", "fokuskristall", "wandelnder_koloss", "leichtes_geschoss", "schweres_geschoss", "moerser", "moerser_praezision", "moerser_belagerung", "rueckstossfeder", "druckkammer", "schockgeschoss", "weitstrahler", "kraftladung", "powerup_verstaerker"]:
 		assert(CardDatabase.get_card(new_card_id) != null, "New pool card %s should exist" % new_card_id)
 	# Duplikat-Abgleich: ähnliche Karten sind jetzt Evolutionen einer Grundkarte.
 	for evo_id in ["bouncy_balls", "stabilisator", "lebensquell", "schwarzes_herz", "regenerationsserum", "sanitaeter", "vampiric_leech", "vampirklinge", "kompakte_statur", "schlanker_koerper", "splitterladung", "leichte_schrotflinte", "railgun_munition", "fast_forward", "wuchtgeschoss", "heavy_bullets", "federstiefel", "ausdauerblock", "ricochet_frenzy", "flummi_kern", "flaechenbrecher", "ueberladung", "powerup_magnet", "brandkapsel", "meteor_cannon"]:

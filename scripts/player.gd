@@ -766,8 +766,8 @@ var melee_lifesteal: float = 0.0
 var melee_wall_stun_bonus: float = 0.0
 var melee_execute_bonus: float = 0.0
 var melee_chain_lightning: bool = false
-# Kettenreaktion (allgemeiner Kettenblitz) bei Nahkampfhelden: ohne weiteren
-# Gegner springt der Blitz wie beim Schuss auf das getroffene Ziel zurück (1-gegen-1).
+# Nahkampf-Kettenblitz (Hochspannung, Gewitterschlag): ohne weiteren Gegner springt
+# der Blitz wie beim Schuss auf das getroffene Ziel zurück (1-gegen-1).
 var melee_chain_return: bool = false
 var melee_echo: bool = false
 var melee_parry: bool = false
@@ -1162,7 +1162,6 @@ func apply_stats() -> void:
 	var m_wall_stun := 0.0
 	var m_execute := 0.0
 	var m_chain := false
-	var m_chain_return := false
 	var m_echo := false
 	var m_parry := false
 	var size_mult = BASE_CHARACTER_SCALE
@@ -1484,7 +1483,6 @@ func apply_stats() -> void:
 		if lightning_shot:
 			m_stun += 0.1
 		m_chain = m_chain or chain_lightning
-		m_chain_return = chain_lightning
 	# Gedeckelt, damit gestapelte Karten den Nahkampf nicht zum Dauerfeuer machen.
 	melee_cooldown = maxf(0.3, float(melee_data["cooldown"]) * m_cd_mult)
 	melee_cooldown_timer = 0.0
@@ -1502,7 +1500,7 @@ func apply_stats() -> void:
 	melee_wall_stun_bonus = minf(m_wall_stun, 1.5)
 	melee_execute_bonus = m_execute
 	melee_chain_lightning = m_chain
-	melee_chain_return = m_chain_return
+	melee_chain_return = m_chain
 	melee_echo = m_echo
 	melee_parry = m_parry
 	melee_echo_timer = 0.0

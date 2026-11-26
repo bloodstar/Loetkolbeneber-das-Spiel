@@ -3267,18 +3267,8 @@ func _init_database() -> void:
 
 	# Brandkapsel ist seit 2026-11-25 Ausbau B von Feuersturm (siehe dort).
 
-	var of4 = CardData.new()
-	of4.id = "kettenreaktion"
-	of4.version = 2 # Nahkampf: Kettenblitz springt im 1-gegen-1 aufs getroffene Ziel zurück
-	of4.title = "Kettenreaktion"
-	of4.description = "Blitze springen zwischen Gegnern.\n+Blitzschuss, +Kettenblitz."
-	of4.rarity = "Epic"
-	of4.pool = "Offensive"
-	of4.color = Color(0.95, 0.85, 0.20)
-	of4.lightning_shot = true
-	of4.chain_lightning = true
-	of4.damage_mult = 0.95
-	_register(of4)
+	# Kettenreaktion wurde 2026-11-26 gestrichen: Fernkampf hat Blitzschuss -> Kettenblitz,
+	# Nahkampf Hochspannung/Gewitterschlag (springen im 1-gegen-1 aufs Ziel zurück).
 
 	# Defensive
 	var df1 = CardData.new()
@@ -3929,8 +3919,9 @@ func _init_database() -> void:
 	# --- Epic ---
 	var nk14 = CardData.new()
 	nk14.id = "nk_hochspannung"
+	nk14.version = 2 # Blitz springt im 1-gegen-1 aufs getroffene Ziel zurück (von Kettenreaktion)
 	nk14.title = "Hochspannung"
-	nk14.description = "Der Funke springt über.\nNahkampftreffer springen als Blitz auf einen weiteren Gegner (50% Schaden, betäubt).\n+0,15s Nahkampf-Betäubung."
+	nk14.description = "Der Funke springt über.\nNahkampftreffer springen als Blitz auf einen weiteren Gegner (50% Schaden, betäubt), im 1-gegen-1 zurück aufs Ziel.\n+0,15s Nahkampf-Betäubung."
 	nk14.rarity = "Epic"
 	nk14.pool = "Nahkampf"
 	nk14.color = Color(1.00, 0.90, 0.20)
@@ -3982,6 +3973,7 @@ func _init_database() -> void:
 	_register(nk18)
 	var nk19 = CardData.new()
 	nk19.id = "nk_gewitterschlag"
+	nk19.version = 2 # Blitz springt im 1-gegen-1 aufs getroffene Ziel zurück (von Kettenreaktion)
 	nk19.title = "Gewitterschlag"
 	nk19.description = "Donner in jedem Hieb.\nNahkampftreffer betäuben 0,4s und springen als Blitz über.\nJeder Schlag folgt ein zweiter mit 60% Schaden."
 	nk19.rarity = "Legendary"

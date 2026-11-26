@@ -62,7 +62,7 @@ func _ready() -> void:
 		_check(shot_card != null and (shot_card.element_core or CardDatabase.is_card_available_for_player(shot_card, "volt", ALL_ELEMENT_CARDS)), "%s für Volt verfügbar" % id)
 		for melee_id in ["phantom", "klinge", "bastion", "vampire_melee", "zeitschlaeger"]:
 			_check(not CardDatabase.is_card_available_for_player(shot_card, melee_id, []), "%s nicht für %s" % [id, melee_id])
-	for id in ["kettenreaktion", "rueckstossfeder", "frostartig", "giftklinge"]:
+	for id in ["nk_hochspannung", "rueckstossfeder", "frostartig", "giftklinge"]:
 		_check(CardDatabase.is_card_available_for_player(CardDatabase.get_card(id), "phantom", ALL_ELEMENT_CARDS), "%s bleibt für Nahkämpfer" % id)
 	for id in ["volt_sprungziel", "volt_entladung", "volt_doppelladung", "volt_starkstrom", "volt_dauerblitz", "volt_schockring",
 			"phantom_sprengkoeder", "phantom_platztausch", "phantom_blutspur", "ulti_akku"]:
