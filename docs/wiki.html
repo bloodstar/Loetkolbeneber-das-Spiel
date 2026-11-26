@@ -548,10 +548,11 @@ Schlusswirbel, schlägt Kugeln zurück</td>
 <tr class="odd">
 <td style="text-align: left;"><strong>Bastion</strong></td>
 <td style="text-align: left;"><strong>Rammbock</strong>: nicht
-unverwundbar, Kugeln von vorn prallen ab, Gegner werden mitgeschoben und
-am Ende weggestoßen</td>
+unverwundbar, Kugeln von vorn prallen ab, Gegner nehmen 25 Schaden,
+werden mitgeschoben und am Ende weggestoßen</td>
 <td style="text-align: left;"><strong>Magnethaken</strong>: Haken bis
-380 px, betäubt den ersten Gegner kurz und zieht ihn heran</td>
+440 px, betäubt den ersten Gegner kurz und zieht ihn heran. Trifft
+alles, dessen Körper die Kette streift (große Eber leichter)</td>
 <td style="text-align: left;"><strong>Festung</strong> (32 s): 5 s
 Kuppel (140 px), gegnerische Kugeln prallen von außen ab, innen heilen
 Bastion und Verbündete</td>
@@ -624,7 +625,8 @@ aus der Unsichtbarkeit oder von hinten.</p>
 <td style="text-align: left;"><strong>Afterburner</strong>: Dash
 hinterlässt eine echte Feuerspur, Gegner darin brennen</td>
 <td style="text-align: left;"><strong>Rocket Leap</strong>: Explosiver
-Sprung, 35 Schaden im Einschlag (Radius 140)</td>
+Sprung bis zum Zielpunkt (50 bis ca. 304 px), 35 Schaden im Einschlag
+(Radius 140)</td>
 <td style="text-align: left;">Schweißerbrille</td>
 </tr>
 <tr class="even">
@@ -938,26 +940,26 @@ mit.</p>
 <p>Nahkampf gehört fest zum Helden und liegt auf
 <strong>Linksklick</strong>: Klinge schlägt mit dem
 <strong>Schwert</strong> (30 Schaden alle 0,68 s), Bastion mit dem
-<strong>Hammer</strong> (30 Schaden alle 0,88 s), Phantom sticht mit dem
-<strong>Lötkolben</strong> (27 Schaden alle 0,77 s). Fernkämpfer haben
-keinen Nahkampf mehr, die Waffenwahl im Tab Charakter und die
-Lobby-Regel „Nahkampfwaffen“ entfallen. Die Tabelle zeigt die Grundwerte
-der Waffen vor den Helden-Faktoren. Allgemeine Karten für Schaden,
-Feuerrate, Lebensraub und Elemente wirken bei Nahkämpfern auf die
-Schläge (Feuerrate = Angriffstempo, Feuer = 3 Brandstapel, Blitz = 0,1 s
-Betäubung). Reine Projektil-Karten (Munition, Abpraller, Durchschlag,
-Zielsuche, Explosionen, Multishot) bekommen nur Fernkämpfer,
-Nahkampf-Karten nur Nahkämpfer. Auch die Schuss-Karten, für die es eine
-eigene Nahkampf-Karte gibt, sehen Nahkämpfer im Draft nicht mehr: Toxic
-Spores, Giftschuss, Frostschuss, Feuersturm, Blitzschuss (je mit
-Ausbau), Schnellfeuer, Scharfe Munition, Schlagkraft I–III und Blutdurst
-samt Ausbauten. Stattdessen gibt es Giftzahn, Frostklinge, Glühende
-Spitze, Elektroschocker, Leichter Griff, Schleifstein und Blutklinge.
-<strong>Kettenblitz</strong> (mit Ausbau Kettenreaktion) bleibt für
-alle, im 1-gegen-1 springt der Blitz aufs getroffene Ziel zurück.
-Reichweite wird in Feldern (36 px) ab dem Körperrand gemessen. Wände
-blockieren den Schlag. Der Schlag trifft auch Blöcke, Kisten, Fässer und
-Türme.</p>
+<strong>Hammer</strong> (30 Schaden alle 0,88 s, 1,5 Felder Reichweite
+statt 1), Phantom sticht mit dem <strong>Lötkolben</strong> (27 Schaden
+alle 0,77 s). Fernkämpfer haben keinen Nahkampf mehr, die Waffenwahl im
+Tab Charakter und die Lobby-Regel „Nahkampfwaffen“ entfallen. Die
+Tabelle zeigt die Grundwerte der Waffen vor den Helden-Faktoren.
+Allgemeine Karten für Schaden, Feuerrate, Lebensraub und Elemente wirken
+bei Nahkämpfern auf die Schläge (Feuerrate = Angriffstempo, Feuer = 3
+Brandstapel, Blitz = 0,1 s Betäubung). Reine Projektil-Karten (Munition,
+Abpraller, Durchschlag, Zielsuche, Explosionen, Multishot) bekommen nur
+Fernkämpfer, Nahkampf-Karten nur Nahkämpfer. Auch die Schuss-Karten, für
+die es eine eigene Nahkampf-Karte gibt, sehen Nahkämpfer im Draft nicht
+mehr: Toxic Spores, Giftschuss, Frostschuss, Feuersturm, Blitzschuss (je
+mit Ausbau), Schnellfeuer, Scharfe Munition, Schlagkraft I–III und
+Blutdurst samt Ausbauten. Stattdessen gibt es Giftzahn, Frostklinge,
+Glühende Spitze, Elektroschocker, Leichter Griff, Schleifstein und
+Blutklinge. <strong>Kettenblitz</strong> (mit Ausbau Kettenreaktion)
+bleibt für alle, im 1-gegen-1 springt der Blitz aufs getroffene Ziel
+zurück. Reichweite wird in Feldern (36 px) ab dem Körperrand gemessen.
+Wände blockieren den Schlag. Der Schlag trifft auch Blöcke, Kisten,
+Fässer und Türme.</p>
 <table>
 <thead>
 <tr class="header">
@@ -1143,8 +1145,9 @@ verfügbaren Karten verteilen: auf die Haupt-Tags, je Haupt-Tag auf seine
 Sub-Tags und auf die Seltenheiten. So sieht man, ob es für alle Werte
 ähnlich viele Karten gibt.</li>
 <li><strong>Seltenheits-Prozente</strong> für
-Common/Uncommon/Rare/Epic/Legendary (Standard 50 / 25 / 15 / 8 / 2). Die
-Summe wird automatisch normalisiert.</li>
+Common/Uncommon/Rare/Epic/Legendary (Standard 51,5 / 25 / 15 / 8 / 0,5),
+mit einer Nachkommastelle einstellbar. Die Summe wird automatisch
+normalisiert.</li>
 <li><strong>Karten sperren</strong>: Gesperrte Karten kommen in keinem
 Draft mehr, nach Seltenheit sortiert. Karten aus abgeschalteten Pools
 stehen dort abgedunkelt als gesperrt („Pool aus“). Der Host kann sie
@@ -2388,12 +2391,12 @@ oder heilen dich mit.</p>
 <tr class="even">
 <td style="text-align: left;">Uncommon</td>
 <td style="text-align: left;">Verstärkte Deckung (+0,3 s, Evolution:
-Ausdauerbarriere), Barrierestoß (stößt weg), Panzerglas (+1 Treffer,
-bevor die Barriere zerbricht)</td>
+Ausdauerbarriere), Barrierestoß (stößt weg)</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Rare</td>
-<td style="text-align: left;">Barrierebombe, Heilzone, Druckwelle</td>
+<td style="text-align: left;">Barrierebombe, Heilzone, Druckwelle,
+Panzerglas (+1 Treffer, bevor die Barriere zerbricht)</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Epic</td>

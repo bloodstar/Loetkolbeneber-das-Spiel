@@ -86,6 +86,8 @@ const KLINGE_BOOMERANG_RADIUS: float = 24.0
 # dieselben Konstanten, damit die Beschreibungen im Menü stimmen.
 const ROCKET_LEAP_SPEED: float = 950.0
 const ROCKET_LEAP_DURATION: float = 0.32
+# Kürzeste Flugweite beim gezielten Sprung (Ziel direkt am Spieler).
+const ROCKET_LEAP_MIN_DISTANCE: float = 50.0
 const ROCKET_IMPACT_RADIUS: float = 140.0
 const ROCKET_IMPACT_DAMAGE: float = 35.0
 const ROCKET_IMPACT_KNOCKBACK: float = 550.0
@@ -191,12 +193,12 @@ const BASTION_DOME_RADIUS: float = 140.0
 # schiebt Gegner mit und stößt sie am Ende weg. Nicht unverwundbar.
 const BASTION_RAM_SPEED: float = 640.0
 const BASTION_RAM_DURATION: float = 0.3
-const BASTION_RAM_DAMAGE: float = 10.0
+const BASTION_RAM_DAMAGE: float = 25.0 # Jochen 2026-11-26: Dash soll spürbar Schaden machen (war 10)
 const BASTION_RAM_KNOCKBACK: float = 620.0
 const BASTION_RAM_FRONT: float = 48.0
 # Fähigkeit "Magnethaken" (siehe MagnetHook).
-const BASTION_HOOK_RANGE: float = 380.0
-const BASTION_HOOK_SPEED: float = 950.0
+const BASTION_HOOK_RANGE: float = 440.0
+const BASTION_HOOK_SPEED: float = 1250.0
 const BASTION_HOOK_PULL_SPEED: float = 1000.0
 const BASTION_HOOK_DAMAGE: float = 6.0
 const BASTION_HOOK_STUN: float = 0.3
@@ -1495,7 +1497,8 @@ func apply_stats() -> void:
 	melee_wall_stun_timer = 0.0
 	melee_damage_mult = m_dmg_mult
 	melee_range_bonus = clampf(m_range_add, 0.0, 3.0)
-	melee_range_mult = 1.0
+	# Heldeneigene Reichweite (Bastion +50 %); Modifier multiplizieren danach.
+	melee_range_mult = hero.melee_range_mult if is_melee else 1.0
 	melee_knockback_mult = m_kb_mult
 	melee_arc_bonus = clampf(m_arc_add, 0.0, 180.0)
 	melee_freeze = minf(m_freeze, 3.0)
@@ -2479,9 +2482,10 @@ func use_ability(target = null) -> void:
 			is_invulnerable = true
 			leap_timer = ROCKET_LEAP_DURATION * ability_range_mult
 			leap_dir = aim_direction.normalized()
-			# Gezielt: Flugrichtung zum Zielpunkt (die Weite bleibt fest).
+			# Gezielt: Flug zum Zielpunkt, höchstens bis zur vollen Weite.
 			if _cast_has_target and _cast_target.distance_squared_to(global_position) > 16.0:
 				leap_dir = (_cast_target - global_position).normalized()
+				leap_timer = _rocket_leap_distance(_cast_target) / ROCKET_LEAP_SPEED
 			if leap_dir.length_squared() < 0.1:
 				leap_dir = Vector2.UP
 		"volt":
@@ -3920,7 +3924,7 @@ func _bastion_ram_tick() -> void:
 	for p in _opponents_within(front, 34.0 * size + MELEE_BODY_RADIUS):
 		if not _dash_hit.has(p):
 			_dash_hit.append(p)
-			p.take_damage(BASTION_RAM_DAMAGE * powerup_damage_mult, Vector2.ZERO, self)
+			p.take_damage(BASTION_RAM_DAMAGE * powerup_damage_mult * dash_effect_mult, Vector2.ZERO, self)
 			_spawn_blade_hit_spark(p.global_position)
 		p.velocity = dash_dir * _dash_speed_now
 		p.knockback_timer = maxf(p.knockback_timer, 0.12)
@@ -5084,6 +5088,11 @@ func ability_target_range(ult := false) -> float:
 			return ROCKET_LEAP_SPEED * ROCKET_LEAP_DURATION * ability_range_mult
 	return 0.0
 
+# Flugweite des gezielten Raketensprungs zu diesem Punkt.
+func _rocket_leap_distance(point: Vector2) -> float:
+	var max_range := ability_target_range()
+	return clampf(global_position.distance_to(point), minf(ROCKET_LEAP_MIN_DISTANCE, max_range), max_range)
+
 # Klemmt einen Punkt (Mauszeiger) auf Reichweite und Kartenbereich.
 func _clamp_ability_point(raw: Vector2, ult := false) -> Vector2:
 	var offset := raw - global_position
@@ -5153,13 +5162,17 @@ func _target_info_at(point: Vector2, ult := false) -> Dictionary:
 			info["valid"] = not _druid_wall_blocked(info)
 			return info
 		"ignis":
-			# Raketensprung: nur die Richtung zählt. Die Vorschau zeigt die
-			# Flugbahn bis zur vollen Weite oder bis zum ersten Hindernis.
+			# Raketensprung: fliegt bis zum Zielpunkt (mindestens
+			# ROCKET_LEAP_MIN_DISTANCE, höchstens volle Weite). Die Vorschau
+			# zeigt die Flugbahn bis dorthin oder bis zum ersten Hindernis.
 			var dir := point - global_position
+			var leap_len := ability_target_range()
 			if dir.length_squared() < 16.0:
 				dir = aim_direction
+			else:
+				leap_len = _rocket_leap_distance(point)
 			dir = dir.normalized()
-			var end := global_position + dir * ability_target_range()
+			var end := global_position + dir * leap_len
 			var query := PhysicsRayQueryParameters2D.create(global_position, end, 1)
 			query.exclude = [get_rid()]
 			var hit := get_world_2d().direct_space_state.intersect_ray(query)

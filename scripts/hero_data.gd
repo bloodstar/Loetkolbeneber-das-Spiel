@@ -29,6 +29,8 @@ extends Resource
 @export var melee_weapon: String = ""
 @export var melee_damage_mult: float = 1.0
 @export var melee_cooldown_mult: float = 1.0
+# Faktor auf die Waffenreichweite (Kacheln der Waffe plus Karten-Bonus).
+@export var melee_range_mult: float = 1.0
 
 # Helden-Dash (Shift) und Ulti (E). ult_cooldown 0 = der Held hat noch keine Ulti.
 @export var dash_name: String = "Dash"

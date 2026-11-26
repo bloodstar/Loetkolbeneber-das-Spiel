@@ -4217,9 +4217,18 @@ func _build_cards_tab() -> void:
 		spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		spin.min_value = 0
 		spin.max_value = 100
-		spin.step = 1
+		spin.step = 0.1
 		spin.value = Global.get_rarity_percent(rarity)
 		spin.value_changed.connect(_on_rarity_percent_changed.bind(rarity))
+		# Deutsches Komma ("0,5") beim Tippen in einen Punkt wandeln, sonst
+		# verwirft die SpinBox die Eingabe.
+		var spin_edit := spin.get_line_edit()
+		spin_edit.text_changed.connect(func(text: String) -> void:
+			if text.contains(","):
+				var caret := spin_edit.caret_column
+				spin_edit.text = text.replace(",", ".")
+				spin_edit.caret_column = caret
+		)
 		row.add_child(spin)
 		rarity_spins[rarity] = spin
 
@@ -4860,7 +4869,7 @@ func _update_rarity_sum() -> void:
 	elif absf(total - 100.0) < 0.01:
 		rarity_sum_label.text = "Summe: 100 %"
 	else:
-		rarity_sum_label.text = "Summe: %.0f %% — wird automatisch auf 100 %% normalisiert." % total
+		rarity_sum_label.text = "Summe: %s %% — wird automatisch auf 100 %% normalisiert." % String.num(total, 1).replace(".", ",")
 
 func _refresh_network_status() -> void:
 	if not Global.network_mode:

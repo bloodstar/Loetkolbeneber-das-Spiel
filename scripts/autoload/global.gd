@@ -484,11 +484,11 @@ var user_character_customization: Dictionary = {}
 # müssen nicht genau 100 ergeben; sie werden beim Ziehen automatisch normalisiert.
 const RARITY_ORDER: Array[String] = ["Common", "Uncommon", "Rare", "Epic", "Legendary"]
 var rarity_percentages: Dictionary = {
-	"Common": 54.0,
+	"Common": 54.5,
 	"Uncommon": 25.0,
 	"Rare": 15.0,
 	"Epic": 5.0,
-	"Legendary": 1.0,
+	"Legendary": 0.5,
 }
 
 # --- Spieler-Slots (Index 0..5 = Spieler 1..6) ---
@@ -673,7 +673,7 @@ func _setup_heroes() -> void:
 	ignis.color_tint = Color(1.0, 0.4, 0.2)
 	ignis.sprite_tile_name = "tile_0000.png"
 	ignis.version = 3 # Nachbrenner-Dash, Ulti Meteorschauer
-	ignis.ability_version = 2
+	ignis.ability_version = 3 # Rocket Leap mit variabler Weite
 	heroes["ignis"] = ignis
 
 	# 2. Volt
@@ -812,6 +812,7 @@ func _setup_heroes() -> void:
 	bastion.melee_weapon = "hammer"
 	bastion.melee_damage_mult = 1.5
 	bastion.melee_cooldown_mult = 0.8
+	bastion.melee_range_mult = 1.5 # Jochen 2026-11-26: langsam, kam an niemanden heran
 	bastion.base_hp = 145
 	bastion.base_shield = 20
 	bastion.base_speed = 270.0
@@ -821,8 +822,8 @@ func _setup_heroes() -> void:
 	bastion.base_reload_time = 1.45
 	bastion.color_tint = Color(0.3, 0.9, 0.7)
 	bastion.sprite_tile_name = "tile_0001.png"
-	bastion.version = 5 # Rammbock-Dash, Ulti Festung
-	bastion.ability_version = 2 # Magnethaken statt Heilfeld
+	bastion.version = 6 # 6: Nahkampfreichweite +50 % (5: Rammbock-Dash, Ulti Festung)
+	bastion.ability_version = 3 # 3: Haken trifft zuverlässiger, schneller, weiter; Rammbock 25 Schaden (2: Magnethaken statt Heilfeld)
 	heroes["bastion"] = bastion
 
 	# 7. Phantom – Schattenassassine
@@ -1024,8 +1025,8 @@ func get_hero(id: String) -> HeroData:
 func get_hero_ability_details(hero: HeroData) -> String:
 	match hero.id:
 		"ignis":
-			return "Fliegt %.2f s lang mit Tempo %d in Zielrichtung (ca. %d px) und ist dabei unverwundbar. Beim Aufprall: Explosion mit Radius %d px, bis zu %d Schaden (nimmt zum Rand hin ab) und starker Rückstoß." % [
-				Player.ROCKET_LEAP_DURATION, int(Player.ROCKET_LEAP_SPEED),
+			return "Fliegt mit Tempo %d bis zum Zielpunkt (%d bis ca. %d px) und ist dabei unverwundbar. Beim Aufprall: Explosion mit Radius %d px, bis zu %d Schaden (nimmt zum Rand hin ab) und starker Rückstoß." % [
+				int(Player.ROCKET_LEAP_SPEED), int(Player.ROCKET_LEAP_MIN_DISTANCE),
 				int(Player.ROCKET_LEAP_SPEED * Player.ROCKET_LEAP_DURATION),
 				int(Player.ROCKET_IMPACT_RADIUS), int(Player.ROCKET_IMPACT_DAMAGE),
 			]
@@ -1202,7 +1203,7 @@ func get_hero_attack_text(hero: HeroData) -> String:
 	var data := get_melee_weapon_data(hero.melee_weapon)
 	return "Nahkampf: %s, %d Schaden alle %.2f s, Reichweite %.1f Felder" % [
 		str(data["label"]), int(round(float(data["damage"]) * hero.melee_damage_mult)),
-		float(data["cooldown"]) * hero.melee_cooldown_mult, float(data["range_tiles"]),
+		float(data["cooldown"]) * hero.melee_cooldown_mult, float(data["range_tiles"]) * hero.melee_range_mult,
 	]
 
 # Angriff, Dash und Ulti eines Helden als Textblock für Menü und Tooltips.
@@ -2247,7 +2248,8 @@ func get_rarity_percent_total() -> float:
 func set_rarity_percent(rarity: String, value: float) -> void:
 	if not RARITY_ORDER.has(rarity):
 		return
-	var clamped := clampf(value, 0.0, 100.0)
+	# Eine Nachkommastelle reicht (z. B. Legendary 0,5 %).
+	var clamped := snappedf(clampf(value, 0.0, 100.0), 0.1)
 	if is_equal_approx(get_rarity_percent(rarity), clamped):
 		return
 	rarity_percentages[rarity] = clamped
@@ -2940,11 +2942,11 @@ func _default_lobby_settings() -> Dictionary:
 		"banned_card_ids": [],
 		"pool_unlocked_card_ids": [],
 		"rarity_percentages": {
-			"Common": 50.0,
+			"Common": 51.5,
 			"Uncommon": 25.0,
 			"Rare": 15.0,
 			"Epic": 8.0,
-			"Legendary": 2.0,
+			"Legendary": 0.5,
 		},
 	}
 
