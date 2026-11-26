@@ -254,6 +254,8 @@ const VAMPIRE_ORB_HIT_INTERVAL: int = 3
 # Fernkampf-Vampir. Passiv "Blutdurst": seine Blutkugeln fallen nicht zu
 # Boden, sondern kreisen als Vorrat um ihn (vampire_orbs), höchstens so viele.
 const VAMPIRE_ORBIT_MAX: int = 6
+# Karten "Blutreserve" und ihre Evolution "Blutkrone": je +3 Plätze im Vorrat.
+const VAMPIRE_ORBIT_CARD_ADD: int = 3
 const VAMPIRE_ORBIT_RADIUS: float = 26.0
 const VAMPIRE_ORBIT_SPEED: float = 2.6
 # Fremde Blutkugeln am Boden (z. B. vom Blutritter) füllen den Vorrat; ist er
@@ -4667,9 +4669,18 @@ func register_vampire_hit(target: Node2D) -> void:
 		else:
 			spawn_blood_orb(target.global_position)
 
+# Größe des Kugel-Vorrats mit Karten (Blutreserve, Blutkrone).
+func vampire_orbit_max() -> int:
+	var n := VAMPIRE_ORBIT_MAX
+	if _has_ability_evolution("vampire_orbs_more"):
+		n += VAMPIRE_ORBIT_CARD_ADD
+	if _has_ability_evolution("vampire_orbs_more2"):
+		n += VAMPIRE_ORBIT_CARD_ADD
+	return n
+
 # Fernkampf-Vampir: eine Kugel in den kreisenden Vorrat. false = Vorrat voll.
 func vampire_add_orb() -> bool:
-	if is_replica or vampire_orbs >= VAMPIRE_ORBIT_MAX:
+	if is_replica or vampire_orbs >= vampire_orbit_max():
 		return false
 	vampire_orbs += 1
 	_fx("ring", NetFx.ring_args(global_position, Color(0.85, 0.05, 0.15, 0.7), 0.3, 2.0, 0.14, 0.18))
@@ -4681,7 +4692,9 @@ func vampire_orb_offset(i: int, count: int = -1) -> Vector2:
 	var n := vampire_orbs if count < 0 else count
 	var t := float(Time.get_ticks_msec()) / 1000.0
 	var a := t * VAMPIRE_ORBIT_SPEED + TAU * float(i) / float(maxi(n, 1))
-	return Vector2(cos(a) * VAMPIRE_ORBIT_RADIUS, sin(a) * VAMPIRE_ORBIT_RADIUS * 0.55 - 4.0)
+	# Mit vielen Kugeln wird der Kreis etwas größer, damit sie nicht kleben.
+	var r := VAMPIRE_ORBIT_RADIUS + maxf(0.0, float(n - VAMPIRE_ORBIT_MAX)) * 2.0
+	return Vector2(cos(a) * r, sin(a) * r * 0.55 - 4.0)
 
 # Zieht eine Blutkugel in der Nähe gerade an? Gilt nur für Vampire.
 func wants_blood_orb() -> bool:
@@ -4689,7 +4702,7 @@ func wants_blood_orb() -> bool:
 		return false
 	match Global.get_player_hero_id(player_index):
 		"vampire":
-			return vampire_orbs < VAMPIRE_ORBIT_MAX or current_health < max_health - 0.5
+			return vampire_orbs < vampire_orbit_max() or current_health < max_health - 0.5
 		VAMP_MELEE_ID:
 			# Blutritter: Schild bis VAMP_MELEE_SHIELD_CAP x Max-HP, auch bei voller HP.
 			return current_shield < max_health * VAMP_MELEE_SHIELD_CAP - 0.5
