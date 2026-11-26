@@ -163,7 +163,9 @@ func end_round(winner_index: int, death_order: Array, match_winner: int = 0) -> 
 		"network": "host" if NetworkManager.is_host else "offline",
 		"bot_test": Global.is_bot_test_active(),
 		"match_mode": Global.match_mode,
-		"game_mode": Global.game_mode,
+		# Ansicht dieser Runde (bei "Beides" je nach Karte), dazu die Lobby-Wahl.
+		"game_mode": Global.view_of_map(str(round_info.get("map_id", ""))) if not str(round_info.get("map_id", "")).is_empty() else Global.game_mode,
+		"lobby_game_mode": Global.game_mode,
 		"player_count": active.size(),
 		"duration_s": _round_seconds(),
 		"map_id": round_info.get("map_id", ""),

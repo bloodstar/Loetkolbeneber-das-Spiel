@@ -333,6 +333,7 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	if map_id.is_empty():
 		map_id = Global.resolve_map_id(level_seed)
 	match_map_id = map_id
+	Global.note_round_view(map_id)
 	if is_network_host and NetworkManager.has_clients():
 		if ArenaMaps.is_custom(map_id):
 			NetworkManager.send_arena_map(map_id, ArenaMaps.to_json(ArenaMaps.get_map(map_id)))
@@ -351,7 +352,7 @@ func _start_fresh_round(forced_seed: int = 0, forced_map_id: String = "") -> voi
 	var active_mods: Array[String] = []
 	var horde := Global.is_horde_mode()
 	if modifier_manager != null and not horde and not Global.test_room_active:
-		active_mods = modifier_manager.roll_configured_modifiers(level_seed)
+		active_mods = modifier_manager.roll_configured_modifiers(level_seed, map_id)
 	elif modifier_manager != null and horde:
 		active_mods = _roll_horde_modifiers(level_seed)
 

@@ -724,6 +724,39 @@ func _ready() -> void:
 	main.lobby._update_status()
 	assert(main.lobby.start_btn.disabled, "Without an active level the match must not start")
 	Global.set_disabled_maps([])
+	# Spielart Beides und Kartenliste je Einstellung (Jochen 2026-11-25).
+	var prev_game_mode := Global.game_mode
+	var prev_match_mode := Global.match_mode
+	Global.set_game_mode(Global.GAME_MODE_ARENA)
+	assert(Global.get_lobby_maps() == Global.get_arena_pool_maps(), "Draufsicht lists the arena maps")
+	assert(ArenaMaps.is_arena_map(Global.resolve_map_id(4242)), "Draufsicht resolves to an arena map")
+	var arena_keep: String = Global.get_arena_pool_maps()[0]
+	var arena_off: Array = Global.get_arena_pool_maps().duplicate()
+	arena_off.erase(arena_keep)
+	Global.set_disabled_maps(arena_off)
+	for check_seed in [3, 55, 4242]:
+		assert(Global.resolve_map_id(check_seed) == arena_keep, "Disabled arena maps are skipped")
+	Global.set_game_mode(Global.GAME_MODE_MIXED)
+	assert(Global.get_lobby_maps().size() == Global.get_playable_maps().size() + Global.get_arena_pool_maps().size(), "Beides lists both views")
+	Global.reset_mixed_views()
+	var views: Array[String] = []
+	for check_seed in range(1, 41):
+		var mixed_map := Global.resolve_map_id(check_seed * 7919)
+		Global.note_round_view(mixed_map)
+		views.append(Global.view_of_map(mixed_map))
+	assert(views.has(Global.GAME_MODE_SIDE) and views.has(Global.GAME_MODE_ARENA), "Beides plays both views")
+	for i in range(views.size() - 2):
+		assert(not (views[i] == views[i + 1] and views[i] == views[i + 2]), "Beides allows at most two rounds in one view")
+	Global.set_disabled_maps(Global.get_arena_pool_maps())
+	Global.reset_mixed_views()
+	for check_seed in [3, 55, 4242]:
+		assert(not ArenaMaps.is_arena_map(Global.resolve_map_id(check_seed)), "Beides with all arenas off stays in side view")
+	Global.set_disabled_maps([])
+	Global.set_match_mode(Global.MATCH_MODE_HORDE)
+	assert(Global.get_lobby_maps().has(ArenaMaps.HORDE_MAP_ID) and Global.has_enabled_maps(), "Horde lists its areas")
+	Global.set_match_mode(prev_match_mode)
+	Global.set_game_mode(prev_game_mode)
+	Global.reset_mixed_views()
 	# Powerups-Reiter: Sperrliste, Presets und Powerup-Karten.
 	Global.set_powerup_enabled("heal", false)
 	assert(not Global.get_active_powerup_kinds().has("heal"), "Disabled powerups should not spawn")

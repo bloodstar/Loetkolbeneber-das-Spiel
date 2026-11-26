@@ -153,9 +153,11 @@ const ARENA_MODIFIERS: Array[String] = [
 	"speed_demon", "air_jumps", "regeneration", "starting_shield", "zone",
 ]
 
-func roll_configured_modifiers(seed_val: int) -> Array[String]:
+## map_id: Karte der Runde. Bei "Beides" entscheidet sie, ob die Arena-Liste gilt.
+func roll_configured_modifiers(seed_val: int, map_id: String = "") -> Array[String]:
 	var ids := Global.get_enabled_level_modifiers()
-	if Global.is_arena_mode():
+	var arena := Global.is_arena_mode() if map_id.is_empty() else ArenaMaps.is_arena_map(map_id)
+	if arena:
 		ids = ids.filter(func(m): return ARENA_MODIFIERS.has(m))
 	if ids.is_empty():
 		return []
