@@ -198,12 +198,24 @@ func _load_sound(key: String) -> void:
 		var path: String = pack_dir + file_name + ".wav"
 		if not ResourceLoader.exists(path):
 			path = SFX_DIR + file_name + ".wav"
-		if ResourceLoader.exists(path):
-			streams.append(load(path))
+		var stream := _load_wav(path)
+		if stream != null:
+			streams.append(stream)
 	if streams.is_empty():
 		sounds.erase(key)
 	else:
 		sounds[key] = streams
+
+## Lädt ein WAV. Fehlt der Import (neue Datei, Editor hat noch nicht
+## importiert), wird die Datei direkt gelesen.
+func _load_wav(path: String) -> AudioStream:
+	if ResourceLoader.exists(path):
+		var imported := ResourceLoader.load(path, "AudioStream") as AudioStream
+		if imported != null:
+			return imported
+	if FileAccess.file_exists(path):
+		return AudioStreamWAV.load_from_file(path)
+	return null
 
 func has_sound_pack(pack_id: String) -> bool:
 	if pack_id == MIX_ID:
