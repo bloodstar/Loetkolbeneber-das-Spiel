@@ -484,11 +484,11 @@ var user_character_customization: Dictionary = {}
 # müssen nicht genau 100 ergeben; sie werden beim Ziehen automatisch normalisiert.
 const RARITY_ORDER: Array[String] = ["Common", "Uncommon", "Rare", "Epic", "Legendary"]
 var rarity_percentages: Dictionary = {
-	"Common": 54.0,
+	"Common": 54.5,
 	"Uncommon": 25.0,
 	"Rare": 15.0,
 	"Epic": 5.0,
-	"Legendary": 1.0,
+	"Legendary": 0.5,
 }
 
 # --- Spieler-Slots (Index 0..5 = Spieler 1..6) ---
@@ -2247,7 +2247,8 @@ func get_rarity_percent_total() -> float:
 func set_rarity_percent(rarity: String, value: float) -> void:
 	if not RARITY_ORDER.has(rarity):
 		return
-	var clamped := clampf(value, 0.0, 100.0)
+	# Eine Nachkommastelle reicht (z. B. Legendary 0,5 %).
+	var clamped := snappedf(clampf(value, 0.0, 100.0), 0.1)
 	if is_equal_approx(get_rarity_percent(rarity), clamped):
 		return
 	rarity_percentages[rarity] = clamped
@@ -2940,11 +2941,11 @@ func _default_lobby_settings() -> Dictionary:
 		"banned_card_ids": [],
 		"pool_unlocked_card_ids": [],
 		"rarity_percentages": {
-			"Common": 50.0,
+			"Common": 51.5,
 			"Uncommon": 25.0,
 			"Rare": 15.0,
 			"Epic": 8.0,
-			"Legendary": 2.0,
+			"Legendary": 0.5,
 		},
 	}
 

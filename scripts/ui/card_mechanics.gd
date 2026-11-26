@@ -30,18 +30,23 @@ static func tooltip(card: CardData, include_meta: bool = false, extra: String = 
 	if card == null:
 		return ""
 	var lines: Array[String] = [card.title]
-	if include_meta:
+	# Evolutionen zeigen weder Seltenheit/Tag noch Freischaltung (Jochen 2026-11-26):
+	# beides steht schon auf der Karte bzw. ergibt sich aus "Ausbau von ...".
+	var evolution := is_evolution(card)
+	if include_meta and not evolution:
 		lines.append("%s · %s" % [card.rarity, card.pool])
 	lines.append(format_description(card.description))
 
-	if is_evolution(card):
+	if evolution:
 		var parent := CardDatabase.get_card(card.parent_card_id)
 		var parent_title := parent.title if parent != null else card.parent_card_id
 		var branch := card.evolution_branch if not card.evolution_branch.is_empty() else "?"
 		lines.append("")
 		lines.append("EVOLUTION: Ausbau von %s (Zweig %s)." % [parent_title, branch])
 
-	var conditions := unlock_conditions(card)
+	var conditions: Array[String] = []
+	if not evolution:
+		conditions = unlock_conditions(card)
 	if not conditions.is_empty():
 		lines.append("")
 		lines.append("FREISCHALTUNG (erscheint erst, wenn erfüllt)")
@@ -266,6 +271,10 @@ static func unlock_short_text(card: CardData) -> String:
 	if card == null or not _mechanic_has_condition(card.required_mechanic):
 		return ""
 	var mechanic := card.required_mechanic
+	# "Benötigt Ulti" steht nicht auf der Karte; Ulti-Karten erscheinen ohnehin
+	# nur bei Helden mit Ulti (Bedingung bleibt im Tooltip unter FREISCHALTUNG).
+	if mechanic == "ult":
+		return ""
 	if mechanic == "shield":
 		return "BENÖTIGT: %d SCHILD" % CardDatabase.SHIELD_UPGRADE_MIN
 	return "BENÖTIGT: %s" % str(MECHANIC_NAMES.get(mechanic, mechanic)).to_upper()

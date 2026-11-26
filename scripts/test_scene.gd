@@ -666,6 +666,10 @@ func _ready() -> void:
 	assert(CardMechanics.unlock_short_text(CardDatabase.get_card("gummiwand")) == "BENÖTIGT: ABPRALLER", "Bounce upgrades should show their unlock condition")
 	assert(CardMechanics.tooltip(CardDatabase.get_card("gummiwand")).contains("FREISCHALTUNG"), "Card tooltip should list unlock conditions")
 	assert(CardMechanics.unlock_short_text(CardDatabase.get_card("ausweichrolle")).is_empty(), "Dash is always available, so no condition is shown")
+	assert(CardMechanics.unlock_short_text(CardDatabase.get_card("ulti_akku")).is_empty(), "Ult cards show no BENÖTIGT line")
+	var evo_tooltip := CardMechanics.tooltip(CardDatabase.get_card("regenerationsserum"), true)
+	assert(not evo_tooltip.contains("FREISCHALTUNG") and not evo_tooltip.contains("Uncommon"), "Evolution tooltips skip unlock, rarity and tag")
+	assert(CardDatabase.get_card("panzerglas").rarity == "Rare", "Panzerglas is Rare")
 	# Mechanik-Tooltips erklären Gift und Frost.
 	var gift_tooltip := CardMechanics.tooltip(CardDatabase.get_card("giftkapsel"))
 	assert(gift_tooltip.contains("GIFT"), "Poison cards should explain the poison mechanic")
