@@ -16,19 +16,26 @@ extends Node2D
 
 const GROUP: String = "blood_orb"
 const RADIUS: float = 6.5
-const LIFETIME: float = 10.0
+const LIFETIME: float = 14.0
 # So lange nach dem Entstehen kann niemand die Kugel aufsammeln, damit der
 # Vampir sie nicht schon beim Erzeugen (z. B. Dash) wieder einsammelt.
 const PICKUP_DELAY: float = 0.45
 const PICKUP_RADIUS: float = 24.0
-# Vampire, die die Kugel nutzen können, ziehen sie aus dieser Nähe an.
+# Vampire, die die Kugel nutzen können, ziehen sie aus dieser Nähe an
+# (Standard; der Fernkampf-Vampir hat mehr, siehe
+# Player.blood_orb_magnet_radius).
 const MAGNET_RADIUS: float = 80.0
+# Größter Anziehungsradius aller Vampire (für die Vorauswahl).
+const MAX_MAGNET_RADIUS: float = 200.0
 const MAGNET_SPEED: float = 320.0
 const GRAVITY: float = 520.0
 const MAX_FALL_SPEED: float = 420.0
 # Mehr Kugeln gleichzeitig gibt es nicht; die älteste verschwindet.
 const MAX_ACTIVE: int = 14
 const BLINK_TIME: float = 2.0
+# Fällt eine Kugel länger als so lange, ohne Boden zu finden (Abgrund),
+# bleibt sie in der Luft schweben, statt aus der Karte zu fallen.
+const MAX_FALL_TIME: float = 1.4
 
 var net_id: int = 0
 var is_replica: bool = false
@@ -41,6 +48,7 @@ var _age: float = 0.0
 var _anim: float = 0.0
 var _gone: bool = false
 var _resting: bool = false
+var _fall_time: float = 0.0
 var _net_target: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
@@ -135,6 +143,11 @@ func _physics_process(delta: float) -> void:
 		if velocity.length_squared() < 1.0:
 			_resting = true
 		return
+	_fall_time += delta
+	if _fall_time >= MAX_FALL_TIME:
+		_resting = true
+		velocity = Vector2.ZERO
+		return
 	velocity.y = minf(velocity.y + GRAVITY * delta, MAX_FALL_SPEED)
 	velocity.x = move_toward(velocity.x, 0.0, 60.0 * delta)
 	var next := global_position + velocity * delta
@@ -154,7 +167,7 @@ func _physics_process(delta: float) -> void:
 # Nächster Vampir in Reichweite, der die Kugel gerade nutzen kann.
 func _magnet_target() -> Player:
 	var best: Player = null
-	var best_dist := MAGNET_RADIUS
+	var best_dist := MAX_MAGNET_RADIUS
 	for node in get_tree().get_nodes_in_group("player"):
 		var p := node as Player
 		if p == null or p.is_replica or p.current_health <= 0.0 or p.is_dead:
@@ -162,7 +175,7 @@ func _magnet_target() -> Player:
 		if not Global.is_vampire_hero(Global.get_player_hero_id(p.player_index)):
 			continue
 		var dist := p.global_position.distance_to(global_position)
-		if dist > best_dist or not p.wants_blood_orb():
+		if dist > best_dist or dist > p.blood_orb_magnet_radius() or not p.wants_blood_orb():
 			continue
 		best = p
 		best_dist = dist
