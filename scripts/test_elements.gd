@@ -36,6 +36,7 @@ func _reset_target(p: Player) -> void:
 	p.burn_ticks_left = 0
 	p.freeze_timer = 0.0
 	p.stun_timer = 0.0
+	p.stun_immunity_timer = 0.0
 	p.is_invulnerable = false
 	if p.has_meta("elem"):
 		p.remove_meta("elem")
@@ -163,7 +164,7 @@ func _ready() -> void:
 	_reset_target(p2)
 	p2.apply_poison(4, 4.0)
 	p2.apply_stun(0.1, p1)
-	_check(p2.stun_timer >= 0.19, "Neurotoxin verdoppelt die Betäubung (%.2f s)" % p2.stun_timer)
+	_check(p2.stun_timer >= 0.19 * Player.STUN_DURATION_MULT, "Neurotoxin verdoppelt die Betäubung (%.2f s)" % p2.stun_timer)
 
 	# Lobby-Regel aus: fremde Reaktionen bleiben aus, eigene Kombination wirkt.
 	Global.set_element_reactions_enabled(false)
@@ -228,7 +229,7 @@ func _ready() -> void:
 	_reset_target(p2)
 	for i in 3:
 		p2.apply_freeze(0.8, p1)
-	_check(p2.stun_timer >= 0.6, "Permafrost friert nach 3 Treffern ein")
+	_check(p2.stun_timer >= 0.6 * Player.STUN_DURATION_MULT, "Permafrost friert nach 3 Treffern ein")
 	hp = p2.current_health
 	p2.take_damage(20.0, Vector2.ZERO, p1)
 	_check(hp - p2.current_health >= 29.0, "Zersplittern: nächster Treffer +50 %% (%.0f)" % (hp - p2.current_health))
@@ -241,7 +242,7 @@ func _ready() -> void:
 	hp = p2.current_health
 	for i in ElementReactions.CHARGE_MAX:
 		p2.apply_stun(0.05, p1)
-	_check(p2.current_health <= hp - ElementReactions.DISCHARGE_DAMAGE + 0.5 and p2.stun_timer >= 0.35, "Hochspannung entlädt sich bei 5 Ladungen")
+	_check(p2.current_health <= hp - ElementReactions.DISCHARGE_DAMAGE + 0.5 and p2.stun_timer >= 0.35 * Player.STUN_DURATION_MULT, "Hochspannung entlädt sich bei 5 Ladungen")
 
 	Global.get_player_cards(1).clear()
 	Global.add_card_to_player(1, CardDatabase.get_card("element_poison"))

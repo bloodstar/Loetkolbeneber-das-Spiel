@@ -829,6 +829,15 @@ var poison_tick_timer: float = 0.0
 var poison_damage_per_tick: float = 4.0
 var freeze_timer: float = 0.0
 var stun_timer: float = 0.0
+# Kampf-Betäubung (Blitz, Haken, Wandschlag ...): danach kurz immun, damit
+# Dauerblitz keinen Stun-Lock erzeugt. Scheintod/Zeitstopp zählen nicht.
+var stun_immunity_timer: float = 0.0
+var _combat_stun_active: bool = false
+var _combat_stun_len: float = 0.0
+var _combat_stun_elapsed: float = 0.0
+# Online: Restdauer der Betäubung für die Schockfunken (Snapshot "stn").
+var net_stun_visual: float = 0.0
+var _stun_sparks: Node2D = null
 var burn_ticks_left: int = 0
 var burn_tick_timer: float = 0.0
 var burn_damage_per_tick: float = 5.0 # selbst verursachter Brandschaden pro Tick
@@ -861,6 +870,13 @@ var powerup_multishot_timer: float = 0.0
 # Wird beim tödlichen Treffer verbraucht.
 const POWERUP_UNDYING_WINDOW: float = 10.0
 const POWERUP_REVIVE_DELAY: float = 2.0
+# Betäubungen wirken auf Eber kürzer (alle Quellen) und sind gedeckelt.
+const STUN_DURATION_MULT: float = 0.6
+const STUN_MAX: float = 0.8
+# Immunität nach einer Kampf-Betäubung: 1,5 x ihre Länge, 0,5 bis 1,0 s.
+const STUN_IMMUNITY_FACTOR: float = 1.5
+const STUN_IMMUNITY_MIN: float = 0.5
+const STUN_IMMUNITY_MAX: float = 1.0
 const POWERUP_REVIVE_HEALTH_PERCENT: float = 0.5
 const POWERUP_REVIVE_INVULN: float = 1.0
 var powerup_undying_timer: float = 0.0
@@ -1036,6 +1052,7 @@ const EFFECT_CIRCLE_TEXTURE: Texture2D = preload("res://assets/projectiles/effec
 const PORTAL_SPAWN_EFFECT_SCRIPT = preload("res://scripts/portal_spawn_effect.gd")
 const POISON_BUBBLE_EFFECT_SCRIPT = preload("res://scripts/poison_bubbles.gd")
 const POWERUP_AURA_SCRIPT = preload("res://scripts/powerup_aura.gd")
+const STUN_SPARKS_SCRIPT = preload("res://scripts/stun_sparks.gd")
 
 func _ready() -> void:
 	ghost_timer.timeout.connect(_spawn_ghost_trail)
@@ -1055,6 +1072,9 @@ func _ready() -> void:
 	_powerup_aura_front = POWERUP_AURA_SCRIPT.new()
 	_powerup_aura_front.set("front", true)
 	add_child(_powerup_aura_front)
+	_stun_sparks = STUN_SPARKS_SCRIPT.new()
+	_stun_sparks.set("player", self)
+	add_child(_stun_sparks)
 	
 	if not Global.pig_appearance_changed.is_connected(_on_pig_appearance_changed):
 		Global.pig_appearance_changed.connect(_on_pig_appearance_changed)
@@ -1106,6 +1126,7 @@ func _setup_voxel_body() -> void:
 func _process(delta: float) -> void:
 	_update_powerup_glow(delta)
 	_update_powerup_aura()
+	_update_stun_sparks(delta)
 	_sync_barrier_dome()
 	_update_body_alpha()
 	if not is_replica or not visible:
@@ -1979,6 +2000,7 @@ func apply_network_state(data: Dictionary) -> void:
 	_last_network_health = next_health
 	current_health = next_health
 	poison_ticks_left = int(data.get("poison", poison_ticks_left))
+	net_stun_visual = float(data.get("stn", 0.0))
 	max_shield = float(data.get("max_shield", max_shield))
 	current_shield = float(data.get("shield", current_shield))
 	vampire_orbs = int(data.get("vorbs", vampire_orbs))
@@ -5844,7 +5866,8 @@ func _try_powerup_revive() -> bool:
 	burn_ticks_left = 0
 	is_blocking = false
 	is_invulnerable = true
-	apply_stun(POWERUP_REVIVE_DELAY)
+	# Scheintod: feste Dauer, keine Kampf-Betäubung.
+	stun_timer = maxf(stun_timer, POWERUP_REVIVE_DELAY)
 	_set_revive_visual(true)
 	# Todes-Effekte lösen auch beim Scheintod aus (wie in _die()).
 	if kamikaze:
@@ -6021,7 +6044,41 @@ func apply_freeze(duration: float, source = null) -> void:
 func apply_stun(duration: float, source = null) -> void:
 	if source != null:
 		ElementReactions.on_element(self, ElementSystem.LIGHTNING, source, duration)
-	stun_timer = maxf(stun_timer, duration)
+	# Kurz nach einer Betäubung prallt die nächste ab (kein Stun-Lock).
+	if stun_immunity_timer > 0.0 or duration <= 0.0:
+		return
+	var d := minf(duration * STUN_DURATION_MULT, STUN_MAX)
+	# Nachgelegte Betäubungen verlängern höchstens bis STUN_MAX insgesamt.
+	if _combat_stun_active:
+		d = minf(d, STUN_MAX - _combat_stun_elapsed)
+	if d <= stun_timer:
+		return
+	stun_timer = d
+	_combat_stun_active = true
+	_combat_stun_len = maxf(_combat_stun_len, _combat_stun_elapsed + d)
+
+## Restdauer der sichtbaren Betäubung (Schockfunken). Scheintod und Zeitstopp
+## haben eigene Effekte und zeigen keine Funken.
+func stun_visual_time() -> float:
+	if is_replica:
+		return net_stun_visual
+	if revive_timer > 0.0 or time_frozen_timer > 0.0 or not _combat_stun_active:
+		return 0.0
+	return maxf(stun_timer, 0.0)
+
+func _end_combat_stun() -> void:
+	_combat_stun_active = false
+	stun_immunity_timer = clampf(_combat_stun_len * STUN_IMMUNITY_FACTOR, STUN_IMMUNITY_MIN, STUN_IMMUNITY_MAX)
+	_combat_stun_len = 0.0
+	_combat_stun_elapsed = 0.0
+
+func _update_stun_sparks(delta: float) -> void:
+	if is_replica and net_stun_visual > 0.0:
+		net_stun_visual = maxf(0.0, net_stun_visual - delta)
+	if _stun_sparks == null:
+		return
+	var t := 0.0 if is_dead or current_health <= 0.0 else stun_visual_time()
+	_stun_sparks.call("set_stun", t)
 
 func apply_burn(stacks: int, damage_per_tick: float = 5.0, source = null) -> void:
 	if source != null and ElementReactions.on_element(self, ElementSystem.FIRE, source):
@@ -6685,6 +6742,15 @@ func _handle_timers(delta: float) -> void:
 
 	if stun_timer > 0.0:
 		stun_timer -= delta
+		if _combat_stun_active and time_frozen_timer <= 0.0:
+			_combat_stun_elapsed += delta
+		if stun_timer <= 0.0 and _combat_stun_active and time_frozen_timer <= 0.0:
+			_end_combat_stun()
+	elif _combat_stun_active and time_frozen_timer <= 0.0:
+		# Von außen auf 0 gesetzt (Runde, Wiederbelebung, Tests).
+		_end_combat_stun()
+	if stun_immunity_timer > 0.0:
+		stun_immunity_timer = maxf(0.0, stun_immunity_timer - delta)
 
 	if knockback_timer > 0.0:
 		knockback_timer = maxf(0.0, knockback_timer - delta)
