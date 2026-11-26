@@ -21,10 +21,6 @@ var shot_color: Color = Color(1.0, 1.0, 1.0, 1.0)
 # GrundgrÃƒÂ¶ÃƒÅ¸e der Spielfigur. Karten mit body_size_mult/giant_growth wirken
 # zusÃƒÂ¤tzlich auf diesen Wert.
 const BASE_CHARACTER_SCALE: float = 1.7
-# Größte Kollisionsbox: +50 % der Grundgröße (Jochen 2026-11-26). Riesen
-# wachsen sichtbar weiter, ihre Box aber nicht, damit sie durch Lücken von zwei
-# Kacheln (72 px) passen; 22 px * 2.55 = 56 px Höhe.
-const HITBOX_MAX_SCALE: float = BASE_CHARACTER_SCALE * 1.5
 const GRAVITY: float = 980.0
 # Treffer nehmen kurz Bewegungskontrolle weg, damit der Rückstoß nicht sofort
 # von Eingabe und Reibung geschluckt wird.
@@ -4314,16 +4310,10 @@ func _start_boar() -> void:
 	_fx("sound", {"snd": ["hit", 0.1, 0.0], "shake": 0.3})
 	emit_signal("health_changed", current_health, max_health, current_shield, max_shield)
 
-## Setzt die Größe der Figur. Die Kollisionsbox wächst nur bis
-## HITBOX_MAX_SCALE mit, darüber wird sie gegen die Knotenskalierung gestaucht.
+## Setzt die Größe der Figur; die Kollisionsbox wächst voll mit (Riesen
+## kommen bewusst nicht überall durch, Jochen 2026-11-26).
 func _set_body_scale(s: float) -> void:
 	scale = Vector2(s, s)
-	if collision_shape != null:
-		var shape_scale := minf(1.0, HITBOX_MAX_SCALE / maxf(s, 0.01))
-		collision_shape.scale = Vector2(shape_scale, shape_scale)
-		# Die Box sitzt im Original 1 px unter dem Ursprung; gestaucht bleibt
-		# ihre Unterkante auf Höhe der Füße.
-		collision_shape.position = Vector2(0.0, 1.0 + 11.0 * (1.0 - shape_scale))
 
 ## Wie weit die Figur beim Spawnen zusätzlich angehoben werden muss, damit die
 ## Unterkante der Kollisionsbox (12 px unter dem Ursprung, skaliert) über der
