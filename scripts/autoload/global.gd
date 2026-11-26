@@ -892,16 +892,16 @@ func _setup_heroes() -> void:
 	vampire.name = "Vampir"
 	vampire.role = "Blood Hunter"
 	vampire.description = "Saugt seine Gegner aus und lebt von ihrem Blut."
-	vampire.passive_desc = "Blutdurst: Jeder %d. Treffer an einem Gegner lässt eine Blutkugel fallen. Eine Kugel heilt dich um %d HP, du sammelst sie aber nur, wenn du verletzt bist. Alle Vampire können jede Blutkugel nutzen." % [
-		Player.VAMPIRE_ORB_HIT_INTERVAL, int(Player.VAMPIRE_ORB_HEAL),
+	vampire.passive_desc = "Blutdurst: Jeder %d. Treffer an einem Gegner gibt dir eine Blutkugel, die um dich kreist (höchstens %d). Fremde Blutkugeln am Boden füllen den Vorrat auch." % [
+		Player.VAMPIRE_ORB_HIT_INTERVAL, Player.VAMPIRE_ORBIT_MAX,
 	]
-	vampire.ability_name = "Blutexplosion"
-	vampire.ability_desc = "Lässt alle Blutkugeln in deiner Nähe explodieren!"
-	vampire.ability_cooldown = 6.0
+	vampire.ability_name = "Blutgeschosse"
+	vampire.ability_desc = "Schickt alle kreisenden Blutkugeln als zielsuchende Geschosse auf Gegner!"
+	vampire.ability_cooldown = 3.0
 	vampire.dash_name = "Blutsturm"
-	vampire.dash_desc = "Stürmt durch Gegner hindurch, jeder Getroffene lässt eine Blutkugel fallen."
+	vampire.dash_desc = "Gibt dir sofort eine Blutkugel und stürmt durch Gegner hindurch."
 	vampire.ult_name = "Fledermausschwarm"
-	vampire.ult_desc = "Blutkugeln in der Nähe werden zu Fledermäusen, die Gegner angreifen!"
+	vampire.ult_desc = "Ein Fledermausschwarm greift an, jede deiner Blutkugeln wird zu einer zusätzlichen Fledermaus!"
 	vampire.ult_cooldown = 26.0
 	vampire.base_hp = 100
 	vampire.base_shield = 5
@@ -912,8 +912,8 @@ func _setup_heroes() -> void:
 	vampire.base_reload_time = 1.2
 	vampire.color_tint = Color(0.72, 0.10, 0.18)
 	vampire.sprite_tile_name = "tile_0007.png"
-	vampire.version = 2
-	vampire.ability_version = 2
+	vampire.version = 3
+	vampire.ability_version = 3
 	heroes["vampire"] = vampire
 	# 9. Blutritter – Nahkampf-Vampir. Teilt sich die Blutkugeln mit allen
 	# Vampiren (Held-IDs mit "vampire" am Anfang).
@@ -1060,8 +1060,8 @@ func get_hero_ability_details(hero: HeroData) -> String:
 				int(Player.PHANTOM_DECOY_HP), Player.PHANTOM_DECOY_DURATION, Player.PHANTOM_STEALTH_DECOY,
 			]
 		"vampire":
-			return "Alle Blutkugeln bis %d px um dich explodieren: je %d Schaden im Radius %d px mit Rückstoß. Mehrere Kugeln am selben Gegner treffen mehrfach. Ohne Kugel in Reichweite passiert nichts und es gibt keinen Cooldown." % [
-				int(Player.VAMPIRE_BURST_RANGE), int(Player.VAMPIRE_BURST_DAMAGE), int(Player.VAMPIRE_BURST_RADIUS),
+			return "Alle kreisenden Blutkugeln fliegen kurz nacheinander als zielsuchende Geschosse zum Gegner (bevorzugt in Zielrichtung) und fliegen durch Wände. Jedes macht %d Schaden im Radius %d px und heilt dich bei Treffer um %d HP. Ohne Kugel im Vorrat passiert nichts und es gibt keinen Cooldown." % [
+				int(Player.VAMPIRE_MISSILE_DAMAGE), int(Player.VAMPIRE_MISSILE_RADIUS), int(Player.VAMPIRE_MISSILE_HEAL),
 			]
 		"druid":
 			return "Rankenwand am Zielpunkt, höchstens %d px entfernt. Die breite Seite zeigt immer zu dir: %d px lang, %.0f s lang, %d HP. Hält Bewegung und Kugeln aller Spieler auf, man kann darauf stehen. Höchstens %d Wand gleichzeitig, die älteste zerfällt." % [
@@ -1104,8 +1104,8 @@ func get_hero_ult_details(hero: HeroData) -> String:
 				int(round(Player.PHANTOM_HUNT_FIRST_HIT_MULT * 100.0)),
 			]
 		"vampire":
-			return "Bis zu %d Blutkugeln im Umkreis von %d px werden zu Fledermäusen (mindestens %d, notfalls aus dir selbst). Jede hat %d HP, lebt %.0f s, fliegt zum nächsten Gegner und beißt alle %.1f s für %d Schaden." % [
-				Player.VAMPIRE_ULT_MAX_BATS, int(Player.VAMPIRE_ULT_RANGE), Player.VAMPIRE_ULT_MIN_BATS,
+			return "%d Fledermäuse, dazu eine pro Blutkugel im Vorrat und pro freier Kugel im Umkreis von %d px (höchstens %d). Jede hat %d HP, lebt %.0f s, fliegt zum nächsten Gegner und beißt alle %.1f s für %d Schaden." % [
+				Player.VAMPIRE_ULT_MIN_BATS, int(Player.VAMPIRE_ULT_RANGE), Player.VAMPIRE_ULT_MAX_BATS,
 				int(Player.VAMPIRE_BAT_HP), Player.VAMPIRE_BAT_DURATION, Player.VAMPIRE_BAT_BITE_INTERVAL,
 				int(Player.VAMPIRE_BAT_DAMAGE),
 			]
@@ -1183,7 +1183,7 @@ func get_hero_dash_details(hero: HeroData) -> String:
 		"phantom":
 			return "Dash in Laufrichtung, kurz unverwundbar. Danach %.1f s unsichtbar." % Player.PHANTOM_STEALTH_DASH
 		"vampire":
-			return "Dash in Laufrichtung, kurz unverwundbar und durch Gegner hindurch. Jeder Getroffene nimmt %d Schaden und lässt sofort eine Blutkugel fallen." % int(Player.VAMPIRE_DASH_DAMAGE)
+			return "Gibt dir sofort eine Blutkugel in den Vorrat. Dash in Laufrichtung, kurz unverwundbar und durch Gegner hindurch. Jeder Getroffene nimmt %d Schaden." % int(Player.VAMPIRE_DASH_DAMAGE)
 		"vampire_melee":
 			return "Legt an der Startstelle eine Blutkugel ab und stürmt %d %% weiter als ein normaler Dash, kurz unverwundbar und durch Gegner hindurch." % int(round(Player.VAMP_MELEE_DASH_DURATION_MULT * 100.0))
 		"flocke":

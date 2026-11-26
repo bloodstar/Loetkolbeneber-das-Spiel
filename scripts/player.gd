@@ -251,23 +251,33 @@ const VAMPMEVO_ULT_RADIUS_MULT: float = 1.4
 # Global.is_vampire_hero): jeder dritte Angriffstreffer an einem Gegner lässt
 # eine Blutkugel fallen (siehe BloodOrb). Fähigkeitsschaden zählt nicht mit.
 const VAMPIRE_ORB_HIT_INTERVAL: int = 3
-# Fernkampf-Vampir. Passiv "Blutdurst": eine Kugel heilt so viel, aber nur,
-# wenn er verletzt ist.
+# Fernkampf-Vampir. Passiv "Blutdurst": seine Blutkugeln fallen nicht zu
+# Boden, sondern kreisen als Vorrat um ihn (vampire_orbs), höchstens so viele.
+const VAMPIRE_ORBIT_MAX: int = 6
+const VAMPIRE_ORBIT_RADIUS: float = 26.0
+const VAMPIRE_ORBIT_SPEED: float = 2.6
+# Fremde Blutkugeln am Boden (z. B. vom Blutritter) füllen den Vorrat; ist er
+# voll, heilen sie so viel, wenn der Vampir verletzt ist.
 const VAMPIRE_ORB_HEAL: float = 25.0
-# Fähigkeit "Blutexplosion": alle Kugeln in dieser Reichweite explodieren.
-const VAMPIRE_BURST_RANGE: float = 480.0
-const VAMPIRE_BURST_RADIUS: float = 80.0
-const VAMPIRE_BURST_DAMAGE: float = 25.0
-const VAMPIRE_BURST_KNOCKBACK: float = 260.0
-# Dash "Blutsturm": stürmt durch Gegner, jeder Getroffene verliert etwas
-# Leben und lässt sofort eine Blutkugel fallen.
+# Fähigkeit "Blutgeschosse" (RMB): alle kreisenden Kugeln fliegen kurz
+# nacheinander als zielsuchende Geschosse (siehe BloodMissile) zum Gegner.
+const VAMPIRE_MISSILE_DAMAGE: float = 14.0
+const VAMPIRE_MISSILE_RADIUS: float = 34.0
+const VAMPIRE_MISSILE_KNOCKBACK: float = 140.0
+const VAMPIRE_MISSILE_SPEED: float = 560.0
+const VAMPIRE_MISSILE_INTERVAL: float = 0.1
+# Jeder Geschoss-Treffer heilt den Vampir so viel.
+const VAMPIRE_MISSILE_HEAL: float = 6.0
+# Dash "Blutsturm": gibt sofort eine Blutkugel in den Vorrat, stürmt durch
+# Gegner, jeder Getroffene verliert etwas Leben.
 const VAMPIRE_DASH_HIT_RADIUS: float = 26.0
 const VAMPIRE_DASH_DAMAGE: float = 8.0
-# Ulti "Fledermausschwarm": Kugeln in Reichweite werden zu Fledermäusen
-# (siehe VampireBat). Gibt es zu wenige, kommen welche aus dem Vampir selbst.
+# Ulti "Fledermausschwarm" (E): Grundschwarm (VAMPIRE_ULT_MIN_BATS, mit
+# Fledermauskönig VAMPIRE_KING_MIN_BATS) plus eine zusätzliche Fledermaus pro
+# Kugel im Vorrat und pro freier Kugel in Reichweite (siehe VampireBat).
 const VAMPIRE_ULT_RANGE: float = 600.0
 const VAMPIRE_ULT_MIN_BATS: int = 2
-const VAMPIRE_ULT_MAX_BATS: int = 8
+const VAMPIRE_ULT_MAX_BATS: int = 12
 const VAMPIRE_BAT_HP: float = 50.0
 const VAMPIRE_BAT_DURATION: float = 7.0
 const VAMPIRE_BAT_SPEED: float = 270.0
@@ -278,8 +288,8 @@ const VAMPIRE_BAT_SPAWN_SPREAD: float = 34.0
 # Fernkampf-Vampir zieht Blutkugeln aus größerer Nähe an als andere Vampire,
 # weil er meist weit weg vom Gegner steht, bei dem die Kugel fällt.
 const VAMPIRE_ORB_MAGNET_RADIUS: float = 170.0
-# Vampir-Evolutionen aus Klassenkarten: Aderlass (Explosion heilt), Gerinnung
-# (Explosion verlangsamt), Blutrausch (Kugel jeden 2. Treffer), Rote Flut
+# Vampir-Evolutionen aus Klassenkarten: Aderlass (Geschosse heilen mehr), Gerinnung
+# (Geschosse verlangsamen), Blutrausch (Kugel jeden 2. Treffer), Rote Flut
 # (Dash doppelter Schaden), Fledermauskönig (mehr Fledermäuse, Bisse heilen).
 const VAMPIRE_LEECH_HEAL: float = 8.0
 const VAMPIRE_CLOT_SLOW: float = 1.2
@@ -595,6 +605,8 @@ var active_orb: BallLightning = null
 # Vampire: Angriffstreffer bis zur nächsten Blutkugel und Gegner, die der
 # laufende Dash schon getroffen hat.
 var vampire_hit_count: int = 0
+# Fernkampf-Vampir: Blutkugeln im Vorrat, die um ihn kreisen (Snapshot "vorbs").
+var vampire_orbs: int = 0
 var flocke_shot_count: int = 0           # Flocke: zählt Schüsse für den Eissplitter
 var _flocke_slide_timer: float = 0.0     # Flocke: Abstand der Eisbahn-Zonen im Dash
 var _vampire_dash_hits: Array = []
@@ -1427,6 +1439,7 @@ func apply_stats() -> void:
 	hunt_timer = 0.0
 	hunt_first_hit = false
 	vampire_hit_count = 0
+	vampire_orbs = 0
 	_vampire_dash_hits.clear()
 	_vampire_dash_ghost(false)
 	_reset_time_state()
@@ -1957,6 +1970,7 @@ func apply_network_state(data: Dictionary) -> void:
 	poison_ticks_left = int(data.get("poison", poison_ticks_left))
 	max_shield = float(data.get("max_shield", max_shield))
 	current_shield = float(data.get("shield", current_shield))
+	vampire_orbs = int(data.get("vorbs", vampire_orbs))
 	max_ammo = int(data.get("max_ammo", max_ammo))
 	current_ammo = int(data.get("ammo", current_ammo))
 	ability_timer = float(data.get("ability", ability_timer))
@@ -2196,6 +2210,8 @@ func dash() -> void:
 		_vampire_dash_ghost(true)
 		if hero_id == VAMP_MELEE_ID:
 			_vamp_melee_dash_start()
+		elif hero_id == "vampire":
+			vampire_add_orb()
 
 # Kurzlebige visuelle Effekte werden an Main gehängt. Die Gruppe erlaubt es,
 # beim Rundenstart auch diese Effekte zuverlässig zu entfernen.
@@ -2466,9 +2482,9 @@ func use_ability(target = null) -> void:
 		return
 	if ability_timer > 0.0:
 		return
-	# Blutexplosion ohne Kugeln in Reichweite: nichts passiert, kein Cooldown.
+	# Blutgeschosse ohne Kugeln im Vorrat: nichts passiert, kein Cooldown.
 	if Global.get_player_hero_id(player_index) == "vampire" and not is_replica \
-			and BloodOrb.free_orbs(get_tree(), global_position, VAMPIRE_BURST_RANGE * ability_range_mult).is_empty():
+			and vampire_orbs <= 0:
 		_owner_sound("bounce", 0.1, -8.0)
 		return
 	_cast_has_target = false
@@ -2515,8 +2531,8 @@ func use_ability(target = null) -> void:
 			# Wurzelwall: Rankenwand quer zur Zielrichtung
 			_place_druid_wall()
 		"vampire":
-			# Blutexplosion: alle Blutkugeln in Reichweite explodieren
-			_vampire_blood_burst()
+			# Blutgeschosse: der Kugel-Vorrat fliegt zu den Gegnern
+			_vampire_fire_missiles()
 		VAMP_MELEE_ID:
 			# Blutbersten: der Schild explodiert. Ohne Schild verpufft nichts,
 			# die Abklingzeit startet dann nicht.
@@ -4595,7 +4611,7 @@ func _start_blizzard(target) -> void:
 	_fx("sound", {"snd": ["warning", 0.1, -4.0], "shake": 0.15})
 
 # ============================================================
-# Vampire: Blutkugeln, Blutexplosion, Blutsturm, Fledermausschwarm
+# Vampire: Blutkugeln, Blutgeschosse, Blutsturm, Fledermausschwarm
 # ============================================================
 
 # Host/offline: Blutkugel an pos erzeugen (auch ohne Treffer, z. B. für den
@@ -4615,7 +4631,26 @@ func register_vampire_hit(target: Node2D) -> void:
 	var interval := VAMPIRE_FRENZY_HIT_INTERVAL if _has_ability_evolution("vampire_frenzy") else VAMPIRE_ORB_HIT_INTERVAL
 	if vampire_hit_count >= interval:
 		vampire_hit_count = 0
-		spawn_blood_orb(target.global_position)
+		if Global.get_player_hero_id(player_index) == "vampire":
+			vampire_add_orb()
+		else:
+			spawn_blood_orb(target.global_position)
+
+# Fernkampf-Vampir: eine Kugel in den kreisenden Vorrat. false = Vorrat voll.
+func vampire_add_orb() -> bool:
+	if is_replica or vampire_orbs >= VAMPIRE_ORBIT_MAX:
+		return false
+	vampire_orbs += 1
+	_fx("ring", NetFx.ring_args(global_position, Color(0.85, 0.05, 0.15, 0.7), 0.3, 2.0, 0.14, 0.18))
+	return true
+
+# Lage der i-ten kreisenden Kugel relativ zum Vampir (Host und Clients
+# rechnen gleich, über die Uhrzeit).
+func vampire_orb_offset(i: int, count: int = -1) -> Vector2:
+	var n := vampire_orbs if count < 0 else count
+	var t := float(Time.get_ticks_msec()) / 1000.0
+	var a := t * VAMPIRE_ORBIT_SPEED + TAU * float(i) / float(maxi(n, 1))
+	return Vector2(cos(a) * VAMPIRE_ORBIT_RADIUS, sin(a) * VAMPIRE_ORBIT_RADIUS * 0.55 - 4.0)
 
 # Zieht eine Blutkugel in der Nähe gerade an? Gilt nur für Vampire.
 func wants_blood_orb() -> bool:
@@ -4623,7 +4658,7 @@ func wants_blood_orb() -> bool:
 		return false
 	match Global.get_player_hero_id(player_index):
 		"vampire":
-			return current_health < max_health - 0.5
+			return vampire_orbs < VAMPIRE_ORBIT_MAX or current_health < max_health - 0.5
 		VAMP_MELEE_ID:
 			# Blutritter: Schild bis VAMP_MELEE_SHIELD_CAP x Max-HP, auch bei voller HP.
 			return current_shield < max_health * VAMP_MELEE_SHIELD_CAP - 0.5
@@ -4641,32 +4676,59 @@ func on_blood_orb_pickup(_orb: BloodOrb) -> bool:
 		return false
 	match Global.get_player_hero_id(player_index):
 		"vampire":
+			if vampire_add_orb():
+				return true
 			heal(VAMPIRE_ORB_HEAL)
 			return true
 		VAMP_MELEE_ID:
 			return _vamp_melee_absorb_orb()
 	return false
 
-func _vampire_blood_burst() -> void:
-	if is_replica:
+# Blutgeschosse: jede kreisende Kugel startet kurz nacheinander als
+# zielsuchendes Geschoss (BloodMissile).
+func _vampire_fire_missiles() -> void:
+	if is_replica or get_parent() == null:
 		return
-	var radius := VAMPIRE_BURST_RADIUS * ability_radius_mult
-	var damage := VAMPIRE_BURST_DAMAGE * ability_damage_mult
-	var orbs := BloodOrb.free_orbs(get_tree(), global_position, VAMPIRE_BURST_RANGE * ability_range_mult)
-	for orb in orbs:
-		var pos: Vector2 = orb.take()
-		_fx("ring", NetFx.ring_args(pos, Color(0.85, 0.05, 0.12, 0.9), 0.6, radius / 8.0, 0.22, 0.28))
-		Seesaw.blast_all(get_tree(), pos, radius, 0.7)
-		for p in _opponents_within(pos, radius):
-			var dir: Vector2 = p.global_position - pos
-			if dir.length_squared() < 1.0:
-				dir = Vector2.UP
-			_ability_hit(p, damage, dir.normalized() * VAMPIRE_BURST_KNOCKBACK)
-			if _has_ability_evolution("vampire_burst_slow"):
-				p.apply_freeze(VAMPIRE_CLOT_SLOW)
-			if _has_ability_evolution("vampire_burst_leech"):
-				heal(VAMPIRE_LEECH_HEAL)
-	_fx("sound", {"snd": ["explosion", 0.25, -1.0 if orbs.size() > 1 else -4.0]})
+	var count := vampire_orbs
+	vampire_orbs = 0
+	var s_scale := absf(scale.x) if absf(scale.x) > 0.01 else 1.0
+	for i in range(count):
+		var m := BloodMissile.new()
+		m.owner_player = self
+		m.owner_index = player_index
+		m.speed = VAMPIRE_MISSILE_SPEED * clampf(ability_range_mult, 0.7, 1.6)
+		m.delay = VAMPIRE_MISSILE_INTERVAL * float(i)
+		var off := vampire_orb_offset(i, count) * s_scale
+		var aim := aim_direction.normalized() if aim_direction.length_squared() > 0.01 else Vector2.RIGHT
+		# Startet nach außen und leicht in Zielrichtung, dann sucht es das Ziel.
+		m.velocity = (off.normalized() * 0.6 + aim).normalized() * VAMPIRE_MISSILE_SPEED * 0.45
+		var pos := global_position + off
+		m.position = pos
+		get_parent().add_child(m)
+		m.global_position = pos
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(global_position, Color(0.85, 0.05, 0.15, 0.8),
+		0.4, 2.6, 0.16, 0.2), "teleport", 0.15, -4.0))
+
+# Ein Blutgeschoss trifft: kleine Explosion, heilt den Vampir.
+func vampire_missile_hit(pos: Vector2) -> void:
+	var radius := VAMPIRE_MISSILE_RADIUS * ability_radius_mult
+	var damage := VAMPIRE_MISSILE_DAMAGE * ability_damage_mult
+	_fx("ring", NetFx.with_sound(NetFx.ring_args(pos, Color(0.85, 0.05, 0.12, 0.9), 0.5, radius / 8.0, 0.16, 0.22),
+		"hit", 0.2, -3.0))
+	var hit_any := false
+	for p in _opponents_within(pos, radius):
+		var dir: Vector2 = p.global_position - pos
+		if dir.length_squared() < 1.0:
+			dir = Vector2.UP
+		_ability_hit(p, damage, dir.normalized() * VAMPIRE_MISSILE_KNOCKBACK)
+		hit_any = true
+		if _has_ability_evolution("vampire_burst_slow"):
+			p.apply_freeze(VAMPIRE_CLOT_SLOW)
+	if hit_any and current_health > 0.0:
+		var amount := VAMPIRE_MISSILE_HEAL
+		if _has_ability_evolution("vampire_burst_leech"):
+			amount += VAMPIRE_LEECH_HEAL
+		heal(amount)
 
 # Vampir-Dashs stürmen durch andere Eber hindurch: für die Dauer des Dashs
 # keine Kollision mit Spielern.
@@ -4692,7 +4754,6 @@ func _vampire_dash_tick() -> void:
 		if _has_ability_evolution("vampire_dash_strong"):
 			dash_damage *= VAMPIRE_STRONG_DASH_MULT
 		_ability_hit(p, dash_damage, dash_dir * 120.0)
-		spawn_blood_orb(p.global_position)
 		_fx("ring", NetFx.with_sound(NetFx.ring_args(p.global_position,
 			Color(0.85, 0.05, 0.15, 0.85), 0.4, 2.2, 0.18, 0.2), "hit", 0.2, -2.0))
 
@@ -4703,17 +4764,24 @@ func _vampire_bat_swarm() -> void:
 	orbs.sort_custom(func(a, b): return a.global_position.distance_squared_to(global_position) \
 		< b.global_position.distance_squared_to(global_position))
 	var spots: Array = []
+	# Grundschwarm kommt aus dem Vampir, im Fächer verteilt, damit man die
+	# Fledermäuse einzeln sieht.
+	var missing := VAMPIRE_KING_MIN_BATS if _has_ability_evolution("vampire_bat_king") else VAMPIRE_ULT_MIN_BATS
+	for i in range(missing):
+		var a := -PI * 0.5 + (float(i) - (missing - 1) * 0.5) * 0.7
+		spots.append(global_position + Vector2(0.0, -12.0) + Vector2.from_angle(a) * VAMPIRE_BAT_SPAWN_SPREAD)
+	# Jede Kugel im Vorrat wird eine zusätzliche Fledermaus.
+	var s_scale := absf(scale.x) if absf(scale.x) > 0.01 else 1.0
+	for i in range(vampire_orbs):
+		if spots.size() >= VAMPIRE_ULT_MAX_BATS:
+			break
+		spots.append(global_position + vampire_orb_offset(i) * s_scale)
+	vampire_orbs = 0
+	# Freie Kugeln in Reichweite ebenfalls.
 	for orb in orbs:
 		if spots.size() >= VAMPIRE_ULT_MAX_BATS:
 			break
 		spots.append(orb.take())
-	var min_bats := VAMPIRE_KING_MIN_BATS if _has_ability_evolution("vampire_bat_king") else VAMPIRE_ULT_MIN_BATS
-	# Fehlende Fledermäuse kommen aus dem Vampir, im Fächer verteilt, damit
-	# man sie einzeln sieht (vorher lagen sie fast übereinander).
-	var missing := min_bats - spots.size()
-	for i in range(missing):
-		var a := -PI * 0.5 + (float(i) - (missing - 1) * 0.5) * 0.7
-		spots.append(global_position + Vector2(0.0, -12.0) + Vector2.from_angle(a) * VAMPIRE_BAT_SPAWN_SPREAD)
 	for i in range(spots.size()):
 		var pos: Vector2 = spots[i]
 		var bat := VampireBat.new()
@@ -6285,6 +6353,7 @@ func _die() -> void:
 	if is_dead:
 		return
 	is_dead = true
+	vampire_orbs = 0
 	_end_time_stop()
 	# Seuche: Vergiftete platzen beim Tod zu einer Giftwolke.
 	if not is_replica:

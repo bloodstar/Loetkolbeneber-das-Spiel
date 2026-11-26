@@ -41,6 +41,21 @@ func _draw() -> void:
 		return
 	_draw_weapon_status()
 	_draw_health_bar()
+	_draw_vampire_orbs()
+
+# Fernkampf-Vampir: Blutkugeln im Vorrat kreisen um ihn.
+func _draw_vampire_orbs() -> void:
+	var n: int = player.vampire_orbs
+	if n <= 0:
+		return
+	var t := float(Time.get_ticks_msec()) / 1000.0
+	for i in range(n):
+		var c: Vector2 = player.vampire_orb_offset(i)
+		var pulse := 0.5 + 0.5 * sin(t * 6.0 + float(i))
+		draw_circle(c, 5.5 + pulse, Color(0.9, 0.05, 0.12, 0.18))
+		draw_circle(c, 3.6, Color(0.25, 0.0, 0.03, 0.9))
+		draw_circle(c, 3.0, Color(0.80, 0.04, 0.10, 1.0))
+		draw_circle(c + Vector2(-1.0, -1.1), 0.9, Color(1.0, 0.75, 0.75, 0.9))
 
 func _draw_weapon_status() -> void:
 	if player.is_melee:

@@ -67,51 +67,53 @@ func _ready() -> void:
 	foe.max_shield = 0.0
 	_check(not vamp.is_melee, "Vampir schießt")
 
-	# Jeder 3. Angriffstreffer erzeugt eine Kugel, Fähigkeitsschaden zählt nicht.
+	# Jeder 3. Angriffstreffer gibt eine kreisende Kugel, Fähigkeitsschaden zählt nicht.
 	_clear_orbs()
+	vamp.vampire_orbs = 0
+	vamp.vampire_hit_count = 0
 	foe.global_position = vamp.global_position + Vector2(300.0, 0.0)
 	foe.is_invulnerable = false
 	foe.take_damage(5.0, Vector2.ZERO, vamp)
 	foe.take_damage(5.0, Vector2.ZERO, vamp)
-	_check(_orbs().size() == 0, "Nach 2 Treffern noch keine Kugel")
+	_check(vamp.vampire_orbs == 0, "Nach 2 Treffern noch keine Kugel")
 	vamp._ability_hit(foe, 5.0, Vector2.ZERO)
-	_check(_orbs().size() == 0, "Fähigkeitsschaden zählt nicht")
+	_check(vamp.vampire_orbs == 0, "Fähigkeitsschaden zählt nicht")
 	foe.take_damage(5.0, Vector2.ZERO, vamp)
-	await get_tree().process_frame
-	_check(_orbs().size() == 1, "3. Treffer erzeugt eine Blutkugel")
-	_check(get_tree().get_nodes_in_group("net_entity").size() >= 1, "Kugel ist Netz-Objekt")
-	var snap: Dictionary = _orbs()[0].get_network_state()
-	_check(snap.get("k") == "blood" and NetEntity.create_replica("blood") is BloodOrb, "Snapshot-Art blood")
+	_check(vamp.vampire_orbs == 1, "3. Treffer gibt eine kreisende Kugel")
+	_check(_orbs().size() == 0, "Keine Kugel am Boden")
+	vamp.vampire_orbs = Player.VAMPIRE_ORBIT_MAX
+	_check(not vamp.vampire_add_orb() and vamp.vampire_orbs == Player.VAMPIRE_ORBIT_MAX, "Vorrat hat eine Obergrenze")
+	_check(NetEntity.create_replica("bmissile") is BloodMissile, "Snapshot-Art bmissile")
 
-	# Bei voller HP wird nicht aufgesammelt, verletzt schon (+25).
-	_clear_orbs()
-	vamp.current_health = vamp.max_health
+	# Fremde Kugel am Boden füllt den Vorrat.
+	vamp.vampire_orbs = 0
 	var orb := vamp.spawn_blood_orb(vamp.global_position + Vector2(0.0, -10.0))
 	await _wait(0.8)
-	_check(is_instance_valid(orb) and orb.is_free(), "Volle HP: Kugel bleibt liegen")
-	vamp.current_health = vamp.max_health - 40.0
-	await _wait(0.6)
-	_check(not is_instance_valid(orb) or not orb.is_free(), "Verletzt: Kugel wird aufgesammelt")
-	_check(absf(vamp.current_health - (vamp.max_health - 15.0)) < 3.0, "Kugel heilt 25 HP (%.0f / %.0f)" % [vamp.current_health, vamp.max_health])
+	_check(not is_instance_valid(orb) or not orb.is_free(), "Kugel am Boden wird eingesammelt")
+	_check(vamp.vampire_orbs == 1, "Eingesammelte Kugel kreist (%d)" % vamp.vampire_orbs)
 
-	# Blutexplosion: ohne Kugel kein Cooldown, mit Kugel Schaden am Gegner.
-	_clear_orbs()
+	# Blutgeschosse: ohne Vorrat kein Cooldown, mit Vorrat Schaden am Gegner.
+	vamp.vampire_orbs = 0
 	vamp.ability_timer = 0.0
 	vamp.use_ability()
 	_check(vamp.ability_timer == 0.0, "Ohne Kugel keine Abklingzeit")
-	vamp.current_health = vamp.max_health
-	foe.global_position = vamp.global_position + Vector2(150.0, 0.0)
+	foe.global_position = vamp.global_position + Vector2(220.0, 0.0)
 	foe.velocity = Vector2.ZERO
-	vamp.spawn_blood_orb(foe.global_position)
+	vamp.vampire_orbs = 3
+	vamp.aim_direction = Vector2.RIGHT
 	var hp_before := foe.current_health
+	vamp.current_health = vamp.max_health - 50.0
+	var vamp_hp := vamp.current_health
 	vamp.use_ability()
-	_check(vamp.ability_timer > 0.0, "Blutexplosion hat Abklingzeit")
-	_check(hp_before - foe.current_health >= 24.0, "Blutexplosion macht 25 Schaden (%.0f)" % (hp_before - foe.current_health))
-	_check(_orbs().size() == 0, "Kugel ist verbraucht")
+	_check(vamp.ability_timer > 0.0, "Blutgeschosse haben Abklingzeit")
+	_check(vamp.vampire_orbs == 0, "Vorrat ist verbraucht")
+	await _wait(1.5)
+	_check(hp_before - foe.current_health >= 13.0 * 3.0, "3 Blutgeschosse treffen (%.0f Schaden)" % (hp_before - foe.current_health))
+	_check(vamp.current_health > vamp_hp, "Treffer heilen den Vampir")
 
-	# Blutsturm: Dash durch den Gegner erzeugt eine Kugel.
-	_clear_orbs()
+	# Blutsturm: Dash gibt sofort eine Kugel.
 	await _wait(0.3)
+	vamp.vampire_orbs = 0
 	foe.global_position = vamp.global_position + Vector2(60.0, 0.0)
 	foe.velocity = Vector2.ZERO
 	vamp.velocity = Vector2.ZERO
@@ -119,23 +121,21 @@ func _ready() -> void:
 	hp_before = foe.current_health
 	vamp.dash_charges = vamp.dash_charges_max
 	vamp.dash()
+	_check(vamp.vampire_orbs == 1, "Blutsturm gibt eine Kugel (%d)" % vamp.vampire_orbs)
 	await _wait(0.35)
 	_check(foe.current_health < hp_before, "Blutsturm trifft den Gegner")
-	_check(_orbs().size() >= 1, "Blutsturm erzeugt eine Blutkugel (%d)" % _orbs().size())
 
-	# Fledermausschwarm: Kugeln werden Fledermäuse, die beißen.
-	_clear_orbs()
+	# Fledermausschwarm: Grundschwarm plus eine pro Kugel im Vorrat.
 	foe.global_position = vamp.global_position + Vector2(200.0, 0.0)
-	for i in range(3):
-		vamp.spawn_blood_orb(vamp.global_position + Vector2(20.0 * i, -40.0))
+	vamp.vampire_orbs = 3
 	vamp.current_health = vamp.max_health
 	vamp.ult_timer = 0.0
 	hp_before = foe.current_health
 	vamp.use_ultimate()
 	await get_tree().process_frame
 	var bats := get_tree().get_nodes_in_group(VampireBat.GROUP)
-	_check(bats.size() == 3, "3 Kugeln werden 3 Fledermäuse (%d)" % bats.size())
-	_check(_orbs().size() == 0, "Kugeln sind verbraucht")
+	_check(bats.size() == Player.VAMPIRE_ULT_MIN_BATS + 3, "2 + 3 Kugeln = 5 Fledermäuse (%d)" % bats.size())
+	_check(vamp.vampire_orbs == 0, "Vorrat ist verbraucht")
 	await _wait(2.0)
 	_check(foe.current_health < hp_before, "Fledermäuse beißen (%.0f Schaden)" % (hp_before - foe.current_health))
 	# Fledermäuse lassen sich abschießen.
@@ -144,13 +144,13 @@ func _ready() -> void:
 		bats[0].take_tower_damage(60.0, foe)
 		await get_tree().process_frame
 		_check(not is_instance_valid(bats[0]), "Fledermaus stirbt nach 50 Schaden")
-	# Ohne Kugeln kommen mindestens 2.
+	# Ohne Kugeln der Grundschwarm.
 	for b in get_tree().get_nodes_in_group(VampireBat.GROUP):
 		b.pop()
 	vamp.ult_timer = 0.0
 	vamp.use_ultimate()
 	await get_tree().process_frame
-	_check(get_tree().get_nodes_in_group(VampireBat.GROUP).size() == Player.VAMPIRE_ULT_MIN_BATS, "Ohne Kugeln mindestens 2 Fledermäuse")
+	_check(get_tree().get_nodes_in_group(VampireBat.GROUP).size() == Player.VAMPIRE_ULT_MIN_BATS, "Ohne Kugeln 2 Fledermäuse")
 
 	# Klassenkarten
 	for id in ["vampire_blutdurst", "vampire_nachtschwinge", "vampire_blutfontaene", "vampire_blutrausch",
@@ -164,14 +164,16 @@ func _ready() -> void:
 	_clear_orbs()
 	vamp.ability_evolutions.append("vampire_frenzy")
 	vamp.vampire_hit_count = 0
+	vamp.vampire_orbs = 0
 	foe.take_damage(5.0, Vector2.ZERO, vamp)
 	foe.take_damage(5.0, Vector2.ZERO, vamp)
-	_check(_orbs().size() == 1, "Blutrausch: Kugel beim 2. Treffer")
+	_check(vamp.vampire_orbs == 1, "Blutrausch: Kugel beim 2. Treffer")
 	# Fledermauskönig: mindestens 4.
 	_clear_orbs()
 	for b in get_tree().get_nodes_in_group(VampireBat.GROUP):
 		b.pop()
 	vamp.ability_evolutions.append("vampire_bat_king")
+	vamp.vampire_orbs = 0
 	vamp.ult_timer = 0.0
 	vamp.use_ultimate()
 	await get_tree().process_frame

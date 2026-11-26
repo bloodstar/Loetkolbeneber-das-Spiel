@@ -632,11 +632,10 @@ func _handle_combat(_delta: float) -> void:
 				# Köder zum Anschleichen oder zum Entkommen.
 				wants = dist < 320.0
 			"vampire":
-				# Blutexplosion nur, wenn eine Kugel nah genug am Gegner liegt.
-				wants = false
-				if is_instance_valid(target):
-					wants = not BloodOrb.free_orbs(player.get_tree(), target.global_position,
-						Player.VAMPIRE_BURST_RADIUS * player.ability_radius_mult).is_empty()
+				# Blutgeschosse mit mindestens 3 Kugeln im Vorrat (oder vollem
+				# Vorrat bzw. in Not) auf einen Gegner in Reichweite.
+				wants = is_instance_valid(target) and dist < 700.0 and player.vampire_orbs > 0 \
+					and (player.vampire_orbs >= 3 or player.current_health < player.max_health * 0.4)
 			"vampire_melee":
 				# Blutbersten erst mit genug Schild und nah am Gegner.
 				wants = player.current_shield >= 30.0 and dist < Player.VAMP_MELEE_BURST_RADIUS * 0.85
