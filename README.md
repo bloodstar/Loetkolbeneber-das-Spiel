@@ -315,6 +315,33 @@ Am Matchende zeigt der Win-Screen unter der Match-Statistik bis zu **8 Ehrungen*
 
 Online berechnet der Host die Ehrungen und schickt sie mit dem Match-Ende an alle Clients.
 
+### Matchstatistik im Horden-Modus
+
+Am Ende einer Jagd zeigt der Endbildschirm Zeit, Stufe, Kills, **besiegte Bosse** (wer wann welchen Boss erlegt hat) und das erreichte Gebiet. Darunter eine Tabelle pro Eber, sortiert nach **Jagdwert**: Erlegt, Schaden, Boss-Schaden, Riesen, beste Serie (Kills in einem Leben), Erfahrung (eingesammelte Kristalle), Geheilt, Gefallen. Jagdwert = Kills + Schaden/60 + Bossschaden/30 + Riesen×2 + Bosse×15 + Heilung/40 + Geblockt/80 − Tode×4.
+
+Dazu bis zu **8 Ehrungen** nach denselben Regeln wie oben (pro Eber begrenzt, solo bekommt der eine Eber alle, MVP erst ab zwei Ebern):
+
+| Ehrung | Wer bekommt sie |
+|---|---|
+| **MVP der Jagd** | Höchster Jagdwert |
+| **Bossbezwinger** | Die meisten Bosse erlegt (letzter Treffer), bei Gleichstand mehr Bossschaden |
+| **Bossjäger** | Meister Schaden an Bossen (ab 300) |
+| **Schadenskönig** | Meister Schaden |
+| **Schlächter** | Die meisten Kills (ab 10) |
+| **Amokläufer** | Die meisten Kills in einem Leben (ab 30) |
+| **Riesentöter** | Die meisten Riesen (ab 2) |
+| **Unkaputtbar** | Am längsten am Stück überlebt (ab 1:30) |
+| **Kristallsammler** | Die meiste Erfahrung eingesammelt (ab 30) |
+| **Sanitäter** | Meiste Heilung (ab 100) |
+| **Fähigkeiten-Ass** / **Nahkampf-Metzger** | Meister Fähigkeits- bzw. Nahkampfschaden (ab 300) |
+| **Bollwerk** | Meister Schaden abgeblockt (ab 150) |
+| **Adlerauge** | Die meisten Adler (ab 8) |
+| **Vielfraß** *(Spaß)* | Die meisten Eicheln gefuttert (ab 3) |
+| **Größter Pechvogel** *(Spaß)* | Am häufigsten gefallen (ab 2) |
+| **Kugelfang** *(Spaß)* | Am meisten Schaden eingesteckt (ab 200) |
+
+Online rechnet der Host und schickt Werte und Ehrungen mit dem letzten Horden-Stand an die Clients.
+
 ---
 
 ## 👥 Spielmodi
