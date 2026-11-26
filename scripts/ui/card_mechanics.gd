@@ -291,12 +291,23 @@ static func get_hero_icon(hero_id: String) -> Texture2D:
 		return null
 	if _hero_icon_cache.has(hero_id):
 		return _hero_icon_cache[hero_id]
-	var path := HERO_ICON_PATH % hero_id
-	var texture: Texture2D = null
-	if ResourceLoader.exists(path):
-		texture = load(path) as Texture2D
+	var texture := load_svg_texture(HERO_ICON_PATH % hero_id)
 	_hero_icon_cache[hero_id] = texture
 	return texture
+
+## Lädt ein SVG als Textur. Hat der Editor die Datei noch nicht importiert
+## (neu per git pull, .godot/imported fehlt), wird das SVG direkt gerendert.
+static func load_svg_texture(path: String, svg_scale: float = 1.0) -> Texture2D:
+	if ResourceLoader.exists(path):
+		var imported := ResourceLoader.load(path, "Texture2D") as Texture2D
+		if imported != null:
+			return imported
+	if not FileAccess.file_exists(path):
+		return null
+	var image := Image.new()
+	if image.load_svg_from_buffer(FileAccess.get_file_as_bytes(path), svg_scale) != OK:
+		return null
+	return ImageTexture.create_from_image(image)
 
 ## Zentrierte Zeile "[Icon] KLASSE: NAME" in der Klassenfarbe, oder null ohne Klasse.
 static func make_class_badge(card: CardData, font_size: int = UiTheme.FS_S) -> Control:

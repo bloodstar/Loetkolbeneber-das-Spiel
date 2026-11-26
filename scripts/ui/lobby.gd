@@ -1119,10 +1119,7 @@ func _on_pig_parts_or_look_changed(_slot: int = 0) -> void:
 func _get_hero_icon(hero_id: String) -> Texture2D:
 	if _hero_icon_cache.has(hero_id):
 		return _hero_icon_cache[hero_id]
-	var path := "%shero_%s.svg" % [HERO_ICON_DIR, hero_id]
-	var texture: Texture2D = null
-	if ResourceLoader.exists(path):
-		texture = load(path) as Texture2D
+	var texture := CardMechanics.load_svg_texture("%shero_%s.svg" % [HERO_ICON_DIR, hero_id])
 	_hero_icon_cache[hero_id] = texture
 	return texture
 
