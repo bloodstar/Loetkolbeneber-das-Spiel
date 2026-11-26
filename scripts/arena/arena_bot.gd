@@ -43,6 +43,12 @@ static func navigate(ai: AIController, delta: float) -> void:
 		goal = Vector2(scroll.center_x + scroll.dir * scroll.window_w * 0.2, p.global_position.y)
 		mode = "zone"
 
+	# Challenge (Tor, Zone, Ball, Münze): dorthin laufen, Schießen läuft weiter.
+	var challenge_goal := ChallengeDirector.bot_goal(p)
+	if mode == "fight" and challenge_goal != Vector2.INF:
+		goal = challenge_goal
+		mode = "zone"
+
 	var to_goal := goal - p.global_position
 	var dist := to_goal.length()
 	var sees := has_line_of_sight(p, target)

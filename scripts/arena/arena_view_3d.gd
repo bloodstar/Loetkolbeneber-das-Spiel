@@ -22,6 +22,7 @@ var _pigs: Dictionary = {}        # Player-Instanz-ID -> VoxelBoar
 var _crates: Dictionary = {}      # Vector2i -> Node3D
 var _druid_walls: Dictionary = {} # DruidWall-Instanz-ID -> MeshInstance3D
 var _beasts: Dictionary = {}      # HordeEnemy-Instanz-ID -> HordeBeast / VoxelPig (Boss)
+var _balls: Dictionary = {}       # RollingBall-Instanz-ID -> MeshInstance3D (Bällebad)
 var _shadow_mat: StandardMaterial3D
 var _shadow_mesh: PlaneMesh
 var _contact_mat: StandardMaterial3D
@@ -471,6 +472,73 @@ func _process(delta: float) -> void:
 	_sync_crates()
 	_sync_druid_walls()
 	_sync_horde(delta)
+	_sync_balls(delta)
+
+# Rollende Kugeln (Challenge Bällebad) als 3D-Kugeln mit Bodenschatten. Die
+# Drehung folgt der Rollbewegung (Achse quer zur Bewegungsrichtung).
+func _sync_balls(delta: float) -> void:
+	if _balls.is_empty() and get_tree().get_first_node_in_group("rolling_ball") == null:
+		return
+	var seen := {}
+	for node in get_tree().get_nodes_in_group("rolling_ball"):
+		var b := node as RollingBall
+		if b == null or not is_instance_valid(b) or b.is_queued_for_deletion():
+			continue
+		var id := b.get_instance_id()
+		seen[id] = true
+		var r := RollingBall.radius_for(b.ball_size)
+		var mi: MeshInstance3D = _balls.get(id, null)
+		if mi == null:
+			mi = MeshInstance3D.new()
+			var sm := SphereMesh.new()
+			sm.radius = r
+			sm.height = r * 2.0
+			sm.radial_segments = 18
+			sm.rings = 10
+			mi.mesh = sm
+			var mat_def: Dictionary = RollingBall.MATERIALS.get(b.ball_material, RollingBall.MATERIALS["wood"])
+			var mat := StandardMaterial3D.new()
+			mat.albedo_color = mat_def["color"]
+			# Gummibälle bunt wie im Bällebad.
+			if b.ball_material == "rubber":
+				var pit: Array[Color] = [Color(0.93, 0.3, 0.38), Color(0.3, 0.6, 0.95), Color(0.98, 0.82, 0.25),
+					Color(0.4, 0.85, 0.45), Color(0.75, 0.45, 0.95), Color(1.0, 0.55, 0.2)]
+				mat.albedo_color = pit[b.net_id % pit.size()]
+			mat.roughness = 0.35 if b.ball_material == "rubber" else (0.25 if b.ball_material == "iron" else 0.8)
+			mat.metallic = 0.7 if b.ball_material == "iron" else 0.0
+			mi.material_override = mat
+			# Streifen, damit man das Rollen sieht.
+			var band := MeshInstance3D.new()
+			var tm := TorusMesh.new()
+			tm.inner_radius = r * 0.96
+			tm.outer_radius = r * 1.04
+			band.mesh = tm
+			var band_mat := StandardMaterial3D.new()
+			band_mat.albedo_color = mat_def["light"]
+			band.material_override = band_mat
+			band.rotation.x = PI * 0.5
+			mi.add_child(band)
+			var sh := MeshInstance3D.new()
+			sh.mesh = _shadow_mesh
+			sh.material_override = _shadow_mat
+			sh.scale = Vector3.ONE * (r * 2.2 / 46.0)
+			add_child(sh)
+			mi.set_meta("shadow", sh)
+			add_child(mi)
+			_balls[id] = mi
+		var pos := Vector3(b.global_position.x, r, b.global_position.y)
+		var v := Vector3(b.linear_velocity.x, 0.0, b.linear_velocity.y)
+		if v.length() > 1.0:
+			var axis := Vector3.UP.cross(v.normalized())
+			mi.rotate(axis.normalized(), v.length() * delta / maxf(1.0, r))
+		mi.position = pos
+		(mi.get_meta("shadow") as Node3D).position = Vector3(pos.x, 0.6, pos.z)
+	for id in _balls.keys():
+		if not seen.has(id):
+			var old: MeshInstance3D = _balls[id]
+			(old.get_meta("shadow") as Node3D).queue_free()
+			old.queue_free()
+			_balls.erase(id)
 
 # Wände des Druiden als Rindenblock mit Moosdecke.
 func _sync_druid_walls() -> void:

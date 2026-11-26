@@ -22,7 +22,7 @@ signal ping_updated()
 
 signal lobby_sync_received(data: Dictionary)
 signal match_start_received(config: Dictionary)
-signal round_start_received(seed: int, map_id: String, points_to_win: int, tiebreak_slots: Array)
+signal round_start_received(seed: int, map_id: String, points_to_win: int, tiebreak_slots: Array, challenge_id: String)
 signal snapshot_received(data: Dictionary)
 signal input_received(slot: int, data: Dictionary)
 signal draft_start_received(drafter: int, card_ids: Array, picks_total: int, bonus_source: String)
@@ -645,6 +645,8 @@ func build_lobby_sync() -> Dictionary:
 		"gamble_enabled": Global.gamble_enabled,
 		"pre_draft_picks": Global.pre_draft_picks,
 		"pre_draft_random": Global.pre_draft_random,
+		"challenge_frequency": Global.challenge_frequency,
+		"disabled_challenges": Global.disabled_challenges.duplicate(),
 		"melee_enabled": Global.melee_enabled,
 		"element_reactions_enabled": Global.element_reactions_enabled,
 		"level_modifier_rate_percent": Global.level_modifier_rate_percent,
@@ -766,6 +768,10 @@ func _apply_lobby_sync(data: Dictionary) -> void:
 	Global.set_gamble_enabled(bool(data.get("gamble_enabled", Global.gamble_enabled)))
 	Global.set_pre_draft_picks(int(data.get("pre_draft_picks", Global.pre_draft_picks)))
 	Global.set_pre_draft_random(bool(data.get("pre_draft_random", Global.pre_draft_random)))
+	Global.set_challenge_frequency(int(data.get("challenge_frequency", Global.challenge_frequency)))
+	var disabled_ch: Variant = data.get("disabled_challenges", Global.disabled_challenges)
+	if disabled_ch is Array:
+		Global.set_disabled_challenges(disabled_ch)
 	Global.set_melee_enabled(bool(data.get("melee_enabled", Global.melee_enabled)))
 	Global.set_element_reactions_enabled(bool(data.get("element_reactions_enabled", Global.element_reactions_enabled)))
 	Global.set_level_modifier_rate_percent(
@@ -854,11 +860,11 @@ func send_start_match(config: Dictionary) -> void:
 func receive_start_match(config: Dictionary) -> void:
 	match_start_received.emit(config)
 
-func send_round_start(level_seed: int, map_id: String, points_to_win: int = 0, tiebreak_slots: Array = []) -> void:
+func send_round_start(level_seed: int, map_id: String, points_to_win: int = 0, tiebreak_slots: Array = [], challenge_id: String = "") -> void:
 	if not is_host:
 		return
 	for peer_id in _broadcast_targets():
-		receive_round_start.rpc_id(int(peer_id), level_seed, map_id, points_to_win, tiebreak_slots)
+		receive_round_start.rpc_id(int(peer_id), level_seed, map_id, points_to_win, tiebreak_slots, challenge_id)
 
 ## Eigene Arena-Karte (Karteneditor) an alle Clients schicken. Läuft vor
 ## send_round_start über denselben zuverlässigen Kanal, kommt also zuerst an.
@@ -889,9 +895,10 @@ func receive_side_level(map_id: String, json_text: String) -> void:
 	SideLevels.register_remote(map_id, json_text)
 
 # tiebreak_slots: im Stechen die Finalisten (nur sie spawnen), sonst leer.
+# challenge_id: Challenge der Runde (ChallengeDefs), "" = normale Runde.
 @rpc("authority", "call_remote", "reliable")
-func receive_round_start(level_seed: int, map_id: String, points_to_win: int = 0, tiebreak_slots: Array = []) -> void:
-	round_start_received.emit(level_seed, map_id, points_to_win, tiebreak_slots)
+func receive_round_start(level_seed: int, map_id: String, points_to_win: int = 0, tiebreak_slots: Array = [], challenge_id: String = "") -> void:
+	round_start_received.emit(level_seed, map_id, points_to_win, tiebreak_slots, challenge_id)
 
 func send_snapshot(data: Dictionary) -> void:
 	if not is_host:

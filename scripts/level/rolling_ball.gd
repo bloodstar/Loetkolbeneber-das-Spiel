@@ -78,6 +78,8 @@ var lifetime: float = 0.0
 var health: float = 40.0
 var max_health: float = 40.0
 var last_attacker: Node = null
+## Challenge "Bällebad": kein Kontaktschaden, unzerstörbar, nichts zertrümmern.
+var harmless: bool = false
 
 var _radius: float = 17.0
 var _broken: bool = false
@@ -156,6 +158,9 @@ func _ready() -> void:
 		max_contacts_reported = 8
 
 func _draw() -> void:
+	# Draufsicht: ArenaView3D zeigt die Kugel als 3D-Kugel.
+	if ArenaMode.active:
+		return
 	var mat: Dictionary = MATERIALS.get(ball_material, MATERIALS["wood"])
 	var base: Color = mat["color"]
 	var dark: Color = mat["dark"]
@@ -192,10 +197,11 @@ func _physics_process(delta: float) -> void:
 	var source = last_attacker if is_instance_valid(last_attacker) else null
 	var damage_mult := float(mat["damage"]) * _size_mult(BIG_DAMAGE_MULT, 1.0, SMALL_DAMAGE_MULT)
 	var max_damage := float(mat["max_damage"]) * _size_mult(BIG_MAX_DAMAGE_MULT, 1.0, SMALL_MAX_DAMAGE_MULT)
-	PhysicsImpact.check_players(self, _previous_velocity, _hit_cooldowns, damage_mult, max_damage, float(mat["knockback"]), source)
-	if bool(mat["smash"]) and ball_size >= 0.75:
+	if not harmless:
+		PhysicsImpact.check_players(self, _previous_velocity, _hit_cooldowns, damage_mult, max_damage, float(mat["knockback"]), source)
+	if bool(mat["smash"]) and ball_size >= 0.75 and not harmless:
 		_smash_obstacles()
-	if ball_material == "wood" and _crack_cooldown <= 0.0:
+	if ball_material == "wood" and _crack_cooldown <= 0.0 and not harmless:
 		var speed_loss := _previous_velocity.length() - linear_velocity.length()
 		if speed_loss > WOOD_CRACK_SPEED:
 			_crack_cooldown = 0.4
@@ -224,6 +230,13 @@ func _apply_player_contacts() -> void:
 			if col.get_collider() != self:
 				continue
 			var normal := col.get_normal()
+			# Draufsicht: Es gibt kein Oben, Spieler schieben die Kugel einfach vor sich her.
+			if ArenaMode.active:
+				if bool(MATERIALS[ball_material].get("kick", false)):
+					_kick_from(player, normal)
+				else:
+					apply_central_force(-normal * PLAYER_PUSH * 1.6)
+				break
 			if bool(MATERIALS[ball_material].get("kick", false)) and normal.y >= -0.5:
 				_kick_from(player, normal)
 			elif normal.y < -0.5:
@@ -241,7 +254,8 @@ func _kick_from(player: CharacterBody2D, normal: Vector2) -> void:
 	_kick_cooldowns[key] = KICK_COOLDOWN
 	var dir := -normal
 	var speed := maxf(KICK_MIN_SPEED, player.velocity.dot(dir) * KICK_FACTOR)
-	apply_central_impulse((dir * speed + Vector2(0.0, -140.0)) * mass)
+	var lift := Vector2.ZERO if ArenaMode.active else Vector2(0.0, -140.0)
+	apply_central_impulse((dir * speed + lift) * mass)
 	SoundManager.play_sound("bounce", 0.2, -6.0)
 	NetFx.send("mobj", NetFx.mobj_args(self, "kick"))
 
@@ -296,7 +310,8 @@ func apply_blast(blast_position: Vector2, radius: float, force: float = 520.0, a
 	if direction == Vector2.ZERO:
 		direction = Vector2.UP
 	# Wie bei Kisten (Masse um 1): leichte Kugeln fliegen weiter als schwere.
-	apply_central_impulse((direction * force * falloff + Vector2(0.0, -90.0)) * float(MATERIALS[ball_material].get("push", 1.0)))
+	var lift := Vector2.ZERO if ArenaMode.active else Vector2(0.0, -90.0)
+	apply_central_impulse((direction * force * falloff + lift) * float(MATERIALS[ball_material].get("push", 1.0)))
 	_take_hit(BLAST_DAMAGE * falloff, attacker)
 
 func _take_hit(amount: float, attacker: Node) -> void:
@@ -304,6 +319,9 @@ func _take_hit(amount: float, attacker: Node) -> void:
 		return
 	if attacker != null and is_instance_valid(attacker):
 		last_attacker = attacker
+	if harmless:
+		_play_hit_feedback()
+		return
 	health -= amount
 	_play_hit_feedback()
 	NetFx.send("mobj", NetFx.mobj_args(self, "hit"))

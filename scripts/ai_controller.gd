@@ -97,6 +97,12 @@ func _is_hidden(p: Player) -> bool:
 func target_pos() -> Vector2:
 	return target.get_lure_target().global_position
 
+# Wohin der Bot läuft: in Challenges zum Ziel (Zone, Münze, Flagge), sonst
+# zum Gegner. Gezielt wird weiter auf target_pos().
+func nav_pos() -> Vector2:
+	var goal := ChallengeDirector.bot_goal(player)
+	return goal if goal != Vector2.INF else target_pos()
+
 func _find_nearest_opponent() -> Player:
 	var best: Player = null
 	var best_dist := INF
@@ -208,15 +214,18 @@ func _handle_navigation(_delta: float) -> void:
 	if _handle_target_climb(_delta):
 		return
 
-	var diff = target_pos() - player.global_position
+	var diff = nav_pos() - player.global_position
 	var dist_x = diff.x
 	var dist_y = diff.y
 	var current_spd = player._current_ground_speed()
+	var challenge_goal := ChallengeDirector.bot_goal(player) != Vector2.INF
 	
 	# Horizontal pursuit / spacing. Nahkämpfer gehen auf Schlagdistanz und
 	# weichen bei wenig Leben nicht zurück.
 	var move_input = 0.0
 	var keep_range: float = player.get_melee_reach() * 0.6 if player.is_melee else combat_range
+	if challenge_goal:
+		keep_range = 14.0
 	if abs(dist_x) > keep_range:
 		move_input = signf(dist_x)
 	elif not player.is_melee and abs(dist_x) < 80.0 and player.current_health < player.max_health * 0.4:
@@ -273,14 +282,19 @@ func _handle_target_climb(delta: float) -> bool:
 	_climb_retry_timer -= delta
 	var feet := _feet()
 	# Springt der Gegner nur kurz hoch, zählt seine letzte Standhöhe.
-	if target != _ground_target or target.is_on_floor() or _target_ground_y == INF:
+	var challenge_goal := ChallengeDirector.bot_goal(player)
+	if challenge_goal != Vector2.INF:
+		# Ziele der Challenge schweben knapp über einer Standfläche.
+		_ground_target = null
+		_target_ground_y = challenge_goal.y + 28.0
+	elif target != _ground_target or target.is_on_floor() or _target_ground_y == INF:
 		_ground_target = target
 		_target_ground_y = target_pos().y + BODY_FOOT_OFFSET * target.scale.y
 	var above := feet.y - _target_ground_y
 	if _climb_mode == "target":
 		# Laufenden Sprung zu Ende führen; am Boden neu entscheiden.
 		if not player.is_on_floor():
-			return _run_climb(delta, target_pos().x)
+			return _run_climb(delta, nav_pos().x)
 		if above < CLIMB_MIN_RISE * 0.5:
 			_reset_climb()
 			return false
@@ -289,7 +303,7 @@ func _handle_target_climb(delta: float) -> bool:
 	if _climb_mode != "target":
 		_reset_climb()
 		_climb_mode = "target"
-	if not _run_climb(delta, target_pos().x):
+	if not _run_climb(delta, nav_pos().x):
 		# Kein Weg nach oben: kurz normal weiterkämpfen, dann neu suchen.
 		_reset_climb()
 		_climb_retry_timer = CLIMB_RETRY_TIME

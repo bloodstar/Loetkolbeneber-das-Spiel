@@ -88,7 +88,9 @@ static func _authoritative() -> bool:
 	return not (Global.network_mode and NetworkManager.is_client)
 
 static func has_combo(src, combo: String) -> bool:
-	return src is Player and is_instance_valid(src) and (src as Player).element_combos.has(combo)
+	# Erst die Gültigkeit: "is" auf einem freigegebenen Objekt ist ein Fehler
+	# (z. B. Gift-Quelle, die per Respawn ersetzt wurde).
+	return is_instance_valid(src) and src is Player and (src as Player).element_combos.has(combo)
 
 static func _allowed(src, combo: String) -> bool:
 	return world_enabled() or has_combo(src, combo)

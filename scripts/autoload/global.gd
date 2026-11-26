@@ -170,6 +170,15 @@ var gamble_enabled: bool = false
 const PRE_DRAFT_MAX_PICKS: int = 10
 var pre_draft_picks: int = 0
 var pre_draft_random: bool = false
+# Lobby-Regel Challenge-Runden (ChallengeDefs): Zwischen normalen Runden kommt
+# ab und zu eine Challenge (Wettrennen, Bällebad, ...). Häufigkeit 0 = aus,
+# 1 = selten, 2 = oft. disabled_challenges schaltet einzelne Arten ab.
+var challenge_frequency: int = 0
+var disabled_challenges: Array[String] = []
+## Challenge der laufenden Runde ("" = normale Runde). Setzt main pro Runde.
+var current_challenge: String = ""
+## Normale Runden seit der letzten Challenge (keine zwei hintereinander).
+var _rounds_since_challenge: int = 0
 # Bot-Test (Balance): Alle aktiven Slots spielen als Bot, auch Spieler 1. Nur
 # lokal (nicht online) und bewusst NICHT in Loadouts/"Last" gespeichert, damit
 # niemand versehentlich ein normales Match nur mit Bots startet. Optional
@@ -1924,6 +1933,8 @@ func reset_match() -> void:
 			player_cards[i].clear()
 	reset_match_stats()
 	reset_mixed_views()
+	current_challenge = ""
+	_rounds_since_challenge = 0
 	tiebreak_slots.clear()
 	match_end_reason = ""
 	current_state = GameState.PLAYING
@@ -2764,6 +2775,68 @@ func set_pre_draft_random(enabled: bool) -> void:
 	draft_modifiers_changed.emit()
 	lobby_state_changed.emit()
 
+func set_challenge_frequency(value: int) -> void:
+	var clamped := clampi(value, 0, ChallengeDefs.FREQUENCY_NAMES.size() - 1)
+	if challenge_frequency == clamped:
+		return
+	challenge_frequency = clamped
+	draft_modifiers_changed.emit()
+	lobby_state_changed.emit()
+
+func is_challenge_enabled(id: String) -> bool:
+	return ChallengeDefs.DEFS.has(id) and not disabled_challenges.has(id)
+
+func set_challenge_enabled(id: String, enabled: bool) -> void:
+	if not ChallengeDefs.DEFS.has(id) or is_challenge_enabled(id) == enabled:
+		return
+	if enabled:
+		disabled_challenges.erase(id)
+	else:
+		disabled_challenges.append(id)
+	draft_modifiers_changed.emit()
+	lobby_state_changed.emit()
+
+func set_disabled_challenges(ids: Array) -> void:
+	var cleaned: Array[String] = []
+	for id in ids:
+		if ChallengeDefs.DEFS.has(str(id)) and not cleaned.has(str(id)):
+			cleaned.append(str(id))
+	if cleaned == disabled_challenges:
+		return
+	disabled_challenges = cleaned
+	draft_modifiers_changed.emit()
+	lobby_state_changed.emit()
+
+## Host: Ist die nächste Runde eine Challenge? "" = normale Runde. Nie in der
+## ersten Runde, nie zweimal hintereinander, nie im Stechen, in der Horde, im
+## Testraum oder beim Editor-Test. Zufall aus dem Runden-Seed.
+func roll_challenge(level_seed: int) -> String:
+	if challenge_frequency <= 0 or is_horde_mode() or is_tiebreak() or test_room_active:
+		return ""
+	if not ArenaMaps.test_map_id.is_empty() or not SideLevels.test_map_id.is_empty():
+		return ""
+	if _rounds_since_challenge < 1:
+		return ""
+	var pool: Array[String] = []
+	for id in ChallengeDefs.ORDER:
+		if is_challenge_enabled(id) and ChallengeDefs.is_possible(id, get_round_player_indices().size()):
+			pool.append(id)
+	if pool.is_empty():
+		return ""
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([maxi(1, level_seed), "challenge"])
+	if rng.randf() >= ChallengeDefs.chance_for(challenge_frequency):
+		return ""
+	return pool[rng.randi() % pool.size()]
+
+## Merkt sich, ob die gestartete Runde eine Challenge ist (Host und Clients).
+func note_round_challenge(id: String) -> void:
+	current_challenge = id
+	if id.is_empty():
+		_rounds_since_challenge += 1
+	else:
+		_rounds_since_challenge = 0
+
 func set_level_modifier_rate_percent(percent: int) -> void:
 	var clamped := clampi(
 		percent,
@@ -2895,6 +2968,8 @@ func get_current_lobby_settings() -> Dictionary:
 		"gamble_enabled": gamble_enabled,
 		"pre_draft_picks": pre_draft_picks,
 		"pre_draft_random": pre_draft_random,
+		"challenge_frequency": challenge_frequency,
+		"disabled_challenges": disabled_challenges.duplicate(),
 		"melee_enabled": melee_enabled,
 		"element_reactions_enabled": element_reactions_enabled,
 		"level_modifier_rate_percent": level_modifier_rate_percent,
@@ -2928,6 +3003,8 @@ func _default_lobby_settings() -> Dictionary:
 		"gamble_enabled": false,
 		"pre_draft_picks": 0,
 		"pre_draft_random": false,
+		"challenge_frequency": 0,
+		"disabled_challenges": [],
 		"melee_enabled": true,
 		"element_reactions_enabled": true,
 		"level_modifier_rate_percent": LevelModifierDefsClass.RATE_DEFAULT_PERCENT,
@@ -3194,6 +3271,9 @@ func apply_lobby_settings(settings: Dictionary) -> void:
 	set_gamble_enabled(bool(settings.get("gamble_enabled", false)))
 	set_pre_draft_picks(int(settings.get("pre_draft_picks", 0)))
 	set_pre_draft_random(bool(settings.get("pre_draft_random", false)))
+	set_challenge_frequency(int(settings.get("challenge_frequency", 0)))
+	var disabled_ch: Variant = settings.get("disabled_challenges", [])
+	set_disabled_challenges(disabled_ch if disabled_ch is Array else [])
 	set_melee_enabled(bool(settings.get("melee_enabled", true)))
 	set_element_reactions_enabled(bool(settings.get("element_reactions_enabled", true)))
 	set_level_modifier_rate_percent(

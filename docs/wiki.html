@@ -1453,6 +1453,75 @@ Schwerewelt, Mini-Chaos, Schadensrausch, Turboschweine, Luftakrobatik,
 Regeneration, Startschild und Zone. Die übrigen sind in der Arena
 vorerst aus.</p></li>
 </ul>
+<h3 id="challenge-runden">Challenge-Runden</h3>
+<p>Lobby-Regel <strong>Challenge-Runden</strong> (Regeln-Tab, unter
+Spielmodus &amp; Spielfeld): <em>Aus</em>, <em>Selten</em> (25 % pro
+Runde) oder <em>Oft</em> (45 %). Einzelne Challenges lassen sich
+abschalten. Nie in der ersten Runde, nie zweimal hintereinander, nie im
+Stechen und nicht in der Horde. Der Sieger (bzw. sein Team) bekommt die
+normalen Rundenpunkte, die Verlierer draften wie immer. <strong>Kills
+zählen in jeder Challenge normal.</strong> Challenge-Runden laufen ohne
+Level-Modifier und ohne Sudden Death.</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Challenge</th>
+<th style="text-align: left;">Karte</th>
+<th style="text-align: left;">Ziel</th>
+<th style="text-align: left;">Tod</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Wettrennen</strong></td>
+<td style="text-align: left;">Rundkurs (Draufsicht)</td>
+<td style="text-align: left;">3 Runden im Uhrzeigersinn, alle Tore der
+Reihe nach. Zeitlimit 3:00</td>
+<td style="text-align: left;">nach 2 s am letzten Tor</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>König des Hügels</strong></td>
+<td style="text-align: left;">normale Karte</td>
+<td style="text-align: left;">Zone halten, nur wer allein drin ist,
+füllt seine Leiste (20 s). Zeitlimit 1:30</td>
+<td style="text-align: left;">nach 2 s am Spawn</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Bällebad</strong></td>
+<td style="text-align: left;">Bällebad (Draufsicht)</td>
+<td style="text-align: left;">Jeder startet in einer Ecke, die Karte
+wird mit Bällen geflutet. Nach 60 s gewinnt, wer die meisten Bälle in
+seiner Ecke hat</td>
+<td style="text-align: left;">nach 2 s in der eigenen Ecke</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Münzjagd</strong></td>
+<td style="text-align: left;">normale Karte</td>
+<td style="text-align: left;">60 s Münzen sammeln, 7 liegen immer
+bereit</td>
+<td style="text-align: left;">nach 2 s, verliert die Hälfte (liegt 14 s
+herum)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Lava-Aufstieg</strong></td>
+<td style="text-align: left;">Lavaturm</td>
+<td style="text-align: left;">Die Lava hält nicht an. Wer zuerst die
+Flagge auf dem Gipfel berührt, gewinnt</td>
+<td style="text-align: left;">raus (normales Ausscheiden)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Hordenwelle</strong></td>
+<td style="text-align: left;">Arena-Karte (Draufsicht)</td>
+<td style="text-align: left;">75 s gegen die Horde, wer die meisten
+Gegner erlegt (Riese = 3), gewinnt</td>
+<td style="text-align: left;">nach 2 s am Spawn</td>
+</tr>
+</tbody>
+</table>
+<p>Code: <code>scripts/challenge/</code> (ChallengeDefs,
+ChallengeDirector, ChallengeHud). Laufzeit-Test mit Bots:
+<code>godot --headless res://tools/challenge_runtime_test.tscn</code>
+(optional <code>-- race hill ...</code>).</p>
 <hr />
 <h2 id="-karten-draft">🃏 Karten-Draft</h2>
 <p>Nach jeder verlorenen Runde bekommt jeder Verlierer <strong>Y
