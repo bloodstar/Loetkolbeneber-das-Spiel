@@ -405,6 +405,10 @@ const HANDICAP_PERCENT_STEP: int = 10
 const HANDICAP_PERCENT_DEFAULT: int = 100
 var player_hp_handicap: Array[int] = [100, 100, 100, 100, 100, 100]
 var player_damage_handicap: Array[int] = [100, 100, 100, 100, 100, 100]
+# Barriere automatisch: Ein Treffer zündet die Barriere selbst, wenn sie
+# bereit ist. Pro Spieler, steht im Handicaps-Reiter (kein Handicap im Sinne
+# von "ALLE 100 %", wird dort nicht zurückgesetzt).
+var player_barrier_auto: Array[bool] = [false, false, false, false, false, false]
 
 # Lobby-Loadouts: benannte Presets für alle Host-Einstellungen (Modus, Punkte,
 # Draft, Kartenpools, Bans, Map, HP/Schaden usw.). Sie werden lokal gespeichert.
@@ -2579,9 +2583,25 @@ func has_handicaps() -> bool:
 			return true
 	return false
 
-# Für Presets und Netzwerk-Sync: {"hp": [..6], "damage": [..6]}.
+func get_barrier_auto(slot: int) -> bool:
+	if slot < 1 or slot > MAX_PLAYERS:
+		return false
+	return player_barrier_auto[slot - 1]
+
+func set_barrier_auto(slot: int, enabled: bool) -> void:
+	if slot < 1 or slot > MAX_PLAYERS or player_barrier_auto[slot - 1] == enabled:
+		return
+	player_barrier_auto[slot - 1] = enabled
+	handicaps_changed.emit()
+
+# Host stellt alle Spieler ein, sonst jeder nur seinen eigenen Slot.
+func can_edit_barrier_auto(slot: int) -> bool:
+	return not network_mode or is_local_host() or slot == local_player_index
+
+# Für Presets und Netzwerk-Sync: {"hp": [..6], "damage": [..6], "barrier_auto": [..6]}.
 func get_handicaps() -> Dictionary:
-	return {"hp": player_hp_handicap.duplicate(), "damage": player_damage_handicap.duplicate()}
+	return {"hp": player_hp_handicap.duplicate(), "damage": player_damage_handicap.duplicate(),
+		"barrier_auto": player_barrier_auto.duplicate()}
 
 func set_handicaps(data: Variant) -> void:
 	var hp_list: Array = []
@@ -2599,6 +2619,15 @@ func set_handicaps(data: Variant) -> void:
 			changed = true
 		player_hp_handicap[i] = hp
 		player_damage_handicap[i] = dmg
+	# Barriere automatisch nur übernehmen, wenn mitgeschickt ("ALLE 100 %"
+	# und alte Presets lassen sie unverändert).
+	if data is Dictionary and (data as Dictionary).get("barrier_auto") is Array:
+		var auto_list: Array = (data as Dictionary).get("barrier_auto")
+		for i in range(MAX_PLAYERS):
+			var on := bool(auto_list[i]) if i < auto_list.size() else false
+			if player_barrier_auto[i] != on:
+				changed = true
+			player_barrier_auto[i] = on
 	if changed:
 		handicaps_changed.emit()
 

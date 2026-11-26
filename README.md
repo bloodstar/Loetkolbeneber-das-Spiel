@@ -576,7 +576,9 @@ Dazu kommen einzelne Reflexions-Karten im Pool Defensive: **Stachelweste**, **Ra
 | Rare | Barrierebombe, Heilzone, Druckwelle |
 | Epic | Konterblitz (+50 % auf reflektierte Schüsse), Barriere-Experte, Unzerbrechlich |
 
-**Minen:** Mit **Minenleger** (Rare) lässt jede Barriere eine Mine fallen, die auf dem Boden darunter liegen bleibt und auf Plattformen und Wippen mitfährt. Gegner sehen sie nicht (online gar nicht, am selben Bildschirm nur schwach). Nach 2 s ist sie scharf. Läuft ein Gegner darüber, blinkt sie und explodiert 1,5 s später: 50 Schaden, 2 Felder Explosionsradius, nur gegen Gegner. Höchstens 8 Minen pro Spieler, bei der neunten verschwindet die älteste. Nur mit Minenleger im Deck gibt es **Minenschaden** (Rare, +50 Schaden) und **Minenreichweite** (Uncommon, +1 Feld Explosionsradius). Evolution A **Sofortzünder** (Epic) lässt Minen ohne Verzögerung explodieren.
+**Minen:** Mit **Minenleger** (Rare) lässt jede Barriere eine Mine fallen, die auf dem Boden darunter liegen bleibt und auf Plattformen und Wippen mitfährt. Gegner sehen sie nicht (online gar nicht, am selben Bildschirm nur schwach). Nach 2 s ist sie scharf. Läuft ein Gegner darüber, blinkt sie und explodiert 1,5 s später: 50 Schaden, 2 Felder Explosionsradius, nur gegen Gegner. Höchstens 8 Minen pro Spieler, bei der neunten verschwindet die älteste. Nur mit Minenleger im Deck gibt es **Minenschaden** (Rare, +50 Schaden) und **Minenreichweite** (Uncommon, +1 Feld Explosionsradius). Evolution A **Sofortzünder** (Epic) lässt Minen ohne Verzögerung explodieren. Im Horden-Modus lösen Bodengegner die Minen aus und nehmen Schaden, Adler fliegen darüber.
+
+**Barriere automatisch:** Im Lobby-Reiter Handicaps hat jeder Spieler den Schalter BARRIERE AUTO (online stellt jeder seinen eigenen, der Host alle). Ist er an und die Barriere bereit, zündet ein Treffer sie selbst und sie fängt ihn ab. Gift- und Brandticks und eigener Schaden lösen sie nicht aus. Praktisch im Horden-Modus.
 
 ### Nahkampf-Karten
 

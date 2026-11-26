@@ -174,7 +174,25 @@ func _enemy_on_mine() -> bool:
 		var d: Vector2 = global_position - center
 		if absf(d.x) <= half.x + BODY_RADIUS and absf(d.y) <= half.y + BODY_RADIUS:
 			return true
+	# Horden-Modus: Bodengegner (Wölfe, Bären …) lösen Minen aus, Adler in der
+	# Luft fliegen darüber.
+	for e in _horde_enemies():
+		if e.arena_z <= HORDE_TRIGGER_HEIGHT \
+				and global_position.distance_to(e.global_position) <= e.radius + BODY_RADIUS:
+			return true
 	return false
+
+const HORDE_TRIGGER_HEIGHT: float = 40.0
+
+func _horde_enemies() -> Array:
+	var result: Array = []
+	if not HordeDirector.is_active():
+		return result
+	for node in get_tree().get_nodes_in_group(HordeEnemy.GROUP):
+		var e := node as HordeEnemy
+		if e != null and e.is_alive() and not e.is_replica:
+			result.append(e)
+	return result
 
 func _is_enemy(p) -> bool:
 	return p is Player and is_instance_valid(p) and p.current_health > 0.0 \
@@ -207,6 +225,13 @@ func _explode() -> void:
 		if dir == Vector2.ZERO:
 			dir = Vector2.UP
 		p.take_damage(damage, dir * KNOCKBACK, source)
+	for e in _horde_enemies():
+		if global_position.distance_to(e.global_position) > radius + e.radius:
+			continue
+		var edir: Vector2 = (e.global_position - global_position).normalized()
+		if edir == Vector2.ZERO:
+			edir = Vector2.UP
+		e.take_damage(damage, edir * KNOCKBACK, source)
 	queue_free()
 
 # Ohne Explosion entfernen (z. B. älteste Mine, wenn das Limit erreicht ist).

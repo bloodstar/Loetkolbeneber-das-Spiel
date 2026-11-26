@@ -669,6 +669,8 @@ var block_timer: float = 0.0
 var block_duration: float = BLOCK_BASE_DURATION
 var block_cooldown: float = BLOCK_BASE_COOLDOWN
 var block_cooldown_timer: float = 0.0
+# true während Gift-/Brandticks (lösen "Barriere automatisch" nicht aus).
+var _in_dot_tick: bool = false
 # Die Barriere hält nur eine begrenzte Zahl an Treffern aus und zerbricht
 # danach. Treffer derselben Quelle kurz hintereinander (Schrotsalve,
 # Rakete + Explosion) zählen als einer; Kleinstschaden (Gift-Ticks) zählt nicht.
@@ -5457,6 +5459,12 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null
 		damage_received.emit(amount, source, "immune")
 		return
 
+	# Lobby-Option "Barriere automatisch": Ist die Barriere bereit, zündet ein
+	# Treffer sie selbst und wird gleich von ihr abgefangen. Gift- und
+	# Brandticks und eigener Schaden lösen sie nicht aus.
+	if not is_blocking and amount > 0.0 and not _in_dot_tick and source != self \
+			and Global.get_barrier_auto(player_index):
+		start_block()
 	# Universeller Block verhindert Schaden vollstÃƒÂ¤ndig; Projektile werden in
 	# der Physik-Schleife reflektiert.
 	if is_blocking:
@@ -6494,7 +6502,9 @@ func _handle_timers(delta: float) -> void:
 			poison_tick_timer = 0.0
 			var plague_bonus := ElementReactions.poison_tick_bonus(self)
 			poison_ticks_left -= 1
+			_in_dot_tick = true
 			take_damage(poison_damage_per_tick + plague_bonus)
+			_in_dot_tick = false
 			_fx("sound", {"snd": ["poison", 0.2, POISON_TICK_VOLUME_DB]})
 			_refresh_poison_visual()
 
@@ -6504,7 +6514,9 @@ func _handle_timers(delta: float) -> void:
 		if burn_tick_timer >= BURN_TICK_INTERVAL:
 			burn_tick_timer = 0.0
 			burn_ticks_left -= 1
+			_in_dot_tick = true
 			take_damage(burn_taken_per_tick)
+			_in_dot_tick = false
 			ElementReactions.on_burn_tick(self)
 
 	# Turm-Talent: automatisch neue TÃƒÂ¼rme erzeugen.

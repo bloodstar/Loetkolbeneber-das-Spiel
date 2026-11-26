@@ -797,6 +797,21 @@ func _apply_lobby_sync(data: Dictionary) -> void:
 	Global.set_base_damage(float(data.get("base_damage", Global.base_damage)))
 	Global.lobby_state_changed.emit()
 
+# Client schaltet "Barriere automatisch" für seinen eigenen Slot.
+func request_barrier_auto(enabled: bool) -> void:
+	if is_client:
+		client_barrier_auto.rpc_id(1, enabled)
+
+@rpc("any_peer", "call_remote", "reliable")
+func client_barrier_auto(enabled: bool) -> void:
+	if not is_host:
+		return
+	var slot := get_slot_for_peer(multiplayer.get_remote_sender_id())
+	if slot == 0:
+		return
+	Global.set_barrier_auto(slot, enabled)
+	sync_lobby()
+
 # Client meldet eigene Heldenwahl / Bereitschaft an den Host.
 func request_hero(hero_id: String) -> void:
 	if is_client:

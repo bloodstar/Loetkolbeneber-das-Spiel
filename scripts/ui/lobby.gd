@@ -3726,6 +3726,13 @@ func _create_handicap_row(slot: int) -> PanelContainer:
 	var dmg := _add_handicap_slider(row, "SCHADEN", "Schaden, den dieser Spieler anderen zufügt.")
 	(dmg[0] as HSlider).value_changed.connect(_on_handicap_damage_changed.bind(slot))
 
+	var auto := CheckButton.new()
+	auto.text = "BARRIERE AUTO"
+	auto.tooltip_text = "Barriere automatisch: Ist sie bereit, zündet ein Treffer sie selbst und sie fängt ihn ab (praktisch im Horden-Modus). Gift- und Brandticks lösen sie nicht aus. Jeder Spieler stellt das für sich ein, der Host für alle."
+	auto.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	auto.toggled.connect(_on_barrier_auto_toggled.bind(slot))
+	row.add_child(auto)
+
 	var reset := Button.new()
 	reset.text = "100 %"
 	reset.tooltip_text = "Handicap dieses Spielers zurücksetzen."
@@ -3742,6 +3749,7 @@ func _create_handicap_row(slot: int) -> PanelContainer:
 		"dmg_slider": dmg[0],
 		"dmg_value": dmg[1],
 		"reset": reset,
+		"barrier_auto": auto,
 	}
 	return card
 
@@ -3821,6 +3829,9 @@ func _refresh_handicap_controls() -> void:
 			var value := nodes[pair[1]] as Label
 			value.text = "%d %%" % int(pair[2])
 			value.add_theme_color_override("font_color", _handicap_value_color(int(pair[2])))
+		var auto := nodes["barrier_auto"] as CheckButton
+		auto.set_pressed_no_signal(Global.get_barrier_auto(slot))
+		auto.disabled = not Global.can_edit_barrier_auto(slot)
 		var reset := nodes["reset"] as Button
 		reset.disabled = not is_host \
 			or (hp_pct == Global.HANDICAP_PERCENT_DEFAULT and dmg_pct == Global.HANDICAP_PERCENT_DEFAULT)
@@ -3832,7 +3843,7 @@ func _refresh_handicap_controls() -> void:
 	if changed_count > 0:
 		text = "%d Spieler mit Handicap." % changed_count
 	if not is_host:
-		text += "  |  Nur der Host kann Handicaps einstellen."
+		text += "  |  Nur der Host kann Handicaps einstellen, BARRIERE AUTO stellt jeder für sich."
 	handicap_summary_label.text = text
 	var idx := tabs.get_tab_idx_from_control(handicaps_tab)
 	if idx >= 0:
@@ -3849,6 +3860,15 @@ func _on_handicap_damage_changed(value: float, slot: int) -> void:
 		_refresh_handicap_controls()
 		return
 	Global.set_damage_handicap(slot, int(value))
+
+func _on_barrier_auto_toggled(enabled: bool, slot: int) -> void:
+	if not Global.can_edit_barrier_auto(slot):
+		_refresh_handicap_controls()
+		return
+	if Global.network_mode and not Global.is_local_host():
+		NetworkManager.request_barrier_auto(enabled)
+	Global.set_barrier_auto(slot, enabled)
+	SoundManager.play_sound("click")
 
 func _on_handicap_slot_reset(slot: int) -> void:
 	if not Global.is_local_host():

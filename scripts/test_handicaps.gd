@@ -7,7 +7,11 @@ extends Node2D
 func _ready() -> void:
 	print("[TEST] Handicaps")
 	Global.lobby_autosave_enabled = false
+	# Gespeicherter Modus (z. B. Horde = alle im selben Team) darf nicht stören.
+	Global.set_match_mode(Global.MATCH_MODE_FFA)
 	Global.reset_handicaps()
+	for slot in range(1, Global.MAX_PLAYERS + 1):
+		Global.set_barrier_auto(slot, false)
 	get_tree().create_timer(20.0, true).timeout.connect(func():
 		print("[TEST] TIMEOUT – breche ab.")
 		get_tree().quit(1)
@@ -38,6 +42,9 @@ func _ready() -> void:
 	var p2: Player = main.get_player(2)
 	assert(p1 != null and p2 != null, "Two players spawned")
 
+	# Gespeicherte Lobby-Werte ("Last") dürfen den Test nicht beeinflussen.
+	for slot in range(1, Global.MAX_PLAYERS + 1):
+		Global.set_barrier_auto(slot, false)
 	# Schaden: Faktor des Angreifers.
 	p2.is_invulnerable = false
 	p2.is_blocking = false
@@ -56,6 +63,22 @@ func _ready() -> void:
 	p2.take_damage(10.0, Vector2.ZERO, p1)
 	assert(is_equal_approx(p2.current_health, 965.0), "Target's own damage handicap does not reduce damage taken")
 	Global.reset_handicaps()
+
+	# Barriere automatisch: Treffer zündet die bereite Barriere und wird abgefangen.
+	Global.set_barrier_auto(2, true)
+	Global.reset_handicaps()
+	assert(Global.get_barrier_auto(2), "ALLE 100 % keeps Barriere automatisch")
+	assert(Global.get_handicaps().has("barrier_auto"), "Barriere automatisch is synced with the handicaps")
+	p2.block_cooldown_timer = 0.0
+	p2.control_enabled = true
+	p2.stun_timer = 0.0
+	p2.take_damage(10.0, Vector2.ZERO, p1)
+	assert(p2.is_blocking and is_equal_approx(p2.current_health, 965.0), "Barriere automatisch blocks the hit")
+	p2._end_block()
+	p2.take_damage(10.0, Vector2.ZERO, p1)
+	assert(not p2.is_blocking and is_equal_approx(p2.current_health, 955.0), "No auto barrier while on cooldown")
+	Global.set_barrier_auto(2, false)
+	p2.block_cooldown_timer = 0.0
 
 	# Leben: Faktor auf die maximalen Leben.
 	p1.apply_stats()
