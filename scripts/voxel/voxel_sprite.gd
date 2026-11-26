@@ -35,6 +35,9 @@ var airborne: bool = false
 var px_per_unit: float = PX_PER_UNIT
 ## Zielwinkel ohne Spieler (+ = hoch), z. B. Hauptmenü.
 var aim_pitch: float = 0.0
+## Zusätzliche Drehung um die Hochachse (Bogenmaß), z. B. wenn die
+## Lobby-Vorschau mit der Maus gedreht wird. 0 = normale Dreiviertel-Ansicht.
+var user_yaw: float = 0.0
 var _pending_spec: Dictionary = {}
 
 var _vp: SubViewport
@@ -112,7 +115,7 @@ func _process(delta: float) -> void:
 			boar.aim_pitch = clampf(atan2(-aim.y, absf(aim.x)), -1.2, 1.2)
 	else:
 		boar.aim_pitch = aim_pitch
-	boar.rotation.y = deg_to_rad(180.0 + YAW_TOWARD_CAMERA if facing_left else -YAW_TOWARD_CAMERA)
+	boar.rotation.y = deg_to_rad(180.0 + YAW_TOWARD_CAMERA if facing_left else -YAW_TOWARD_CAMERA) + user_yaw
 	boar.animate(delta, moving, airborne, 1.0, Vector2.ZERO, 0.0, player.velocity.y if player != null and is_instance_valid(player) else 0.0)
 	queue_redraw()
 

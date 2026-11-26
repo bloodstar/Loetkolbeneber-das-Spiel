@@ -563,6 +563,7 @@ func _build_showcase(parent: Control) -> void:
 	showcase_pig.follow_parent_motion = false
 	showcase_actor.add_child(showcase_pig)
 	showcase_voxel = _attach_voxel_preview(showcase_pig)
+	_enable_preview_drag_rotate(canvas, showcase_voxel)
 
 	showcase_wand_pivot = Node2D.new()
 	showcase_wand_pivot.position = -feet_offset
@@ -787,6 +788,36 @@ func _create_hero_tile(hero: HeroData) -> Button:
 		"style_selected": style_selected,
 	}
 	return btn
+
+# Drehung pro Pixel Mausweg beim Ziehen über die Vorschau (Bogenmaß).
+const PREVIEW_DRAG_ROTATE_SPEED: float = 0.012
+
+# Vorschau-Fläche mit der Maus drehbar machen: linke Maustaste gedrückt
+# halten und seitlich ziehen dreht den Voxel-Eber um die Hochachse,
+# Doppelklick stellt die normale Ansicht wieder her.
+func _enable_preview_drag_rotate(canvas: Control, sprite: Node) -> void:
+	if canvas == null or sprite == null or not ("user_yaw" in sprite):
+		return
+	canvas.mouse_filter = Control.MOUSE_FILTER_STOP
+	canvas.mouse_default_cursor_shape = Control.CURSOR_HSIZE
+	canvas.tooltip_text = "Ziehen zum Drehen · Doppelklick setzt zurück"
+	canvas.gui_input.connect(_on_preview_drag_input.bind(canvas, sprite))
+
+func _on_preview_drag_input(event: InputEvent, canvas: Control, sprite: Node) -> void:
+	if not is_instance_valid(sprite):
+		return
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+			if mb.double_click:
+				sprite.set("user_yaw", 0.0)
+			canvas.accept_event()
+	elif event is InputEventMouseMotion:
+		var mm := event as InputEventMouseMotion
+		if mm.button_mask & MOUSE_BUTTON_MASK_LEFT:
+			var yaw: float = float(sprite.get("user_yaw")) + mm.relative.x * PREVIEW_DRAG_ROTATE_SPEED
+			sprite.set("user_yaw", wrapf(yaw, -PI, PI))
+			canvas.accept_event()
 
 # Voxel-Eber an ein 2D-Vorschau-Schwein hängen, sofern der Voxel-Umbau im
 # Projekt ist. Gibt den VoxelSprite zurück oder null.
@@ -1345,6 +1376,7 @@ func _build_character_tab() -> void:
 	character_preview_voxel = VoxelSprite.new()
 	character_preview_voxel.px_per_unit = 6.0
 	character_preview.add_child(character_preview_voxel)
+	_enable_preview_drag_rotate(preview_canvas, character_preview_voxel)
 
 	character_preview_wand_pivot = Node2D.new()
 	character_preview_wand_pivot.position = Vector2(140, 176)
