@@ -67,32 +67,32 @@ const HERO_TITLES: Dictionary = {
 const HERO_ROUND_GOAL: int = 15
 
 # Reihenfolge = Anzeige in der Erfolgsliste.
-# id, name, desc, counter, goal, title ("" = kein Titel), unlock ([] oder [Kategorie, ID]).
+# id, name, desc, done (Text der Einblendung), counter, goal, title ("" = kein Titel), unlock ([] oder [Kategorie, ID]).
 const ACHIEVEMENTS: Array = [
-	{"id": "first_blood", "name": "Erstes Blut", "desc": "Erziele deinen ersten Kill.", "counter": "kills", "goal": 1, "title": "Ersttäter", "unlock": []},
-	{"id": "first_win", "name": "Erster Sieg", "desc": "Gewinne ein Match.", "counter": "matches_won", "goal": 1, "title": "Frischling", "unlock": ["tusk", "saber"]},
-	{"id": "regular", "name": "Stammgast", "desc": "Spiele 10 Matches zu Ende.", "counter": "matches_played", "goal": 10, "title": "Stammgast", "unlock": ["ears", "bat"]},
-	{"id": "rounds_25", "name": "Rundenjäger", "desc": "Gewinne 25 Runden.", "counter": "rounds_won", "goal": 25, "title": "Rundenjäger", "unlock": ["hair", "mohawk"]},
-	{"id": "kills_50", "name": "Schweinejäger", "desc": "Erziele 50 Kills.", "counter": "kills", "goal": 50, "title": "Schweinejäger", "unlock": ["tip", "diamond"]},
-	{"id": "triple", "name": "Dreifach-Eber", "desc": "Erziele 3 Kills in einer Runde.", "counter": "multikill_rounds", "goal": 1, "title": "Dreifach-Eber", "unlock": []},
-	{"id": "flawless", "name": "Unberührbar", "desc": "Gewinne eine Runde, ohne Schaden zu nehmen.", "counter": "flawless_rounds", "goal": 1, "title": "Unberührbar", "unlock": []},
-	{"id": "damage_10k", "name": "Feuerwerker", "desc": "Verursache insgesamt 10.000 Schaden.", "counter": "damage_dealt", "goal": 10000, "title": "Feuerwerker", "unlock": ["tail", "bushy"]},
-	{"id": "healer", "name": "Feldsanitäter", "desc": "Heile insgesamt 3.000 HP.", "counter": "healing_done", "goal": 3000, "title": "Feldsanitäter", "unlock": ["snout", "heart"]},
-	{"id": "blocker", "name": "Bollwerk", "desc": "Blocke 150 Treffer mit der Barriere.", "counter": "blocked_hits", "goal": 150, "title": "Bollwerk", "unlock": ["body", "boar"]},
-	{"id": "brawler", "name": "Raufbold", "desc": "Verursache 4.000 Nahkampfschaden.", "counter": "melee_damage", "goal": 4000, "title": "Raufbold", "unlock": ["hair", "mane"]},
-	{"id": "ability_fan", "name": "Fähigkeitsfanatiker", "desc": "Verursache 8.000 Schaden mit Heldenfähigkeiten.", "counter": "ability_damage", "goal": 8000, "title": "Fähigkeitsfanatiker", "unlock": ["tip", "spark"]},
-	{"id": "potato_king", "name": "Kartoffelkönig", "desc": "Gewinne 3 Runden mit der Heißen Kartoffel.", "counter": "hot_potato_wins", "goal": 3, "title": "Kartoffelkönig", "unlock": []},
-	{"id": "zone_runner", "name": "Zonenläufer", "desc": "Gewinne 5 Runden mit schrumpfender Zone.", "counter": "zone_wins", "goal": 5, "title": "Zonenläufer", "unlock": []},
-	{"id": "arena_lord", "name": "Arenafürst", "desc": "Gewinne 10 Runden im Arena-Modus.", "counter": "arena_wins", "goal": 10, "title": "Arenafürst", "unlock": []},
-	{"id": "nerves", "name": "Nervenstark", "desc": "Gewinne 5 Runden im Sudden Death.", "counter": "sudden_death_wins", "goal": 5, "title": "Nervenstark", "unlock": []},
-	{"id": "card_shark", "name": "Kartenhai", "desc": "Halte 12 Karten in einem Match.", "counter": "max_cards_match", "goal": 12, "title": "Kartenhai", "unlock": []},
-	{"id": "flawless_10", "name": "Unantastbar", "desc": "Gewinne 10 Runden, ohne Schaden zu nehmen.", "counter": "flawless_rounds", "goal": 10, "title": "Unantastbar", "unlock": ["tusk", "double"]},
-	{"id": "winner_10", "name": "Seriensieger", "desc": "Gewinne 10 Matches.", "counter": "matches_won", "goal": 10, "title": "Seriensieger", "unlock": ["top", "robe"]},
-	{"id": "kills_250", "name": "Keilerkönig", "desc": "Erziele 250 Kills.", "counter": "kills", "goal": 250, "title": "Keilerkönig", "unlock": ["eyes", "angry"]},
-	{"id": "allrounder", "name": "Tausendsassa", "desc": "Gewinne mit jedem Helden mindestens ein Match.", "counter": "heroes_match_won", "goal": 8, "title": "Tausendsassa", "unlock": []},
-	{"id": "veteran", "name": "Urgestein", "desc": "Spiele 100 Matches zu Ende.", "counter": "matches_played", "goal": 100, "title": "Urgestein", "unlock": []},
-	{"id": "winner_50", "name": "Großmeister", "desc": "Gewinne 50 Matches.", "counter": "matches_won", "goal": 50, "title": "Großmeister des Lötens", "unlock": ["tip", "blaze"]},
-	{"id": "kills_1000", "name": "Legende", "desc": "Erziele 1.000 Kills.", "counter": "kills", "goal": 1000, "title": "Legende vom Lötkolben", "unlock": []},
+	{"id": "first_blood", "name": "Erstes Blut", "desc": "Erziele deinen ersten Kill.", "done": "Deinen ersten Kill erzielt!", "counter": "kills", "goal": 1, "title": "Ersttäter", "unlock": []},
+	{"id": "first_win", "name": "Erster Sieg", "desc": "Gewinne ein Match.", "done": "Dein erstes Match gewonnen!", "counter": "matches_won", "goal": 1, "title": "Frischling", "unlock": ["tusk", "saber"]},
+	{"id": "regular", "name": "Stammgast", "desc": "Spiele 10 Matches zu Ende.", "done": "10 Matches zu Ende gespielt!", "counter": "matches_played", "goal": 10, "title": "Stammgast", "unlock": ["ears", "bat"]},
+	{"id": "rounds_25", "name": "Rundenjäger", "desc": "Gewinne 25 Runden.", "done": "25 Runden gewonnen!", "counter": "rounds_won", "goal": 25, "title": "Rundenjäger", "unlock": ["hair", "mohawk"]},
+	{"id": "kills_50", "name": "Schweinejäger", "desc": "Erziele 50 Kills.", "done": "50 Kills erzielt!", "counter": "kills", "goal": 50, "title": "Schweinejäger", "unlock": ["tip", "diamond"]},
+	{"id": "triple", "name": "Dreifach-Eber", "desc": "Erziele 3 Kills in einer Runde.", "done": "3 Kills in einer Runde erzielt!", "counter": "multikill_rounds", "goal": 1, "title": "Dreifach-Eber", "unlock": []},
+	{"id": "flawless", "name": "Unberührbar", "desc": "Gewinne eine Runde, ohne Schaden zu nehmen.", "done": "Eine Runde ohne Schaden gewonnen!", "counter": "flawless_rounds", "goal": 1, "title": "Unberührbar", "unlock": []},
+	{"id": "damage_10k", "name": "Feuerwerker", "desc": "Verursache insgesamt 10.000 Schaden.", "done": "Insgesamt 10.000 Schaden verursacht!", "counter": "damage_dealt", "goal": 10000, "title": "Feuerwerker", "unlock": ["tail", "bushy"]},
+	{"id": "healer", "name": "Feldsanitäter", "desc": "Heile insgesamt 3.000 HP.", "done": "Insgesamt 3.000 HP geheilt!", "counter": "healing_done", "goal": 3000, "title": "Feldsanitäter", "unlock": ["snout", "heart"]},
+	{"id": "blocker", "name": "Bollwerk", "desc": "Blocke 150 Treffer mit der Barriere.", "done": "150 Treffer mit der Barriere geblockt!", "counter": "blocked_hits", "goal": 150, "title": "Bollwerk", "unlock": ["body", "boar"]},
+	{"id": "brawler", "name": "Raufbold", "desc": "Verursache 4.000 Nahkampfschaden.", "done": "4.000 Nahkampfschaden verursacht!", "counter": "melee_damage", "goal": 4000, "title": "Raufbold", "unlock": ["hair", "mane"]},
+	{"id": "ability_fan", "name": "Fähigkeitsfanatiker", "desc": "Verursache 8.000 Schaden mit Heldenfähigkeiten.", "done": "8.000 Schaden mit Heldenfähigkeiten verursacht!", "counter": "ability_damage", "goal": 8000, "title": "Fähigkeitsfanatiker", "unlock": ["tip", "spark"]},
+	{"id": "potato_king", "name": "Kartoffelkönig", "desc": "Gewinne 3 Runden mit der Heißen Kartoffel.", "done": "3 Runden mit der Heißen Kartoffel gewonnen!", "counter": "hot_potato_wins", "goal": 3, "title": "Kartoffelkönig", "unlock": []},
+	{"id": "zone_runner", "name": "Zonenläufer", "desc": "Gewinne 5 Runden mit schrumpfender Zone.", "done": "5 Runden mit schrumpfender Zone gewonnen!", "counter": "zone_wins", "goal": 5, "title": "Zonenläufer", "unlock": []},
+	{"id": "arena_lord", "name": "Arenafürst", "desc": "Gewinne 10 Runden im Arena-Modus.", "done": "10 Runden im Arena-Modus gewonnen!", "counter": "arena_wins", "goal": 10, "title": "Arenafürst", "unlock": []},
+	{"id": "nerves", "name": "Nervenstark", "desc": "Gewinne 5 Runden im Sudden Death.", "done": "5 Runden im Sudden Death gewonnen!", "counter": "sudden_death_wins", "goal": 5, "title": "Nervenstark", "unlock": []},
+	{"id": "card_shark", "name": "Kartenhai", "desc": "Halte 12 Karten in einem Match.", "done": "12 Karten in einem Match gehalten!", "counter": "max_cards_match", "goal": 12, "title": "Kartenhai", "unlock": []},
+	{"id": "flawless_10", "name": "Unantastbar", "desc": "Gewinne 10 Runden, ohne Schaden zu nehmen.", "done": "10 Runden ohne Schaden gewonnen!", "counter": "flawless_rounds", "goal": 10, "title": "Unantastbar", "unlock": ["tusk", "double"]},
+	{"id": "winner_10", "name": "Seriensieger", "desc": "Gewinne 10 Matches.", "done": "10 Matches gewonnen!", "counter": "matches_won", "goal": 10, "title": "Seriensieger", "unlock": ["top", "robe"]},
+	{"id": "kills_250", "name": "Keilerkönig", "desc": "Erziele 250 Kills.", "done": "250 Kills erzielt!", "counter": "kills", "goal": 250, "title": "Keilerkönig", "unlock": ["eyes", "angry"]},
+	{"id": "allrounder", "name": "Tausendsassa", "desc": "Gewinne mit jedem Helden mindestens ein Match.", "done": "Mit jedem Helden ein Match gewonnen!", "counter": "heroes_match_won", "goal": 8, "title": "Tausendsassa", "unlock": []},
+	{"id": "veteran", "name": "Urgestein", "desc": "Spiele 100 Matches zu Ende.", "done": "100 Matches zu Ende gespielt!", "counter": "matches_played", "goal": 100, "title": "Urgestein", "unlock": []},
+	{"id": "winner_50", "name": "Großmeister", "desc": "Gewinne 50 Matches.", "done": "50 Matches gewonnen!", "counter": "matches_won", "goal": 50, "title": "Großmeister des Lötens", "unlock": ["tip", "blaze"]},
+	{"id": "kills_1000", "name": "Legende", "desc": "Erziele 1.000 Kills.", "done": "1.000 Kills erzielt!", "counter": "kills", "goal": 1000, "title": "Legende vom Lötkolben", "unlock": []},
 ]
 
 # Lebenszeit-Zähler, ids freigeschalteter Erfolge -> Zeitstempel, Rundensiege pro Held.
@@ -146,6 +146,7 @@ func _build_achievement_defs() -> void:
 			"id": "hero_" + str(hero_id),
 			"name": "%s-Profi" % hero_name,
 			"desc": "Gewinne %d Runden mit %s." % [HERO_ROUND_GOAL, hero_name],
+			"done": "%d Runden mit %s gewonnen!" % [HERO_ROUND_GOAL, hero_name],
 			"counter": "hero_rounds:" + str(hero_id),
 			"goal": HERO_ROUND_GOAL,
 			"title": HERO_TITLES[hero_id],
@@ -263,6 +264,13 @@ func set_unlock_all_cosmetics(value: bool) -> void:
 	unlock_all_cosmetics = value
 	save_progress()
 	progress_changed.emit()
+
+# Was man geschafft hat, für die Einblendung („12 Karten in einem Match gehalten!“).
+func get_done_text(entry: Dictionary) -> String:
+	var text := str(entry.get("done", ""))
+	if text.is_empty():
+		text = str(entry.get("desc", entry.get("name", "")))
+	return text
 
 func get_reward_text(entry: Dictionary) -> String:
 	var parts: PackedStringArray = []
@@ -575,22 +583,33 @@ func _next_toast() -> void:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 2)
 	panel.add_child(column)
+	# Kopfzeile mit Erfolgsname, groß darunter, was man geschafft hat,
+	# dann die Belohnung. Ist der Titel gleich dem Namen, steht er nur einmal da.
+	var achievement_name := str(entry["name"])
+	var title_text := str(entry.get("title", ""))
 	var head := Label.new()
 	head.text = "🏆 ERFOLG FREIGESCHALTET"
+	if title_text != achievement_name:
+		head.text += ": " + achievement_name
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	head.add_theme_font_size_override("font_size", UiTheme.FS_S)
 	head.add_theme_color_override("font_color", UiTheme.GOLD)
 	column.add_child(head)
-	var name_label := Label.new()
-	name_label.text = str(entry["name"])
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", UiTheme.FS_XL)
-	name_label.add_theme_color_override("font_color", UiTheme.TEXT)
-	column.add_child(name_label)
-	var reward := get_reward_text(entry)
-	if not reward.is_empty():
+	var done_label := Label.new()
+	done_label.text = get_done_text(entry)
+	done_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	done_label.add_theme_font_size_override("font_size", UiTheme.FS_XL)
+	done_label.add_theme_color_override("font_color", UiTheme.TEXT)
+	column.add_child(done_label)
+	var reward_lines: PackedStringArray = []
+	if not title_text.is_empty():
+		reward_lines.append("Neuer Titel: „%s“" % title_text)
+	var unlock: Array = entry.get("unlock", [])
+	if unlock.size() == 2:
+		reward_lines.append("Freigeschaltet: " + get_unlock_label(str(unlock[0]), str(unlock[1])))
+	for line in reward_lines:
 		var reward_label := Label.new()
-		reward_label.text = "Belohnung: " + reward
+		reward_label.text = line
 		reward_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		reward_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
 		reward_label.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
@@ -598,7 +617,7 @@ func _next_toast() -> void:
 	_toast_box.add_child(panel)
 	SoundManager.play_sound("coin", 0.0, 0.0)
 	# Echtzeit (ignore_time_scale), damit die Kill-Cam-Zeitlupe nicht bremst.
-	await get_tree().create_timer(4.0, true, false, true).timeout
+	await get_tree().create_timer(5.0, true, false, true).timeout
 	panel.queue_free()
 	await get_tree().create_timer(0.25, true, false, true).timeout
 	_next_toast()
