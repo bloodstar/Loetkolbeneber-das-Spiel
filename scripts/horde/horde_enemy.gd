@@ -608,7 +608,7 @@ func _apply_damage(amount: float, source) -> void:
 		if source.dealing_ability_damage:
 			Global.add_match_stat(source.player_index, "ability_damage", dealt)
 		if director != null:
-			director.note_damage(source.player_index, dealt)
+			director.note_damage(source.player_index, dealt, self)
 	if current_health <= 0.0:
 		_die(source if source is Player else _kill_credit)
 

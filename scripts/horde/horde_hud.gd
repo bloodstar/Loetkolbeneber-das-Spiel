@@ -25,6 +25,8 @@ var _end_panel: PanelContainer
 var _end_title: Label
 var _end_stats: Label
 var _end_table: GridContainer
+var _end_bosses: Label
+var _end_honors: VBoxContainer
 var _again_btn: Button
 
 func _ready() -> void:
@@ -135,7 +137,8 @@ func _process(delta: float) -> void:
 		return
 	# Während der Kartenwahl (Baum pausiert) nichts über das Draft-Fenster legen.
 	var paused := get_tree().paused
-	_plate.visible = not paused
+	# Am Jagdende verdeckt die Boss-Leiste sonst den Endbildschirm.
+	_plate.visible = not paused and director.over == 0
 	_notice_label.visible = not paused
 	_respawn_label.visible = not paused
 	if paused:
@@ -166,16 +169,25 @@ func _process(delta: float) -> void:
 	else:
 		_respawn_label.text = ""
 
+const END_COLUMNS: Array = [
+	["EBER", ""], ["JAGDWERT", "Kills + Schaden/60 + Bossschaden/30 + Riesen×2 + Bosse×15 + Heilung/40 + Geblockt/80 − Tode×4"],
+	["ERLEGT", ""], ["SCHADEN", ""], ["BOSS-SCHADEN", ""], ["RIESEN", ""],
+	["BESTE SERIE", "Meiste Kills in einem Leben"], ["ERFAHRUNG", "Eingesammelte Kristalle"],
+	["GEHEILT", ""], ["GEFALLEN", ""],
+]
+
 func _build_end_panel() -> void:
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(center)
 	_end_panel = PanelContainer.new()
 	_end_panel.visible = false
-	_end_panel.set_anchors_preset(Control.PRESET_CENTER)
-	_end_panel.custom_minimum_size = Vector2(620, 0)
-	_end_panel.position = Vector2(-310, -200)
-	_end_panel.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PLATE_SOLID, UiTheme.CYAN_DIM, 2, 10, 24, 18))
-	_root.add_child(_end_panel)
+	_end_panel.custom_minimum_size = Vector2(760, 0)
+	_end_panel.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PLATE_SOLID, UiTheme.CYAN_DIM, 2, 10, 24, 16))
+	center.add_child(_end_panel)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 12)
+	v.add_theme_constant_override("separation", 8)
 	_end_panel.add_child(v)
 	_end_title = _label("", UiTheme.FS_H1, UiTheme.GOLD)
 	_end_title.add_theme_font_override("font", UiTheme.FONT_DISPLAY)
@@ -184,13 +196,19 @@ func _build_end_panel() -> void:
 	_end_stats = _label("", UiTheme.FS_L, UiTheme.TEXT)
 	_end_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(_end_stats)
+	_end_bosses = _label("", UiTheme.FS_S, UiTheme.TEXT_MUTED)
+	_end_bosses.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(_end_bosses)
 	_end_table = GridContainer.new()
-	_end_table.columns = 4
-	_end_table.add_theme_constant_override("h_separation", 26)
+	_end_table.columns = END_COLUMNS.size()
+	_end_table.add_theme_constant_override("h_separation", 18)
 	_end_table.add_theme_constant_override("v_separation", 4)
-	var center := CenterContainer.new()
-	center.add_child(_end_table)
-	v.add_child(center)
+	var table_center := CenterContainer.new()
+	table_center.add_child(_end_table)
+	v.add_child(table_center)
+	_end_honors = VBoxContainer.new()
+	_end_honors.add_theme_constant_override("separation", 6)
+	v.add_child(_end_honors)
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	buttons.add_theme_constant_override("separation", 16)
@@ -211,16 +229,97 @@ func _on_run_over(victory: bool) -> void:
 	_end_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_end_title.text = "ÜBERLEBT!" if victory else "DIE JAGD IST VORBEI"
 	_end_title.add_theme_color_override("font_color", UiTheme.GOLD if victory else UiTheme.DANGER)
-	_end_stats.text = "Zeit %s   ·   Stufe %d   ·   %d erlegt" % [HordeDefs.format_time(director.run_time), director.level, director.kills]
-	for c in _end_table.get_children():
-		c.queue_free()
-	for h in ["EBER", "ERLEGT", "SCHADEN", "GEFALLEN"]:
-		_end_table.add_child(_label(h, UiTheme.FS_S, UiTheme.TEXT_MUTED))
-	for slot in Global.get_active_player_indices():
-		var s: Dictionary = director.slot_stats.get(slot, director.slot_stats.get(str(slot), {}))
-		_end_table.add_child(_label(Global.get_player_name(slot), UiTheme.FS_M, UiTheme.TEXT))
-		_end_table.add_child(_label(str(int(s.get("kills", 0))), UiTheme.FS_M, UiTheme.GOLD))
-		_end_table.add_child(_label(str(int(s.get("damage", 0.0))), UiTheme.FS_M, UiTheme.TEXT))
-		_end_table.add_child(_label(str(int(s.get("deaths", 0))), UiTheme.FS_M, UiTheme.TEXT_SOFT))
+	var report := director.final_report
+	var boss_log: Array = report.get("b", [])
+	var stage := int(report.get("stg", director.stage)) + 1
+	_end_stats.text = "Zeit %s   ·   Stufe %d   ·   %d erlegt   ·   Bosse %d/%d   ·   Gebiet %d" % [
+		HordeDefs.format_time(director.run_time), director.level, director.kills,
+		boss_log.size(), HordeDefs.BOSS_TIMES.size(), stage]
+	var boss_parts: Array[String] = []
+	for entry in boss_log:
+		var e: Dictionary = entry
+		var who := Global.get_player_name(int(e.get("slot", 0))) if int(e.get("slot", 0)) > 0 else "—"
+		boss_parts.append("%s %s (%s)" % [str(e.get("name", "Boss")), HordeDefs.format_time(float(e.get("t", 0.0))), who])
+	_end_bosses.text = ("Bosse: " + "   ·   ".join(boss_parts)) if not boss_parts.is_empty() else ""
+	_end_bosses.visible = not boss_parts.is_empty()
+	_fill_end_table()
+	_fill_end_honors(report.get("h", []))
 	# Online entscheidet nur der Host über eine neue Jagd.
 	_again_btn.visible = not Global.network_mode or NetworkManager.is_host
+
+func _fill_end_table() -> void:
+	for c in _end_table.get_children():
+		c.queue_free()
+	for col in END_COLUMNS:
+		var h := _label(str(col[0]), UiTheme.FS_XS, UiTheme.TEXT_MUTED)
+		h.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if col != END_COLUMNS[0] else HORIZONTAL_ALIGNMENT_LEFT
+		if str(col[1]) != "":
+			h.tooltip_text = str(col[1])
+			h.mouse_filter = Control.MOUSE_FILTER_PASS
+		_end_table.add_child(h)
+	# Nach Jagdwert sortiert, der Beste in Gold.
+	var slots: Array = []
+	for slot in Global.get_active_player_indices():
+		slots.append({"slot": slot, "score": HordeHonors.hunt_score(director, slot)})
+	slots.sort_custom(func(a, b): return float(a["score"]) > float(b["score"]))
+	var first := true
+	for entry in slots:
+		var slot := int(entry["slot"])
+		var s: Dictionary = director.slot_stats.get(slot, director.slot_stats.get(str(slot), {}))
+		var hero: HeroData = Global.get_hero(Global.get_player_hero_id(slot))
+		var name_label := _label("%s · %s" % [Global.get_player_name(slot), hero.name], UiTheme.FS_M, hero.color_tint)
+		_end_table.add_child(name_label)
+		var values := [
+			int(round(float(entry["score"]))),
+			int(s.get("kills", 0)),
+			int(s.get("damage", 0.0)),
+			int(director.report_value(slot, "boss_dmg")),
+			int(director.report_value(slot, "giants")),
+			int(director.report_value(slot, "best_streak")),
+			int(director.report_value(slot, "xp")),
+			int(director.report_value(slot, "healing_done")),
+			int(s.get("deaths", 0)),
+		]
+		for i in range(values.size()):
+			var color := UiTheme.TEXT
+			if i == 0:
+				color = UiTheme.GOLD if first and slots.size() > 1 else UiTheme.CYAN_LIGHT
+			elif i == values.size() - 1:
+				color = UiTheme.TEXT_SOFT
+			var l := _label(str(values[i]), UiTheme.FS_M, color)
+			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			_end_table.add_child(l)
+		first = false
+
+# Ehrungen (HordeHonors) als Kacheln wie im normalen Win-Screen, nacheinander
+# eingeblendet.
+func _fill_end_honors(honors: Array) -> void:
+	for c in _end_honors.get_children():
+		c.queue_free()
+	if honors.is_empty():
+		return
+	var heading := _label("EHRUNGEN", UiTheme.FS_BODY, UiTheme.GOLD)
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_end_honors.add_child(heading)
+	var grid := GridContainer.new()
+	grid.columns = mini(4, honors.size())
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	var center := CenterContainer.new()
+	center.add_child(grid)
+	_end_honors.add_child(center)
+	var delay := 0.35
+	for value in honors:
+		var honor: Dictionary = value
+		var slot := int(honor.get("slot", 0))
+		var who := "—"
+		if slot > 0:
+			who = "%s · %s" % [Global.get_player_name(slot), Global.get_hero(Global.get_player_hero_id(slot)).name]
+		var tile := MatchHonors.make_tile(honor, HordeHonors.describe(honor, director), who)
+		grid.add_child(tile)
+		tile.modulate.a = 0.0
+		var tween := tile.create_tween()
+		tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		tween.tween_interval(delay)
+		tween.tween_property(tile, "modulate:a", 1.0, 0.25)
+		delay += 0.18

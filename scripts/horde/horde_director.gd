@@ -89,6 +89,15 @@ var _powerup_t: float = POWERUP_FIRST
 var _spawn_grace: float = 0.0
 ## Pro Slot: {"kills": int, "damage": float, "deaths": int}
 var slot_stats: Dictionary = {}
+## Matchstatistik für den Endbildschirm (nur Host, geht erst mit "fin" raus):
+## Pro Slot boss_dmg, bosses, giants, eagles, xp, food, chests, streak,
+## best_streak, life_start, best_life.
+var detail_stats: Dictionary = {}
+## Besiegte Bosse in Reihenfolge: {"name", "t", "slot"}.
+var boss_log: Array = []
+## Am Jagdende: {"d": detail_stats, "h": Ehrungen, "b": boss_log, "stg": Gebiet}.
+## Host baut es in _finish, Clients bekommen es mit dem Snapshot ("fin").
+var final_report: Dictionary = {}
 
 var _rng := RandomNumberGenerator.new()
 var _spawn_acc: float = 0.0
@@ -137,6 +146,8 @@ func start(main: Node, seed_value: int, players: int) -> void:
 	player_count = maxi(1, players)
 	_rng.seed = maxi(1, seed_value)
 	running = true
+	for slot in Global.get_active_player_indices():
+		detail(slot)
 	run_time = 0.0
 	level = 1
 	xp = 0
@@ -691,10 +702,21 @@ func howl(e: HordeEnemy) -> void:
 
 # --- Treffer und Tode ---
 
-func note_damage(slot: int, amount: float) -> void:
+func note_damage(slot: int, amount: float, target = null) -> void:
 	var s: Dictionary = slot_stats.get(slot, {"kills": 0, "damage": 0.0, "deaths": 0})
 	s["damage"] = float(s["damage"]) + amount
 	slot_stats[slot] = s
+	if target is HordeEnemy and target.is_boss and not pvp_wave:
+		var d := detail(slot)
+		d["boss_dmg"] = float(d["boss_dmg"]) + amount
+
+## Matchstatistik eines Slots (legt fehlende Einträge an).
+func detail(slot: int) -> Dictionary:
+	if not detail_stats.has(slot):
+		detail_stats[slot] = {"boss_dmg": 0.0, "bosses": 0, "giants": 0, "eagles": 0,
+			"xp": 0, "food": 0, "chests": 0, "streak": 0, "best_streak": 0,
+			"life_start": run_time, "best_life": 0.0}
+	return detail_stats[slot]
 
 func on_enemy_killed(e: HordeEnemy, killer) -> void:
 	kills += 1
@@ -709,6 +731,15 @@ func on_enemy_killed(e: HordeEnemy, killer) -> void:
 		s["kills"] = int(s["kills"]) + 1
 		slot_stats[killer.player_index] = s
 		Global.add_match_stat(killer.player_index, "kills", 1.0)
+		var d := detail(killer.player_index)
+		d["streak"] = int(d["streak"]) + 1
+		d["best_streak"] = maxi(int(d["best_streak"]), int(d["streak"]))
+		if e.riese:
+			d["giants"] = int(d["giants"]) + 1
+		if e.kind == "adler":
+			d["eagles"] = int(d["eagles"]) + 1
+		if e.is_boss:
+			d["bosses"] = int(d["bosses"]) + 1
 	var pos := e.global_position
 	if e.is_boss:
 		_drop(pos, "chest", 1)
@@ -718,6 +749,9 @@ func on_enemy_killed(e: HordeEnemy, killer) -> void:
 			Color(1.0, 0.85, 0.3, 0.9), 1.0, 30.0, 0.5, 0.5), "explosion_big", 0.0, 0.0))
 		Global.shake_camera(0.5)
 		var was_final := bool(boss_info.get("final", false))
+		boss_log.append({"name": str(boss_info.get("name", "Boss")), "t": snappedf(run_time, 1.0),
+			"slot": killer.player_index if killer is Player and is_instance_valid(killer) else 0,
+			"final": was_final})
 		if e == boss:
 			boss = null
 			boss_info = {}
@@ -964,19 +998,26 @@ func on_map_changed() -> void:
 	_post_notice("Neues Gebiet: %s" % title, Color(0.7, 1.0, 0.85))
 
 func _collect(g: Dictionary, p: Node2D) -> void:
+	var slot := int(p.get("player_index")) if p is Player and is_instance_valid(p) else 0
 	match str(g["t"]):
 		"xp":
 			xp += int(g["v"])
+			if slot > 0:
+				detail(slot)["xp"] = int(detail(slot)["xp"]) + int(g["v"])
 			if _coin_sound_t <= 0.0:
 				_coin_sound_t = 0.06
 				SoundManager.play_sound("coin", 0.15, -10.0)
 		"food":
 			if p != null and p.has_method("heal"):
 				p.heal(FOOD_HEAL)
+			if slot > 0:
+				detail(slot)["food"] = int(detail(slot)["food"]) + 1
 			NetFx.emit(get_parent(), "sound", {"snd": ["heal", 0.1, -4.0]})
 		"chest":
 			pending_bonus += 1
 			pending_levelups += 1
+			if slot > 0:
+				detail(slot)["chests"] = int(detail(slot)["chests"]) + 1
 			_post_notice("Truhe! Bonus-Karte für alle.", Color(1.0, 0.85, 0.3))
 			NetFx.emit(get_parent(), "sound", {"snd": ["mystery", 0.0, 0.0]})
 
@@ -1074,6 +1115,9 @@ func on_player_died(slot: int) -> void:
 	var s: Dictionary = slot_stats.get(slot, {"kills": 0, "damage": 0.0, "deaths": 0})
 	s["deaths"] = int(s["deaths"]) + 1
 	slot_stats[slot] = s
+	var d := detail(slot)
+	d["streak"] = 0
+	d["best_life"] = maxf(float(d["best_life"]), run_time - float(d["life_start"]))
 	_dead_slots[slot] = true
 	_respawns.append({"slot": slot, "t": HordeDefs.RESPAWN_DELAY})
 	# Alle tot (der Sterbende ist schon raus)? Dann ist die Jagd verloren.
@@ -1097,6 +1141,7 @@ func _update_respawns(delta: float) -> void:
 			if not targets.is_empty():
 				var anchor: Node2D = targets[_rng.randi() % targets.size()]
 				_dead_slots.erase(int(r["slot"]))
+				detail(int(r["slot"]))["life_start"] = run_time
 				main_node.horde_respawn_player(int(r["slot"]), anchor.global_position + Vector2(_rng.randf_range(-30, 30), _rng.randf_range(-30, 30)))
 				_post_notice("%s ist wieder da!" % Global.get_player_name(int(r["slot"])), Color(0.5, 1.0, 0.6))
 			_respawns.remove_at(i)
@@ -1113,8 +1158,40 @@ func _finish(victory: bool) -> void:
 		return
 	over = 1 if victory else 2
 	running = false
+	if not pvp_wave and not is_replica:
+		_build_final_report()
 	SoundManager.play_sound("match_win" if victory else "round_end", 0.0, 0.0)
 	run_over.emit(victory)
+
+## Endstand für den Endbildschirm: Werte runden, letzte Lebenszeit der
+## Überlebenden abschließen, Ehrungen wählen (HordeHonors).
+func _build_final_report() -> void:
+	for slot in Global.get_active_player_indices():
+		var d := detail(slot)
+		if not _dead_slots.has(slot):
+			d["best_life"] = maxf(float(d["best_life"]), run_time - float(d["life_start"]))
+	var out := {}
+	for slot in detail_stats.keys():
+		var d: Dictionary = detail_stats[slot]
+		var row := {}
+		for key in d.keys():
+			if key == "life_start" or key == "streak":
+				continue
+			row[key] = int(round(float(d[key])))
+		# Eber-Werte aus den Match-Statistiken (online nur beim Host bekannt).
+		for key in ["healing_done", "damage_taken", "damage_blocked", "ability_damage", "melee_damage"]:
+			row[key] = int(round(Global.get_match_stat(int(slot), key)))
+		out[int(slot)] = row
+	final_report = {"d": out, "b": boss_log.duplicate(true), "stg": stage, "t": snappedf(run_time, 1.0)}
+	final_report["h"] = HordeHonors.compute(self)
+
+## Matchwert eines Slots aus final_report (auf Host und Client gleich).
+func report_value(slot: int, key: String) -> float:
+	var d: Dictionary = final_report.get("d", {})
+	var row = d.get(slot, d.get(str(slot), null))
+	if row is Dictionary:
+		return float(row.get(key, 0.0))
+	return 0.0
 
 func _post_notice(text: String, color: Color) -> void:
 	_notice_seq += 1
@@ -1161,6 +1238,8 @@ func get_network_state() -> Dictionary:
 		"st": slot_stats, "rs": _respawn_snapshot(), "nb": snappedf(next_boss_in(), 0.1),
 		"stg": [stage, stage_map_id, stage_seed], "sx": snappedf(scroll_x, 0.5),
 	}
+	if over != 0 and not final_report.is_empty():
+		data["fin"] = final_report
 	if not boss_info.is_empty():
 		var b := boss_info.duplicate()
 		b["hp"] = snappedf(boss_health_ratio(), 0.005)
@@ -1215,6 +1294,9 @@ func apply_network_state(data: Dictionary) -> void:
 		_seen_notice = int(n[0])
 		if _seen_notice > 0:
 			notice.emit(str(n[1]), Color.html(str(n[2])))
+	var fin = data.get("fin", null)
+	if fin is Dictionary and final_report.is_empty():
+		final_report = fin
 	var new_over := int(data.get("o", 0))
 	if new_over != over:
 		over = new_over

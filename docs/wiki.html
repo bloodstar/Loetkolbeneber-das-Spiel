@@ -1308,6 +1308,96 @@ den Runden davor</td>
 </table>
 <p>Online berechnet der Host die Ehrungen und schickt sie mit dem
 Match-Ende an alle Clients.</p>
+<h3 id="matchstatistik-im-horden-modus">Matchstatistik im
+Horden-Modus</h3>
+<p>Am Ende einer Jagd zeigt der Endbildschirm Zeit, Stufe, Kills,
+<strong>besiegte Bosse</strong> (wer wann welchen Boss erlegt hat) und
+das erreichte Gebiet. Darunter eine Tabelle pro Eber, sortiert nach
+<strong>Jagdwert</strong>: Erlegt, Schaden, Boss-Schaden, Riesen, beste
+Serie (Kills in einem Leben), Erfahrung (eingesammelte Kristalle),
+Geheilt, Gefallen. Jagdwert = Kills + Schaden/60 + Bossschaden/30 +
+Riesen×2 + Bosse×15 + Heilung/40 + Geblockt/80 − Tode×4.</p>
+<p>Dazu bis zu <strong>8 Ehrungen</strong> nach denselben Regeln wie
+oben (pro Eber begrenzt, solo bekommt der eine Eber alle, MVP erst ab
+zwei Ebern):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Ehrung</th>
+<th>Wer bekommt sie</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>MVP der Jagd</strong></td>
+<td>Höchster Jagdwert</td>
+</tr>
+<tr class="even">
+<td><strong>Bossbezwinger</strong></td>
+<td>Die meisten Bosse erlegt (letzter Treffer), bei Gleichstand mehr
+Bossschaden</td>
+</tr>
+<tr class="odd">
+<td><strong>Bossjäger</strong></td>
+<td>Meister Schaden an Bossen (ab 300)</td>
+</tr>
+<tr class="even">
+<td><strong>Schadenskönig</strong></td>
+<td>Meister Schaden</td>
+</tr>
+<tr class="odd">
+<td><strong>Schlächter</strong></td>
+<td>Die meisten Kills (ab 10)</td>
+</tr>
+<tr class="even">
+<td><strong>Amokläufer</strong></td>
+<td>Die meisten Kills in einem Leben (ab 30)</td>
+</tr>
+<tr class="odd">
+<td><strong>Riesentöter</strong></td>
+<td>Die meisten Riesen (ab 2)</td>
+</tr>
+<tr class="even">
+<td><strong>Unkaputtbar</strong></td>
+<td>Am längsten am Stück überlebt (ab 1:30)</td>
+</tr>
+<tr class="odd">
+<td><strong>Kristallsammler</strong></td>
+<td>Die meiste Erfahrung eingesammelt (ab 30)</td>
+</tr>
+<tr class="even">
+<td><strong>Sanitäter</strong></td>
+<td>Meiste Heilung (ab 100)</td>
+</tr>
+<tr class="odd">
+<td><strong>Fähigkeiten-Ass</strong> /
+<strong>Nahkampf-Metzger</strong></td>
+<td>Meister Fähigkeits- bzw. Nahkampfschaden (ab 300)</td>
+</tr>
+<tr class="even">
+<td><strong>Bollwerk</strong></td>
+<td>Meister Schaden abgeblockt (ab 150)</td>
+</tr>
+<tr class="odd">
+<td><strong>Adlerauge</strong></td>
+<td>Die meisten Adler (ab 8)</td>
+</tr>
+<tr class="even">
+<td><strong>Vielfraß</strong> <em>(Spaß)</em></td>
+<td>Die meisten Eicheln gefuttert (ab 3)</td>
+</tr>
+<tr class="odd">
+<td><strong>Größter Pechvogel</strong> <em>(Spaß)</em></td>
+<td>Am häufigsten gefallen (ab 2)</td>
+</tr>
+<tr class="even">
+<td><strong>Kugelfang</strong> <em>(Spaß)</em></td>
+<td>Am meisten Schaden eingesteckt (ab 200)</td>
+</tr>
+</tbody>
+</table>
+<p>Online rechnet der Host und schickt Werte und Ehrungen mit dem
+letzten Horden-Stand an die Clients.</p>
 <hr />
 <h2 id="-spielmodi">👥 Spielmodi</h2>
 <table>

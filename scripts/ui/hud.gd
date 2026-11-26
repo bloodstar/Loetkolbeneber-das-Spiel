@@ -1769,68 +1769,8 @@ func _build_honors_block() -> Control:
 	return box
 
 func _make_honor_tile(honor: Dictionary) -> Control:
-	var info := MatchHonors.describe(honor)
 	var slot := int(honor.get("slot", 0))
-	var accent: Color = info["color"]
-	var is_mvp := str(honor.get("id", "")) == "mvp"
-
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(250, 92)
-	panel.tooltip_text = str(info["flavor"])
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.06, 0.08, 0.11, 0.95) if not is_mvp else Color(0.14, 0.11, 0.04, 0.95)
-	style.set_corner_radius_all(10)
-	style.set_border_width_all(3 if is_mvp else 2)
-	style.border_color = UiTheme.with_alpha(accent, 0.9 if is_mvp else 0.6)
-	style.content_margin_left = 10
-	style.content_margin_right = 10
-	style.content_margin_top = 6
-	style.content_margin_bottom = 6
-	panel.add_theme_stylebox_override("panel", style)
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	panel.add_child(row)
-
-	var icon := Label.new()
-	icon.text = str(info["icon"])
-	icon.custom_minimum_size = Vector2(40, 0)
-	icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	icon.add_theme_font_size_override("font_size", 34)
-	icon.add_theme_color_override("font_color", accent)
-	row.add_child(icon)
-
-	var texts := VBoxContainer.new()
-	texts.add_theme_constant_override("separation", 0)
-	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	texts.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_child(texts)
-
-	var title := Label.new()
-	title.text = str(info["title"]).to_upper()
-	title.add_theme_font_override("font", UiTheme.FONT_BOLD)
-	title.add_theme_font_size_override("font_size", UiTheme.FS_M)
-	title.add_theme_color_override("font_color", accent)
-	texts.add_child(title)
-
-	var who := Label.new()
-	who.text = _player_display_name(slot) if slot > 0 else "—"
-	who.add_theme_font_size_override("font_size", UiTheme.FS_S)
-	if slot > 0:
-		who.add_theme_color_override("font_color", Global.get_hero(Global.get_player_hero_id(slot)).color_tint)
-	who.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	who.custom_minimum_size = Vector2(180, 0)
-	texts.add_child(who)
-
-	var detail := Label.new()
-	detail.text = str(info["detail"])
-	detail.add_theme_font_size_override("font_size", UiTheme.FS_XS)
-	detail.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
-	detail.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	detail.custom_minimum_size = Vector2(180, 0)
-	texts.add_child(detail)
-	return panel
+	return MatchHonors.make_tile(honor, MatchHonors.describe(honor), _player_display_name(slot) if slot > 0 else "—")
 
 func _player_display_name(slot: int) -> String:
 	var hero: HeroData = Global.get_hero(Global.get_player_hero_id(slot))
