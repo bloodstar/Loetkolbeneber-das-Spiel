@@ -49,6 +49,10 @@ var burn_damage: float = 5.0
 var freeze_duration: float = 1.2
 var stun_duration: float = 0.25
 var is_replica: bool = false
+## Arena: Bodenhöhe unter der Fläche (Plattform, Plateau). Nur Optik: die
+## Fläche wird um den Höhenversatz nach oben gezeichnet, damit sie auf der
+## Plattform liegt statt versetzt darunter.
+var ground_z: float = 0.0
 # Nur Optik (Void, Heilung, Sporenwolke): die Wirkung berechnet der Spieler selbst.
 var visual_only: bool = false
 # Gasbrand (eigener Build): Diese Giftwolke brennt zusätzlich.
@@ -308,6 +312,8 @@ func _scan_fire_floor() -> void:
 			_fire_columns[i] = 0.0
 
 func _draw() -> void:
+	if ground_z > 0.0 and ArenaMode.active:
+		draw_set_transform(ArenaMode.height_offset(ground_z))
 	match kind:
 		Kind.FIRE:
 			_draw_fire()

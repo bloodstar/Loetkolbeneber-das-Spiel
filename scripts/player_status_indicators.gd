@@ -39,6 +39,12 @@ func _process(_delta: float) -> void:
 func _draw() -> void:
 	if not is_instance_valid(player):
 		return
+	# Arena: auf Plattformen und im Sprung mit der Voxel-Figur nach oben
+	# wandern (Versatz in Weltkoordinaten, der Node erbt die Player-Skalierung).
+	var lift := player.arena_lift()
+	if lift != Vector2.ZERO:
+		var sc := global_scale
+		draw_set_transform(Vector2(lift.x / maxf(absf(sc.x), 0.01), lift.y / maxf(absf(sc.y), 0.01)))
 	_draw_weapon_status()
 	_draw_health_bar()
 	_draw_vampire_orbs()
