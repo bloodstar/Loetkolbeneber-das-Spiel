@@ -161,7 +161,10 @@ func _physics_process(delta: float) -> void:
 	if not running or over != 0:
 		queue_redraw()
 		return
-	run_time += delta
+	# Uhr steht, solange ein Boss lebt und bis das nächste Gebiet geladen ist:
+	# Bosszeiten, Spawnrate und Gegnerstärke laufen erst danach weiter.
+	if not timer_paused():
+		run_time += delta
 	if pvp_wave:
 		_flow_t -= delta
 		if _bfs_active:
@@ -532,9 +535,8 @@ func _update_spawning(delta: float) -> void:
 	var targets := alive_targets()
 	if targets.is_empty():
 		return
-	var boss_alive := boss != null and is_instance_valid(boss) and not boss.is_dead
 	var rate := HordeDefs.spawn_rate(run_time) * (1.0 + 0.3 * float(player_count - 1))
-	if boss_alive:
+	if boss_alive():
 		rate *= 0.5
 	_spawn_acc += rate * delta
 	var cap := mini(HordeDefs.max_alive(run_time, player_count), enemy_limit())
@@ -1121,6 +1123,16 @@ func _post_notice(text: String, color: Color) -> void:
 	_notice_text = text
 	_notice_color = color
 	notice.emit(text, color)
+
+func boss_alive() -> bool:
+	return boss != null and is_instance_valid(boss) and not boss.is_dead
+
+## Horden-Uhr angehalten (Boss lebt oder Gebietswechsel nach Bosskill läuft).
+## Auf Clients reicht boss_info aus dem Snapshot.
+func timer_paused() -> bool:
+	if is_replica:
+		return not boss_info.is_empty()
+	return boss_alive() or _map_change_t >= 0.0
 
 ## Restzeit bis zum nächsten Boss (oder -1).
 func next_boss_in() -> float:

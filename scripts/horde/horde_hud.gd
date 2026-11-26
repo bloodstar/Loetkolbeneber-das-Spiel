@@ -141,6 +141,11 @@ func _process(delta: float) -> void:
 	if paused:
 		return
 	_time_label.text = HordeDefs.format_time(director.run_time)
+	# Angehaltene Uhr während des Bosskampfs gedimmt und blinkend.
+	if director.timer_paused():
+		_time_label.modulate = Color(1.0, 0.55, 0.45, 0.55 + 0.35 * absf(sin(Time.get_ticks_msec() * 0.004)))
+	else:
+		_time_label.modulate = Color.WHITE
 	_level_label.text = "STUFE %d" % director.level
 	_kills_label.text = "%d erlegt" % director.kills
 	_xp_bar.value = clampf(float(director.xp) / maxf(1.0, float(director.xp_next)), 0.0, 1.0)
