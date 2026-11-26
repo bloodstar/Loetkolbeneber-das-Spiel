@@ -953,10 +953,11 @@ Spores, Giftschuss, Frostschuss, Feuersturm, Blitzschuss (je mit
 Ausbau), Schnellfeuer, Scharfe Munition, Schlagkraft I–III und Blutdurst
 samt Ausbauten. Stattdessen gibt es Giftzahn, Frostklinge, Glühende
 Spitze, Elektroschocker, Leichter Griff, Schleifstein und Blutklinge.
-<strong>Kettenreaktion</strong> bleibt für alle, weil der Blitz im
-Nahkampf aufs Ziel zurückspringt. Reichweite wird in Feldern (36 px) ab
-dem Körperrand gemessen. Wände blockieren den Schlag. Der Schlag trifft
-auch Blöcke, Kisten, Fässer und Türme.</p>
+<strong>Kettenblitz</strong> (mit Ausbau Kettenreaktion) bleibt für
+alle, im 1-gegen-1 springt der Blitz aufs getroffene Ziel zurück.
+Reichweite wird in Feldern (36 px) ab dem Körperrand gemessen. Wände
+blockieren den Schlag. Der Schlag trifft auch Blöcke, Kisten, Fässer und
+Türme.</p>
 <table>
 <thead>
 <tr class="header">
@@ -1660,9 +1661,9 @@ die wichtigsten Gruppen.</p>
 <td style="text-align: left;">Schaden, Munition, Projektile,
 Elemente</td>
 <td style="text-align: left;">Splittergeschoss, Panzerbrecher,
-Kettenreaktion, Leichtes/Schweres Geschoss, Mörser, Notvorrat,
-Fokuskristall, Weitstrahler, Kraftladung, Schlagkraft, Munitionsgurt,
-Gefechtsbereit</td>
+Kettenblitz (Ausbau Kettenreaktion), Leichtes/Schweres Geschoss, Mörser,
+Notvorrat, Fokuskristall, Weitstrahler, Kraftladung, Schlagkraft,
+Munitionsgurt, Gefechtsbereit</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>Defensive</strong></td>
@@ -2246,23 +2247,31 @@ Leben) auf</td>
 <tr class="odd">
 <td style="text-align: left;"><strong>Blitzschuss</strong></td>
 <td style="text-align: left;">0,1 s Betäubung</td>
-<td style="text-align: left;">Kettenblitz</td>
 <td style="text-align: left;">Blitz-Orb am Einschlag</td>
+<td style="text-align: left;"></td>
 </tr>
 <tr class="even">
+<td style="text-align: left;"><strong>Kettenblitz</strong></td>
+<td style="text-align: left;">Treffer springen als Blitz auf den
+nächsten Gegner (45 % Schaden, 0,1 s Betäubung), im 1-gegen-1 zurück
+aufs Ziel. Auch für Nahkämpfer</td>
+<td style="text-align: left;">Kettenreaktion: +1 Sprung</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
 <td style="text-align: left;"><strong>Frostschuss</strong></td>
 <td style="text-align: left;">0,8 s Verlangsamung</td>
 <td style="text-align: left;">Eisnova am Einschlag</td>
 <td style="text-align: left;">Eisbahn hinter dir</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><strong>Explosivschuss</strong></td>
 <td style="text-align: left;">+30 px Explosion</td>
 <td style="text-align: left;">Großer Knall (+60 px)</td>
 <td style="text-align: left;">Splitterbomben (Zweig C: Meteor Cannon,
 +75 px, +60 % Schaden, −30 % Feuerrate, früher eigene Karte)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><strong>Feuersturm</strong></td>
 <td style="text-align: left;">Geschosse entzünden Gegner und den Boden
 am Einschlag (früher Brandkapsel)</td>
@@ -2270,37 +2279,37 @@ am Einschlag (früher Brandkapsel)</td>
 <td style="text-align: left;">Brandkapsel: +60 % Feuerreichweite (Zweig
 C: Feuerspur hinter dir)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><strong>Wächterdrohne</strong></td>
 <td style="text-align: left;">Drohne schießt mit</td>
 <td style="text-align: left;">Zwillingsdrohne</td>
 <td style="text-align: left;">Regenerationsdrohne</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><strong>Schutzdrohne</strong></td>
 <td style="text-align: left;">Drohne fängt Schüsse ab</td>
 <td style="text-align: left;">Heilende Schutzdrohne</td>
 <td style="text-align: left;">Schutzdrohnen-Schwarm</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><strong>Mörser</strong></td>
 <td style="text-align: left;">Steiler Bogen, mehr Schaden</td>
 <td style="text-align: left;">Präzisionsmörser</td>
 <td style="text-align: left;">Belagerungsmörser</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><strong>Rückstoßfeder</strong></td>
 <td style="text-align: left;">+25 % Rückstoß</td>
 <td style="text-align: left;">Druckkammer</td>
 <td style="text-align: left;">Schockgeschoss</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><strong>Leichte Schuhe</strong></td>
 <td style="text-align: left;">Tempo</td>
 <td style="text-align: left;">Windschuhe</td>
 <td style="text-align: left;"></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><strong>Minenleger</strong></td>
 <td style="text-align: left;">Jede Barriere legt eine unsichtbare
 Mine</td>
@@ -2308,7 +2317,7 @@ Mine</td>
 Verzögerung</td>
 <td style="text-align: left;"></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;"><strong>Tank-Panzerung</strong></td>
 <td style="text-align: left;">siehe unten</td>
 <td style="text-align: left;"></td>

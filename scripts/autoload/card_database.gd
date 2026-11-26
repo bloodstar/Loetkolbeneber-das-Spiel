@@ -793,19 +793,6 @@ func _init_database() -> void:
 	lb1.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
 	_register(lb1)
 
-	var lb2 = CardData.new()
-	lb2.id = "blitzschuss_kette"
-	lb2.version = 2 # nur noch Fernkampf
-	lb2.title = "Kettenblitz"
-	lb2.description = "Blitzschuss-Ausbau: Der Blitz springt auf nahe Gegner über und betäubt sie erneut."
-	lb2.rarity = "Epic"
-	lb2.color = Color(1.00, 0.80, 0.10)
-	lb2.family_id = "blitzschuss"
-	lb2.parent_card_id = "blitzschuss"
-	lb2.evolution_branch = "A"
-	lb2.chain_lightning = true
-	lb2.attack_type = "ranged" # Nahkampf hat eigene Karte (Nahkampf-Pool)
-	_register(lb2)
 
 	var lb3 = CardData.new()
 	lb3.id = "blitzschuss_zone"
@@ -815,7 +802,7 @@ func _init_database() -> void:
 	lb3.color = Color(0.90, 0.75, 1.00)
 	lb3.family_id = "blitzschuss"
 	lb3.parent_card_id = "blitzschuss"
-	lb3.evolution_branch = "B"
+	lb3.evolution_branch = "A" # seit Kettenblitz eigene Grundkarte ist (2026-11-26)
 	lb3.lightning_zone = true
 	_register(lb3)
 
@@ -3267,17 +3254,33 @@ func _init_database() -> void:
 
 	# Brandkapsel ist seit 2026-11-25 Ausbau B von Feuersturm (siehe dort).
 
+	# --- Kettenblitz ---
+	# Seit 2026-11-26 eigene Grundkarte für alle Helden (vorher Blitzschuss-Ausbau A,
+	# nur Fernkampf). Kettenreaktion ist ihr Ausbau mit einem Sprung mehr.
+	var lb2 = CardData.new()
+	lb2.id = "blitzschuss_kette"
+	lb2.version = 3 # eigene Grundkarte, auch für Nahkämpfer, Rare statt Epic
+	lb2.title = "Kettenblitz"
+	lb2.description = "Treffer springen als Blitz auf den nächsten Gegner über.\n45% Schaden, 0,1s Betäubung.\nIm 1-gegen-1 springt der Blitz aufs Ziel zurück."
+	lb2.rarity = "Rare"
+	lb2.pool = "Offensive"
+	lb2.color = Color(1.00, 0.80, 0.10)
+	lb2.family_id = "blitzschuss_kette"
+	lb2.chain_lightning = true
+	_register(lb2)
+
 	var of4 = CardData.new()
 	of4.id = "kettenreaktion"
-	of4.version = 2 # Nahkampf: Kettenblitz springt im 1-gegen-1 aufs getroffene Ziel zurück
+	of4.version = 3 # Ausbau A von Kettenblitz: +1 Sprung (vorher eigene Karte mit Blitzschuss + Kettenblitz)
 	of4.title = "Kettenreaktion"
-	of4.description = "Blitze springen zwischen Gegnern.\n+Blitzschuss, +Kettenblitz."
+	of4.description = "Kettenblitz-Ausbau: Der Blitz springt ein weiteres Mal.\n+1 Sprung."
 	of4.rarity = "Epic"
 	of4.pool = "Offensive"
 	of4.color = Color(0.95, 0.85, 0.20)
-	of4.lightning_shot = true
-	of4.chain_lightning = true
-	of4.damage_mult = 0.95
+	of4.family_id = "blitzschuss_kette"
+	of4.parent_card_id = "blitzschuss_kette"
+	of4.evolution_branch = "A"
+	of4.chain_jumps_add = 1
 	_register(of4)
 
 	# Defensive

@@ -197,7 +197,7 @@ Feuerböden, Giftwolken, Eisflächen, Blitzzonen, Singularität und Heilfelder w
 
 ## 🔨 Nahkampf
 
-Nahkampf gehört fest zum Helden und liegt auf **Linksklick**: Klinge schlägt mit dem **Schwert** (30 Schaden alle 0,68 s), Bastion mit dem **Hammer** (30 Schaden alle 0,88 s), Phantom sticht mit dem **Lötkolben** (27 Schaden alle 0,77 s). Fernkämpfer haben keinen Nahkampf mehr, die Waffenwahl im Tab Charakter und die Lobby-Regel „Nahkampfwaffen“ entfallen. Die Tabelle zeigt die Grundwerte der Waffen vor den Helden-Faktoren. Allgemeine Karten für Schaden, Feuerrate, Lebensraub und Elemente wirken bei Nahkämpfern auf die Schläge (Feuerrate = Angriffstempo, Feuer = 3 Brandstapel, Blitz = 0,1 s Betäubung). Reine Projektil-Karten (Munition, Abpraller, Durchschlag, Zielsuche, Explosionen, Multishot) bekommen nur Fernkämpfer, Nahkampf-Karten nur Nahkämpfer. Auch die Schuss-Karten, für die es eine eigene Nahkampf-Karte gibt, sehen Nahkämpfer im Draft nicht mehr: Toxic Spores, Giftschuss, Frostschuss, Feuersturm, Blitzschuss (je mit Ausbau), Schnellfeuer, Scharfe Munition, Schlagkraft I–III und Blutdurst samt Ausbauten. Stattdessen gibt es Giftzahn, Frostklinge, Glühende Spitze, Elektroschocker, Leichter Griff, Schleifstein und Blutklinge. **Kettenreaktion** bleibt für alle, weil der Blitz im Nahkampf aufs Ziel zurückspringt. Reichweite wird in Feldern (36 px) ab dem Körperrand gemessen. Wände blockieren den Schlag. Der Schlag trifft auch Blöcke, Kisten, Fässer und Türme.
+Nahkampf gehört fest zum Helden und liegt auf **Linksklick**: Klinge schlägt mit dem **Schwert** (30 Schaden alle 0,68 s), Bastion mit dem **Hammer** (30 Schaden alle 0,88 s), Phantom sticht mit dem **Lötkolben** (27 Schaden alle 0,77 s). Fernkämpfer haben keinen Nahkampf mehr, die Waffenwahl im Tab Charakter und die Lobby-Regel „Nahkampfwaffen“ entfallen. Die Tabelle zeigt die Grundwerte der Waffen vor den Helden-Faktoren. Allgemeine Karten für Schaden, Feuerrate, Lebensraub und Elemente wirken bei Nahkämpfern auf die Schläge (Feuerrate = Angriffstempo, Feuer = 3 Brandstapel, Blitz = 0,1 s Betäubung). Reine Projektil-Karten (Munition, Abpraller, Durchschlag, Zielsuche, Explosionen, Multishot) bekommen nur Fernkämpfer, Nahkampf-Karten nur Nahkämpfer. Auch die Schuss-Karten, für die es eine eigene Nahkampf-Karte gibt, sehen Nahkämpfer im Draft nicht mehr: Toxic Spores, Giftschuss, Frostschuss, Feuersturm, Blitzschuss (je mit Ausbau), Schnellfeuer, Scharfe Munition, Schlagkraft I–III und Blutdurst samt Ausbauten. Stattdessen gibt es Giftzahn, Frostklinge, Glühende Spitze, Elektroschocker, Leichter Griff, Schleifstein und Blutklinge. **Kettenblitz** (mit Ausbau Kettenreaktion) bleibt für alle, im 1-gegen-1 springt der Blitz aufs getroffene Ziel zurück. Reichweite wird in Feldern (36 px) ab dem Körperrand gemessen. Wände blockieren den Schlag. Der Schlag trifft auch Blöcke, Kisten, Fässer und Türme.
 
 | Waffe | Form | Schaden | Reichweite | Rückstoß | Abklingzeit | Besonderheit |
 | :--- | :--- | ---: | ---: | :--- | ---: | :--- |
@@ -421,7 +421,7 @@ Insgesamt gibt es über **230 Karten**: rund 210 in den Pools Offensive, Defensi
 
 | Pool | Inhalt | Beispiele |
 | :--- | :--- | :--- |
-| **Offensive** | Schaden, Munition, Projektile, Elemente | Splittergeschoss, Panzerbrecher, Kettenreaktion, Leichtes/Schweres Geschoss, Mörser, Notvorrat, Fokuskristall, Weitstrahler, Kraftladung, Schlagkraft, Munitionsgurt, Gefechtsbereit |
+| **Offensive** | Schaden, Munition, Projektile, Elemente | Splittergeschoss, Panzerbrecher, Kettenblitz (Ausbau Kettenreaktion), Leichtes/Schweres Geschoss, Mörser, Notvorrat, Fokuskristall, Weitstrahler, Kraftladung, Schlagkraft, Munitionsgurt, Gefechtsbereit |
 | **Defensive** | Leben, Schild, Rüstung, Reflexion, Barriere, Größe | Sanitäter, Bollwerk, Zweites Herz, Tank-Panzerung, Stachelweste, Dornenthron, Riese, Wandelnder Koloss |
 | **Bewegung** | Tempo, Sprünge, Dash, Größe | Federstiefel, Windschatten |
 | **Nahkampf** | Nur für den `E`-Schlag | Schleifstein, Frostklinge, Parade, Meister der Werkbank |
@@ -541,7 +541,8 @@ Eine Ausbaukarte erscheint erst, wenn die Grundkarte im Deck liegt. Wer einen Zw
 | :--- | :--- | :--- | :--- |
 | **Turm** | Turm: Fähigkeit stellt eine Kanone (100 Leben) auf | Mehr Türme: alle 5 s ein weiterer | Folgende Türme: folgen dir |
 | **Giftschuss** | +2 Gift-Stapel | Giftwolke am Einschlag | Giftspur hinter dir |
-| **Blitzschuss** | 0,1 s Betäubung | Kettenblitz | Blitz-Orb am Einschlag |
+| **Blitzschuss** | 0,1 s Betäubung | Blitz-Orb am Einschlag | |
+| **Kettenblitz** | Treffer springen als Blitz auf den nächsten Gegner (45 % Schaden, 0,1 s Betäubung), im 1-gegen-1 zurück aufs Ziel. Auch für Nahkämpfer | Kettenreaktion: +1 Sprung | |
 | **Frostschuss** | 0,8 s Verlangsamung | Eisnova am Einschlag | Eisbahn hinter dir |
 | **Explosivschuss** | +30 px Explosion | Großer Knall (+60 px) | Splitterbomben (Zweig C: Meteor Cannon, +75 px, +60 % Schaden, −30 % Feuerrate, früher eigene Karte) |
 | **Feuersturm** | Geschosse entzünden Gegner und den Boden am Einschlag (früher Brandkapsel) | Brandherd: +60 % Feuerschaden | Brandkapsel: +60 % Feuerreichweite (Zweig C: Feuerspur hinter dir) |
