@@ -59,6 +59,7 @@ var _picker_title: Label = null
 var _picker_search: LineEdit = null
 var _picker_rarity: OptionButton = null
 var _picker_pool: OptionButton = null
+var _picker_sub_tag: OptionButton = null
 var _picker_hero_only: CheckBox = null
 var _picker_owned_flow: HFlowContainer = null
 var _picker_grid: HFlowContainer = null
@@ -587,7 +588,7 @@ func _build_picker() -> void:
 	filters.add_theme_constant_override("separation", 10)
 	col.add_child(filters)
 	_picker_search = LineEdit.new()
-	_picker_search.placeholder_text = "Suchen (Name oder Text) …"
+	_picker_search.placeholder_text = "Suchen (Name, Text oder Sub-Tag) …"
 	_picker_search.custom_minimum_size = Vector2(320, 0)
 	_picker_search.clear_button_enabled = true
 	_picker_search.text_changed.connect(func(_t: String): _fill_picker_grid())
@@ -602,8 +603,14 @@ func _build_picker() -> void:
 	_picker_pool.add_item("Alle Bereiche")
 	for pool in Global.CARD_POOLS:
 		_picker_pool.add_item(pool)
-	_picker_pool.item_selected.connect(func(_i: int): _fill_picker_grid())
+	_picker_pool.item_selected.connect(func(_i: int):
+		_fill_sub_tag_options()
+		_fill_picker_grid())
 	filters.add_child(_picker_pool)
+	_picker_sub_tag = OptionButton.new()
+	_picker_sub_tag.item_selected.connect(func(_i: int): _fill_picker_grid())
+	filters.add_child(_picker_sub_tag)
+	_fill_sub_tag_options()
 	_picker_hero_only = CheckBox.new()
 	_picker_hero_only.text = "Nur Karten, die zum Helden passen"
 	_picker_hero_only.button_pressed = true
@@ -705,7 +712,44 @@ func _owned_chip(card: CardData) -> Button:
 	chip.pressed.connect(func(): _toggle_card(card))
 	return chip
 
-func _card_matches(card: CardData, query: String, rarity: String, pool: String, hero_id: String, hero_only: bool) -> bool:
+# Sub-Tag-Auswahl: bei gewähltem Bereich nur dessen Sub-Tags, sonst alle nach Bereich gruppiert.
+func _fill_sub_tag_options() -> void:
+	if _picker_sub_tag == null:
+		return
+	var keep := _selected_sub_tag()
+	_picker_sub_tag.clear()
+	_picker_sub_tag.add_item("Alle Sub-Tags")
+	_picker_sub_tag.set_item_metadata(0, "")
+	var pool := "" if _picker_pool.selected <= 0 else Global.CARD_POOLS[_picker_pool.selected - 1]
+	var groups: Array = [pool] if not pool.is_empty() else Global.CARD_POOLS.duplicate()
+	groups.append("")
+	for group in groups:
+		var tags: Array = CardDatabase.SUB_TAG_GROUPS.get(group, []) if not str(group).is_empty() else CardDatabase.SHARED_SUB_TAGS
+		if tags.is_empty():
+			continue
+		_picker_sub_tag.add_separator(str(group) if not str(group).is_empty() else "Allgemein")
+		for tag in tags:
+			_picker_sub_tag.add_item(str(tag))
+			var idx := _picker_sub_tag.item_count - 1
+			_picker_sub_tag.set_item_metadata(idx, str(tag))
+			_picker_sub_tag.set_item_tooltip(idx, str(CardDatabase.SUB_TAG_DESCRIPTIONS.get(tag, "")))
+			if str(tag) == keep:
+				_picker_sub_tag.select(idx)
+
+func _selected_sub_tag() -> String:
+	if _picker_sub_tag == null or _picker_sub_tag.selected < 0 or _picker_sub_tag.item_count == 0:
+		return ""
+	var meta: Variant = _picker_sub_tag.get_item_metadata(_picker_sub_tag.selected)
+	return "" if meta == null else str(meta)
+
+# PanelContainer stoppt Mausklicks standardmäßig; sonst reagiert nur der äußere Rahmen.
+func _pass_clicks_to_card(node: Node) -> void:
+	for child in node.get_children():
+		if child is Control and (child as Control).mouse_filter == Control.MOUSE_FILTER_STOP:
+			(child as Control).mouse_filter = Control.MOUSE_FILTER_PASS
+		_pass_clicks_to_card(child)
+
+func _card_matches(card: CardData, query: String, rarity: String, pool: String, hero_id: String, hero_only: bool, sub_tag: String = "") -> bool:
 	# "Element" öffnet nur im Draft den Unter-Draft; im Testraum gibt man die Elementkarten direkt.
 	if card.element_pick:
 		return false
@@ -715,10 +759,17 @@ func _card_matches(card: CardData, query: String, rarity: String, pool: String, 
 		return false
 	if not pool.is_empty() and card.pool != pool:
 		return false
+	if not sub_tag.is_empty() and not card.sub_tags.has(sub_tag):
+		return false
 	if query.is_empty():
 		return true
-	return card.title.to_lower().contains(query) or card.description.to_lower().contains(query) \
-			or card.id.to_lower().contains(query)
+	if card.title.to_lower().contains(query) or card.description.to_lower().contains(query) \
+			or card.id.to_lower().contains(query):
+		return true
+	for tag in card.sub_tags:
+		if str(tag).to_lower().contains(query):
+			return true
+	return false
 
 func _fill_picker_grid() -> void:
 	if _picker_grid == null or not _picker.visible:
@@ -730,9 +781,10 @@ func _fill_picker_grid() -> void:
 	var rarity := "" if _picker_rarity.selected <= 0 else RARITIES[_picker_rarity.selected - 1]
 	var pool := "" if _picker_pool.selected <= 0 else Global.CARD_POOLS[_picker_pool.selected - 1]
 	var hero_id := Global.get_player_hero_id(_picker_slot)
+	var sub_tag := _selected_sub_tag()
 	var matches: Array[CardData] = []
 	for card in CardDatabase.all_cards:
-		if _card_matches(card, query, rarity, pool, hero_id, _picker_hero_only.button_pressed):
+		if _card_matches(card, query, rarity, pool, hero_id, _picker_hero_only.button_pressed, sub_tag):
 			matches.append(card)
 	var shown := mini(matches.size(), MAX_SHOWN_CARDS)
 	_picker_info.text = "%d Karten passen%s · Klick auf eine Karte gibt sie, nochmal Klick nimmt sie weg." % [
@@ -744,6 +796,7 @@ func _fill_picker_grid() -> void:
 		var footer := "✓ AKTIV · KLICK ENTFERNT" if owned else "KLICK: GEBEN"
 		var panel: PanelContainer = draft_ui._create_card_button(card, i + 1, false, footer, UiTheme.SUCCESS if owned else UiTheme.TEXT_SOFT)
 		panel.mouse_filter = Control.MOUSE_FILTER_STOP
+		_pass_clicks_to_card(panel)
 		panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		if owned:
 			panel.modulate = Color(0.75, 1.0, 0.8)
