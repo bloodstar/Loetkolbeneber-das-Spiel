@@ -97,11 +97,12 @@ func _physics_process(delta: float) -> void:
 	if target != null and _bite_timer <= 0.0 and global_position.distance_to(target.global_position) <= BITE_RANGE + SWARM_SPREAD + 8.0:
 		_bite(target)
 
-func _find_target() -> Player:
-	var best: Player = null
+# Nächster Gegner: Eber oder (im Horden-Modus) Horden-Gegner.
+func _find_target() -> Node2D:
+	var best: Node2D = null
 	var best_dist := INF
 	for p in owner_player._opponents_within(global_position, 1400.0):
-		if p.is_stealthed():
+		if p is Player and (p as Player).is_stealthed():
 			continue
 		var dist: float = global_position.distance_to(p.global_position)
 		if dist < best_dist:
@@ -109,7 +110,7 @@ func _find_target() -> Player:
 			best_dist = dist
 	return best
 
-func _bite(target: Player) -> void:
+func _bite(target: Node2D) -> void:
 	_bite_timer = bite_interval
 	var dir := (target.global_position - global_position).normalized()
 	owner_player._ability_hit(target, bite_damage, dir * 80.0)
