@@ -67,6 +67,9 @@ var trampoline_cells: Dictionary = {}
 var mover_group_of: Dictionary = {}
 var node_group: Dictionary = {}       # Knoten -> Gruppen-ID
 var print_ascii := false
+# --break-blocks: Zerstörbare Blöcke zählen nicht als Hindernis (man kann sie
+# wegschießen). Sinnvoll für große Figuren, die sich den Weg freischießen.
+var break_blocks := false
 var _last_unreached: Dictionary = {}
 
 func _ready() -> void:
@@ -76,6 +79,8 @@ func _ready() -> void:
 	for a in args:
 		if a == "--ascii":
 			print_ascii = true
+		if a == "--break-blocks":
+			break_blocks = true
 		if a.begins_with("--scale="):
 			var body_scale := float(a.substr(8))
 			HALF = BASE_HALF * body_scale
@@ -137,6 +142,10 @@ func _read_level() -> void:
 		oneway_cells[c] = true
 	for c in gen._special_cells.keys():
 		solid_cells[c] = true
+	if break_blocks:
+		for tile in gen._special_tiles.values():
+			if is_instance_valid(tile) and tile.kind == SpecialTile.Kind.DESTRUCTIBLE:
+				solid_cells.erase(Vector2i(int(floor(tile.position.x / TILE)), int(floor(tile.position.y / TILE))))
 	for child in gen.get_children():
 		if child is JumpPad:
 			# Area 18x12, mit Faktor 2 skaliert, Unterkante auf der Standfläche.

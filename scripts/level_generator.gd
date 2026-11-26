@@ -1514,6 +1514,12 @@ func _is_spawn_surface_clear(cell: Vector2i) -> bool:
 			return false
 		if _solid_cells.has(above) or _object_cells.has(above) or _special_cells.has(above) or _ice_cells.has(above):
 			return false
+		# Auch neben dem Platz keine Wand: Große Figuren (Karten) sind breiter
+		# als eine Kachel und steckten sonst beim Spawnen in der Wand.
+		for dx in [-1, 1]:
+			var side := Vector2i(cell.x + dx, cell.y - dy)
+			if _solid_cells.has(side) or _special_cells.has(side):
+				return false
 	return true
 
 func _spawn_position_on_surface(surface_row: int, tile_x: int) -> Vector2:
@@ -1936,7 +1942,7 @@ const LAYOUTS: Dictionary = {
 			[19.0, 20.2, 25.0, 20.2, [1.16]],
 			[17.0, 14.2, 27.0, 14.2, [0.82, 0.82]],
 			[0.0, 11.2, 7.0, 11.2, [0.82]],
-			[13.5, 0.0, -1, 7.0, [1.0, 0.82]],
+			[22.0, 0.0, -1, 5.0, [1.0, 0.82]],
 		],
 	},
 	"wollhaus": {
@@ -2006,8 +2012,8 @@ const LAYOUTS: Dictionary = {
 		# Mauerreste aus zerstörbaren Blöcken.
 		"mirror": true,
 		"platforms": [[12, 16, 19], [3, 7, 16]],
-		"oneway": [[19, 24, 16], [8, 11, 13], [15, 18, 10]],
-		"blocks": [[12, 12, 18], [16, 16, 18], [7, 8, 22], [7, 8, 21], [17, 17, 22], [20, 20, 22], [20, 20, 21], [20, 23, 20], [3, 3, 15], [8, 8, 12]],
+		"oneway": [[19, 24, 16], [8, 12, 13], [14, 18, 10]],
+		"blocks": [[12, 12, 18], [16, 16, 18], [7, 8, 22], [7, 8, 21], [17, 17, 22], [20, 20, 22], [20, 20, 21], [20, 23, 20], [3, 3, 15], [12, 12, 12]],
 		"mystery": [[21, 12]],
 		"pipes": [[1, 22, 42, 22]],
 	},
