@@ -1366,7 +1366,8 @@ func apply_stats() -> void:
 		if c.blocker_drone_heal:
 			blocker_drone_heal = true
 	
-	max_health = (base_hp + hp_flat) * hp_mult
+	# Lobby-Handicap skaliert die fertigen Leben (Held + Karten).
+	max_health = maxf(1.0, (base_hp + hp_flat) * hp_mult * Global.get_hp_handicap_mult(player_index))
 	current_health = max_health
 	armor_percent = clampf(armor_total, 0.0, MAX_ARMOR_PERCENT)
 	damage_reflect_percent = clampf(damage_reflect_total, 0.0, MAX_DAMAGE_REFLECT_PERCENT)
@@ -5433,6 +5434,9 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null
 	# Flächenfähigkeiten und Explosionen, deren Quelle ein Spieler ist.
 	if is_instance_valid(source) and source is Player and source != self and source.team_id == team_id:
 		return
+	# Lobby-Handicap: Schaden, den ein Spieler anderen zufügt, wird skaliert.
+	if is_instance_valid(source) and source is Player and source != self:
+		amount *= Global.get_damage_handicap_mult(source.player_index)
 	# Selbstschaden durch eigene Waffen, Explosionen oder TNT wird halbiert.
 	if is_instance_valid(source) and source is Player and source == self:
 		amount *= FRIENDLY_FIRE_DAMAGE_MULT

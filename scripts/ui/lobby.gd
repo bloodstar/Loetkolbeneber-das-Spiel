@@ -149,6 +149,15 @@ var powerup_none_btn: Button = null
 # kind -> { card, preview, badge, name, desc, check }
 var powerup_cards: Dictionary = {}
 
+# Handicaps-Controls (Reiter im Skript angelegt): Leben/Schaden pro Spieler.
+var handicaps_tab: VBoxContainer = null
+var handicap_rows_box: VBoxContainer = null
+var handicap_summary_label: Label = null
+var handicap_reset_btn: Button = null
+# slot -> { name, info, hp_slider, hp_value, dmg_slider, dmg_value, reset }
+var handicap_rows: Dictionary = {}
+var _handicap_row_signature: String = ""
+
 # Charakter-Controls
 var fur_picker: ColorPickerButton = null
 var eye_picker: ColorPickerButton = null
@@ -211,6 +220,7 @@ func _ready() -> void:
 	Global.map_changed.connect(_on_map_changed)
 	Global.map_pool_changed.connect(_on_map_pool_changed)
 	Global.powerup_pool_changed.connect(_on_powerup_pool_changed)
+	Global.handicaps_changed.connect(_refresh_handicap_controls)
 	Global.match_mode_changed.connect(_on_match_mode_changed)
 	Global.game_mode_changed.connect(_on_game_mode_changed)
 	Global.lobby_state_changed.connect(_on_lobby_state_changed)
@@ -237,6 +247,7 @@ func _ready() -> void:
 	_build_modifier_tab()
 	_build_levels_tab()
 	_build_powerups_tab()
+	_build_handicaps_tab()
 	# Summary auch ohne open_lobby() korrekt anzeigen.
 	_sync_from_global()
 
@@ -2148,6 +2159,7 @@ func _refresh_host_controls() -> void:
 	_refresh_modifier_controls()
 	_refresh_level_controls()
 	_refresh_powerup_controls()
+	_refresh_handicap_controls()
 	_refresh_loadout_enabled()
 
 ## Map-Auswahl: "Zufällig" plus die Karten der aktuellen Einstellung
@@ -3621,6 +3633,235 @@ func _on_powerup_pool_changed() -> void:
 	_refresh_powerup_controls()
 	# Powerup-Karten hängen davon ab, ob überhaupt Powerups aktiv sind.
 	_refresh_ban_states()
+
+# --- Handicaps: Leben und Schaden pro Spieler (nur Host) ---
+
+func _build_handicaps_tab() -> void:
+	if handicaps_tab == null:
+		handicaps_tab = VBoxContainer.new()
+		handicaps_tab.name = "Handicaps"
+		handicaps_tab.add_theme_constant_override("separation", 8)
+		tabs.add_child(handicaps_tab)
+	_clear_children(handicaps_tab)
+	handicap_rows.clear()
+	_handicap_row_signature = ""
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	handicaps_tab.add_child(scroll)
+
+	var body := VBoxContainer.new()
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 10)
+	scroll.add_child(body)
+
+	_add_section_title(body, "HANDICAPS", Color(1.0, 0.62, 0.35, 1.0))
+	var intro := Label.new()
+	intro.text = "Gleicht unterschiedlich starke Spieler aus. LEBEN skaliert die maximalen Leben nach Helden- und Kartenwerten, SCHADEN skaliert jeden Schaden, den der Spieler anderen zufügt (Schüsse, Nahkampf, Fähigkeiten, Flächen). Erlaubt sind %d %% bis %d %%." % [
+		Global.HANDICAP_PERCENT_MIN, Global.HANDICAP_PERCENT_MAX,
+	]
+	intro.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	intro.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(intro)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 12)
+	body.add_child(header)
+
+	handicap_summary_label = Label.new()
+	handicap_summary_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	handicap_summary_label.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
+	handicap_summary_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	handicap_summary_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	handicap_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	header.add_child(handicap_summary_label)
+
+	handicap_reset_btn = Button.new()
+	handicap_reset_btn.text = "ALLE 100 %"
+	handicap_reset_btn.tooltip_text = "Alle Handicaps zurücksetzen."
+	handicap_reset_btn.pressed.connect(_on_handicaps_reset_pressed)
+	header.add_child(handicap_reset_btn)
+
+	handicap_rows_box = VBoxContainer.new()
+	handicap_rows_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	handicap_rows_box.add_theme_constant_override("separation", 8)
+	body.add_child(handicap_rows_box)
+
+	_refresh_handicap_controls()
+
+func _rebuild_handicap_rows(slots: Array[int]) -> void:
+	_clear_children(handicap_rows_box)
+	handicap_rows.clear()
+	for slot in slots:
+		handicap_rows_box.add_child(_create_handicap_row(slot))
+
+func _create_handicap_row(slot: int) -> PanelContainer:
+	var card := PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.add_theme_stylebox_override("panel", _level_card_on)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	card.add_child(row)
+
+	var name_box := VBoxContainer.new()
+	name_box.custom_minimum_size = Vector2(230, 0)
+	name_box.add_theme_constant_override("separation", 2)
+	row.add_child(name_box)
+
+	var name_label := Label.new()
+	name_label.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	name_label.clip_text = true
+	name_box.add_child(name_label)
+
+	var info_label := Label.new()
+	info_label.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	info_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	name_box.add_child(info_label)
+
+	var hp := _add_handicap_slider(row, "LEBEN", "Maximale Leben dieses Spielers.")
+	(hp[0] as HSlider).value_changed.connect(_on_handicap_hp_changed.bind(slot))
+	var dmg := _add_handicap_slider(row, "SCHADEN", "Schaden, den dieser Spieler anderen zufügt.")
+	(dmg[0] as HSlider).value_changed.connect(_on_handicap_damage_changed.bind(slot))
+
+	var reset := Button.new()
+	reset.text = "100 %"
+	reset.tooltip_text = "Handicap dieses Spielers zurücksetzen."
+	reset.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	reset.pressed.connect(_on_handicap_slot_reset.bind(slot))
+	row.add_child(reset)
+
+	handicap_rows[slot] = {
+		"card": card,
+		"name": name_label,
+		"info": info_label,
+		"hp_slider": hp[0],
+		"hp_value": hp[1],
+		"dmg_slider": dmg[0],
+		"dmg_value": dmg[1],
+		"reset": reset,
+	}
+	return card
+
+# Gibt [HSlider, Wert-Label] zurück.
+func _add_handicap_slider(row: HBoxContainer, caption: String, tooltip: String) -> Array:
+	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 2)
+	box.tooltip_text = tooltip
+	row.add_child(box)
+
+	var top := HBoxContainer.new()
+	box.add_child(top)
+	var cap := Label.new()
+	cap.text = caption
+	cap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cap.add_theme_font_size_override("font_size", UiTheme.FS_S)
+	cap.add_theme_color_override("font_color", UiTheme.TEXT_SOFT)
+	top.add_child(cap)
+	var value := Label.new()
+	value.add_theme_font_size_override("font_size", UiTheme.FS_M)
+	top.add_child(value)
+
+	var slider := HSlider.new()
+	slider.min_value = Global.HANDICAP_PERCENT_MIN
+	slider.max_value = Global.HANDICAP_PERCENT_MAX
+	slider.step = Global.HANDICAP_PERCENT_STEP
+	slider.tick_count = int((Global.HANDICAP_PERCENT_MAX - Global.HANDICAP_PERCENT_MIN) / 50) + 1
+	slider.ticks_on_borders = true
+	slider.value = Global.HANDICAP_PERCENT_DEFAULT
+	slider.custom_minimum_size = Vector2(160, 24)
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.tooltip_text = tooltip
+	box.add_child(slider)
+	return [slider, value]
+
+func _handicap_value_color(percent: int) -> Color:
+	if percent > Global.HANDICAP_PERCENT_DEFAULT:
+		return Color(1.0, 0.78, 0.35, 1.0)
+	if percent < Global.HANDICAP_PERCENT_DEFAULT:
+		return Color(0.5, 0.78, 1.0, 1.0)
+	return Color(0.75, 0.78, 0.85, 1.0)
+
+func _refresh_handicap_controls() -> void:
+	if handicaps_tab == null or handicap_rows_box == null:
+		return
+	var slots: Array[int] = Global.get_active_player_indices()
+	var signature := str(slots)
+	if signature != _handicap_row_signature:
+		_handicap_row_signature = signature
+		_rebuild_handicap_rows(slots)
+	var is_host := Global.is_local_host()
+	var changed_count := 0
+	for slot_key in handicap_rows.keys():
+		var slot := int(slot_key)
+		var nodes: Dictionary = handicap_rows[slot_key]
+		var hp_pct := Global.get_hp_handicap_percent(slot)
+		var dmg_pct := Global.get_damage_handicap_percent(slot)
+		if hp_pct != Global.HANDICAP_PERCENT_DEFAULT or dmg_pct != Global.HANDICAP_PERCENT_DEFAULT:
+			changed_count += 1
+		var name_label := nodes["name"] as Label
+		name_label.text = _slot_short_name(slot)
+		var tint := _character_team_tint(slot)
+		name_label.add_theme_color_override("font_color", tint.lightened(0.35) if tint.a > 0.0 else Color(0.92, 0.95, 1.0, 1.0))
+		var hero := Global.get_hero(Global.get_player_hero_id(slot))
+		var base_hp := float(Global.get_effective_base_hp(hero))
+		var hero_name := hero.name if hero != null else "?"
+		(nodes["info"] as Label).text = "%s · %d Leben · %d Schuss" % [
+			hero_name,
+			int(round(base_hp * float(hp_pct) / 100.0)),
+			int(round(Global.base_damage * float(dmg_pct) / 100.0)),
+		]
+		for pair in [["hp_slider", "hp_value", hp_pct], ["dmg_slider", "dmg_value", dmg_pct]]:
+			var slider := nodes[pair[0]] as HSlider
+			slider.set_value_no_signal(int(pair[2]))
+			slider.editable = is_host
+			var value := nodes[pair[1]] as Label
+			value.text = "%d %%" % int(pair[2])
+			value.add_theme_color_override("font_color", _handicap_value_color(int(pair[2])))
+		var reset := nodes["reset"] as Button
+		reset.disabled = not is_host \
+			or (hp_pct == Global.HANDICAP_PERCENT_DEFAULT and dmg_pct == Global.HANDICAP_PERCENT_DEFAULT)
+		reset.visible = is_host
+	if handicap_reset_btn != null:
+		handicap_reset_btn.disabled = not is_host or not Global.has_handicaps()
+		handicap_reset_btn.visible = is_host
+	var text := "Alle Spieler auf 100 %."
+	if changed_count > 0:
+		text = "%d Spieler mit Handicap." % changed_count
+	if not is_host:
+		text += "  |  Nur der Host kann Handicaps einstellen."
+	handicap_summary_label.text = text
+	var idx := tabs.get_tab_idx_from_control(handicaps_tab)
+	if idx >= 0:
+		tabs.set_tab_title(idx, "Handicaps •" if Global.has_handicaps() else "Handicaps")
+
+func _on_handicap_hp_changed(value: float, slot: int) -> void:
+	if not Global.is_local_host():
+		_refresh_handicap_controls()
+		return
+	Global.set_hp_handicap(slot, int(value))
+
+func _on_handicap_damage_changed(value: float, slot: int) -> void:
+	if not Global.is_local_host():
+		_refresh_handicap_controls()
+		return
+	Global.set_damage_handicap(slot, int(value))
+
+func _on_handicap_slot_reset(slot: int) -> void:
+	if not Global.is_local_host():
+		return
+	Global.set_hp_handicap(slot, Global.HANDICAP_PERCENT_DEFAULT)
+	Global.set_damage_handicap(slot, Global.HANDICAP_PERCENT_DEFAULT)
+	SoundManager.play_sound("click")
+
+func _on_handicaps_reset_pressed() -> void:
+	if not Global.is_local_host():
+		return
+	Global.reset_handicaps()
+	SoundManager.play_sound("click")
 
 # Großansicht: liegt als eigenes Overlay über dem gesamten Lobby-Panel.
 func _build_level_viewer() -> void:

@@ -30,6 +30,8 @@ signal map_changed()
 signal map_pool_changed()
 # Powerups wurden im Lobby-Reiter "Powerups" an- oder abgeschaltet.
 signal powerup_pool_changed()
+# Handicaps (Leben/Schaden pro Spieler) wurden im Lobby-Reiter geändert.
+signal handicaps_changed()
 signal match_mode_changed(mode: String)
 signal game_mode_changed(mode: String)
 signal player_count_changed(count: int)
@@ -394,6 +396,15 @@ const POWERUP_INFO: Dictionary = {
 	"invisible": {"name": "Unsichtbar", "description": "6 s lang für Gegner unsichtbar. Deine Schüsse und Effekte bleiben sichtbar."},
 }
 var disabled_powerup_kinds: Array[String] = []
+
+# Handicaps: Leben- und Schadensfaktor pro Spieler-Slot in Prozent. Nur der
+# Host stellt sie ein (Lobby-Reiter "Handicaps"), Clients spiegeln sie.
+const HANDICAP_PERCENT_MIN: int = 50
+const HANDICAP_PERCENT_MAX: int = 200
+const HANDICAP_PERCENT_STEP: int = 10
+const HANDICAP_PERCENT_DEFAULT: int = 100
+var player_hp_handicap: Array[int] = [100, 100, 100, 100, 100, 100]
+var player_damage_handicap: Array[int] = [100, 100, 100, 100, 100, 100]
 
 # Lobby-Loadouts: benannte Presets für alle Host-Einstellungen (Modus, Punkte,
 # Draft, Kartenpools, Bans, Map, HP/Schaden usw.). Sie werden lokal gespeichert.
@@ -2520,6 +2531,80 @@ func set_disabled_powerups(kinds: Array) -> void:
 	disabled_powerup_kinds = target
 	powerup_pool_changed.emit()
 
+# --- Handicaps ---
+
+func _clamp_handicap(percent: int) -> int:
+	return clampi(percent, HANDICAP_PERCENT_MIN, HANDICAP_PERCENT_MAX)
+
+func get_hp_handicap_percent(slot: int) -> int:
+	if slot < 1 or slot > MAX_PLAYERS:
+		return HANDICAP_PERCENT_DEFAULT
+	return player_hp_handicap[slot - 1]
+
+func get_damage_handicap_percent(slot: int) -> int:
+	if slot < 1 or slot > MAX_PLAYERS:
+		return HANDICAP_PERCENT_DEFAULT
+	return player_damage_handicap[slot - 1]
+
+# Faktor auf die maximalen Leben (nach Helden- und Kartenwerten).
+func get_hp_handicap_mult(slot: int) -> float:
+	return float(get_hp_handicap_percent(slot)) / 100.0
+
+# Faktor auf allen Schaden, den der Spieler anderen zufügt.
+func get_damage_handicap_mult(slot: int) -> float:
+	return float(get_damage_handicap_percent(slot)) / 100.0
+
+func set_hp_handicap(slot: int, percent: int) -> void:
+	if slot < 1 or slot > MAX_PLAYERS:
+		return
+	var clamped := _clamp_handicap(percent)
+	if player_hp_handicap[slot - 1] == clamped:
+		return
+	player_hp_handicap[slot - 1] = clamped
+	handicaps_changed.emit()
+
+func set_damage_handicap(slot: int, percent: int) -> void:
+	if slot < 1 or slot > MAX_PLAYERS:
+		return
+	var clamped := _clamp_handicap(percent)
+	if player_damage_handicap[slot - 1] == clamped:
+		return
+	player_damage_handicap[slot - 1] = clamped
+	handicaps_changed.emit()
+
+func has_handicaps() -> bool:
+	for i in range(MAX_PLAYERS):
+		if player_hp_handicap[i] != HANDICAP_PERCENT_DEFAULT \
+				or player_damage_handicap[i] != HANDICAP_PERCENT_DEFAULT:
+			return true
+	return false
+
+# Für Presets und Netzwerk-Sync: {"hp": [..6], "damage": [..6]}.
+func get_handicaps() -> Dictionary:
+	return {"hp": player_hp_handicap.duplicate(), "damage": player_damage_handicap.duplicate()}
+
+func set_handicaps(data: Variant) -> void:
+	var hp_list: Array = []
+	var dmg_list: Array = []
+	if data is Dictionary:
+		var hp_v: Variant = data.get("hp", [])
+		var dmg_v: Variant = data.get("damage", [])
+		hp_list = hp_v if hp_v is Array else []
+		dmg_list = dmg_v if dmg_v is Array else []
+	var changed := false
+	for i in range(MAX_PLAYERS):
+		var hp := _clamp_handicap(int(hp_list[i])) if i < hp_list.size() else HANDICAP_PERCENT_DEFAULT
+		var dmg := _clamp_handicap(int(dmg_list[i])) if i < dmg_list.size() else HANDICAP_PERCENT_DEFAULT
+		if player_hp_handicap[i] != hp or player_damage_handicap[i] != dmg:
+			changed = true
+		player_hp_handicap[i] = hp
+		player_damage_handicap[i] = dmg
+	if changed:
+		handicaps_changed.emit()
+
+func reset_handicaps() -> void:
+	set_handicaps({})
+
 # Löst "zufall" deterministisch anhand des Runden-Seeds auf. Host und Client
 # erhalten so dieselbe Map, auch wenn der Host "Zufällig" ausgewählt hat.
 func resolve_map_id(level_seed: int) -> String:
@@ -2789,6 +2874,7 @@ func get_current_lobby_settings() -> Dictionary:
 		"map_id": selected_map_id,
 		"disabled_map_ids": disabled_map_ids.duplicate(),
 		"disabled_powerup_kinds": disabled_powerup_kinds.duplicate(),
+		"handicaps": get_handicaps(),
 		"enabled_card_pools": enabled_card_pools.duplicate(),
 		"known_card_pools": CARD_POOLS.duplicate(),
 		"banned_card_ids": banned_card_ids.duplicate(),
@@ -2820,6 +2906,7 @@ func _default_lobby_settings() -> Dictionary:
 		"map_id": MAP_RANDOM,
 		"disabled_map_ids": [],
 		"disabled_powerup_kinds": [],
+		"handicaps": {},
 		"enabled_card_pools": CARD_POOLS.duplicate(),
 		"banned_card_ids": [],
 		"pool_unlocked_card_ids": [],
@@ -2974,6 +3061,7 @@ func _setup_lobby_settings_autosave() -> void:
 	map_changed.connect(_queue_lobby_autosave)
 	map_pool_changed.connect(_queue_lobby_autosave)
 	powerup_pool_changed.connect(_queue_lobby_autosave)
+	handicaps_changed.connect(_queue_lobby_autosave)
 	base_hp_percent_changed.connect(_queue_lobby_autosave)
 	base_damage_changed.connect(_queue_lobby_autosave)
 	rarity_percentages_changed.connect(_queue_lobby_autosave)
@@ -3108,6 +3196,8 @@ func apply_lobby_settings(settings: Dictionary) -> void:
 	# Alte Presets ohne Liste haben alle Powerups an.
 	var disabled_powerups: Variant = settings.get("disabled_powerup_kinds", [])
 	set_disabled_powerups(disabled_powerups if disabled_powerups is Array else [])
+	# Alte Presets ohne Handicaps: alle Spieler 100 %.
+	set_handicaps(settings.get("handicaps", {}))
 	var pools: Variant = settings.get("enabled_card_pools", null)
 	if pools is Array:
 		# Pools, die beim Speichern noch nicht existierten, sind an.

@@ -577,6 +577,8 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, source = null
 	if source is Player:
 		_kill_credit = source
 		last_damage_source = source
+		# Lobby-Handicap des Spielers gilt auch gegen Horden-Gegner.
+		amount *= Global.get_damage_handicap_mult(source.player_index)
 	if mark_timer > 0.0 and source != null and source == mark_source:
 		amount *= 1.25
 	# Element-System: Supraleiter, Zersplittern, Eissplitter-Karte.
