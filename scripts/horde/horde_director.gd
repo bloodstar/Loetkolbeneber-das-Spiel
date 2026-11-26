@@ -740,6 +740,7 @@ func _update_gems(delta: float) -> void:
 	var targets := alive_targets()
 	if targets.is_empty():
 		return
+	var chest_wait := _chest_must_wait()
 	var i := _gems.size() - 1
 	while i >= 0:
 		var g: Dictionary = _gems[i]
@@ -760,9 +761,23 @@ func _update_gems(delta: float) -> void:
 			gp = gp.move_toward(best.global_position, float(g["spd"]) * delta)
 			g["pos"] = gp
 			if gp.distance_to(best.global_position) < HordeDefs.GEM_PICKUP_RADIUS:
-				_collect(g, best)
-				_gems.remove_at(i)
+				if g["t"] == "chest" and chest_wait:
+					# Truhe schwebt beim Eber, bis alle Kristalle da sind.
+					pass
+				else:
+					_collect(g, best)
+					_gems.remove_at(i)
 		i -= 1
+
+## Die Truhe öffnet sich erst, wenn alle vom Magneten gezogenen Kristalle
+## eingesammelt und die daraus entstandenen Stufenaufstiege gewählt sind.
+func _chest_must_wait() -> bool:
+	if levelup_active or pending_levelups > 0:
+		return true
+	for g in _gems:
+		if str(g["t"]) != "chest" and bool(g.get("mag", false)):
+			return true
+	return false
 
 ## Verschmilzt alte, ruhende XP-Kristalle mit Nachbarn (Raster-Hash). Der
 ## größere Kristall bleibt liegen und bekommt den Wert dazu.
