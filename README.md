@@ -157,7 +157,7 @@ Die HP-Werte gelten bei **Basis-HP-Faktor 100 %**. In der Lobby lässt sich der 
 - **Durchschlag**: Jeder Punkt Durchschlag geht durch einen weiteren Gegner **und** durch eine halbe Kachel feste Wand oder eine ganze Kachel zerstörbaren Block. Diagonale Schüsse kosten gleich viel. Die Rand-Felswand, Fässer, Herzblöcke und Türme lassen sich nicht durchschießen.
 - **Eigene Schüsse**: Sobald eine Kugel deinen Körper verlassen hat, kann sie dich selbst treffen, etwa wenn ein Schuss nach oben auf deinen Kopf zurückfällt, vom Wind zurückgeweht wird oder abprallt. Selbstschaden ist halbiert.
 - **Abpraller**: Geschosse prallen von Oberflächen ab. Wer schon Abpraller hat, bekommt drei Ausbaukarten angeboten:
-  - **Gummiwand** (legendär): Kugeln prallen auch am Kartenrand ab, ohne einen Abpraller zu verbrauchen.
+  - **Gummiwand** (legendär): Kugeln prallen auch am Kartenrand ab, ohne einen Abpraller zu verbrauchen. Im Horden-Modus wird sie nicht angeboten.
   - **Gummipuffer** (episch): 50 % weniger Selbstschaden durch eigene Kugeln, Explosionen und Flächen.
   - **Zellteilung** (episch): Bei jedem Abprall teilt sich die Kugel in zwei kleinere mit je 60 % Schaden. Höchstens 3 Teilungen pro Schuss (also maximal 8 Teile).
 - **Projektil-Kollision**: Schüsse von Gegnern stoßen in der Luft zusammen. Stärke = Schaden × Größe. Sind beide ähnlich stark (Verhältnis ab 0,7), löschen sie sich aus. Sonst fliegt der stärkere geschrumpft weiter.
@@ -177,7 +177,7 @@ Kurzer Sprint mit kurzer Unverwundbarkeit. Ignis hinterlässt dabei Feuer.
 - **Schild** lädt sich erst **5 s nach dem letzten Schaden** wieder auf (**Schild-Cooldown**, Bastion **4 s**). Jeder Schaden aus jeder Quelle (Schüsse, Explosionen, Flächen, Gift, Eigenschaden) startet die Wartezeit neu. Karten (Schildkondensator −0,75 s, Schnellstart-Generator −1,25 s, Bollwerk −0,5 s) verkürzen sie, nie unter 0,5 s. Nur Bastions Heilfeld baut Schild auch während des Cooldowns auf. Schild-Upgrade-Karten erscheinen erst, wenn man mindestens **25 Schild** hat.
 - Über der HP-Leiste zeigt ein **blauer Balken** den aktuellen Schild.
 - **Rüstung** senkt jeden eingehenden Schaden prozentual, höchstens **75 %**.
-- **Schadensreflexion** wirft einen Teil des erlittenen Schadens auf den Angreifer zurück, höchstens **60 %**. Reflektierter Schaden wird nicht noch einmal reflektiert.
+- **Schadensreflexion** wirft einen Teil des erlittenen Schadens auf den Angreifer zurück, höchstens **60 %**. Reflektierter Schaden wird nicht noch einmal reflektiert. Im Horden-Modus trifft die Reflexion auch Horden-Gegner, bei Bissen wie bei Geschossen.
 
 ### Statuseffekte
 
@@ -547,7 +547,7 @@ Eine Ausbaukarte erscheint erst, wenn die Grundkarte im Deck liegt. Wer einen Zw
 | **Explosivschuss** | +30 px Explosion | Großer Knall (+60 px) | Splitterbomben (Zweig C: Meteor Cannon, +75 px, +60 % Schaden, −30 % Feuerrate, früher eigene Karte) |
 | **Feuersturm** | Geschosse entzünden Gegner und den Boden am Einschlag (früher Brandkapsel) | Brandherd: +60 % Feuerschaden | Brandkapsel: +60 % Feuerreichweite (Zweig C: Feuerspur hinter dir) |
 | **Wächterdrohne** | Drohne schießt mit | Zwillingsdrohne | Regenerationsdrohne |
-| **Schutzdrohne** | Drohne fängt Schüsse ab | Heilende Schutzdrohne | Schutzdrohnen-Schwarm |
+| **Schutzdrohne** | Drohne fängt Schüsse ab (auch Horden-Geschosse) | Heilende Schutzdrohne | Schutzdrohnen-Schwarm |
 | **Mörser** | Steiler Bogen, mehr Schaden | Präzisionsmörser | Belagerungsmörser |
 | **Rückstoßfeder** | +25 % Rückstoß | Druckkammer | Schockgeschoss |
 | **Leichte Schuhe** | Tempo | Windschuhe | |

@@ -190,6 +190,22 @@ func _try_block_projectiles(delta: float) -> void:
 		if global_position.distance_to(closest) <= block_radius:
 			_block_projectile(bullet)
 
+## Horden-Geschosse sind keine Bullet-Knoten, der HordeDirector fragt die
+## Schutzdrohnen deshalb selbst. shot_h: Flughöhe über dem Boden.
+func try_block_horde_shot(start: Vector2, finish: Vector2, shot_h: float, dmg: float) -> bool:
+	if not blocks_projectiles or is_replica or not is_instance_valid(owner_player):
+		return false
+	if owner_player.is_dead or owner_player.current_health <= 0.0:
+		return false
+	if absf(owner_player.arena_z - shot_h) > 50.0:
+		return false
+	var closest := Geometry2D.get_closest_point_to_segment(global_position, start, finish)
+	if global_position.distance_to(closest) > block_radius:
+		return false
+	_spawn_block_flash()
+	_credit_block(maxf(dmg, 0.0))
+	return true
+
 func _is_friendly_projectile(bullet: Bullet) -> bool:
 	var shooter := bullet.shooter
 	if shooter == owner_player:
@@ -204,6 +220,9 @@ func _block_projectile(bullet: Bullet) -> void:
 	if not bullet.block_by_drone():
 		return
 	_spawn_block_flash()
+	_credit_block(blocked_damage)
+
+func _credit_block(blocked_damage: float) -> void:
 	if not is_instance_valid(owner_player):
 		return
 	Global.add_match_stat(owner_player.player_index, "damage_blocked", blocked_damage)
