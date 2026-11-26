@@ -546,6 +546,11 @@ func _update_spawning(delta: float) -> void:
 	var targets := alive_targets()
 	if targets.is_empty():
 		return
+	# Bosskampf: nur in den ersten BOSS_SPAWN_WINDOW Sekunden kommen noch
+	# Gegner nach (halbe Rate), danach gar keine mehr (auch kein Wolfsring).
+	if boss_alive() and boss.boss_age >= HordeDefs.BOSS_SPAWN_WINDOW:
+		_spawn_acc = 0.0
+		return
 	var rate := HordeDefs.spawn_rate(run_time) * (1.0 + 0.3 * float(player_count - 1))
 	if boss_alive():
 		rate *= 0.5
@@ -685,8 +690,19 @@ func boss_slam(b: HordeEnemy, radius: float, dmg: float) -> void:
 		if p.global_position.distance_to(b.global_position) <= radius + 12.0 and p.arena_z < 40.0:
 			p.take_damage(dmg, (p.global_position - b.global_position).normalized() * 420.0, b)
 
+## Neue Wut-Stufe: Ring + Meldung, Stufe geht per boss_info an die Clients.
+func on_boss_enrage(b: HordeEnemy) -> void:
+	if b != boss or boss_info.is_empty():
+		return
+	boss_info["rage"] = b.enrage_level
+	NetFx.emit(get_parent(), "ring", NetFx.with_sound(NetFx.ring_args(b.global_position,
+		Color(1.0, 0.2, 0.15, 0.85), 0.6, 16.0, 0.35, 0.35), "warning", 0.05, -8.0))
+	if b.enrage_level == 1:
+		_post_notice("%s wird wütend!" % str(boss_info.get("name", "Boss")), Color(1.0, 0.3, 0.2))
+
 func boss_summon(b: HordeEnemy) -> void:
-	if enemy_count() >= enemy_limit():
+	# Nach dem Spawn-Fenster ruft auch der Boss keine Helfer mehr.
+	if enemy_count() >= enemy_limit() or b.boss_age >= HordeDefs.BOSS_SPAWN_WINDOW:
 		return
 	for i in range(4):
 		var p := b.global_position + Vector2.from_angle(TAU * float(i) / 4.0 + _rng.randf()) * 70.0

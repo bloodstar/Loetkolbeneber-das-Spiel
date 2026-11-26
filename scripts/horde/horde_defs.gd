@@ -9,6 +9,15 @@ const RUN_LENGTH: float = 600.0
 ## Bosse (Sekunden ab Start). Der letzte ist der Endboss: Wer ihn besiegt, gewinnt.
 const BOSS_TIMES: Array[float] = [180.0, 360.0, 540.0, 600.0]
 const BOSS_BASE_HP: Array[float] = [900.0, 1800.0, 3000.0, 5200.0]
+## Bosskampf (Jochen 2026-11-26): nach dem Erscheinen des Bosses kommen nur
+## noch so lange normale Gegner nach, danach ist es ein reines Boss-Duell.
+const BOSS_SPAWN_WINDOW: float = 30.0
+## Enrage: alle BOSS_ENRAGE_EVERY Sekunden eine Wut-Stufe mehr.
+const BOSS_ENRAGE_EVERY: float = 10.0
+## Je Wut-Stufe: +8 % Tempo (höchstens doppelt so schnell), +12 % Schaden.
+const BOSS_ENRAGE_SPEED: float = 0.08
+const BOSS_ENRAGE_SPEED_MAX: float = 2.0
+const BOSS_ENRAGE_DAMAGE: float = 0.12
 ## Gebiete: Nach jedem besiegten Boss geht es auf die nächste Karte. Die
 ## Treibjagd ist eine lange Scroll-Strecke (Feuerwalze von links).
 ## Gebiet 2 und 4 werden je Lauf aus zwei Karten gewürfelt: Felsterrassen und
