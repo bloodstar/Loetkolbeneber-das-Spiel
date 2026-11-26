@@ -7,7 +7,9 @@ extends Node2D
 # Evolution "Magnetfeld": unterwegs schluckt der Haken gegnerische Kugeln
 # und sammelt Powerups für Bastion ein. Host simuliert, Clients zeichnen.
 
-const HIT_RADIUS: float = 14.0
+# Trefferzone um die Kette: plus Körperradius des Ziels (große Eber sind
+# leichter zu treffen).
+const HIT_RADIUS: float = 16.0
 const PULL_MAX_TIME: float = 0.5
 const PULL_STOP_DISTANCE: float = 46.0
 
@@ -57,19 +59,27 @@ func _physics_process(delta: float) -> void:
 		return
 	match state:
 		State.FLY:
-			var next := global_position + direction * speed * delta
-			if _hits_terrain(global_position, next) or _travelled >= max_range:
-				state = State.RETRACT
-				return
-			_travelled += speed * delta
+			var step := speed * delta
+			var from := global_position
+			var next := from + direction * step
+			# Gelände: Der Haken fliegt nur bis zur Wand. Gegner auf dem Stück
+			# davor werden trotzdem noch getroffen.
+			var wall = _terrain_hit(from, next)
+			var stop := wall is Vector2 or _travelled + step >= max_range
+			if wall is Vector2:
+				next = wall
+			_travelled += from.distance_to(next)
 			global_position = next
 			if magnet:
 				_magnet_sweep()
-			var hits: Array = owner_player._opponents_within(global_position, HIT_RADIUS + Player.MELEE_BODY_RADIUS)
-			if not hits.is_empty():
-				_target = hits[0]
+			var hit = _sweep_target(from, next)
+			if hit != null:
+				_target = hit
 				state = State.PULL
+				global_position = _target.global_position
 				owner_player.bastion_hook_hit(_target)
+			elif stop:
+				state = State.RETRACT
 		State.PULL:
 			_pull_time += delta
 			if not is_instance_valid(_target) or _target.current_health <= 0.0:
@@ -103,17 +113,53 @@ func _magnet_sweep() -> void:
 		if is_instance_valid(pu) and pu.has_method("_collect") and pu.global_position.distance_to(global_position) <= magnet_radius:
 			pu._collect(owner_player)
 
-func _hits_terrain(from: Vector2, to: Vector2) -> bool:
+# Erster Gegner, dessen Körper das Kettenstück from→to berührt (der nächste
+# zum Startpunkt gewinnt).
+func _sweep_target(from: Vector2, to: Vector2):
+	var seg_len := from.distance_to(to)
+	var mid := from.lerp(to, 0.5)
+	var best = null
+	var best_t := INF
+	for t in owner_player._opponents_within(mid, seg_len * 0.5 + HIT_RADIUS + 80.0):
+		var pos: Vector2 = t.global_position
+		var closest := Geometry2D.get_closest_point_to_segment(pos, from, to)
+		if closest.distance_to(pos) > HIT_RADIUS + _body_radius(t):
+			continue
+		var along := from.distance_to(closest)
+		if along < best_t:
+			best_t = along
+			best = t
+	return best
+
+static func _body_radius(t) -> float:
+	if t is Player:
+		return Player.MELEE_BODY_RADIUS * absf((t as Player).scale.x)
+	if t is HordeEnemy:
+		return (t as HordeEnemy).radius
+	return Player.MELEE_BODY_RADIUS
+
+# Punkt, an dem das Stück from→to gegen Gelände stößt, sonst null.
+# Einweg-Stege lassen den Haken durch.
+func _terrain_hit(from: Vector2, to: Vector2):
 	var mask := 1
 	if ArenaMode.active:
 		mask = ArenaMode.point_band_mask(arena_z)
-	var query := PhysicsRayQueryParameters2D.create(from, to, mask)
-	query.exclude = [owner_player.get_rid()]
-	var hit := get_world_2d().direct_space_state.intersect_ray(query)
-	if hit.is_empty():
-		return false
-	var collider = hit.get("collider")
-	return not (collider is Node and (collider as Node).is_in_group("one_way_platform"))
+	var space := get_world_2d().direct_space_state
+	var exclude: Array[RID] = [owner_player.get_rid()]
+	for _i in range(4):
+		var query := PhysicsRayQueryParameters2D.create(from, to, mask)
+		query.exclude = exclude
+		var hit := space.intersect_ray(query)
+		if hit.is_empty():
+			return null
+		var collider = hit.get("collider")
+		if collider is Node and (collider as Node).is_in_group("one_way_platform"):
+			if not collider is CollisionObject2D:
+				return null
+			exclude.append((collider as CollisionObject2D).get_rid())
+			continue
+		return hit.get("position", to)
+	return null
 
 func finish() -> void:
 	if _ended:
