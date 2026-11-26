@@ -2222,6 +2222,24 @@ func dash() -> void:
 		elif hero_id == "vampire":
 			vampire_add_orb()
 
+## Arena: Bildschirmversatz für Effekte an diesem Eber. Steht er auf einer
+## Plattform oder springt er, liegt die 2D-Effektebene sonst am Boden darunter
+## und der Effekt erscheint versetzt zur Voxel-Figur. Seitenansicht: kein Versatz.
+func arena_lift() -> Vector2:
+	if not ArenaMode.active:
+		return Vector2.ZERO
+	return ArenaMode.height_offset(maxf(arena_z, 0.0))
+
+## Wie arena_lift() für ein beliebiges Ziel (Eber, Horden-Gegner, Dummy) mit
+## einer arena_z-Höhe; ohne Höhe kein Versatz.
+static func lift_of(node: Object) -> Vector2:
+	if not ArenaMode.active or node == null:
+		return Vector2.ZERO
+	var z = node.get("arena_z")
+	if z == null:
+		return Vector2.ZERO
+	return ArenaMode.height_offset(maxf(float(z), 0.0))
+
 # Kurzlebige visuelle Effekte werden an Main gehängt. Die Gruppe erlaubt es,
 # beim Rundenstart auch diese Effekte zuverlässig zu entfernen.
 func _add_round_effect(node: Node) -> void:
@@ -2270,7 +2288,7 @@ func _spawn_voxel_ghost() -> void:
 	ghost.offset = Vector2(0.0, (VoxelSprite.FEET_Y - VoxelSprite.VIEW_CENTER_Y) / unit)
 	ghost.modulate = Color(1.0, 1.0, 1.0, 0.6)
 	_add_round_effect(ghost)
-	ghost.global_position = sprite.global_position
+	ghost.global_position = sprite.global_position + arena_lift()
 	var tw = ghost.create_tween()
 	tw.tween_property(ghost, "modulate:a", 0.0, 0.2)
 	tw.tween_callback(ghost.queue_free)
@@ -2295,7 +2313,7 @@ func _spawn_ghost_trail() -> void:
 	ghost.flip_h = sprite.flip_h
 	ghost.modulate = Color(1.0, 1.0, 1.0, 0.6)
 	_add_round_effect(ghost)
-	ghost.global_position = sprite.global_position
+	ghost.global_position = sprite.global_position + arena_lift()
 	var tw = ghost.create_tween()
 	tw.tween_property(ghost, "modulate:a", 0.0, 0.2)
 	tw.tween_callback(ghost.queue_free)
@@ -2675,7 +2693,7 @@ func _melee_strike(dir: Vector2, power: float) -> void:
 				apply_freeze((p as Player).chill_on_melee_hit)
 		if (landed or p.is_time_frozen()) and Global.get_player_hero_id(player_index) == "zeitschlaeger":
 			_zeit_register_hit(p)
-		_spawn_blade_hit_spark(p.global_position)
+		_spawn_blade_hit_spark(p.global_position + lift_of(p))
 	if not targets.is_empty():
 		chain_hit_timer = 0.0
 		_on_boar_hit()
@@ -3351,7 +3369,7 @@ func _spawn_fire_sparks() -> void:
 	spark.texture = EFFECT_CIRCLE_TEXTURE
 	spark.modulate = Color(1.0, 0.4, 0.1, 0.8)
 	_add_round_effect(spark)
-	spark.global_position = global_position
+	spark.global_position = global_position + arena_lift()
 	var tw = spark.create_tween()
 	tw.tween_property(spark, "scale", Vector2(2.0, 2.0), 0.3)
 	tw.parallel().tween_property(spark, "modulate:a", 0.0, 0.3)
@@ -3472,7 +3490,7 @@ func _blade_storm_strike(damage_mult: float, knockback: float, quiet := false) -
 		var before: float = p.current_health + p.current_shield
 		_ability_hit(p, bullet_damage * damage_mult * _ult_power(), dir.normalized() * knockback)
 		dealt += maxf(0.0, before - (p.current_health + p.current_shield))
-		_spawn_blade_hit_spark(p.global_position)
+		_spawn_blade_hit_spark(p.global_position + lift_of(p))
 	# Evolution "Blutrausch": heilt um einen Teil des tatsächlich verursachten Schadens.
 	if dealt > 0.0 and _has_ability_evolution("klinge_bloodlust"):
 		heal(dealt * BLADE_BLOODLUST_HEAL)
@@ -3607,7 +3625,7 @@ func _dash_cut() -> void:
 		if closest.distance_to(p.global_position) > width:
 			continue
 		_ability_hit(p, damage, (to - from).normalized() * 180.0)
-		_spawn_blade_hit_spark(p.global_position)
+		_spawn_blade_hit_spark(p.global_position + lift_of(p))
 
 # --- Blutritter (Nahkampf-Vampir): Blutsturm (Dash), Blutbersten (Fähigkeit),
 # Blutruf (Ulti). Passiv: Blutkugeln laden Schild auf. Die Blutkugeln selbst
@@ -3637,7 +3655,7 @@ func _vamp_melee_dash_start() -> void:
 	# Die Kugel bleibt an der Startstelle liegen (z. B. für den Blutruf).
 	# Durch Gegner hindurch geht es wie bei allen Vampiren (_vampire_dash_ghost).
 	spawn_blood_orb(global_position)
-	_fx("ring", NetFx.ring_args(global_position, Color(0.75, 0.05, 0.12, 0.8), 0.6, 3.0, 0.16, 0.25))
+	_fx("ring", NetFx.ring_args(global_position + arena_lift(), Color(0.75, 0.05, 0.12, 0.8), 0.6, 3.0, 0.16, 0.25))
 
 # Evolution "Blutschneise": jeder Gegner, den der Blutsturm berührt, nimmt
 # einmal pro Dash einen Teil des Nahkampfschadens.
@@ -3649,7 +3667,7 @@ func _vamp_melee_dash_cut() -> void:
 			continue
 		_vampire_dash_hits.append(p)
 		_ability_hit(p, damage, dash_dir * 140.0)
-		_spawn_blade_hit_spark(p.global_position)
+		_spawn_blade_hit_spark(p.global_position + lift_of(p))
 
 # Fähigkeit "Blutbersten": der gesamte Schild explodiert und macht
 # VAMP_MELEE_BURST_DAMAGE_PER_SHIELD Schaden je Schildpunkt an allen Gegnern
@@ -3926,7 +3944,7 @@ func _klinge_dash_tick() -> void:
 		var data := Global.get_melee_weapon_data(melee_weapon)
 		var dmg := float(data["damage"]) * melee_damage_mult * powerup_damage_mult * KLINGE_DASH_DAMAGE_MULT * dash_effect_mult
 		p.take_damage(dmg, dash_dir * 160.0, self)
-		_spawn_blade_hit_spark(p.global_position)
+		_spawn_blade_hit_spark(p.global_position + lift_of(p))
 		if _dash_hit.size() == 1:
 			_klinge_dash_refund()
 
@@ -3959,7 +3977,7 @@ func _bastion_ram_tick() -> void:
 		if not _dash_hit.has(p):
 			_dash_hit.append(p)
 			p.take_damage(BASTION_RAM_DAMAGE * powerup_damage_mult * dash_effect_mult, Vector2.ZERO, self)
-			_spawn_blade_hit_spark(p.global_position)
+			_spawn_blade_hit_spark(p.global_position + lift_of(p))
 		p.velocity = dash_dir * _dash_speed_now
 		p.knockback_timer = maxf(p.knockback_timer, 0.12)
 
@@ -3990,7 +4008,7 @@ func _boar_charge_tick() -> void:
 			continue
 		_dash_hit.append(p)
 		_ability_hit(p, DRUID_BOAR_CHARGE_DAMAGE * _ult_power(), (dash_dir + lift).normalized() * DRUID_BOAR_CHARGE_KNOCKBACK)
-		_spawn_blade_hit_spark(p.global_position)
+		_spawn_blade_hit_spark(p.global_position + lift_of(p))
 		_on_boar_hit()
 	_melee_hit_objects(dash_dir, 60.0 * _ult_power(), 500.0)
 
@@ -4241,7 +4259,7 @@ func _throw_boomerang() -> void:
 
 func boomerang_hit(p, damage: float, dir: Vector2) -> void:
 	_ability_hit(p, damage * powerup_damage_mult, dir * 220.0)
-	_spawn_blade_hit_spark(p.global_position)
+	_spawn_blade_hit_spark(p.global_position + lift_of(p))
 	# Evolution "Blutung": Treffer bluten und markieren den Gegner.
 	if _has_ability_evolution("klinge_bleed"):
 		p.apply_burn(KLINGEEVO_BLEED_STACKS, KLINGEEVO_BLEED_DAMAGE * ability_damage_mult)
@@ -4302,7 +4320,7 @@ func _fire_hook() -> void:
 func bastion_hook_hit(p) -> void:
 	_ability_hit(p, BASTION_HOOK_DAMAGE * ability_damage_mult, Vector2.ZERO)
 	p.apply_stun(BASTION_HOOK_STUN * ability_duration_mult)
-	_spawn_blade_hit_spark(p.global_position)
+	_spawn_blade_hit_spark(p.global_position + lift_of(p))
 	_fx("sound", {"snd": ["hit", 0.15, -2.0]})
 	# Evolution "Kettenschlag": der nächste Hammerschlag trifft doppelt.
 	if _has_ability_evolution("bastion_chain_hit"):
@@ -4767,7 +4785,7 @@ func _vampire_dash_tick() -> void:
 		if _has_ability_evolution("vampire_dash_strong"):
 			dash_damage *= VAMPIRE_STRONG_DASH_MULT
 		_ability_hit(p, dash_damage, dash_dir * 120.0)
-		_fx("ring", NetFx.with_sound(NetFx.ring_args(p.global_position,
+		_fx("ring", NetFx.with_sound(NetFx.ring_args(p.global_position + lift_of(p),
 			Color(0.85, 0.05, 0.15, 0.85), 0.4, 2.2, 0.18, 0.2), "hit", 0.2, -2.0))
 
 func _vampire_bat_swarm() -> void:
@@ -6158,6 +6176,7 @@ func spawn_effect_zone(kind: int, pos: Vector2, radius: float, duration: float, 
 	zone.from_ability = bool(params.get("from_ability", false))
 	zone.also_burn = bool(params.get("also_burn", false))
 	zone.no_react = bool(params.get("no_react", false))
+	zone.ground_z = _arena_ground_at(pos)
 	get_parent().add_child(zone)
 	zone.global_position = pos
 	# Auf Plattformen und Wippen fährt das Feuer mit.
@@ -6183,10 +6202,18 @@ func spawn_effect_zone(kind: int, pos: Vector2, radius: float, duration: float, 
 			"stun_duration": zone.stun_duration,
 			"owner_index": player_index,
 			"also_burn": zone.also_burn,
+			"gz": zone.ground_z,
 		}
 		if EffectZone.is_floor_kind(kind):
 			net_data.merge(zone.fire_network_data())
 		NetworkManager.send_zone_spawn(net_data)
+
+# Arena: Bodenhöhe an pos, höchstens bis zur eigenen Höhe (Plattform unter
+# dem Eber, nicht ein höheres Plateau daneben). Seitenansicht: 0.
+func _arena_ground_at(pos: Vector2) -> float:
+	if not ArenaMode.active or ArenaMode.grid == null:
+		return 0.0
+	return ArenaMode.grid.support_height(pos, maxf(arena_z, 0.0) + 1.0, Vector2(4, 4), 0.5)
 
 func spawn_network_zone(data: Dictionary) -> void:
 	var zone := EffectZone.new()
@@ -6196,6 +6223,7 @@ func spawn_network_zone(data: Dictionary) -> void:
 	zone.duration = float(data.get("duration", 2.0))
 	zone.tick_interval = float(data.get("tick_interval", 0.55))
 	zone.also_burn = bool(data.get("also_burn", false))
+	zone.ground_z = float(data.get("gz", 0.0))
 	get_parent().add_child(zone)
 	zone.global_position = data.get("pos", global_position)
 	if EffectZone.is_floor_kind(zone.kind):
