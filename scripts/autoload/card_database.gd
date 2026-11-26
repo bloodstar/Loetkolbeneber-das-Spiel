@@ -3178,7 +3178,8 @@ func _init_database() -> void:
 	bl12.id = "panzerglas"
 	bl12.title = "Panzerglas"
 	bl12.description = "Die Barriere zerbricht nicht so schnell.\n+1 Treffer, den die Barriere aushält."
-	bl12.rarity = "Uncommon"
+	bl12.rarity = "Rare"
+	bl12.version = 2 # Uncommon -> Rare (Jochen 2026-11-26)
 	bl12.color = Color(0.55, 0.90, 1.00)
 	bl12.block_hits_add = 1
 	_register(bl12)

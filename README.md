@@ -260,7 +260,7 @@ Ganz oben stehen **Spielart**, **Modus** und **Map**, darunter Loadouts, Bot-Tes
 
 - **Kartenpools** (Haupt-Tags) einzeln an- und ausschalten: Offensive, Defensive, Bewegung, Nahkampf. Mindestens einer bleibt aktiv. Die früheren Pools Kern und Chaos sind in Offensive bzw. Defensive aufgegangen.
 - **Netzdiagramme** unter den Pools zeigen, wie sich alle verfügbaren Karten verteilen: auf die Haupt-Tags, je Haupt-Tag auf seine Sub-Tags und auf die Seltenheiten. So sieht man, ob es für alle Werte ähnlich viele Karten gibt.
-- **Seltenheits-Prozente** für Common/Uncommon/Rare/Epic/Legendary (Standard 50 / 25 / 15 / 8 / 2). Die Summe wird automatisch normalisiert.
+- **Seltenheits-Prozente** für Common/Uncommon/Rare/Epic/Legendary (Standard 51,5 / 25 / 15 / 8 / 0,5), mit einer Nachkommastelle einstellbar. Die Summe wird automatisch normalisiert.
 - **Karten sperren**: Gesperrte Karten kommen in keinem Draft mehr, nach Seltenheit sortiert. Karten aus abgeschalteten Pools stehen dort abgedunkelt als gesperrt („Pool aus“). Der Host kann sie einzeln wieder freigeben („freigegeben“); Ausbaukarten einer freigegebenen Grundkarte sind dann ebenfalls frei. Wird der Pool wieder eingeschaltet, verfallen die Einzelfreigaben.
 - **Filter ▾** filtert die Kartenliste nach Haupt-Tags und Sub-Tags. Innerhalb einer Gruppe reicht ein Treffer (oder), Haupt- und Sub-Tags zusammen müssen beide passen (und).
 - Die Lobby zeigt `Pool min. X/Held`, also wie viele Karten der kleinste Helden-Pool noch hat.
@@ -572,8 +572,8 @@ Dazu kommen einzelne Reflexions-Karten im Pool Defensive: **Stachelweste**, **Ra
 | Seltenheit | Karten |
 | :--- | :--- |
 | Common | Barriereübung (+0,15 s), Schnelle Deckung (−15 % Abklingzeit) |
-| Uncommon | Verstärkte Deckung (+0,3 s, Evolution: Ausdauerbarriere), Barrierestoß (stößt weg), Panzerglas (+1 Treffer, bevor die Barriere zerbricht) |
-| Rare | Barrierebombe, Heilzone, Druckwelle |
+| Uncommon | Verstärkte Deckung (+0,3 s, Evolution: Ausdauerbarriere), Barrierestoß (stößt weg) |
+| Rare | Barrierebombe, Heilzone, Druckwelle, Panzerglas (+1 Treffer, bevor die Barriere zerbricht) |
 | Epic | Konterblitz (+50 % auf reflektierte Schüsse), Barriere-Experte, Unzerbrechlich |
 
 **Minen:** Mit **Minenleger** (Rare) lässt jede Barriere eine Mine fallen, die auf dem Boden darunter liegen bleibt und auf Plattformen und Wippen mitfährt. Gegner sehen sie nicht (online gar nicht, am selben Bildschirm nur schwach). Nach 2 s ist sie scharf. Läuft ein Gegner darüber, blinkt sie und explodiert 1,5 s später: 50 Schaden, 2 Felder Explosionsradius, nur gegen Gegner. Höchstens 8 Minen pro Spieler, bei der neunten verschwindet die älteste. Nur mit Minenleger im Deck gibt es **Minenschaden** (Rare, +50 Schaden) und **Minenreichweite** (Uncommon, +1 Feld Explosionsradius). Evolution A **Sofortzünder** (Epic) lässt Minen ohne Verzögerung explodieren. Im Horden-Modus lösen Bodengegner die Minen aus und nehmen Schaden, Adler fliegen darüber.
