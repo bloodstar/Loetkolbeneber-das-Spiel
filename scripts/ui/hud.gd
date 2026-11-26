@@ -1714,8 +1714,8 @@ func _build_match_stats() -> void:
 			str(int(stats.get("kills", 0.0))),
 			str(int(stats.get("deaths", 0.0))),
 			str(int(stats.get("damage_dealt", 0.0))),
-			# Gewählte Waffe und davon verursachter Schaden.
-			"%s · %d" % [Global.get_melee_weapon_label(Global.get_melee_weapon(slot)), int(stats.get("melee_damage", 0.0))],
+			# Nur der Nahkampfschaden: die Waffe hängt inzwischen an der Klasse.
+			str(int(stats.get("melee_damage", 0.0))),
 			str(int(stats.get("damage_blocked", 0.0))),
 			str(int(stats.get("healing_done", 0.0))),
 			_format_accuracy(stats),
