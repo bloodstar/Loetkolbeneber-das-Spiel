@@ -117,7 +117,7 @@ Die **Ulti** lädt über eine Abklingzeit, nicht über Schaden. Sie läuft über
 
 | Held | Rolle | HP | Tempo | Schild | Passiv | Fähigkeit | Outfit |
 | :--- | :--- | ---: | ---: | ---: | :--- | :--- | :--- |
-| **Ignis** | Pyro Skirmisher | 100 | 310 | 0 | **Afterburner**: Dash hinterlässt eine echte Feuerspur, Gegner darin brennen | **Rocket Leap**: Explosiver Sprung, 35 Schaden im Einschlag (Radius 140) | Schweißerbrille |
+| **Ignis** | Pyro Skirmisher | 100 | 310 | 0 | **Afterburner**: Dash hinterlässt eine echte Feuerspur, Gegner darin brennen | **Rocket Leap**: Explosiver Sprung bis zum Zielpunkt (50 bis ca. 304 px), 35 Schaden im Einschlag (Radius 140) | Schweißerbrille |
 | **Volt** | Hyper Speedster | 85 | 350 | 0 | **Overcharge**: Doppelsprung von Anfang an | **Kugelblitz**: wandernde Blitzkugel, schockt und verlangsamt | Gelbe Kappe mit Blitz |
 | **Spore** | Toxic Alchemist | 105 | 295 | 10 | **Spore Coat**: Treffer vergiften (2 Stapel) | **Giftpilz**: Falle, platzt zu einer Giftwolke | Pilzhut |
 | **Nova** | Gravity Mage | 95 | 290 | 10 | **Schwerelos**: Höchste Sprungkraft | **Gravitationsstoß**: stößt Gegner und Kugeln im Kegel weg | Zauberhut mit Mini-Planet |

@@ -673,7 +673,7 @@ func _setup_heroes() -> void:
 	ignis.color_tint = Color(1.0, 0.4, 0.2)
 	ignis.sprite_tile_name = "tile_0000.png"
 	ignis.version = 3 # Nachbrenner-Dash, Ulti Meteorschauer
-	ignis.ability_version = 2
+	ignis.ability_version = 3 # Rocket Leap mit variabler Weite
 	heroes["ignis"] = ignis
 
 	# 2. Volt
@@ -1024,8 +1024,8 @@ func get_hero(id: String) -> HeroData:
 func get_hero_ability_details(hero: HeroData) -> String:
 	match hero.id:
 		"ignis":
-			return "Fliegt %.2f s lang mit Tempo %d in Zielrichtung (ca. %d px) und ist dabei unverwundbar. Beim Aufprall: Explosion mit Radius %d px, bis zu %d Schaden (nimmt zum Rand hin ab) und starker Rückstoß." % [
-				Player.ROCKET_LEAP_DURATION, int(Player.ROCKET_LEAP_SPEED),
+			return "Fliegt mit Tempo %d bis zum Zielpunkt (%d bis ca. %d px) und ist dabei unverwundbar. Beim Aufprall: Explosion mit Radius %d px, bis zu %d Schaden (nimmt zum Rand hin ab) und starker Rückstoß." % [
+				int(Player.ROCKET_LEAP_SPEED), int(Player.ROCKET_LEAP_MIN_DISTANCE),
 				int(Player.ROCKET_LEAP_SPEED * Player.ROCKET_LEAP_DURATION),
 				int(Player.ROCKET_IMPACT_RADIUS), int(Player.ROCKET_IMPACT_DAMAGE),
 			]

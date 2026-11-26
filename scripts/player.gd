@@ -86,6 +86,8 @@ const KLINGE_BOOMERANG_RADIUS: float = 24.0
 # dieselben Konstanten, damit die Beschreibungen im Menü stimmen.
 const ROCKET_LEAP_SPEED: float = 950.0
 const ROCKET_LEAP_DURATION: float = 0.32
+# Kürzeste Flugweite beim gezielten Sprung (Ziel direkt am Spieler).
+const ROCKET_LEAP_MIN_DISTANCE: float = 50.0
 const ROCKET_IMPACT_RADIUS: float = 140.0
 const ROCKET_IMPACT_DAMAGE: float = 35.0
 const ROCKET_IMPACT_KNOCKBACK: float = 550.0
@@ -2475,9 +2477,10 @@ func use_ability(target = null) -> void:
 			is_invulnerable = true
 			leap_timer = ROCKET_LEAP_DURATION * ability_range_mult
 			leap_dir = aim_direction.normalized()
-			# Gezielt: Flugrichtung zum Zielpunkt (die Weite bleibt fest).
+			# Gezielt: Flug zum Zielpunkt, höchstens bis zur vollen Weite.
 			if _cast_has_target and _cast_target.distance_squared_to(global_position) > 16.0:
 				leap_dir = (_cast_target - global_position).normalized()
+				leap_timer = _rocket_leap_distance(_cast_target) / ROCKET_LEAP_SPEED
 			if leap_dir.length_squared() < 0.1:
 				leap_dir = Vector2.UP
 		"volt":
@@ -5065,6 +5068,11 @@ func ability_target_range(ult := false) -> float:
 			return ROCKET_LEAP_SPEED * ROCKET_LEAP_DURATION * ability_range_mult
 	return 0.0
 
+# Flugweite des gezielten Raketensprungs zu diesem Punkt.
+func _rocket_leap_distance(point: Vector2) -> float:
+	var max_range := ability_target_range()
+	return clampf(global_position.distance_to(point), minf(ROCKET_LEAP_MIN_DISTANCE, max_range), max_range)
+
 # Klemmt einen Punkt (Mauszeiger) auf Reichweite und Kartenbereich.
 func _clamp_ability_point(raw: Vector2, ult := false) -> Vector2:
 	var offset := raw - global_position
@@ -5134,13 +5142,17 @@ func _target_info_at(point: Vector2, ult := false) -> Dictionary:
 			info["valid"] = not _druid_wall_blocked(info)
 			return info
 		"ignis":
-			# Raketensprung: nur die Richtung zählt. Die Vorschau zeigt die
-			# Flugbahn bis zur vollen Weite oder bis zum ersten Hindernis.
+			# Raketensprung: fliegt bis zum Zielpunkt (mindestens
+			# ROCKET_LEAP_MIN_DISTANCE, höchstens volle Weite). Die Vorschau
+			# zeigt die Flugbahn bis dorthin oder bis zum ersten Hindernis.
 			var dir := point - global_position
+			var leap_len := ability_target_range()
 			if dir.length_squared() < 16.0:
 				dir = aim_direction
+			else:
+				leap_len = _rocket_leap_distance(point)
 			dir = dir.normalized()
-			var end := global_position + dir * ability_target_range()
+			var end := global_position + dir * leap_len
 			var query := PhysicsRayQueryParameters2D.create(global_position, end, 1)
 			query.exclude = [get_rid()]
 			var hit := get_world_2d().direct_space_state.intersect_ray(query)
