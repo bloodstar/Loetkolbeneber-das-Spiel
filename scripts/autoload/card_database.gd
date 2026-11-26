@@ -2551,7 +2551,7 @@ func _init_database() -> void:
 	var vp3 = CardData.new()
 	vp3.id = "vampire_blutfontaene"
 	vp3.title = "Blutfontäne"
-	vp3.description = "Vampir – Blutexplosion: +30% Explosionsradius, +20% Schaden, -15% Fähigkeits-Abklingzeit."
+	vp3.description = "Vampir – Blutgeschosse: +30% Explosionsradius, +20% Schaden, -15% Fähigkeits-Abklingzeit."
 	vp3.rarity = "Rare"
 	vp3.pool = "Offensive"
 	vp3.color = Color(0.72, 0.10, 0.18)
@@ -2560,12 +2560,13 @@ func _init_database() -> void:
 	vp3.ability_radius_mult = 1.3
 	vp3.ability_damage_mult = 1.2
 	vp3.ability_cooldown_mult = 0.85
+	vp3.version = 2 # 2026-11-26: Blutkugeln kreisen, Blutgeschosse
 	_register(vp3)
 
 	var vp3a = CardData.new()
 	vp3a.id = "vampire_aderlass"
 	vp3a.title = "Aderlass"
-	vp3a.description = "Blutexplosion-Evolution: Jeder getroffene Gegner heilt dich um %d HP." % int(Player.VAMPIRE_LEECH_HEAL)
+	vp3a.description = "Blutgeschosse-Evolution: Jeder Geschoss-Treffer heilt dich um %d HP mehr." % int(Player.VAMPIRE_LEECH_HEAL)
 	vp3a.rarity = "Epic"
 	vp3a.color = Color(0.72, 0.10, 0.18)
 	vp3a.hero_id = "vampire"
@@ -2573,12 +2574,13 @@ func _init_database() -> void:
 	vp3a.parent_card_id = "vampire_blutfontaene"
 	vp3a.evolution_branch = "A"
 	vp3a.ability_evolution = "vampire_burst_leech"
+	vp3a.version = 2 # 2026-11-26: Blutkugeln kreisen, Blutgeschosse
 	_register(vp3a)
 
 	var vp3b = CardData.new()
 	vp3b.id = "vampire_gerinnung"
 	vp3b.title = "Gerinnung"
-	vp3b.description = "Blutexplosion-Evolution: Getroffene Gegner sind %.1f s verlangsamt." % Player.VAMPIRE_CLOT_SLOW
+	vp3b.description = "Blutgeschosse-Evolution: Getroffene Gegner sind %.1f s verlangsamt." % Player.VAMPIRE_CLOT_SLOW
 	vp3b.rarity = "Epic"
 	vp3b.color = Color(0.72, 0.10, 0.18)
 	vp3b.hero_id = "vampire"
@@ -2586,17 +2588,19 @@ func _init_database() -> void:
 	vp3b.parent_card_id = "vampire_blutfontaene"
 	vp3b.evolution_branch = "B"
 	vp3b.ability_evolution = "vampire_burst_slow"
+	vp3b.version = 2 # 2026-11-26: Blutkugeln kreisen, Blutgeschosse
 	_register(vp3b)
 
 	var vp4 = CardData.new()
 	vp4.id = "vampire_blutrausch"
 	vp4.title = "Blutrausch"
-	vp4.description = "Vampir: Schon jeder 2. Treffer lässt eine Blutkugel fallen."
+	vp4.description = "Vampir: Schon jeder 2. Treffer gibt dir eine Blutkugel."
 	vp4.rarity = "Epic"
 	vp4.pool = "Offensive"
 	vp4.color = Color(0.80, 0.08, 0.16)
 	vp4.hero_id = "vampire"
 	vp4.ability_evolution = "vampire_frenzy"
+	vp4.version = 2 # 2026-11-26: Blutkugeln kreisen, Blutgeschosse
 	_register(vp4)
 
 	var vp5 = CardData.new()
@@ -2614,13 +2618,14 @@ func _init_database() -> void:
 	var vp6 = CardData.new()
 	vp6.id = "vampire_fledermauskoenig"
 	vp6.title = "Fledermauskönig"
-	vp6.description = "Vampir – Fledermausschwarm: mindestens %d Fledermäuse, +30%% Dauer, ihre Bisse heilen dich um die Hälfte des Schadens." % Player.VAMPIRE_KING_MIN_BATS
+	vp6.description = "Vampir – Fledermausschwarm: Grundschwarm %d statt %d Fledermäuse, +30%% Dauer, ihre Bisse heilen dich um die Hälfte des Schadens." % [Player.VAMPIRE_KING_MIN_BATS, Player.VAMPIRE_ULT_MIN_BATS]
 	vp6.rarity = "Epic"
 	vp6.pool = "Offensive"
 	vp6.color = Color(0.40, 0.08, 0.30)
 	vp6.hero_id = "vampire"
 	vp6.ult_duration_mult = 1.3
 	vp6.ability_evolution = "vampire_bat_king"
+	vp6.version = 2 # 2026-11-26: Blutkugeln kreisen, Blutgeschosse
 	_register(vp6)
 
 	# --- Blutritter (Nahkampf-Vampir): Klassenkarten ---

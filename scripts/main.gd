@@ -1624,6 +1624,7 @@ func _player_snapshot(player: Player, with_appearance: bool = true) -> Dictionar
 		"poison": player.poison_ticks_left,
 		"shield": player.current_shield,
 		"max_shield": player.max_shield,
+		"vorbs": player.vampire_orbs,
 		"ammo": player.current_ammo,
 		"max_ammo": player.max_ammo,
 		"aim": player.aim_direction,

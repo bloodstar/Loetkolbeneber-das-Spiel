@@ -29,6 +29,8 @@ static func create_replica(kind: String) -> Node2D:
 			return VampireBat.new()
 		"bbolt":
 			return BloodBolt.new()
+		"bmissile":
+			return BloodMissile.new()
 		"meteor":
 			return IgnisMeteor.new()
 		"shroom":
