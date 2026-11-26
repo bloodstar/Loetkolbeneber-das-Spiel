@@ -15,6 +15,8 @@ const GROUP: String = "vampire_bat"
 const HOVER_HEIGHT: float = 14.0
 const BITE_RANGE: float = 22.0
 const BAR_WIDTH: float = 16.0
+# Abstand der Schwarm-Plätze vom Ziel.
+const SWARM_SPREAD: float = 16.0
 
 var net_id: int = 0
 var is_replica: bool = false
@@ -31,6 +33,9 @@ var bite_interval: float = 0.7
 # Evolution "Fledermauskönig": Anteil des Bissschadens, der den Vampir heilt.
 var heal_share: float = 0.0
 var arena_z: float = 0.0
+# Platz im Schwarm (Winkel um das Ziel), damit mehrere Fledermäuse nicht
+# als ein Klumpen fliegen.
+var slot_angle: float = 0.0
 
 var _age: float = 0.0
 var _anim: float = 0.0
@@ -76,9 +81,11 @@ func _physics_process(delta: float) -> void:
 	var goal: Vector2
 	if target != null:
 		goal = target.global_position + Vector2(0.0, -HOVER_HEIGHT if not ArenaMode.active else 0.0)
+		# Um das Ziel verteilt: jede Fledermaus hat ihren eigenen Platz.
+		goal += Vector2.from_angle(slot_angle + _age * 1.6) * SWARM_SPREAD
 	else:
 		# Ohne Gegner kreist sie um den Vampir.
-		goal = owner_player.global_position + Vector2.from_angle(_age * 2.5 + _wobble) * 50.0 + Vector2(0.0, -30.0)
+		goal = owner_player.global_position + Vector2.from_angle(_age * 2.5 + slot_angle) * 50.0 + Vector2(0.0, -30.0)
 	# Leichtes Flattern, damit ein Schwarm nicht als Klumpen fliegt.
 	goal += Vector2(sin(_age * 5.0 + _wobble) * 10.0, cos(_age * 7.0 + _wobble) * 6.0)
 	var to := goal - global_position
@@ -87,7 +94,7 @@ func _physics_process(delta: float) -> void:
 	global_position += velocity * delta
 	if absf(velocity.x) > 8.0:
 		_face = signf(velocity.x)
-	if target != null and _bite_timer <= 0.0 and global_position.distance_to(target.global_position) <= BITE_RANGE + 8.0:
+	if target != null and _bite_timer <= 0.0 and global_position.distance_to(target.global_position) <= BITE_RANGE + SWARM_SPREAD + 8.0:
 		_bite(target)
 
 func _find_target() -> Player:

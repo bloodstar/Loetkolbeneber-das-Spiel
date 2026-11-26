@@ -273,6 +273,11 @@ const VAMPIRE_BAT_DURATION: float = 7.0
 const VAMPIRE_BAT_SPEED: float = 270.0
 const VAMPIRE_BAT_DAMAGE: float = 8.0
 const VAMPIRE_BAT_BITE_INTERVAL: float = 0.7
+# Abstand der Fledermäuse, die ohne Blutkugel direkt aus dem Vampir kommen.
+const VAMPIRE_BAT_SPAWN_SPREAD: float = 34.0
+# Fernkampf-Vampir zieht Blutkugeln aus größerer Nähe an als andere Vampire,
+# weil er meist weit weg vom Gegner steht, bei dem die Kugel fällt.
+const VAMPIRE_ORB_MAGNET_RADIUS: float = 170.0
 # Vampir-Evolutionen aus Klassenkarten: Aderlass (Explosion heilt), Gerinnung
 # (Explosion verlangsamt), Blutrausch (Kugel jeden 2. Treffer), Rote Flut
 # (Dash doppelter Schaden), Fledermauskönig (mehr Fledermäuse, Bisse heilen).
@@ -4624,6 +4629,12 @@ func wants_blood_orb() -> bool:
 			return current_shield < max_health * VAMP_MELEE_SHIELD_CAP - 0.5
 	return false
 
+# Aus dieser Nähe zieht der Vampir freie Blutkugeln an.
+func blood_orb_magnet_radius() -> float:
+	if Global.get_player_hero_id(player_index) == "vampire":
+		return VAMPIRE_ORB_MAGNET_RADIUS
+	return BloodOrb.MAGNET_RADIUS
+
 # Kugel berührt: true = verbraucht. Jeder Vampir hat hier seine Regel.
 func on_blood_orb_pickup(_orb: BloodOrb) -> bool:
 	if not wants_blood_orb():
@@ -4697,10 +4708,17 @@ func _vampire_bat_swarm() -> void:
 			break
 		spots.append(orb.take())
 	var min_bats := VAMPIRE_KING_MIN_BATS if _has_ability_evolution("vampire_bat_king") else VAMPIRE_ULT_MIN_BATS
-	while spots.size() < min_bats:
-		spots.append(global_position + Vector2(randf_range(-14.0, 14.0), -20.0 - randf() * 10.0))
-	for pos in spots:
+	# Fehlende Fledermäuse kommen aus dem Vampir, im Fächer verteilt, damit
+	# man sie einzeln sieht (vorher lagen sie fast übereinander).
+	var missing := min_bats - spots.size()
+	for i in range(missing):
+		var a := -PI * 0.5 + (float(i) - (missing - 1) * 0.5) * 0.7
+		spots.append(global_position + Vector2(0.0, -12.0) + Vector2.from_angle(a) * VAMPIRE_BAT_SPAWN_SPREAD)
+	for i in range(spots.size()):
+		var pos: Vector2 = spots[i]
 		var bat := VampireBat.new()
+		# Jede Fledermaus bekommt einen eigenen Platz im Schwarm.
+		bat.slot_angle = TAU * float(i) / float(spots.size())
 		bat.owner_player = self
 		bat.owner_index = player_index
 		bat.team_id = team_id

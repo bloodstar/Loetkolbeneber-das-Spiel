@@ -913,7 +913,7 @@ func _setup_heroes() -> void:
 	vampire.color_tint = Color(0.72, 0.10, 0.18)
 	vampire.sprite_tile_name = "tile_0007.png"
 	vampire.version = 2
-	vampire.ability_version = 1
+	vampire.ability_version = 2
 	heroes["vampire"] = vampire
 	# 9. Blutritter – Nahkampf-Vampir. Teilt sich die Blutkugeln mit allen
 	# Vampiren (Held-IDs mit "vampire" am Anfang).
