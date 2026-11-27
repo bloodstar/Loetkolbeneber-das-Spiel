@@ -13,7 +13,7 @@ config_version=5
 config/name="Lötkolbeneber"
 config/version="0.1.0"
 run/main_scene="uid://cax1207aidl7f"
-config/features=PackedStringArray("4.6", "Mobile")
+config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
 config/windows_native_icon="res://icon.ico"
 
@@ -55,8 +55,8 @@ enabled=PackedStringArray("res://addons/build_info/plugin.cfg", "res://addons/ep
 
 [gui]
 
-theme/custom="res://assets/ui/ui_theme.tres"
 timers/tooltip_delay_sec=0.35
+theme/custom="res://assets/ui/ui_theme.tres"
 
 [physics]
 
